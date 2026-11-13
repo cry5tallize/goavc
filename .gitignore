@@ -1,0 +1,28 @@
+# 构建产物
+/bin/
+/out/
+*.test
+*.exe
+
+# 性能与调试输出
+*.prof
+*.pprof
+cpu.out
+mem.out
+bench.txt
+
+# 原始视频与参考输出（体积大，按 docs 约定通过 manifest 引用）
+*.yuv
+*.rgb
+*.ppm
+*.png.tmp
+
+# 编辑器与系统
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 本地临时目录
+/tmp/
+*.log
