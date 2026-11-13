@@ -38,7 +38,7 @@ func (m MV) Validate() error {
 // Grid 存储整帧按 4×4 块划分的 MV 与参考索引。
 //
 // 坐标：bx/by 是从图像左上角开始的 4×4 块坐标（不是宏块内坐标）。
-// Ref < 0 表示该块没有可用的 list0 预测（帧内块或尚未解码）。
+// Ref < 0 表示该块没有 list0 参考；valid 另行区分帧内块与尚未解码块。
 type Grid struct {
 	MBWidth    int
 	MBHeight   int
@@ -68,7 +68,7 @@ func NewGrid(mbWidth, mbHeight int) *Grid {
 
 func (g *Grid) index(bx, by int) int { return by*g.BlockW + bx }
 
-// Available 判断块坐标是否在图像内且已有参考索引。
+// Available 判断块是否已解码且属于当前 slice；帧内块也可以用作邻块。
 func (g *Grid) Available(bx, by int) bool {
 	if g == nil || bx < 0 || by < 0 || bx >= g.BlockW || by >= g.BlockH {
 		return false
