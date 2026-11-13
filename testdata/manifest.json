@@ -1,4 +1,43 @@
 {
   "version": 1,
-  "entries": []
+  "entries": [
+    {
+      "name": "baseline_64x48_yuv420p_cavlc_ipp_001",
+      "path": "testdata/baseline/baseline_64x48_yuv420p_cavlc_ipp_001.264",
+      "source": "x264",
+      "profile": "baseline",
+      "level": "1.0",
+      "width": 64,
+      "height": 48,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": ["I", "P"],
+      "sliceCount": 1,
+      "refFrames": 1,
+      "tags": ["m1_syntax"],
+      "sha256": "cf5e409b5733b6413c0cddded9675fc3fee3d5510e5a56dfbae6a3db5d61bc8b",
+      "status": "wip",
+      "notes": "M1 syntax round-trip and ffprobe coverage; pixel oracle pending M2."
+    },
+    {
+      "name": "main_64x48_yuv420p_cabac_ipb_001",
+      "path": "testdata/main/main_64x48_yuv420p_cabac_ipb_001.264",
+      "source": "x264",
+      "profile": "main",
+      "level": "1.0",
+      "width": 64,
+      "height": 48,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": ["I", "P", "B"],
+      "sliceCount": 1,
+      "refFrames": 1,
+      "tags": ["m1_syntax"],
+      "sha256": "17d76f1e2058f4048eaa902fb55dc8fd8541a146a62caf0fcf17e744bce45a25",
+      "status": "wip",
+      "notes": "M1 syntax round-trip and ffprobe coverage; pixel oracle pending M3."
+    }
+  ]
 }
