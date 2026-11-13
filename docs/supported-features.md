@@ -1,5 +1,9 @@
 # 支持矩阵
 
+> **M4 开工：** `encoder.New` 已支持串行 Baseline CQP 的 I_PCM IDR 输出、Annex-B、
+> 多 slice、偶数显示尺寸裁剪和输入同步消费。PCM 已通过独立 FFmpeg 像素验证。
+> 普通帧内压缩路径尚待实现，M4 整体门禁未通过；Main/High、P/B、ABR/CBR 明确拒绝。
+
 > 状态图例：`TODO` 未开始 · `WIP` 进行中 · `Partial` 部分可用（有已知不支持路径）·
 > `Conformant` 通过规定验证 · `Unsupported` 明确拒绝并返回 `ErrUnsupported`
 >

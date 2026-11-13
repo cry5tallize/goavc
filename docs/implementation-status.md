@@ -110,7 +110,16 @@ Main I/P 回归保持通过。最终清单共 27 条，26 条支持样本 217 �
 正常构建为 CGO=0；race 使用 Go 检测工具链要求的 CGO=1，不引入编解码运行时依赖。
 本地标签为 `v0.4.0`，最终逐项证据见 `docs/gates/m3.md`；远端 CI 尚未执行。
 
-## M4–M9
+## M4：Encoder Baseline（进行中）
+
+| Module | 规范条款 | Scope | Status | Tests | Known gaps |
+|---|---|---|---|---|---|
+| Annex-B Writer | B.1 | 四字节起始码、EBSP NAL、短写错误 | Conformant | `nal/annexb_writer_test.go` 固定字节与重扫 | — |
+| Encoder 状态与 I_PCM | 7.3.3 / 7.3.5 | 单槽背压、Flush/Reset/Close、独立 IDR、裁剪、1..64 slice、参数集/VUI | Conformant | `encoder/encoder_test.go`、`tests/codec` 自解码与 FFmpeg 逐像素 | 当前仅 PCM；I4/I16、正变换/量化/CAVLC 编码和去块尚待实现；4:2:0 奇数显示尺寸不能用 SPS crop 表达，显式拒绝 |
+
+普通构建与测试使用 Go 1.27.4、CGO_ENABLED=0。M4 尚未通过整体退出门禁。
+
+## M5–M9
 
 后续里程碑的模块表在对应里程碑开工时补全；开工前这里只保留占位，
 避免出现"提前承诺、实际未实现"的记录失真。
