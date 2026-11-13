@@ -164,11 +164,6 @@ func TestDecoder_UnsupportedTools(t *testing.T) {
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.SeqScalingMatrixPresentFlag = true },
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { h.Type = syntax.SliceTypeB },
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { h.HasPredWeightTable = true },
-		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { h.AdaptiveRefPicMarking = true },
-		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { h.RefPicListReorderingL0 = true },
-		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { h.LongTermReferenceFlag = true },
-		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.MaxNumRefFrames = 2 },
-		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.PicOrderCntType = 1 },
 	} {
 		ss, pp, hh := *s, *p, *h
 		mutate(&ss, &pp, &hh)

@@ -229,6 +229,112 @@
       "expectedYUVSha256": "8a0c6a97eceb5358acd5192c4afccb9383ade6633d6cc43282edbecb2b79f5ac",
       "status": "conformant",
       "notes": "M3 CABAC I/P subset; 4 frames; init_idc=2; FFmpeg 8.0 pixel exact; B/multireference pending."
+    },
+    {
+      "name": "main_128x96_yuv420p_cabac_multiref_005",
+      "path": "testdata/main/main_128x96_yuv420p_cabac_multiref_005.264",
+      "source": "x264",
+      "profile": "main",
+      "level": "1.0",
+      "width": 128,
+      "height": 96,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P"
+      ],
+      "sliceCount": 1,
+      "refFrames": 4,
+      "tags": [
+        "m3_multiref"
+      ],
+      "sha256": "63e4222bbec6091cdb7dd75350cee4ff324134a7c9f5426ab483610c736651f1",
+      "expectedYUVSha256": "3fad89c08f80c5c6f27de643055dd5d57eac57f12a8d9cf2197b1b827e2966b5",
+      "status": "conformant",
+      "notes": "12 frames; FFmpeg 8.0 pixel exact; multi-reference P decoding."
+    },
+    {
+      "name": "baseline_96x64_yuv420p_cavlc_multiref_006",
+      "path": "testdata/baseline/baseline_96x64_yuv420p_cavlc_multiref_006.264",
+      "source": "x264",
+      "profile": "baseline",
+      "level": "1.0",
+      "width": 96,
+      "height": 64,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "P"
+      ],
+      "sliceCount": 1,
+      "refFrames": 3,
+      "tags": [
+        "m3_multiref"
+      ],
+      "sha256": "8bbdf92860907353f3f66daa071bb83c089f7a9af9a154e89b5bfe392e083120",
+      "expectedYUVSha256": "0ab3e104e9eae0187046fbd1876af2d10ed43f9bd765555f0d66dc0445caf69d",
+      "status": "conformant",
+      "notes": "10 frames; FFmpeg 8.0 pixel exact; multi-reference P decoding."
+    },
+    {
+      "name": "main_16x16_yuv420p_cavlc_mmco_006",
+      "path": "testdata/main/main_16x16_yuv420p_cavlc_mmco_006.264",
+      "source": "synthetic",
+      "profile": "main",
+      "level": "1.0",
+      "width": 16,
+      "height": 16,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "P"
+      ],
+      "sliceCount": 1,
+      "refFrames": 3,
+      "tags": [
+        "m3_multiref",
+        "mmco",
+        "long_term",
+        "reordering"
+      ],
+      "sha256": "4b2ba079a2f0623f72c3addb7712535106d156fb9667087e08d31d5cef42c0a2",
+      "expectedYUVSha256": "a65d3ec10d28eff45614a12e562bab9860fef199fd4e22d36a593176fa88c3b7",
+      "status": "conformant",
+      "notes": "6 frames; FFmpeg 8.0 pixel exact; MMCO operations 1..6 and long-term reordering."
+    },
+    {
+      "name": "main_16x16_yuv420p_cavlc_poc1_007",
+      "path": "testdata/main/main_16x16_yuv420p_cavlc_poc1_007.264",
+      "source": "synthetic",
+      "profile": "main",
+      "level": "1.0",
+      "width": 16,
+      "height": 16,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "P"
+      ],
+      "sliceCount": 1,
+      "refFrames": 3,
+      "tags": [
+        "m3_multiref",
+        "mmco",
+        "long_term",
+        "poc1"
+      ],
+      "sha256": "b3986ee3e673604b5b6991244e6a73f842561a25d55c1a487c23efb5679d431f",
+      "expectedYUVSha256": "a65d3ec10d28eff45614a12e562bab9860fef199fd4e22d36a593176fa88c3b7",
+      "status": "conformant",
+      "notes": "6 frames; FFmpeg 8.0 pixel exact; MMCO operations 1..6 and long-term reordering."
     }
   ]
 }

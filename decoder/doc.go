@@ -3,7 +3,8 @@
 // 流水线顺序：NAL → RBSP → SPS/PPS/SEI → Slice Header → 熵解码
 // （CAVLC 或 CABAC）→ 反量化 → 逆变换 → 帧内/帧间预测 → 残差重建
 // → 去块滤波 → 单参考 DPB/POC → 按 SPS 裁剪输出帧。
-// M3 已接入 CABAC 的 I/P 4×4 路径。B 帧、多参考、High 8×8/ScalingMatrix
+// M3 已接入 CABAC/CAVLC 的多参考 I/P、MMCO/长期参考和 POC type 0/1/2。
+// B 帧、High 8×8/ScalingMatrix
 // 和需要显示重排序的流继续在 M3 扩展，当前显式拒绝。
 // 输入为完整 Annex-B 访问单元；增量字节流/AVCC 适配属于 M6。
 //

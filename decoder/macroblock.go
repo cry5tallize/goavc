@@ -46,15 +46,16 @@ func blockRaster(n int) int {
 
 func decodeSkipMacroblock(fs *frameState, addr int, s *sliceEntry, qp int, sliceID int) error {
 	mbx, mby := addr%fs.mbW, addr/fs.mbW
-	ref := fs.d.dpb.Reference()
-	if ref == nil {
+	if len(s.refs[0]) == 0 {
 		return fmt.Errorf("decoder: P_Skip without reference: %w", h264.ErrInvalidData)
 	}
+	ref := s.refs[0][0].Picture
 	mv := motion.PredictSkip(fs.mv, mbx*4, mby*4, 0)
 	if err := mv.Validate(); err != nil {
 		return err
 	}
 	fs.mv.SetRect(mbx*4, mby*4, 4, 4, mv, 0)
+	fs.setReferenceIdentity(0, mbx*4, mby*4, 4, 4, s.refs[0][0].Identity)
 	fs.mcPartition(ref, mbx, mby, 0, 0, 16, 16, mv)
 	info := &fs.info[addr]
 	*info = mbInfo{skip: true, qp: qp, sliceID: sliceID}
@@ -248,188 +249,6 @@ func decodePCMMacroblock(fs *frameState, addr, mbx, mby int, s *sliceEntry) erro
 		s.cabac.lastDelta = false
 	}
 	return nil
-}
-
-// decodeInterMacroblock 处理 P 切片的 L0 预测宏块。
-func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEntry, qscale *int) error {
-	ref := fs.d.dpb.Reference()
-	if ref == nil {
-		return fmt.Errorf("decoder: inter macroblock without reference: %w", h264.ErrInvalidData)
-	}
-	info := &fs.info[addr]
-	baseX, baseY := mbx*4, mby*4
-
-	var mvdX, mvdY int
-	var difference motion.MV
-	predict := func(x, y, w, kind int) motion.MV {
-		mvdX, mvdY = x, y
-		switch kind {
-		case 1, 2:
-			return motion.Predict16x8(fs.mv, x, y, kind == 2, 0)
-		case 3, 4:
-			return motion.Predict8x16(fs.mv, x, y, kind == 4, 0)
-		}
-		return motion.Predict(fs.mv, x, y, w, 0)
-	}
-	setMV := func(bx, by, w, h int, mv motion.MV) error {
-		if err := mv.Validate(); err != nil {
-			return err
-		}
-		fs.mv.SetRect(baseX+bx, baseY+by, w, h, mv, 0)
-		if s.cabac != nil {
-			for y := baseY + by; y < baseY+by+h; y++ {
-				for x := baseX + bx; x < baseX+bx+w; x++ {
-					fs.mvd[y*fs.mv.BlockW+x] = difference
-				}
-			}
-		}
-		return nil
-	}
-	readMVD := func(pred motion.MV) (motion.MV, error) {
-		var dx, dy int32
-		var err error
-		if s.cabac != nil {
-			dx, err = s.cabac.readMVDComponent(fs, mvdX, mvdY, 0)
-		} else {
-			dx, err = s.data.ReadSE()
-		}
-		if err != nil {
-			return motion.MV{}, fmt.Errorf("mvd_l0 x: %w", err)
-		}
-		if s.cabac != nil {
-			dy, err = s.cabac.readMVDComponent(fs, mvdX, mvdY, 1)
-		} else {
-			dy, err = s.data.ReadSE()
-		}
-		if err != nil {
-			return motion.MV{}, fmt.Errorf("mvd_l0 y: %w", err)
-		}
-		difference = motion.MV{X: dx, Y: dy}
-		x, y := int64(pred.X)+int64(dx), int64(pred.Y)+int64(dy)
-		if x < -motion.MaxAbsMV || x > motion.MaxAbsMV || y < -motion.MaxAbsMV || y > motion.MaxAbsMV {
-			return motion.MV{}, fmt.Errorf("decoder: motion vector overflow: %w", h264.ErrInvalidData)
-		}
-		return motion.MV{X: int32(x), Y: int32(y)}, nil
-	}
-
-	switch pType {
-	case 0: // 16x16
-		mv, err := readMVD(predict(baseX, baseY, 4, 0))
-		if err != nil {
-			return err
-		}
-		if err := setMV(0, 0, 4, 4, mv); err != nil {
-			return err
-		}
-		fs.mcPartition(ref, mbx, mby, 0, 0, 16, 16, mv)
-	case 1: // 16x8
-		for i := 0; i < 2; i++ {
-			mv, err := readMVD(predict(baseX, baseY+i*2, 4, 1+i))
-			if err != nil {
-				return err
-			}
-			if err := setMV(0, i*2, 4, 2, mv); err != nil {
-				return err
-			}
-			fs.mcPartition(ref, mbx, mby, 0, i*8, 16, 8, mv)
-		}
-	case 2: // 8x16
-		for i := 0; i < 2; i++ {
-			mv, err := readMVD(predict(baseX+i*2, baseY, 2, 3+i))
-			if err != nil {
-				return err
-			}
-			if err := setMV(i*2, 0, 2, 4, mv); err != nil {
-				return err
-			}
-			fs.mcPartition(ref, mbx, mby, i*8, 0, 8, 16, mv)
-		}
-	case 3, 4: // 8x8 / 8x8ref0
-		// 规范 7.3.5.2：先读完 4 个 sub_mb_type，再逐个分区读 mvd。
-		// 不能“读一个 sub_mb_type 就跟它的 mvd”，否则位流错位。
-		var subTypes [4]int
-		for i8 := 0; i8 < 4; i8++ {
-			subType, err := s.readPSubType()
-			if err != nil {
-				return fmt.Errorf("sub_mb_type[%d]: %w", i8, err)
-			}
-			if subType > 3 {
-				return fmt.Errorf("sub_mb_type %d out of range: %w", subType, h264.ErrInvalidData)
-			}
-			subTypes[i8] = int(subType)
-		}
-		for i8 := 0; i8 < 4; i8++ {
-			x8 := (i8 & 1) * 2
-			y8 := (i8 >> 1) * 2
-			switch subTypes[i8] {
-			case 0: // 8x8
-				mv, err := readMVD(predict(baseX+x8, baseY+y8, 2, 0))
-				if err != nil {
-					return err
-				}
-				if err := setMV(x8, y8, 2, 2, mv); err != nil {
-					return err
-				}
-				fs.mcPartition(ref, mbx, mby, x8*4, y8*4, 8, 8, mv)
-			case 1: // 8x4
-				for j := 0; j < 2; j++ {
-					mv, err := readMVD(predict(baseX+x8, baseY+y8+j, 2, 0))
-					if err != nil {
-						return err
-					}
-					if err := setMV(x8, y8+j, 2, 1, mv); err != nil {
-						return err
-					}
-					fs.mcPartition(ref, mbx, mby, x8*4, (y8+j)*4, 8, 4, mv)
-				}
-			case 2: // 4x8
-				for j := 0; j < 2; j++ {
-					mv, err := readMVD(predict(baseX+x8+j, baseY+y8, 1, 0))
-					if err != nil {
-						return err
-					}
-					if err := setMV(x8+j, y8, 1, 2, mv); err != nil {
-						return err
-					}
-					fs.mcPartition(ref, mbx, mby, (x8+j)*4, y8*4, 4, 8, mv)
-				}
-			case 3: // 4x4
-				for j := 0; j < 4; j++ {
-					bx, by := x8+j%2, y8+j/2
-					mv, err := readMVD(predict(baseX+bx, baseY+by, 1, 0))
-					if err != nil {
-						return err
-					}
-					if err := setMV(bx, by, 1, 1, mv); err != nil {
-						return err
-					}
-					fs.mcPartition(ref, mbx, mby, bx*4, by*4, 4, 4, mv)
-				}
-			}
-		}
-	default:
-		return fmt.Errorf("P mb_type %d out of range: %w", pType, h264.ErrInvalidData)
-	}
-
-	cbp, err := s.readCBP(fs, addr, false)
-	if err != nil {
-		return err
-	}
-	info.cbp = cbp
-	if cbp != 0 {
-		if err := s.updateQP(qscale); err != nil {
-			return err
-		}
-		info.qp = *qscale
-	}
-	var res residual
-	if err := fs.decodeResiduals(s, addr, mbx, mby, false, false, cbp, &res); err != nil {
-		return err
-	}
-	if err := fs.addLumaResidual(mbx, mby, cbp, false, *qscale, &res); err != nil {
-		return err
-	}
-	return fs.addChromaResidual(mbx, mby, (cbp>>4)&3, *qscale, &res)
 }
 
 func updateQScale(r *bitstream.Reader, qscale *int) error {

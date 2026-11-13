@@ -100,7 +100,17 @@ CGO_ENABLED=0、FFmpeg 8.0 下，三份新增 Main 样本共 12 帧（64×48 全
 | Main 解码流水线 | M3 范围 | CABAC 单参考、无重排 I/P、4×4 变换、多 slice | Partial | `TestCABAC_IntraPixelOracle`、固定 Oracle 哈希、M2 回归 | B、双向/direct、多参考/MMCO、加权预测、POC type 1、显示重排尚未实现，显式拒绝 |
 | High 解码流水线 | M3 范围 | 8×8 / ScalingMatrix | TODO | 尚无新增 High 验证 | 8×8 逆变换、I8×8 预测、缩放矩阵选择与应用待实现 |
 
-后续按 `docs/Implementation-Plan.md` M3 的参考列表/MMCO、B 帧与重排、
+M3 第二批补齐多参考 P 帧、参考列表重排、MMCO 1..6、长期参考和 POC type 1。
+两份 x264 多参考样本（CABAC 12 帧、CAVLC 10 帧）及两份规范合成 MMCO 样本
+（type 0/type 1 各 6 帧）均通过 FFmpeg 逐像素对比，输入/输出哈希已登记。
+
+| Module | Scope | Status | Tests | Known gaps |
+|---|---|---|---|---|
+| 参考列表 / ref_idx | P 列表初始化、短期/长期重排、CAVLC te(v) 与 CABAC 索引、跨 slice 身份去块 | Conformant | `references_test.go`、`TestReferenceLists_MultiReferenceOracle` | B 列表内核有解析向量，B 流水线待接入 |
+| MMCO / 长期参考 | 滑窗、操作 1..6、长期索引上限/替换、图像归还、轻量共位身份 | Conformant | 独立 DPB 所有权测试、`mmco` 专设语料与 Oracle | 字段参考在 M7 |
+| POC type 1/2 | 周期偏移、非参考帧、frame_num 回绕、MMCO5 后锚点 | Conformant | `poc_test.go`、type 1 合成语料 Oracle | 显示顺序缓存待 B 帧接入 |
+
+后续按 `docs/Implementation-Plan.md` M3 的 B 帧与重排、
 High 8×8/ScalingMatrix、完整 Oracle 与 race 门禁继续推进；当前不创建 v0.4.0 标签。
 
 ## M4–M9

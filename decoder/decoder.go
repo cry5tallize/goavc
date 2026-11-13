@@ -1,8 +1,8 @@
 // Package decoder 实现 H.264 Baseline 解码流水线。
 //
 // 输入单位是访问单元（Packet.Data 为 Annex-B），输出是显示顺序的
-// 4:2:0 8-bit Frame。当前支持 CAVLC/CABAC 的 I/P、单参考帧、4x4 变换、
-// 基础去块与无重排的 POC type 0/2；B/8x8/MMCO 等返回 ErrUnsupported。
+// 4:2:0 8-bit Frame。当前支持 CAVLC/CABAC 的 I/P、多参考与 MMCO、4x4 变换、
+// 去块与无重排的 POC type 0/1/2；B/8x8/加权预测等返回 ErrUnsupported。
 package decoder
 
 import (
@@ -254,6 +254,9 @@ func (d *Decoder) activateSPS(s *syntax.SPS) error {
 		d.dpb.Reset()
 	}
 	d.dpb = dpb.New(d.maxFrameNum, s.GapsInFrameNumValueAllowedFlag)
+	if err := d.dpb.SetCapacity(max(1, int(s.MaxNumRefFrames))); err != nil {
+		return err
+	}
 	maxLsb := int32(1) << (s.Log2MaxPicOrderCntLsbMinus4 + 4)
 	d.poc = dpb.NewPOCState(maxLsb)
 	return nil

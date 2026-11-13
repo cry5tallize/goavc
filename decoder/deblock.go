@@ -216,7 +216,11 @@ func (fs *frameState) bSAtBlocks(pbx, pby, qbx, qby int, boundary bool) int {
 	}
 	pmv, pref, pok := fs.mv.Get(pbx, pby)
 	qmv, qref, qok := fs.mv.Get(qbx, qby)
-	if !pok || !qok || pref != qref {
+	sameReference := pref == qref
+	if fs.referenceIDs[0] != nil {
+		sameReference = fs.referenceIDs[0][pby*fs.mv.BlockW+pbx] == fs.referenceIDs[0][qby*fs.mv.BlockW+qbx]
+	}
+	if !pok || !qok || !sameReference {
 		return 1
 	}
 	if absInt(int(pmv.X-qmv.X)) >= 4 || absInt(int(pmv.Y-qmv.Y)) >= 4 {

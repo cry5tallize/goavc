@@ -7,7 +7,8 @@
 > 输出 8-bit YUV420；支持 CAVLC、I/P、单参考、多 slice、P_Skip、去块与裁剪。
 > 五份真实 Baseline 语料（含 1080p）通过 FFmpeg 逐像素对比，CI 可核验固定
 > Oracle 输出哈希。M3 新增 CABAC 单参考 I/P 的 4×4 路径，三份 Main 样本通过
-> FFmpeg 对比。编码器从 M4 开始；B/多参考/8×8 等工具当前返回 `ErrUnsupported`。
+> FFmpeg 对比。多参考、重排命令、MMCO/长期参考与 POC type 1 已接入并验证。
+> 编码器从 M4 开始；B/8×8/加权预测等工具当前返回 `ErrUnsupported`。
 > 本地退出证据见 [M2 门禁记录](docs/gates/m2.md)，远端 CI 待执行。
 > 进度及边界见 [实现状态](docs/implementation-status.md) 与 [支持矩阵](docs/supported-features.md)。
 

@@ -5,6 +5,7 @@ import (
 
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/bitstream"
+	"github.com/goavc/h264/internal/dpb"
 	"github.com/goavc/h264/internal/motion"
 	"github.com/goavc/h264/internal/picture"
 	"github.com/goavc/h264/nal"
@@ -20,6 +21,7 @@ type sliceEntry struct {
 	rbsp  []byte
 	data  *bitstream.Reader
 	cabac *cabacSyntax
+	refs  [2][]*dpb.Reference
 }
 
 // mbInfo 是去块滤波与后续 MB 预测需要的宏块元数据。
@@ -54,6 +56,7 @@ type frameState struct {
 	chromaNZ        [2][]uint8
 	dcCoded         [3][]bool
 	mvd             []motion.MV
+	referenceIDs    [2][]*dpb.Identity
 	mv              *motion.Grid
 }
 
@@ -80,6 +83,7 @@ func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS) (*frameState, e
 	}
 	fs.chromaNZ[0] = make([]uint8, total*4)
 	fs.chromaNZ[1] = make([]uint8, total*4)
+	fs.referenceIDs[0] = make([]*dpb.Identity, total*16)
 	if pps.EntropyCodingModeFlag {
 		for i := range fs.dcCoded {
 			fs.dcCoded[i] = make([]bool, total)
@@ -195,36 +199,9 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 		return fmt.Errorf("decoder: non-IDR picture without reference: %w", h264.ErrInvalidData)
 	}
 
-	poc := int32(0)
-	if sps.PicOrderCntType == 0 {
-		previous := *d.poc
-		poc = d.poc.Compute(idr, int32(first.hdr.PicOrderCntLsb))
-		if !ref {
-			*d.poc = previous
-		}
-		if first.hdr.DeltaPicOrderCntBottom < 0 {
-			poc += first.hdr.DeltaPicOrderCntBottom
-		}
-	} else if sps.PicOrderCntType == 2 {
-		// Spec: 8.2.1.3。x264 的无 B 帧 Baseline 通常使用 type 2。
-		offset := d.frameNumOffset
-		if !idr && first.hdr.FrameNum < d.dpb.ReferenceFrameNum() {
-			offset += int64(d.maxFrameNum)
-		}
-		value := 2 * (offset + int64(first.hdr.FrameNum))
-		if !ref {
-			value--
-		}
-		if value > 1<<31-1 {
-			return fmt.Errorf("decoder: POC overflow: %w", h264.ErrResourceLimit)
-		}
-		poc = int32(value)
-		if ref {
-			d.frameNumOffset = offset
-		}
-	} else {
-		return fmt.Errorf("decoder: poc type %d is not supported in M2: %w",
-			sps.PicOrderCntType, h264.ErrUnsupported)
+	top, _, poc, err := d.poc.ComputeFrame(sps, first.hdr, ref)
+	if err != nil {
+		return err
 	}
 	if d.hasOutput && poc <= d.lastOutputPOC {
 		return fmt.Errorf("decoder: display reordering requires M3: %w", h264.ErrUnsupported)
@@ -250,6 +227,20 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 	lastEnd := 0
 	for si := range slices {
 		s := &slices[si]
+		if s.hdr.Type != syntax.SliceTypeI {
+			lists := d.dpb.Lists(s.hdr.FrameNum, poc, s.hdr.Type == syntax.SliceTypeB)
+			for list := 0; list < 1+boolToInt(s.hdr.Type == syntax.SliceTypeB); list++ {
+				n := int(s.hdr.NumRefIdxL0ActiveMinus1) + 1
+				if list == 1 {
+					n = int(s.hdr.NumRefIdxL1ActiveMinus1) + 1
+				}
+				var err error
+				s.refs[list], err = d.dpb.Modify(lists[list], s.hdr.FrameNum, s.hdr.RefListModifications[list], n)
+				if err != nil {
+					return err
+				}
+			}
+		}
 		if s.hdr.FirstMBInSlice >= uint32(fs.total) {
 			return fmt.Errorf("decoder: first_mb_in_slice %d exceeds picture: %w",
 				s.hdr.FirstMBInSlice, h264.ErrInvalidData)
@@ -291,12 +282,31 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 	if err != nil {
 		return err
 	}
-	d.out = append(d.out, frame)
-	d.lastOutputPOC, d.hasOutput = poc, true
 	if ref {
-		d.dpb.PutReference(fs.pic, first.hdr.FrameNum, poc)
+		r := d.dpb.NewReference(fs.pic, first.hdr.FrameNum, poc)
+		r.Motion[0] = fs.mv
+		r.BlockReferences = fs.referenceIDs
+		if err := d.dpb.Store(r, idr, first.hdr.LongTermReferenceFlag, first.hdr.AdaptiveRefPicMarking, first.hdr.MemoryManagement); err != nil {
+			frame.Release()
+			return err
+		}
+		for _, m := range first.hdr.MemoryManagement {
+			if m.Operation == 5 {
+				d.poc.AfterMMCO5(top - poc)
+				d.frameNumOffset = 0
+				r.POC = 0
+				d.lastOutputPOC = 0
+			}
+		}
 	} else {
 		fs.release()
+	}
+	d.out = append(d.out, frame)
+	d.lastOutputPOC, d.hasOutput = poc, true
+	for _, m := range first.hdr.MemoryManagement {
+		if m.Operation == 5 {
+			d.lastOutputPOC = 0
+		}
 	}
 	d.waitingForIDR = false
 	ok = true
@@ -308,8 +318,8 @@ func (d *Decoder) checkSupported(sps *syntax.SPS, pps *syntax.PPS, hdr *syntax.S
 	if hdr.SliceQP < 0 || hdr.SliceQP > 51 {
 		return fmt.Errorf("decoder: slice QP %d: %w", hdr.SliceQP, h264.ErrInvalidData)
 	}
-	if hdr.LongTermReferenceFlag || hdr.RedundantPicCnt > 0 || sps.MaxNumRefFrames > 1 {
-		return fmt.Errorf("decoder: long term, redundant or multiple references: %w", h264.ErrUnsupported)
+	if hdr.RedundantPicCnt > 0 {
+		return fmt.Errorf("decoder: redundant slices: %w", h264.ErrUnsupported)
 	}
 	if pps.Transform8x8ModeFlag {
 		return fmt.Errorf("decoder: 8x8 transform is not supported in M2: %w", h264.ErrUnsupported)
@@ -322,18 +332,6 @@ func (d *Decoder) checkSupported(sps *syntax.SPS, pps *syntax.PPS, hdr *syntax.S
 	}
 	if hdr.HasPredWeightTable {
 		return fmt.Errorf("decoder: weighted prediction is not supported in M2: %w", h264.ErrUnsupported)
-	}
-	if hdr.AdaptiveRefPicMarking || hdr.MMCOCount > 0 {
-		return fmt.Errorf("decoder: MMCO is not supported in M2: %w", h264.ErrUnsupported)
-	}
-	if hdr.RefPicListReorderingL0 || hdr.RefPicListReorderingL1 {
-		return fmt.Errorf("decoder: reference list reordering is not supported in M2: %w", h264.ErrUnsupported)
-	}
-	if hdr.NumRefIdxL0ActiveMinus1 > 0 {
-		return fmt.Errorf("decoder: multiple reference frames are not supported in M2: %w", h264.ErrUnsupported)
-	}
-	if sps.PicOrderCntType == 1 {
-		return fmt.Errorf("decoder: poc type 1 is not supported in M2: %w", h264.ErrUnsupported)
 	}
 	return nil
 }

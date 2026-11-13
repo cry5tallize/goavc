@@ -1,5 +1,18 @@
 # testdata
 
+## M3 多参考与 MMCO 定向语料
+
+`main_128x96_yuv420p_cabac_multiref_005` 为 12 帧、ref=4 的 Main CABAC I/P；
+`baseline_96x64_yuv420p_cavlc_multiref_006` 为 10 帧、ref=3 的 CAVLC I/P。
+使用上述尺寸与帧数、x264 medium/QP=26、bframes=0、weightp=0、scenecut=0、
+threads=1、aud=1、keyint=30 生成，并以 FFmpeg 的完整 rawvideo 输出哈希固定。
+
+`main_16x16_yuv420p_cavlc_mmco_006` 与 `poc1_007` 由本仓库的规范小向量生成器
+产生，均为 6 帧，覆盖 MMCO 1..6、长期参考选择、列表重排和 MMCO5 后恢复。
+可用 `go run ./tools/fixtures` 重建 type 0 样本；type 1 使用
+`go run ./tools/fixtures -poc-type 1 -output testdata/main/main_16x16_yuv420p_cavlc_poc1_007.264`。
+预先设置 CGO_ENABLED=0；向量输出必须由独立 FFmpeg 再次逐像素核验后才能更新 manifest。
+
 ## M3 首批 CABAC 语料
 
 新增三份 Main 语料：64×48 全 I（3 帧）、176×144 I/P（5 帧，init_idc=1）、
