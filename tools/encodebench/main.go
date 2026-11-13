@@ -21,6 +21,7 @@ import (
 )
 
 type report struct {
+	GOPSize                                             int
 	Width, Height, Frames, QP, FPS, SliceCount          int
 	PCM                                                 bool
 	Go, InputSHA256, StreamSHA256, ReconstructionSHA256 string
@@ -72,7 +73,7 @@ func measure(c h264.EncoderConfig, count, slices int, pcm bool) (report, []byte,
 		return report{}, nil, err
 	}
 	defer e.Close()
-	r := report{Width: c.Width, Height: c.Height, Frames: count, QP: c.QP, FPS: c.FPSNum, SliceCount: slices, PCM: pcm, Go: runtime.Version()}
+	r := report{Width: c.Width, Height: c.Height, Frames: count, QP: c.QP, FPS: c.FPSNum, SliceCount: slices, PCM: pcm, Go: runtime.Version(), GOPSize: c.GOPSize}
 	input, output, recon := sha256.New(), sha256.New(), sha256.New()
 	var stream []byte
 	var sums [3]uint64

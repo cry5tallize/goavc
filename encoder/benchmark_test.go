@@ -39,3 +39,31 @@ func benchmarkEncoder(b *testing.B, w, h, fps int, pcm bool) {
 func BenchmarkEncoder_720p_Generic(b *testing.B)    { benchmarkEncoder(b, 1280, 720, 30, false) }
 func BenchmarkEncoder_1080p_Generic(b *testing.B)   { benchmarkEncoder(b, 1920, 1080, 15, false) }
 func BenchmarkEncoderPCM_720p_Generic(b *testing.B) { benchmarkEncoder(b, 1280, 720, 30, true) }
+
+func BenchmarkEncoderP_720p_Generic(b *testing.B) {
+	c := h264.DefaultEncoderConfig()
+	c.Width = 1280
+	c.Height = 720
+	c.GOPSize = 600
+	e, err := New(c)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer e.Close()
+	f := pattern.Frame(c.Width, c.Height, 1)
+	defer f.Release()
+	if err = e.SendFrame(f); err != nil {
+		b.Fatal(err)
+	}
+	e.ReceivePacket()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if err = e.SendFrame(f); err != nil {
+			b.Fatal(err)
+		}
+		if _, err = e.ReceivePacket(); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
