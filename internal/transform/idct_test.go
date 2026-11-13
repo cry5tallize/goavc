@@ -2,6 +2,18 @@ package transform
 
 import "testing"
 
+func TestIDCT4x4_MixedOddCoefficientsRespectPassOrder(t *testing.T) {
+	// Spec: 8.5.12.2。DC=31、(1,1)=1 时，水平蝶形的奇数算术右移
+	// 必须先发生；先垂直会把 (2,3) 的 +1 错放到 (3,2)。
+	in := [16]int32{31, 0, 0, 0, 0, 1}
+	want := [16]int32{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1}
+	var out [16]int32
+	IDCT4x4(&out, &in)
+	if out != want {
+		t.Fatalf("got %v want %v", out, want)
+	}
+}
+
 func TestIDCT4x4_LargeDCDoesNotWrap(t *testing.T) {
 	var in, out [16]int32
 	in[0] = 1<<31 - 1
