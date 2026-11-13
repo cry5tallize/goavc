@@ -1,8 +1,8 @@
 // Package dpb 管理解码图像缓冲与显示顺序状态。
 //
-// M2 只需要“上一帧作为唯一参考 + frame_num 连续性校验 + POC type 0”，
-// 因此本包刻意保持窄接口：不实现多参考列表、MMCO 与输出重排序（M3）。
-// 图像内存归 picture.Pool 所有，DPB 只持有指针并在替换/Reset 时归还。
+// 提供单/多参考、短期/长期参考列表、MMCO 和 POC type 0/1/2。
+// 输出重排由流水线持有公共 Frame；参考图像内存由本包在解除标记或
+// Reset 时归还 picture.Pool，运动共位数据只保留轻量身份。
 package dpb
 
 import (
@@ -12,7 +12,7 @@ import (
 	"github.com/goavc/h264/internal/picture"
 )
 
-// DPB 是单参考帧缓冲。
+// DPB 管理最多 16 个参考帧；默认容量 1 保留 M2 接口行为。
 type DPB struct {
 	ref          *picture.Picture
 	refFrameNum  uint32
@@ -20,21 +20,23 @@ type DPB struct {
 	prevFrameNum uint32
 	hasPrev      bool
 
-	maxFrameNum uint32
-	gapsAllowed bool
+	maxFrameNum    uint32
+	gapsAllowed    bool
+	references     []*Reference
+	maxRefs        int
+	maxLongTermIdx int64
+	nextID         uint64
 }
 
 // New 创建 DPB。maxFrameNum 是 1<<(log2_max_frame_num_minus4+4)。
 func New(maxFrameNum uint32, gapsAllowed bool) *DPB {
-	return &DPB{maxFrameNum: maxFrameNum, gapsAllowed: gapsAllowed}
+	return &DPB{maxFrameNum: maxFrameNum, gapsAllowed: gapsAllowed, maxRefs: 1, maxLongTermIdx: -1}
 }
 
 // Reset 清空参考帧并归还其内存。
 func (d *DPB) Reset() {
-	if d.ref != nil {
-		d.ref.Release()
-		d.ref = nil
-	}
+	d.clearReferences()
+	d.maxLongTermIdx = -1
 	d.hasPrev = false
 	d.prevFrameNum = 0
 	d.refFrameNum = 0
@@ -78,12 +80,10 @@ func (d *DPB) BeginFrame(idr bool, frameNum uint32) error {
 
 // PutReference 把 pic 设为当前参考帧，并归还旧参考帧。
 func (d *DPB) PutReference(pic *picture.Picture, frameNum uint32, poc int32) {
-	if d.ref != nil && d.ref != pic {
-		d.ref.Release()
+	if d.ref == pic {
+		return
 	}
-	d.ref = pic
-	d.refFrameNum = frameNum
-	d.refPOC = poc
+	_ = d.Store(d.NewReference(pic, frameNum, poc), false, false, false, nil)
 }
 
 // Reference 返回当前参考帧；没有参考帧时返回 nil。
