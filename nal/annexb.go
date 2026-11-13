@@ -34,11 +34,20 @@ type AnnexBScanner struct {
 	payloadStart bool
 
 	unitIndex int
+	maxSize   int
 }
 
 // NewAnnexBScanner 创建一个 Annex-B 扫描器。
 func NewAnnexBScanner(r io.Reader) *AnnexBScanner {
 	return &AnnexBScanner{br: bufio.NewReaderSize(r, 64*1024)}
+}
+
+// NewAnnexBScannerWithLimit 在复制 NAL 之前限制其大小（含一个字节的头，
+// 不含起始码与尾零）。maxSize<=0 时沿用无上限的扫描行为。
+func NewAnnexBScannerWithLimit(r io.Reader, maxSize int) *AnnexBScanner {
+	s := NewAnnexBScanner(r)
+	s.maxSize = maxSize
+	return s
 }
 
 // Next 返回下一个 NAL unit；流正常结束时返回 io.EOF。
@@ -75,8 +84,6 @@ func (s *AnnexBScanner) Next() (Unit, error) {
 		// 检测下一个起始码。EBSP 中的防竞争机制保证 payload 内不会出现
 		// 00 00 01，因此这个模式只可能是起始码。
 		if b == 1 && zeros >= 2 {
-			// 最后两个 0 属于起始码，不属于 payload。
-			payload = payload[:len(payload)-2]
 			end := trimTrailingZeros(payload)
 			if end == 0 {
 				s.err = fmt.Errorf("nal: empty NAL unit at index %d: %w", s.unitIndex, h264.ErrInvalidData)
@@ -91,10 +98,17 @@ func (s *AnnexBScanner) Next() (Unit, error) {
 			return unit, nil
 		}
 
-		payload = append(payload, b)
 		if b == 0 {
 			zeros++
 		} else {
+			// 暂存零字节计数；只有确认它们属于 EBSP 时才写入。
+			// 这样起始码与 trailing_zero_8bits 不占用 NAL 大小预算。
+			if s.maxSize > 0 && (len(payload) >= s.maxSize || zeros > s.maxSize-len(payload)-1) {
+				s.err = fmt.Errorf("nal: unit %d exceeds limit %d: %w", s.unitIndex, s.maxSize, h264.ErrResourceLimit)
+				return Unit{}, s.err
+			}
+			payload = append(payload, make([]byte, zeros)...)
+			payload = append(payload, b)
 			zeros = 0
 		}
 	}
