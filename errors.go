@@ -8,7 +8,7 @@ import (
 // 编解码器与流式管道对外暴露的唯一错误集合。
 //
 // 约定：调用方一律使用 errors.Is 判断，因为内部实现会用 %w 包装上下文
-//（例如 "plane 1 stride 8 below row size 16"）。直接比较 == 只对哨兵值本身成立。
+// （例如 "plane 1 stride 8 below row size 16"）。直接比较 == 只对哨兵值本身成立。
 var (
 	// ErrAgain 表示"当前没有输出可拿"。
 	//

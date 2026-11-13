@@ -15,7 +15,7 @@ import (
 
 // PlaneLayout 描述单个平面的几何信息。
 type PlaneLayout struct {
-	Width int
+	Width  int
 	Height int
 	// BytesPerSample 是存储字节数（8 bit 为 1，10/12 bit 为 2）。
 	BytesPerSample int
@@ -132,7 +132,7 @@ func Compare(ref, got []byte, layout Layout) (Result, error) {
 // Size 计算布局对应的总字节数，并检测溢出。
 //
 // 溢出检测是必需的：布局参数来自命令行或码流，超大尺寸会让
-//「长度校验」因为回绕而失效，随后比较循环越界读取。
+// 「长度校验」因为回绕而失效，随后比较循环越界读取。
 func (l Layout) Size() (int, error) {
 	if len(l.Planes) == 0 {
 		return 0, fmt.Errorf("yuvdiff: empty layout")

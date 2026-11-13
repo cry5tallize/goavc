@@ -1,7 +1,7 @@
 // Package decoder 实现解码流水线。
 //
 // 流水线顺序：NAL → RBSP → SPS/PPS/SEI → Slice Header → 熵解码
-//（CAVLC/CABAC）→ 反量化 → 逆变换 → 帧内/帧间预测 → 残差重建
+// （CAVLC/CABAC）→ 反量化 → 逆变换 → 帧内/帧间预测 → 残差重建
 // → 去块滤波 → DPB/POC 重排序 → 输出帧。
 //
 // 关键约束：

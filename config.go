@@ -76,7 +76,7 @@ const (
 // 生命周期约定：调用 NewEncoder 时先由 SetDefaults 补全零值字段，再执行 Validate。
 // 因此直接使用结构体字面量时可以只填 Width/Height，其余留零。
 // 例外是 QP：0 是合法 QP 值，无法与"未设置"区分，所以 QP 必须显式给出
-//（或使用 DefaultEncoderConfig 获得 26）。
+// （或使用 DefaultEncoderConfig 获得 26）。
 type EncoderConfig struct {
 	Width       int
 	Height      int

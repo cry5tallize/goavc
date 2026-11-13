@@ -44,13 +44,13 @@ func TestFrameValidate(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name: "10 bit packed 420",
-			frame: func() *Frame { return newPackedFrame(YUV420P10LE, 1920, 1080) },
+			name:    "10 bit packed 420",
+			frame:   func() *Frame { return newPackedFrame(YUV420P10LE, 1920, 1080) },
 			wantErr: nil,
 		},
 		{
-			name: "444 packed",
-			frame: func() *Frame { return newPackedFrame(YUV444P, 128, 96) },
+			name:    "444 packed",
+			frame:   func() *Frame { return newPackedFrame(YUV444P, 128, 96) },
 			wantErr: nil,
 		},
 		{

@@ -12,7 +12,7 @@ package h264
 // 由上层配置决定；Decoder 会按配置解析，不做自动猜测。
 //
 // 所有权：SendPacket 成功后 Decoder 不会在调用返回后继续持有 Data 引用
-//（如需保留会拷贝到内部缓冲）。因此调用方可以在 SendPacket 返回后复用 Data。
+// （如需保留会拷贝到内部缓冲）。因此调用方可以在 SendPacket 返回后复用 Data。
 type Packet struct {
 	Data []byte
 

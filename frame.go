@@ -106,7 +106,7 @@ func (f PixelFormat) ChromaSubsampling() (subW, subH int) {
 //
 // 这里一律用向上取整（ceil）而不是假设偶数：虽然 H.264 以宏块为单位编码，
 // 但输出帧会按 SPS 的裁剪窗口裁到显示尺寸，显示宽高完全可能是奇数
-//（例如 641×361）。用偶数假设会让这类帧的色度平面少一行/一列。
+// （例如 641×361）。用偶数假设会让这类帧的色度平面少一行/一列。
 func (f PixelFormat) PlaneDimensions(plane, width, height int) (w, h int) {
 	if plane < 0 || plane > 2 || !f.Valid() || width <= 0 || height <= 0 {
 		return 0, 0

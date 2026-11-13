@@ -7,12 +7,12 @@ import "testing"
 // "画面轻微错位"或"内存越界"，极难定位。
 func TestPixelFormatMetadata(t *testing.T) {
 	tests := []struct {
-		format    PixelFormat
-		name      string
-		depth     int
-		bps       int
-		subW      int
-		subH      int
+		format PixelFormat
+		name   string
+		depth  int
+		bps    int
+		subW   int
+		subH   int
 	}{
 		{YUV420P, "yuv420p", 8, 1, 2, 2},
 		{YUV422P, "yuv422p", 8, 1, 2, 1},
