@@ -143,7 +143,7 @@ M5a 已完成本地门禁（`v0.5.1`，远端 CI 待执行）：两种大尺寸�
 | CQP AU 资源门禁 | Annex A / 事务边界 | Auto 几何/帧率校验，实际 AU 上限检查，1080p30 不再因最坏预算在 New 拒绝 | Conformant | `LevelBudgetIsTransactional` 注入超限、已有 Oracle 回归 | 超限返回 ErrResourceLimit 且不发布输出；仍非 HRD/VBV 保证；显式 Level 与 PCM 保留保守初始化检查 |
 | SATD | 编码分析 | 4×4 Hadamard、8×8/16×16 聚合、非对齐 stride、帧内候选搜索 | Conformant | 独立常量/脉冲解析解，正负极值，17 模式实际选择与整帧 Oracle | 不参与解码重建 |
 | RD 代价与决策 | 编码分析 | Q8 lambda、三平面 SSE、实际 CAVLC 位数、MV 比特搜索代价、Skip/四种 P/I4/I16/PCM 全比较 | Conformant | QP 全范围单调性、位数精确、穷举候选最低 J 对照、参考只读、场景变化选择帧内块及完整 Oracle | skip_run 按独立宏块开销估计，不宣称全 slice 全局最优；x264 质量门禁待执行 |
-| RD 剪枝与状态回滚 | 候选事务 | 按 D>=0 与最小语法位数下界提前终止，恢复胜者像素/模式/NZ/MV | Conformant | 未剪枝全部候选对照；逐4×4实际 MV；参考 fuzz 和双解码器 | 非并行；没有以近似像素替代合法模式 |
+| RD 剪枝与状态回滚 | 候选事务 | 按 D>=0/语法下界提前终止；常量运动窗口支配 P 候选；恢复完整状态 | Conformant | 全部未剪枝候选对照、平坦块完整候选结构相等、插值 halo 拒绝、逐4×4 MV、参考 fuzz 和 Oracle | 非并行；未采用近似像素或降低质量换速度；等价剪枝前后基准见性能记录 |
 | 活动度 QP | 编码分析 / mb_qp_delta | AQ strength 0..6、方差分档、QP 0..51 裁剪 | Conformant | 平坦/棋盘解析活动度、实际 QP=23/29、0/26/51 的 36 帧双解码器 Oracle | 默认关闭；与显式宏块 QP 或 PCM 通道冲突时拒绝 |
 
 ## M6–M9

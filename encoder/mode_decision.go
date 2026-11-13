@@ -20,6 +20,10 @@ type rdCandidate struct {
 // SSE，R 来自真实 CAVLC 宏块写出；mb_skip_run 以独立宏块的最小语法开销估计。
 // 候选只修改当前宏块，胜者的像素、模式、NZ 与 MV 一起恢复，避免试探污染邻块。
 func (s *frameState) analyzeRD(addr, previousQP, radius int, full bool) (residual, error) {
+	return s.decideRD(addr, previousQP, radius, full, true)
+}
+
+func (s *frameState) decideRD(addr, previousQP, radius int, full, early bool) (residual, error) {
 	base := s.info[addr]
 	qp := base.qp
 	x, y := addr%s.pic.MBWidth*4, addr/s.pic.MBWidth*4
@@ -53,6 +57,7 @@ func (s *frameState) analyzeRD(addr, previousQP, radius int, full bool) (residua
 	skip := motion.PredictSkip(s.mv, x, y, 0)
 	s.mc(addr, partitions[0][0], skip)
 	skipRes := s.interResidual(addr)
+	uniform := false
 	if s.info[addr].cbp == 0 {
 		s.info[addr].inter = true
 		s.info[addr].skip = true
@@ -64,24 +69,28 @@ func (s *frameState) analyzeRD(addr, previousQP, radius int, full bool) (residua
 			return residual{}, err
 		}
 		// 其余非 Skip 宏块最少 5 bit 且 D>=0，此剪枝不会跳过更低 J 的候选。
-		if best.cost <= rdCost(qp, 0, 5) {
+		if early && best.cost <= rdCost(qp, 0, 5) {
 			s.restoreRD(addr, &best)
 			return best.res, nil
 		}
+		uniform = early && s.uniformPrediction(addr, radius)
 	}
 	for kind := 0; kind < 4; kind++ {
+		if uniform {
+			break
+		}
 		reset()
 		res := s.interCandidate(addr, kind, radius, full)
 		if err = evaluate(res); err != nil {
 			return residual{}, err
 		}
 		// 后续两分区/I16 至少 9 bit；等代价保留先前候选。
-		if kind == 0 && best.distortion == 0 && best.rate <= 9 {
+		if early && kind == 0 && best.distortion == 0 && best.rate <= 9 {
 			break
 		}
 	}
 	// 若零失真胜者已达到所有剩余帧内候选的最小位数，可安全省去其变换。
-	if !(best.distortion == 0 && best.rate <= 9) {
+	if !early || !(best.distortion == 0 && best.rate <= 9) {
 		for _, family := range []int{1, 2} {
 			reset()
 			res := s.analyzeIntra(addr, family)
@@ -93,6 +102,37 @@ func (s *frameState) analyzeRD(addr, previousQP, radius int, full bool) (residua
 	}
 	s.restoreRD(addr, &best)
 	return best.res, nil
+}
+
+// uniformPrediction 证明所有允许 MV 的三个预测平面都为同一常量。
+// 调用前已经确认 Skip 的量化残差全零；因此所有其他 P 分区的 D 相同，
+// R 至少为 5 bit，被 Skip 的 1 bit 严格支配。帧内候选仍须正常比较。
+func (s *frameState) uniformPrediction(addr, radius int) bool {
+	for comp := 0; comp < 3; comp++ {
+		n, pad := 16, radius+4
+		if comp > 0 {
+			n = 8
+			pad = (radius+1)/2 + 2
+		}
+		x, y := addr%s.pic.MBWidth*n, addr/s.pic.MBWidth*n
+		source, reference, pred := &s.src.Planes[comp], &s.reference.Planes[comp], &s.pic.Planes[comp]
+		sv, pv := source.Pix(x, y), pred.Pix(x, y)
+		for j := 0; j < n; j++ {
+			for i := 0; i < n; i++ {
+				if source.Pix(x+i, y+j) != sv || pred.Pix(x+i, y+j) != pv {
+					return false
+				}
+			}
+		}
+		for j := max(0, y-pad); j < min(reference.Height, y+n+pad); j++ {
+			for _, v := range reference.Row(j)[max(0, x-pad):min(reference.Width, x+n+pad)] {
+				if v != pv {
+					return false
+				}
+			}
+		}
+	}
+	return true
 }
 
 func (s *frameState) interCandidate(addr, kind, radius int, full bool) residual {

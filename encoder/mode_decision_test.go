@@ -142,3 +142,85 @@ func TestModeDecision_SceneChangeChoosesIntra(t *testing.T) {
 		t.Fatal("scene change never chose I16 inside P picture")
 	}
 }
+
+func TestModeDecision_FlatPruningMatchesExhaustive(t *testing.T) {
+	for _, qp := range []int{18, 26, 34, 51} {
+		c := h264.DefaultEncoderConfig()
+		c.Width = 16
+		c.Height = 16
+		c.QP = qp
+		e, err := New(c)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ref, _ := picture.New(1, 1)
+		src, _ := picture.New(1, 1)
+		for comp := 0; comp < 3; comp++ {
+			for y := 0; y < ref.Planes[comp].Height; y++ {
+				for x := 0; x < ref.Planes[comp].Width; x++ {
+					ref.Planes[comp].SetPix(x, y, 129)
+					src.Planes[comp].SetPix(x, y, 128)
+				}
+			}
+		}
+		run := func(early bool) rdCandidate {
+			s, err := e.newFrameState(src)
+			if err != nil {
+				t.Fatal(err)
+			}
+			s.reference = ref
+			r, err := s.decideRD(0, qp, 4, true, early)
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := s.captureRD(0, qp, qp, r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return result
+		}
+		if fast, slow := run(true), run(false); fast != slow {
+			t.Fatalf("qp%d flat pruning changed winner J=%d/%d", qp, fast.cost, slow.cost)
+		}
+		e.Close()
+	}
+}
+
+func TestUniformPrediction_IncludesInterpolationHalo(t *testing.T) {
+	c := h264.DefaultEncoderConfig()
+	c.Width = 32
+	c.Height = 32
+	e, err := New(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Close()
+	ref, _ := picture.New(2, 2)
+	src, _ := picture.New(2, 2)
+	for comp := 0; comp < 3; comp++ {
+		for y := 0; y < ref.Planes[comp].Height; y++ {
+			for x := 0; x < ref.Planes[comp].Width; x++ {
+				ref.Planes[comp].SetPix(x, y, 128)
+				src.Planes[comp].SetPix(x, y, 128)
+			}
+		}
+	}
+	s, err := e.newFrameState(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.reference = ref
+	s.mc(0, partitions[0][0], motion.MV{})
+	if !s.uniformPrediction(0, 4) {
+		t.Fatal("uniform rectangle rejected")
+	}
+	ref.Planes[0].SetPix(22, 0, 200)
+	if s.uniformPrediction(0, 4) {
+		t.Fatal("luma interpolation halo ignored")
+	}
+	ref.Planes[0].SetPix(22, 0, 128)
+	ref.Planes[1].SetPix(11, 0, 200)
+	if s.uniformPrediction(0, 4) {
+		t.Fatal("chroma interpolation halo ignored")
+	}
+}

@@ -67,3 +67,36 @@ func BenchmarkEncoderP_720p_Generic(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkEncoderPFlat_720p_Generic(b *testing.B) {
+	c := h264.DefaultEncoderConfig()
+	c.Width = 1280
+	c.Height = 720
+	c.GOPSize = 600
+	e, err := New(c)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer e.Close()
+	f := pattern.Frame(c.Width, c.Height, 1)
+	for comp := range f.Planes {
+		for i := range f.Planes[comp].Data {
+			f.Planes[comp].Data[i] = 129
+		}
+	}
+	defer f.Release()
+	if err = e.SendFrame(f); err != nil {
+		b.Fatal(err)
+	}
+	e.ReceivePacket()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if err = e.SendFrame(f); err != nil {
+			b.Fatal(err)
+		}
+		if _, err = e.ReceivePacket(); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
