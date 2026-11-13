@@ -13,6 +13,8 @@ set -euo pipefail
 
 msg_file="$1"
 subject="$(head -n 1 "$msg_file")"
+# Windows 下 git 可能写入 CRLF；先去掉行尾 CR，避免长度与结尾判断被干扰。
+subject="${subject%$'\r'}"
 
 if [ "${#subject}" -gt 72 ]; then
     printf 'commit-msg: 首行 %d 字符，超过 72 字符上限\n' "${#subject}" >&2
@@ -21,7 +23,7 @@ if [ "${#subject}" -gt 72 ]; then
 fi
 
 if ! printf '%s' "$subject" | grep -Eq \
-    '^(feat|fix|refactor|perf|test|bench|docs|build|ci|chore|style|revert)\[[a-z0-9]+(/[a-z0-9]+)?\]: [a-z0-9][^.]*$'; then
+    '^(feat|fix|refactor|perf|test|bench|docs|build|ci|chore|style|revert)\[[a-z0-9]+(/[a-z0-9]+)?\]: [a-z0-9].*$'; then
     cat >&2 <<'EOF'
 commit-msg: 提交信息格式不符
 
@@ -31,12 +33,19 @@ commit-msg: 提交信息格式不符
   type  : feat fix refactor perf test bench docs build ci chore style revert
   module: repo errors frame packet config bitstream nal syntax picture dpb
           cavlc cabac prediction transform motion filter simd buffer
-          decoder encoder stream cmd deps oracle testdata fuzz bench
+          decoder encoder stream cmd deps oracle testdata fuzz bench release
           status roadmap architecture performance conformance api legal readme
 EOF
     printf '  实际：%s\n' "$subject" >&2
     exit 1
 fi
+
+case "$subject" in
+    *.)
+        printf 'commit-msg: subject 不能以句号结尾\n' >&2
+        exit 1
+        ;;
+esac
 
 case "$subject" in
     *" and "*)

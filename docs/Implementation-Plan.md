@@ -102,6 +102,7 @@ Milestone: M2
 | `stream` | `stream/` |
 | `cmd` | `cmd/h264enc`、`h264dec`、`h264probe` |
 | `deps` / `oracle` / `testdata` / `fuzz` / `bench` | 测试基础设施 |
+| `release` | 里程碑门禁收尾（`chore[release]`） |
 | `status` / `roadmap` / `architecture` / `performance` / `conformance` / `api` / `legal` / `readme` | `docs/` 下对应文件、`LICENSE`、`PATENTS.md` |
 
 **二级形式**（用于精确定位子目录，避免歧义）：`feat[entropy/cavlc]: …`。仅当同级存在同名概念时才用二级形式。
