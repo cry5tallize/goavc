@@ -1,5 +1,18 @@
 # testdata
 
+## M3 High 与不支持边界
+
+七份 High 样本覆盖默认 CABAC（96×64/12 帧、176×144/12 帧、320×240/10 帧、
+64×48/8 帧）、JVT 矩阵 CABAC（160×96/10 帧）、JVT+CAVLC（128×96/10 帧）、
+JVT+双 slice（192×128/12 帧）。都使用 testsrc2 rate=5、x264 medium/High/yuv420p，
+固定 threads=1、aud=1；矩阵样本额外设 cqm=jvt，CAVLC 设 cabac=0，多 slice 设 slices=2。
+High 共 74 帧，输入与 FFmpeg 原始 YUV SHA-256 均登记为 conformant。
+
+合法隔行 Main 样本为 64×64/4 帧，medium/Main/yuv420p、flags=+ildct+ilme、
+x264-params=interlaced=1:tff=1:threads=1:aud=1。它标为 unsupported，测试验证
+返回 ErrUnsupported 后还能在正确 IDR 恢复，不污染后续渐进帧。
+总计 27 条语料：26 条已支持、217 帧 Oracle 回归，1 条已知不支持。
+
 ## M3 B 帧、加权与显示重排
 
 三份 `main_*_cabac_default_008/009/010` 分别为 96×64/16 帧、176×144/14 帧、

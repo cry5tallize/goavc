@@ -156,12 +156,16 @@ func TestDecoder_ConfigurationAndLimits(t *testing.T) {
 }
 
 func TestDecoder_UnsupportedTools(t *testing.T) {
-	s := &syntax.SPS{MaxNumRefFrames: 1}
+	s := &syntax.SPS{MaxNumRefFrames: 1, FrameMbsOnlyFlag: true, ChromaFormatIDC: 1}
 	p := &syntax.PPS{}
 	h := &syntax.SliceHeader{Type: syntax.SliceTypeI}
 	for _, mutate := range []func(*syntax.SPS, *syntax.PPS, *syntax.SliceHeader){
-		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { p.Transform8x8ModeFlag = true },
-		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.SeqScalingMatrixPresentFlag = true },
+		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.FrameMbsOnlyFlag = false },
+		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.MbAdaptiveFrameFieldFlag = true },
+		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.ChromaFormatIDC = 2 },
+		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.BitDepthLumaMinus8 = 2 },
+		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { h.RedundantPicCnt = 1 },
+		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { h.Type = syntax.SliceTypeSP },
 	} {
 		ss, pp, hh := *s, *p, *h
 		mutate(&ss, &pp, &hh)
@@ -336,6 +340,11 @@ func TestDecoder_PCMAndEdgeMotionOracle(t *testing.T) {
 }
 
 func FuzzDecoder_NoPanic(f *testing.F) {
+	if data, err := os.ReadFile("../testdata/high/high_64x48_yuv420p_cabac_default_006.264"); err == nil {
+		f.Add(data)
+	} else {
+		f.Fatal(err)
+	}
 	if data, err := os.ReadFile("../testdata/main/main_64x48_yuv420p_cabac_i_002.264"); err == nil {
 		f.Add(data)
 	} else {

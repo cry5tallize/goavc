@@ -2,7 +2,7 @@
 //
 // 输入单位是访问单元（Packet.Data 为 Annex-B），输出是显示顺序的
 // 4:2:0 8-bit Frame。支持 CAVLC/CABAC 的 I/P/B、多参考/MMCO、direct、加权
-// 预测和 POC 显示重排；High 8x8/ScalingMatrix 正在接入。
+// 预测、High 8x8/ScalingMatrix 和 POC 显示重排，范围为渐进式 8-bit 4:2:0。
 package decoder
 
 import (

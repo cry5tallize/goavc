@@ -42,11 +42,21 @@ func (fs *frameState) decodeResiduals(s *sliceEntry, addr, mbx, mby int, i16, lu
 			for i4 := 0; i4 < 4; i4++ {
 				raster := blockRaster(i4 + 4*i8)
 				nC := fs.lumaNC(mbx, mby, raster%4, raster/4)
-				n, err := cavlc.DecodeBlock(r, &res.luma[raster], cavlc.Luma4x4, nC)
+				target := &res.luma[raster]
+				var stream [16]int32
+				if fs.info[addr].transform8 {
+					target = &stream
+				}
+				n, err := cavlc.DecodeBlock(r, target, cavlc.Luma4x4, nC)
 				if err != nil {
 					return fmt.Errorf("luma block %d: %w", raster, err)
 				}
 				fs.lumaNZ[addr*16+raster] = uint8(n)
+				if fs.info[addr].transform8 {
+					for k := 0; k < 16; k++ {
+						res.luma8[i8][transform.Zigzag8x8[4*k+i4]] = stream[transform.Zigzag4x4[k]]
+					}
+				}
 			}
 		}
 	}
@@ -95,7 +105,7 @@ func (fs *frameState) reconstructIntra4x4(mbx, mby, cbp, qp int, res *residual) 
 		}
 		i8 := (by/2)*2 + bx/2
 		if cbp&(1<<i8) != 0 {
-			if err := addResidual4x4(plane, x, y, &res.luma[raster], qp, nil); err != nil {
+			if err := addResidual4x4(plane, x, y, &res.luma[raster], qp, nil, fs.matrix4(true, 0)); err != nil {
 				return err
 			}
 		}
@@ -113,19 +123,19 @@ func (fs *frameState) reconstructI16(mbx, mby, predMode, chromaMode int, lumaAC 
 		return err
 	}
 	var dc [16]int32
-	if err := transform.DequantLumaDC(&dc, &res.lumaDC, qp); err != nil {
+	if err := transform.DequantLumaDCWithScaling(&dc, &res.lumaDC, qp, dcScale(fs.matrix4(true, 0))); err != nil {
 		return err
 	}
 	for raster := 0; raster < 16; raster++ {
 		var coeff [16]int32
 		if lumaAC {
-			if err := transform.Dequant4x4(&coeff, &res.luma[raster], qp); err != nil {
+			if err := transform.Dequant4x4WithScaling(&coeff, &res.luma[raster], qp, fs.matrix4(true, 0)); err != nil {
 				return err
 			}
 		}
 		coeff[0] = dc[raster]
 		bx, by := raster%4, raster/4
-		if err := addResidual4x4(plane, mbx*16+bx*4, mby*16+by*4, &coeff, qp, &coeff); err != nil {
+		if err := addResidual4x4(plane, mbx*16+bx*4, mby*16+by*4, &coeff, qp, &coeff, nil); err != nil {
 			return err
 		}
 	}
@@ -160,6 +170,16 @@ func (fs *frameState) addLumaResidual(mbx, mby, cbp int, i16 bool, qp int, res *
 	if i16 {
 		return nil
 	}
+	if fs.info[mby*fs.mbW+mbx].transform8 {
+		for block := 0; block < 4; block++ {
+			if cbp&(1<<block) != 0 {
+				if err := fs.addLuma8Block(mbx, mby, block, qp, &res.luma8[block], false); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
 	plane := &fs.pic.Planes[0]
 	for raster := 0; raster < 16; raster++ {
 		bx, by := raster%4, raster/4
@@ -167,7 +187,7 @@ func (fs *frameState) addLumaResidual(mbx, mby, cbp int, i16 bool, qp int, res *
 		if cbp&(1<<i8) == 0 {
 			continue
 		}
-		if err := addResidual4x4(plane, mbx*16+bx*4, mby*16+by*4, &res.luma[raster], qp, nil); err != nil {
+		if err := addResidual4x4(plane, mbx*16+bx*4, mby*16+by*4, &res.luma[raster], qp, nil, fs.matrix4(false, 0)); err != nil {
 			return err
 		}
 	}
@@ -182,21 +202,22 @@ func (fs *frameState) addChromaResidual(mbx, mby, chromaCBP, qp int, res *residu
 	offsets := [2]int{int(fs.pps.ChromaQPIndexOffset), int(fs.pps.SecondChromaQPIndexOffset)}
 	for comp := 0; comp < 2; comp++ {
 		qpc := transform.ChromaQP(qp, offsets[comp])
+		matrix := fs.matrix4(fs.info[mby*fs.mbW+mbx].intra, comp+1)
 		var dc [4]int32
-		if err := transform.DequantChromaDC(&dc, &res.chromaDC[comp], qpc); err != nil {
+		if err := transform.DequantChromaDCWithScaling(&dc, &res.chromaDC[comp], qpc, dcScale(matrix)); err != nil {
 			return err
 		}
 		pl := &fs.pic.Planes[comp+1]
 		for b := 0; b < 4; b++ {
 			var coeff [16]int32
 			if chromaCBP == 2 {
-				if err := transform.Dequant4x4(&coeff, &res.chroma[comp][b], qpc); err != nil {
+				if err := transform.Dequant4x4WithScaling(&coeff, &res.chroma[comp][b], qpc, matrix); err != nil {
 					return err
 				}
 			}
 			coeff[0] = dc[b]
 			bx, by := b%2, b/2
-			if err := addResidual4x4(pl, mbx*8+bx*4, mby*8+by*4, &coeff, qpc, &coeff); err != nil {
+			if err := addResidual4x4(pl, mbx*8+bx*4, mby*8+by*4, &coeff, qpc, &coeff, nil); err != nil {
 				return err
 			}
 		}
@@ -208,11 +229,11 @@ func (fs *frameState) addChromaResidual(mbx, mby, chromaCBP, qp int, res *residu
 //
 // alreadyDequant 为 nil 表示使用 levels 本身做反量化；I16x16 的 DC 已经从
 // 亮度 DC 变换写入 coeff[0]，因此传入同一数组且不再重复反量化 DC。
-func addResidual4x4(pl *picture.Plane, x, y int, levels *[16]int32, qp int, alreadyDequant *[16]int32) error {
+func addResidual4x4(pl *picture.Plane, x, y int, levels *[16]int32, qp int, alreadyDequant *[16]int32, scaling *[16]uint8) error {
 	var dequant [16]int32
 	src := levels
 	if alreadyDequant == nil {
-		if err := transform.Dequant4x4(&dequant, levels, qp); err != nil {
+		if err := transform.Dequant4x4WithScaling(&dequant, levels, qp, scaling); err != nil {
 			return err
 		}
 		src = &dequant

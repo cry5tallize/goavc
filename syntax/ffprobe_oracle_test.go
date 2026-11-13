@@ -48,6 +48,9 @@ func TestFFprobe_SPSMatchesStreamMetadata(t *testing.T) {
 	}
 
 	for _, entry := range m.Entries {
+		if entry.Status == manifest.StatusUnsupported {
+			continue
+		}
 		t.Run(entry.Name, func(t *testing.T) {
 			path := filepath.Join(root, filepath.FromSlash(entry.Path))
 			data, err := os.ReadFile(path)

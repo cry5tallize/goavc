@@ -76,6 +76,14 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 			g.parts = []pPartition{g.pPartition}
 		}
 	}
+	fs.info[addr].allow8 = true
+	for _, g := range groups {
+		for _, p := range g.parts {
+			if p.w < 2 || p.h < 2 {
+				fs.info[addr].allow8 = false
+			}
+		}
+	}
 	for gi, g := range groups {
 		for _, p := range g.parts {
 			x, y := baseX+p.x, baseY+p.y
@@ -131,6 +139,13 @@ func (fs *frameState) interResidual(s *sliceEntry, addr, mbx, mby int, qscale *i
 		return err
 	}
 	fs.info[addr].cbp = cbp
+	if s.pps.Transform8x8ModeFlag && cbp&15 != 0 && fs.info[addr].allow8 {
+		v, err := s.readTransformFlag(fs, addr)
+		if err != nil {
+			return err
+		}
+		fs.info[addr].transform8 = v
+	}
 	if cbp != 0 {
 		if err := s.updateQP(qscale); err != nil {
 			return err

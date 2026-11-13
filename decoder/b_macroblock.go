@@ -81,9 +81,19 @@ func decodeBMacroblock(fs *frameState, addr, mbx, mby, typ int, s *sliceEntry, q
 		return fmt.Errorf("decoder: B macroblock type %d: %w", typ, h264.ErrInvalidData)
 	}
 	needDirect := false
+	fs.info[addr].allow8 = true
 	for _, g := range groups {
 		if g.direct {
 			needDirect = true
+			if !fs.sps.Direct8x8InferenceFlag {
+				fs.info[addr].allow8 = false
+			}
+		} else {
+			for _, p := range g.parts {
+				if p.w < 2 || p.h < 2 {
+					fs.info[addr].allow8 = false
+				}
+			}
 		}
 	}
 	var direct directMotion

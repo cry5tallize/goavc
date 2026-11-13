@@ -24,6 +24,9 @@ func (fs *frameState) deblock() error {
 			}
 			// 垂直边。
 			for _, edgeX := range []int{0, 4, 8, 12} {
+				if info.transform8 && (edgeX == 4 || edgeX == 12) {
+					continue
+				}
 				boundary := edgeX == 0
 				if boundary {
 					if mbx == 0 || fs.skipSliceBoundary(mbx, mby, mbx-1, mby) {
@@ -41,6 +44,9 @@ func (fs *frameState) deblock() error {
 			}
 			// 水平边。
 			for _, edgeY := range []int{0, 4, 8, 12} {
+				if info.transform8 && (edgeY == 4 || edgeY == 12) {
+					continue
+				}
 				boundary := edgeY == 0
 				if boundary {
 					if mby == 0 || fs.skipSliceBoundary(mbx, mby, mbx, mby-1) {
@@ -211,9 +217,7 @@ func (fs *frameState) bSAtBlocks(pbx, pby, qbx, qby int, boundary bool) int {
 		}
 		return 3
 	}
-	pNZ := fs.lumaNZ[pAddr*16+(pby%4)*4+pbx%4]
-	qNZ := fs.lumaNZ[qAddr*16+(qby%4)*4+qbx%4]
-	if pNZ != 0 || qNZ != 0 {
+	if fs.lumaNonzero(pAddr, pbx%4, pby%4) || fs.lumaNonzero(qAddr, qbx%4, qby%4) {
 		return 2
 	}
 	if fs.mv1 != nil {
@@ -232,6 +236,14 @@ func (fs *frameState) bSAtBlocks(pbx, pby, qbx, qby int, boundary bool) int {
 		return 1
 	}
 	return 0
+}
+
+func (fs *frameState) lumaNonzero(addr, bx, by int) bool {
+	if !fs.info[addr].transform8 {
+		return fs.lumaNZ[addr*16+by*4+bx] != 0
+	}
+	base := addr*16 + (by/2)*8 + (bx/2)*2
+	return fs.lumaNZ[base] != 0 || fs.lumaNZ[base+1] != 0 || fs.lumaNZ[base+4] != 0 || fs.lumaNZ[base+5] != 0
 }
 
 // B 边界允许两侧参考列表互换；若两方向恰好引用同一图像，任一成对

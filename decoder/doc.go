@@ -4,8 +4,8 @@
 // （CAVLC 或 CABAC）→ 反量化 → 逆变换 → 帧内/帧间预测 → 残差重建
 // → 去块滤波 → 单参考 DPB/POC → 按 SPS 裁剪输出帧。
 // M3 已接入 CABAC/CAVLC 的多参考 I/P、MMCO/长期参考和 POC type 0/1/2。
-// B 帧、双向/direct、加权与显示重排序已接入；High 8×8/ScalingMatrix
-// 继续在 M3 扩展，当前显式拒绝。
+// B 帧、双向/direct、加权、High 8×8/ScalingMatrix 与显示重排序已接入。
+// 字段编码、High10/422/444、FMO/ASO、SP/SI 与冗余切片仍显式拒绝。
 // 输入为完整 Annex-B 访问单元；增量字节流/AVCC 适配属于 M6。
 //
 // 关键约束：

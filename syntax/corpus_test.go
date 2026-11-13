@@ -31,6 +31,9 @@ func loadCorpus(t *testing.T) []corpusEntry {
 	}
 	var out []corpusEntry
 	for _, e := range m.Entries {
+		if e.Status == manifest.StatusUnsupported {
+			continue
+		}
 		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(e.Path)))
 		if err != nil {
 			t.Fatalf("%s: 读取失败: %v", e.Name, err)

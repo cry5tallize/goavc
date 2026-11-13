@@ -31,6 +31,8 @@ type mbInfo struct {
 	pcm        bool
 	skip       bool
 	direct     bool
+	transform8 bool
+	allow8     bool
 	qp         int
 	cbp        int
 	sliceID    int
@@ -45,11 +47,12 @@ type mbInfo struct {
 
 // frameState 是一帧解码期间的工作状态。
 type frameState struct {
-	d   *Decoder
-	pic *picture.Picture
-	sps *syntax.SPS
-	pps *syntax.PPS
-	poc int32
+	d       *Decoder
+	pic     *picture.Picture
+	sps     *syntax.SPS
+	pps     *syntax.PPS
+	poc     int32
+	scaling syntax.ScalingMatrices
 
 	mbW, mbH, total int
 	decoded         []bool
@@ -66,6 +69,10 @@ type frameState struct {
 }
 
 func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFrame bool) (*frameState, error) {
+	scaling, err := syntax.SelectScalingMatrices(sps, pps)
+	if err != nil {
+		return nil, err
+	}
 	mbW := int(sps.PicWidthInMbs())
 	mbH := int(sps.FrameHeightInMbs())
 	pic, err := d.pool.Get(mbW, mbH)
@@ -74,6 +81,7 @@ func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFrame bool) (*
 	}
 	total := mbW * mbH
 	fs := &frameState{
+		scaling: scaling,
 		d:       d,
 		pic:     pic,
 		sps:     sps,
@@ -175,6 +183,11 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 		return nil
 	}
 	first := slices[0]
+	for i := 1; i < len(slices); i++ {
+		if slices[i].hdr.FirstMBInSlice < slices[i-1].hdr.FirstMBInSlice {
+			return fmt.Errorf("decoder: arbitrary slice order: %w", h264.ErrUnsupported)
+		}
+	}
 	sps, pps := first.sps, first.pps
 	if err := d.checkSupported(sps, pps, first.hdr); err != nil {
 		return err
@@ -325,19 +338,22 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 	return nil
 }
 
-// checkSupported 在进入宏块解码前拒绝 M2 范围外的工具。
+// checkSupported 在进入宏块解码前拒绝 M3 范围外的工具。
 func (d *Decoder) checkSupported(sps *syntax.SPS, pps *syntax.PPS, hdr *syntax.SliceHeader) error {
+	if !sps.FrameMbsOnlyFlag || sps.MbAdaptiveFrameFieldFlag || hdr.FieldPicFlag {
+		return fmt.Errorf("decoder: field/MBAFF coding: %w", h264.ErrUnsupported)
+	}
+	if sps.ChromaFormatIDC != 1 || sps.BitDepthLumaMinus8 != 0 || sps.BitDepthChromaMinus8 != 0 {
+		return fmt.Errorf("decoder: only 8-bit 4:2:0: %w", h264.ErrUnsupported)
+	}
+	if hdr.Type == syntax.SliceTypeSP || hdr.Type == syntax.SliceTypeSI {
+		return fmt.Errorf("decoder: SP/SI slices: %w", h264.ErrUnsupported)
+	}
 	if hdr.SliceQP < 0 || hdr.SliceQP > 51 {
 		return fmt.Errorf("decoder: slice QP %d: %w", hdr.SliceQP, h264.ErrInvalidData)
 	}
 	if hdr.RedundantPicCnt > 0 {
 		return fmt.Errorf("decoder: redundant slices: %w", h264.ErrUnsupported)
-	}
-	if pps.Transform8x8ModeFlag {
-		return fmt.Errorf("decoder: 8x8 transform is not supported in M2: %w", h264.ErrUnsupported)
-	}
-	if sps.SeqScalingMatrixPresentFlag || pps.PicScalingMatrixPresentFlag {
-		return fmt.Errorf("decoder: scaling matrices are not supported in M2: %w", h264.ErrUnsupported)
 	}
 	return nil
 }

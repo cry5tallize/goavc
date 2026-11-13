@@ -496,6 +496,224 @@
       "expectedYUVSha256": "41e461ebd97d1b7aa13fef7116b4fbf8110a0216c36f5de3e8ed53ec1f864236",
       "status": "conformant",
       "notes": "3 frames; FFmpeg 8.0 display-order YUV pixel exact; B/direct/weighted coverage."
+    },
+    {
+      "name": "high_96x64_yuv420p_cabac_default_001",
+      "path": "testdata/high/high_96x64_yuv420p_cabac_default_001.264",
+      "source": "x264",
+      "profile": "high",
+      "level": "1.0",
+      "width": 96,
+      "height": 64,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 1,
+      "refFrames": 4,
+      "tags": [
+        "m3_high",
+        "default"
+      ],
+      "sha256": "77758caee7ac5c349c0546226e316eecc5c724610cf976c3f19919d0a27c0c5a",
+      "expectedYUVSha256": "f87589efeb3c95901c2a734fe7a19a63842222dac171f5bf1fa1f6a2937bb398",
+      "status": "conformant",
+      "notes": "12 frames; FFmpeg 8.0 pixel exact; progressive High 8x8/ScalingMatrix coverage."
+    },
+    {
+      "name": "high_176x144_yuv420p_cabac_default_002",
+      "path": "testdata/high/high_176x144_yuv420p_cabac_default_002.264",
+      "source": "x264",
+      "profile": "high",
+      "level": "1.0",
+      "width": 176,
+      "height": 144,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 1,
+      "refFrames": 4,
+      "tags": [
+        "m3_high",
+        "default"
+      ],
+      "sha256": "f3c820b0d7af7212f06494d1c44aa3c9296e084e4b33b8c4c65d17dc5668e2fe",
+      "expectedYUVSha256": "a45193217735deb961f29255d38dfdc2de33f501909733f1f5fe5a8ae9bd1eee",
+      "status": "conformant",
+      "notes": "12 frames; FFmpeg 8.0 pixel exact; progressive High 8x8/ScalingMatrix coverage."
+    },
+    {
+      "name": "high_320x240_yuv420p_cabac_default_003",
+      "path": "testdata/high/high_320x240_yuv420p_cabac_default_003.264",
+      "source": "x264",
+      "profile": "high",
+      "level": "1.2",
+      "width": 320,
+      "height": 240,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 1,
+      "refFrames": 4,
+      "tags": [
+        "m3_high",
+        "default"
+      ],
+      "sha256": "a63c2aa7d191003956fec4a0c9fa4372d7083316397f448f33b839120149087a",
+      "expectedYUVSha256": "0006cd67506cfa4bc8ae5fff34b87ac44419174a6846443c177aa3edbb1e2e79",
+      "status": "conformant",
+      "notes": "10 frames; FFmpeg 8.0 pixel exact; progressive High 8x8/ScalingMatrix coverage."
+    },
+    {
+      "name": "high_160x96_yuv420p_cabac_jvt_004",
+      "path": "testdata/high/high_160x96_yuv420p_cabac_jvt_004.264",
+      "source": "x264",
+      "profile": "high",
+      "level": "1.0",
+      "width": 160,
+      "height": 96,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 1,
+      "refFrames": 4,
+      "tags": [
+        "m3_high",
+        "scaling_matrix"
+      ],
+      "sha256": "bbc4ba76f3a808bbe6c8e795c2134dbb1ce8152a80ada80d81c1add92c747655",
+      "expectedYUVSha256": "25abd35040cef1ede95fab40979bba342a80afd2da62d666367aad4d87ebdc84",
+      "status": "conformant",
+      "notes": "10 frames; FFmpeg 8.0 pixel exact; progressive High 8x8/ScalingMatrix coverage."
+    },
+    {
+      "name": "high_128x96_yuv420p_cavlc_jvt_005",
+      "path": "testdata/high/high_128x96_yuv420p_cavlc_jvt_005.264",
+      "source": "x264",
+      "profile": "high",
+      "level": "1.0",
+      "width": 128,
+      "height": 96,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 1,
+      "refFrames": 4,
+      "tags": [
+        "m3_high",
+        "scaling_matrix"
+      ],
+      "sha256": "7c9fdd05a0ee3c61cdc17d07a3a15e29f292482004d082651f67c7b888106454",
+      "expectedYUVSha256": "1812c8871d2c02ae918ecf6ee6d46abea88d147c91b9dd4f92a0b8fd8c752fc3",
+      "status": "conformant",
+      "notes": "10 frames; FFmpeg 8.0 pixel exact; progressive High 8x8/ScalingMatrix coverage."
+    },
+    {
+      "name": "high_64x48_yuv420p_cabac_default_006",
+      "path": "testdata/high/high_64x48_yuv420p_cabac_default_006.264",
+      "source": "x264",
+      "profile": "high",
+      "level": "1.0",
+      "width": 64,
+      "height": 48,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 1,
+      "refFrames": 4,
+      "tags": [
+        "m3_high",
+        "default",
+        "fuzz_seed"
+      ],
+      "sha256": "0bfff64abe276cf39a78fbdebc93405d5a27ecde035aa564a39d431f913d552d",
+      "expectedYUVSha256": "c278d7c6e7f61789e807f66cd3e963f515edd23bbb6ca886d0a60656dbf2c749",
+      "status": "conformant",
+      "notes": "8 frames; FFmpeg 8.0 pixel exact; progressive High 8x8/ScalingMatrix coverage."
+    },
+    {
+      "name": "main_64x64_yuv420p_cabac_interlaced_013",
+      "path": "testdata/main/main_64x64_yuv420p_cabac_interlaced_013.264",
+      "source": "x264",
+      "profile": "main",
+      "level": "2.1",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 1,
+      "refFrames": 4,
+      "tags": [
+        "unsupported",
+        "interlaced"
+      ],
+      "sha256": "a5f1bdeeb585eeb32c602e1084db3a65b0a866d915c69d82d15956df8d2f69af",
+      "expectedYUVSha256": "9797520dcb4f2679b4b1975e143ae8b1b6ea4bdfbd3c5f6498f12139594989d1",
+      "status": "unsupported",
+      "notes": "Legal interlaced/MBAFF Main stream; M3 explicitly returns ErrUnsupported; M7 support planned."
+    },
+    {
+      "name": "high_192x128_yuv420p_cabac_multislice_007",
+      "path": "testdata/high/high_192x128_yuv420p_cabac_multislice_007.264",
+      "source": "x264",
+      "profile": "high",
+      "level": "1.0",
+      "width": 192,
+      "height": 128,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 2,
+      "refFrames": 4,
+      "tags": [
+        "m3_high",
+        "scaling_matrix",
+        "multislice"
+      ],
+      "sha256": "f9252a6cb557955995605bb968b0f54f415a8ad9d5407910dc48786d1297aa9e",
+      "expectedYUVSha256": "0dfb70b21c355ab6a9fec342adf5e9aad49dda33324440da5dba08715b793909",
+      "status": "conformant",
+      "notes": "12 frames; FFmpeg 8.0 pixel exact; progressive High 8x8/ScalingMatrix coverage."
     }
   ]
 }

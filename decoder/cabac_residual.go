@@ -82,21 +82,36 @@ func (fs *frameState) decodeCABACResidual(s *sliceEntry, addr, mbx, mby int, i16
 		}
 		fs.dcCoded[0][addr] = n != 0
 	}
-	for n := 0; n < 16; n++ {
-		r := blockRaster(n)
-		if i16 && !lumaAC || !i16 && cbp&(1<<(n/4)) == 0 {
-			continue
+	if fs.info[addr].transform8 {
+		for block := 0; block < 4; block++ {
+			if cbp&(1<<block) == 0 {
+				continue
+			}
+			count, err := c.d.Residual(&c.ctx, cabac.Luma8x8, res.luma8[block][:], transform.Zigzag8x8[:])
+			if err != nil {
+				return err
+			}
+			for i := 0; i < 4; i++ {
+				fs.lumaNZ[addr*16+blockRaster(block*4+i)] = uint8(count)
+			}
 		}
-		cat, scan := cabac.Luma4x4, transform.Zigzag4x4[:]
-		if i16 {
-			cat = cabac.LumaAC
-			scan = scan[1:]
+	} else {
+		for n := 0; n < 16; n++ {
+			r := blockRaster(n)
+			if i16 && !lumaAC || !i16 && cbp&(1<<(n/4)) == 0 {
+				continue
+			}
+			cat, scan := cabac.Luma4x4, transform.Zigzag4x4[:]
+			if i16 {
+				cat = cabac.LumaAC
+				scan = scan[1:]
+			}
+			count, err := block(cat, r%4, r/4, -1, false, res.luma[r][:], scan)
+			if err != nil {
+				return err
+			}
+			fs.lumaNZ[addr*16+r] = uint8(count)
 		}
-		count, err := block(cat, r%4, r/4, -1, false, res.luma[r][:], scan)
-		if err != nil {
-			return err
-		}
-		fs.lumaNZ[addr*16+r] = uint8(count)
 	}
 	chroma := (cbp >> 4) & 3
 	if chroma > 0 {

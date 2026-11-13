@@ -84,28 +84,30 @@ POC type 2 的无重排路径提前纳入 M2，因为 x264 的 Baseline 无 B �
 type 2；type 0 使用合成 PCM/P 码流及独立内核测试验证。这里不宣称完整 Baseline
 Profile 一致性：高级工具仍按支持矩阵返回 `ErrUnsupported`。
 
-## M3：Decoder Main / High（进行中）
+## M3：Decoder Main / High（本地功能已实现）
 
 Main 的逐帧 I/P/B、CABAC/CAVLC、多参考、MMCO/长期参考、加权预测和显示重排已接入。
 三份 x264 默认 Main 样本（96×64、176×144、320×240，合计 42 帧）包含 B-pyramid、
 多参考、隐式加权与 CABAC，全部与 FFmpeg 逐像素一致；另有 CAVLC temporal-direct、
-淡出显式 P 权重及三平面不同显式 B 权重的独立语料。全部 19 条语料已登记输入与
-独立 Oracle 输出哈希。High 8×8/ScalingMatrix 与最终 race 门禁仍待完成。
+淡出显式 P 权重及三平面不同显式 B 权重的独立语料。全部 27 条语料已登记输入与
+独立 Oracle 输出哈希。High 8×8/ScalingMatrix 和 race 已通过验证；完整证据见 `docs/gates/m3.md`。
 
 | Module | 规范条款 | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|---|
 | CABAC 算术/初始化 | 9.3.1 / 9.3.3.2 | 460 上下文、64 状态、I/PB0..2、QP 0..51、停止位、PCM restart、zero-word | Conformant | CABAC 解析 trace、全表测试、真实 Oracle、PCM/填充回归 | 4:4:4 上下文 M7 |
-| CABAC 残差 | 9.3.3.1.3 | 4×4 luma/chroma DC/AC、显著性、level 转义 | Conformant | 固定向量、残差 fuzz、Main Oracle | 8×8 cat5 待接入 |
-| CABAC 宏块/MV/ref_idx | 9.3.3 | I/P/B 各宏块与子分区、skip、QP/CBP、双列表 MVD | Conformant | 默认 Main B-pyramid、多 slice I/P Oracle | 8×8 transform flag 待接入 |
+| CABAC 残差 | 9.3.3.1.3 | 4×4/8×8 luma、chroma DC/AC、显著性、level 转义 | Conformant | 固定向量、残差 fuzz、Main/High Oracle | 4:4:4 扩展 M7 |
+| CABAC 宏块/MV/ref_idx | 9.3.3 | I/P/B、skip、QP/CBP、双列表 MVD、transform8 flag | Conformant | 默认 Main/High B-pyramid、High 多 slice Oracle | 字段与扩展工具 M7 |
 | 参考列表与 MMCO | 8.2.4 / 8.2.5 | P/B 默认列表、短期/长期重排、滑窗、MMCO 1..6、图像池所有权 | Conformant | DPB 独立解析向量、两份 MMCO 语料 | 字段参考 M7 |
 | POC | 8.2.1 | type 0/1/2、非参考帧、周期、回绕、MMCO5 锚点 | Conformant | POC 向量、type1/MMCO Oracle | 字段 POC M7 |
 | B/direct 与去块 | 8.4.1 / 8.7 | 双向预测、spatial/temporal direct、B_Skip、参考身份交换匹配 | Conformant | Main/CAVLC temporal Oracle、B 边界交换单测 | 字段 direct M7 |
 | 加权预测 | 8.4.3.2 | 单向显式、双向显式/隐式、三平面权重与偏移 | Conformant | 淡出样本、显式 B 解析样本、权重/距离向量与 Oracle | 8-bit 4:2:0 范围 |
 | 显示输出 | 公共 API / VUI | POC 排序、VUI 重排深度、PTS/Duration、Flush、IDR/MMCO5 边界 | Conformant | PTS 0..30000 显示顺序、Again/EOF/重复 Flush、输入复用测试 | 增量字节输入 M6 |
-| High | M3 范围 | 8×8 inverse/prediction、ScalingMatrix | TODO | 尚无新增 High 验证 | 下一实现步骤 |
+| High / ScalingMatrix | 8.3.2 / 8.5 / 7.4 | 8×8 inverse/prediction、SPS/PPS fallback、默认/自定义矩阵、CAVLC 交织扫描、8×8 去块 | Conformant | 非 DC 组合解析解、矩阵继承单测、七份 High 74 帧 Oracle | 正变换在编码里程碑；字段/高位深 M7 |
 
 全部普通验证使用 Go 1.27.4、CGO_ENABLED=0、FFmpeg 8.0。M2 Baseline 及之前的
-Main I/P 回归保持通过。当前不把这些证据当作完整 M3 退出门禁，不创建 v0.4.0。
+Main I/P 回归保持通过。最终清单共 27 条，26 条支持样本 217 帧逐像素/固定哈希回归，
+1 条隔行样本明确拒绝。字段不支持及恢复、PTS/Flush、完整 race 均有测试。
+正常构建为 CGO=0；race 使用 Go 检测工具链要求的 CGO=1，不引入编解码运行时依赖。
 
 ## M4–M9
 

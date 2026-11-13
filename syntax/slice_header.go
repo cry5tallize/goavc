@@ -90,8 +90,7 @@ type SliceHeader struct {
 	// CABAC 初始化（仅 CABAC 且非 I/SI 切片存在）。
 	CabacInitIDC uint32
 
-	// B 切片的 direct_spatial_mv_pred_flag。M2 不解码 B 切片，
-	// 保留字段是为了让 header 长度解析与后续 M3 一致。
+	// B 切片的 direct_spatial_mv_pred_flag，选择 spatial 或 temporal direct。
 	DirectSpatialMVPredFlag bool
 
 	// 量化参数。SliceQPDelta 是码流中的 se(v)，SliceQP 是加上
@@ -259,8 +258,7 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 		if h.NumRefIdxL0ActiveMinus1 > 31 || h.NumRefIdxL1ActiveMinus1 > 31 {
 			return nil, fmt.Errorf("syntax: active ref idx minus1 exceeds 31: %w", h264.ErrInvalidData)
 		}
-		// ref_pic_list_reordering()。语法层完整消费命令，M2 解码器
-		// 再根据标志显式拒绝；这样语法测试仍能覆盖 Main/B 码流。
+		// ref_pic_list_reordering()：保留完整命令供 P/B 列表构造消费。
 		if h.RefPicListReorderingL0, err = readFlag(r, "ref_pic_list_reordering_flag_l0"); err != nil {
 			return nil, err
 		}
@@ -281,7 +279,7 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 		}
 	}
 
-	// pred_weight_table()：语法层消费完整表，M2 解码器拒绝。
+	// pred_weight_table()：保留默认值、显式权重和偏移供预测消费。
 	if (pps.WeightedPredFlag && typ == SliceTypeP) ||
 		(pps.WeightedBipredIDC == 1 && typ == SliceTypeB) {
 		h.HasPredWeightTable = true

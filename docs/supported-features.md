@@ -13,7 +13,8 @@
 > FMO/ASO、冗余 slice 等高级工具仍未实现。编码流水线从 M4 开始。
 >
 > **M3 进展：** CABAC/CAVLC 多参考 I/P/B、MMCO 与长期参考已验证；
-> High 8×8/ScalingMatrix 仍待实现。Main 渐进帧 I/P/B、direct、加权预测和重排已验证；M3 门禁尚未完成。
+> High 8×8/ScalingMatrix、Main 渐进帧 I/P/B、direct、加权预测和重排均已验证。
+> Profile 整体保留 Partial，范围外的字段/高位深工具仍明确拒绝；本地门禁证据见 gates/m3.md。
 
 ## 1. Profile
 
@@ -21,7 +22,7 @@
 |---|---|---|---|---|---|
 | Baseline | 66 | CAVLC、I/P | Partial | TODO | M2 单参考无重排已验证；高级工具 M7 / Encoder M4 |
 | Main | 77 | CABAC、B、隔行 | Partial | TODO | M3 渐进帧 I/P/B、MMCO、权重与显示重排已验证；隔行 M7 |
-| High | 100 | 8×8 变换、ScalingMatrix | TODO | TODO | M3 / M5c |
+| High | 100 | 8×8 变换、ScalingMatrix | Partial | TODO | M3 渐进式 8-bit 4:2:0 已验证；字段/扩展 M7；Encoder M5c |
 | High 10 | 110 | 10 bit | TODO | TODO | M7 |
 | High 4:2:2 | 122 | 4:2:2、10 bit | TODO | TODO | M7 |
 | High 4:4:4 Predictive | 244 | 4:4:4、残差预测 | TODO | TODO | M7 |
@@ -44,9 +45,9 @@
 | SPS | 7.3.2.1 | Partial | Partial | M1 解析/序列化 + ffprobe；流水线 M2/M4 |
 | PPS | 7.3.2.2 | Partial | Partial | M1 解析/序列化；独立 PPS Oracle 待补 |
 | VUI | E.1 | Partial | Partial | M1 结构往返；timing/HRD 语义待 Oracle |
-| ScalingList | 7.3.2.1.1.1 | Partial | Partial | M1 解析/序列化；应用在 M3 |
+| ScalingList | 7.3.2.1.1.1 | Conformant | Partial | M3 4×4/8×8、SPS/PPS fallback、JVT 与实际应用 Oracle |
 | SEI（user_data / recovery point） | 7.3.2.3 | Partial | Partial | M1 框架与 user_data；其余语义消息 M2/M3 |
-| Slice Header | 7.3.3 | Conformant | Partial | M2 CAVLC I/P 完整头部已接入；高级工具显式拒绝 |
+| Slice Header | 7.3.3 | Conformant | Partial | M3 I/P/B、重排、权重和 MMCO 参数保留并消费；范围外工具明确拒绝 |
 | Macroblock Layer | 7.3.4 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
 | Slice Data Partitioning | 7.3.5 | TODO | Unsupported | M7 |
 
@@ -59,7 +60,7 @@
 | CAVLC：level prefix / suffix / 转义 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
 | CABAC：算术编解码器 | Conformant | TODO | M3 解码 MPS/LPS/bypass/terminate 解析解与 Oracle；编码 M5 |
 | CABAC：上下文初始化与状态转移 | Conformant | TODO | M3 4:2:0 使用的 460 个上下文、64 状态已验证；4:4:4 M7 |
-| CABAC：宏块/MV/残差上下文 | Partial | TODO | M3 多参考 I/P/B、双列表 MVD、ref_idx、4×4 已验证；8×8 待接入 |
+| CABAC：宏块/MV/残差上下文 | Conformant | TODO | M3 多参考 I/P/B、双列表、ref_idx、4×4/8×8 Oracle |
 | CABAC：terminate / cabac_zero_word | Conformant | TODO | M3 停止位、PCM 重启、Annex-B zero-word 与 Oracle 已验证 |
 
 ## 5. 预测
@@ -67,7 +68,7 @@
 | 特性 | Decoder | Encoder | 备注 |
 |---|---|---|---|
 | Intra 4×4（9 模式） | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
-| Intra 8×8（High） | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
+| Intra 8×8（High） | Conformant | TODO | M3 滤波邻域、九方向解析向量及七份 High Oracle |
 | Intra 16×16（4 模式） | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
 | Chroma 8×8（4:2:0） | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
 | Chroma 4:2:2 | Unsupported | TODO | 当前 SPS 显式拒绝；M7 实现 |
@@ -85,9 +86,9 @@
 | 4×4 逆/正整数变换 | Partial | TODO | M2 逆变换 Conformant；正变换 M4 |
 | 4×4 亮度 DC Hadamard | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
 | 2×2 色度 DC Hadamard | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
-| 8×8 逆/正变换 | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
+| 8×8 逆/正变换 | Partial | TODO | M3 逆变换 Conformant；正变换属于编码阶段 |
 | 量化 / 反量化 | Partial | TODO | M2 反量化 Conformant；量化 M4 |
-| ScalingMatrix 应用 | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
+| ScalingMatrix 应用 | Conformant | TODO | M3 4×4/8×8/DC，默认、SPS/PPS、自定义及 JVT Oracle |
 | 10 bit 变换路径 | TODO | TODO | M7 |
 
 ## 7. 滤波
@@ -104,9 +105,9 @@
 | 特性 | Decoder | Encoder | 备注 |
 |---|---|---|---|
 | 单参考帧 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
-| 多参考帧 + reordering | Conformant | TODO | M3 P 列表、短期/长期重排已通过解析解与 Oracle；B 接入待完成 |
+| 多参考帧 + reordering | Conformant | TODO | M3 P/B 列表、短期/长期重排通过解析解与 Oracle |
 | POC type 0 / 1 / 2 | Conformant | TODO | M3 三种渐进帧推导、MMCO5 与 B 显示重排已验证 |
-| 滑动窗口标记 | TODO | TODO | M3 |
+| 滑动窗口标记 | Conformant | TODO | M3 PicNum 回绕排序、淘汰与所有权单测/Oracle |
 | MMCO（含长期参考） | Conformant | TODO | M3 操作 1..6、长期参考、重置及专设 Oracle 语料；字段 M7 |
 | 输出重排序与延迟输出 | Conformant | TODO | M3 VUI/POC 缓冲、PTS/Duration 与 Flush 已验证 |
 | Flush 排空语义 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |

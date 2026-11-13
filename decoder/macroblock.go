@@ -25,12 +25,13 @@ var interCBPMap = [48]uint8{
 	17, 18, 20, 24, 19, 21, 26, 28, 23, 27, 29, 30, 22, 25, 38, 41,
 }
 
-// residual 保存一个宏块的 CAVLC level（尚未反量化）。
+// residual 保存两种熵模式共用的宏块 level（尚未反量化）。
 type residual struct {
 	luma     [16][16]int32 // 光栅块顺序
 	chroma   [2][4][16]int32
 	lumaDC   [16]int32
 	chromaDC [2][4]int32
+	luma8    [4][64]int32
 }
 
 // blockRaster 把比特流中的 4x4 块序号（8x8 分组）映射为光栅下标。
@@ -107,7 +108,7 @@ func decodeMacroblock(fs *frameState, addr int, s *sliceEntry, sliceID int, qsca
 	return decodeIntraMacroblock(fs, addr, mbx, mby, int(mbType), s, qscale)
 }
 
-// decodeIntraMacroblock 处理 I 宏块（I4x4 / I16x16 / I_PCM）。
+// decodeIntraMacroblock 处理 I 宏块（I4x4 / I8x8 / I16x16 / I_PCM）。
 func decodeIntraMacroblock(fs *frameState, addr, mbx, mby, mbType int, s *sliceEntry, qscale *int) error {
 	info := &fs.info[addr]
 	info.intra = true
@@ -120,15 +121,25 @@ func decodeIntraMacroblock(fs *frameState, addr, mbx, mby, mbType int, s *sliceE
 		return decodePCMMacroblock(fs, addr, mbx, mby, s)
 	}
 	if mbType == 0 {
-		// Intra4x4。
+		// IntraNxN：PPS 允许时先读取 8×8 标志，再读取对应数量的模式。
 		if fs.pps.Transform8x8ModeFlag {
-			// 该标志只在 transform_8x8_mode_flag=1 时存在；M2 已在
-			// checkSupported 中拒绝，这里保留防御。
-			return fmt.Errorf("decoder: transform8x8 flag in intra4x4: %w", h264.ErrUnsupported)
+			v, err := s.readTransformFlag(fs, addr)
+			if err != nil {
+				return err
+			}
+			info.transform8 = v
 		}
 		var modes [16]int8
-		for n := 0; n < 16; n++ {
-			raster := blockRaster(n)
+		count := 16
+		if info.transform8 {
+			count = 4
+		}
+		for n := 0; n < count; n++ {
+			index := n
+			if info.transform8 {
+				index = n * 4
+			}
+			raster := blockRaster(index)
 			pred := fs.mostProbableMode(mbx, mby, raster)
 			mode, err := s.readIntraMode(pred)
 			if err != nil {
@@ -143,6 +154,12 @@ func decodeIntraMacroblock(fs *frameState, addr, mbx, mby, mbType int, s *sliceE
 			// 立即写回缓存：后续块的 MPM 需要已解析的邻块模式，
 			// 若等整个循环结束再赋值，所有 pred 都会退化为 DC。
 			info.intraModes[raster] = int8(mode)
+			if info.transform8 {
+				for _, offset := range []int{0, 1, 4, 5} {
+					modes[raster+offset] = int8(mode)
+					info.intraModes[raster+offset] = int8(mode)
+				}
+			}
 		}
 		chromaMode, err := s.readChromaMode(fs, addr)
 		if err != nil {
@@ -168,8 +185,14 @@ func decodeIntraMacroblock(fs *frameState, addr, mbx, mby, mbType int, s *sliceE
 		if err := fs.decodeResiduals(s, addr, mbx, mby, false, false, cbp, &res); err != nil {
 			return err
 		}
-		if err := fs.reconstructIntra4x4(mbx, mby, cbp, *qscale, &res); err != nil {
-			return err
+		if info.transform8 {
+			if err := fs.reconstructIntra8x8(mbx, mby, cbp, *qscale, &res); err != nil {
+				return err
+			}
+		} else {
+			if err := fs.reconstructIntra4x4(mbx, mby, cbp, *qscale, &res); err != nil {
+				return err
+			}
 		}
 		// I4x4 宏块的色度仍然使用 8x8 帧内预测（与亮度模式无关）。
 		if err := fs.predictChroma(mbx, mby, int(chromaMode)); err != nil {
