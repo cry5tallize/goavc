@@ -58,6 +58,10 @@ func DetectBoundary(prev, curr Unit, prevInfo, currInfo *SliceInfo) Boundary {
 	if curr.Header.Type == TypeAUD {
 		return BoundaryNew
 	}
+	// end of sequence/stream 关闭当前 AU；它之后的任何 NAL 都开启新 AU。
+	if prev.Header.Type == TypeEndOfSequence || prev.Header.Type == TypeEndOfStream {
+		return BoundaryNew
+	}
 	currVCL := curr.Header.IsVCL()
 	prevVCL := prev.Header.IsVCL()
 

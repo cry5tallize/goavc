@@ -34,6 +34,8 @@ func TestDetectBoundary_NALSequenceRules(t *testing.T) {
 		{"EOS after slice", slice, unitOf(TypeEndOfSequence, 3), BoundarySame},
 		{"EOSTREAM after slice", slice, unitOf(TypeEndOfStream, 3), BoundarySame},
 		{"filler after slice", slice, unitOf(TypeFiller, 3), BoundarySame},
+		{"SPS after EOS", unitOf(TypeEndOfSequence, 3), sps, BoundaryNew},
+		{"slice after EOSTREAM", unitOf(TypeEndOfStream, 3), slice, BoundaryNew},
 		{"SPS then slice", sps, slice, BoundarySame},
 		{"PPS then slice", unitOf(TypePPS, 3), slice, BoundarySame},
 		{"SEI then slice", unitOf(TypeSEI, 0), slice, BoundarySame},
