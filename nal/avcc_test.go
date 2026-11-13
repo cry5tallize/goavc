@@ -46,6 +46,34 @@ func TestSplitAVCC_LengthSizes(t *testing.T) {
 	}
 }
 
+// TestAVCCReader_ChunkMatrix 验证任意 Read 分块（含前缀被切开）得到相同 NAL。
+func TestAVCCReader_ChunkMatrix(t *testing.T) {
+	units := []Unit{
+		{Header: Header{RefIDC: 3, Type: TypeSPS}, Payload: []byte{0x42, 0xC0, 0x0A, 0x80}},
+		{Header: Header{RefIDC: 3, Type: TypePPS}, Payload: []byte{0xCE, 0x0F, 0x2C, 0x80}},
+		{Header: Header{RefIDC: 3, Type: TypeSliceIDR}, Payload: []byte{0x88, 0x84, 0x11, 0xFF}},
+	}
+	stream := avccStream(3, units...)
+	for _, chunk := range []int{1, 2, 3, 4, 7, 4096, len(stream) + 1} {
+		reader, err := NewAVCCReader(&chunkReader{data: stream, chunk: chunk}, 3)
+		if err != nil {
+			t.Fatalf("chunk=%d 构造失败: %v", chunk, err)
+		}
+		var got []Unit
+		for {
+			u, err := reader.Next()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				t.Fatalf("chunk=%d 读取失败: %v", chunk, err)
+			}
+			got = append(got, u)
+		}
+		mustEqualUnits(t, got, units)
+	}
+}
+
 // TestAVCCReader_EOFAndTruncation 验证空流、半截前缀与半截 payload。
 func TestAVCCReader_EOFAndTruncation(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
