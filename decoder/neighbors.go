@@ -130,13 +130,7 @@ func (fs *frameState) mostProbableMode(mbx, mby, raster int) int {
 	} else if fs.intraNeighbor(addr, addr-fs.mbW) {
 		top = fs.neighborIntraMode(addr-fs.mbW, 3*4+bx)
 	}
-	if left < 0 || top < 0 {
-		return prediction.Intra4x4DC
-	}
-	if left < top {
-		return left
-	}
-	return top
+	return prediction.MostProbableIntra4x4(left, top)
 }
 
 // neighborIntraMode 返回邻块用于 MPM 的帧内模式。
