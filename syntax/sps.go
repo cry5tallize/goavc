@@ -296,16 +296,18 @@ func (s *SPS) validateSupported() error {
 		return fmt.Errorf("syntax: profile_idc %d is not supported in M1: %w",
 			s.ProfileIDC, h264.ErrUnsupported)
 	}
-	if s.SeparateColourPlaneFlag {
-		return fmt.Errorf("syntax: separate_colour_plane_flag is not supported: %w", h264.ErrUnsupported)
-	}
-	if s.ChromaFormatIDC != 1 {
-		return fmt.Errorf("syntax: chroma_format_idc %d is not supported (only 4:2:0): %w",
-			s.ChromaFormatIDC, h264.ErrUnsupported)
-	}
-	if s.BitDepthLumaMinus8 != 0 || s.BitDepthChromaMinus8 != 0 {
-		return fmt.Errorf("syntax: bit depth %d/%d is not supported (only 8-bit): %w",
-			s.BitDepthLumaMinus8+8, s.BitDepthChromaMinus8+8, h264.ErrUnsupported)
+	if usesHighProfileSyntax(s.ProfileIDC) {
+		if s.SeparateColourPlaneFlag {
+			return fmt.Errorf("syntax: separate_colour_plane_flag is not supported: %w", h264.ErrUnsupported)
+		}
+		if s.ChromaFormatIDC != 1 {
+			return fmt.Errorf("syntax: chroma_format_idc %d is not supported (only 4:2:0): %w",
+				s.ChromaFormatIDC, h264.ErrUnsupported)
+		}
+		if s.BitDepthLumaMinus8 != 0 || s.BitDepthChromaMinus8 != 0 {
+			return fmt.Errorf("syntax: bit depth %d/%d is not supported (only 8-bit): %w",
+				s.BitDepthLumaMinus8+8, s.BitDepthChromaMinus8+8, h264.ErrUnsupported)
+		}
 	}
 	if !s.FrameMbsOnlyFlag {
 		return fmt.Errorf("syntax: interlaced/field coding is not supported: %w", h264.ErrUnsupported)
@@ -313,9 +315,21 @@ func (s *SPS) validateSupported() error {
 	return nil
 }
 
+// effectiveChromaFormatIDC 返回实际生效的色度格式。
+//
+// 非 High 系列 profile 的语法里没有 chroma_format_idc，按规范隐含为 1
+// （4:2:0）。这样手工构造的 SPS 即使没有显式填 ChromaFormatIDC 也能正确
+// 计算平面尺寸。
+func (s *SPS) effectiveChromaFormatIDC() uint32 {
+	if !usesHighProfileSyntax(s.ProfileIDC) {
+		return 1
+	}
+	return s.ChromaFormatIDC
+}
+
 // SubWidthC 返回亮度到色度的水平抽样因子（§6.2）。
 func (s *SPS) SubWidthC() uint64 {
-	switch s.ChromaFormatIDC {
+	switch s.effectiveChromaFormatIDC() {
 	case 1, 2:
 		return 2
 	default:
@@ -325,7 +339,7 @@ func (s *SPS) SubWidthC() uint64 {
 
 // SubHeightC 返回亮度到色度的垂直抽样因子（§6.2）。
 func (s *SPS) SubHeightC() uint64 {
-	switch s.ChromaFormatIDC {
+	switch s.effectiveChromaFormatIDC() {
 	case 1:
 		return 2
 	case 2:
