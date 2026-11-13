@@ -58,24 +58,28 @@ func weakLumaLine(data []byte, p0, p1, p2, q0, q1, q2, tcOrig, beta int) {
 	if tcOrig < 0 {
 		return
 	}
+	// 先快照原始像素：规范与 libavcodec 都用 p1/q1 的原始值计算
+	// p0/q0 的 delta，即使 p1/q1 已被本次滤波修改。
+	p0v, p1v, p2v := int(data[p0]), int(data[p1]), int(data[p2])
+	q0v, q1v, q2v := int(data[q0]), int(data[q1]), int(data[q2])
 	tc := tcOrig
-	if abs(int(data[p2])-int(data[p0])) < beta {
+	if abs(p2v-p0v) < beta {
 		if tcOrig != 0 {
-			avg := (int(data[p2]) + ((int(data[p0]) + int(data[q0]) + 1) >> 1)) >> 1
-			data[p1] = clipPixel(int(data[p1]) + clipInt(avg-int(data[p1]), -tcOrig, tcOrig))
+			avg := (p2v + ((p0v + q0v + 1) >> 1)) >> 1
+			data[p1] = clipPixel(p1v + clipInt(avg-p1v, -tcOrig, tcOrig))
 		}
 		tc++
 	}
-	if abs(int(data[q2])-int(data[q0])) < beta {
+	if abs(q2v-q0v) < beta {
 		if tcOrig != 0 {
-			avg := (int(data[q2]) + ((int(data[p0]) + int(data[q0]) + 1) >> 1)) >> 1
-			data[q1] = clipPixel(int(data[q1]) + clipInt(avg-int(data[q1]), -tcOrig, tcOrig))
+			avg := (q2v + ((p0v + q0v + 1) >> 1)) >> 1
+			data[q1] = clipPixel(q1v + clipInt(avg-q1v, -tcOrig, tcOrig))
 		}
 		tc++
 	}
-	delta := clipInt((((int(data[q0])-int(data[p0]))*4)+int(data[p1])-int(data[q1])+4)>>3, -tc, tc)
-	data[p0] = clipPixel(int(data[p0]) + delta)
-	data[q0] = clipPixel(int(data[q0]) - delta)
+	delta := clipInt((((q0v-p0v)*4)+p1v-q1v+4)>>3, -tc, tc)
+	data[p0] = clipPixel(p0v + delta)
+	data[q0] = clipPixel(q0v - delta)
 }
 
 // strongLumaLine 实现 bS==4 的亮度强滤波。

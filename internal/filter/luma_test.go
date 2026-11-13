@@ -61,6 +61,18 @@ func TestLumaEdge_ConstantUnaffected(t *testing.T) {
 	}
 }
 
+func TestLumaEdge_WeakUsesOriginalNeighbors(t *testing.T) {
+	pix, stride := edgeRows(4, 10, 0, 10, 10, 20, 21, 20, 20)
+	LumaEdge(pix, 4, stride, 1, 1, 51, 0, 0)
+	// Spec: 8.7.2.3。delta=(4*(20-10)+0-21+4)>>3=2。
+	// p1/q1 同时会被更新，但不能用更新值重算 delta。
+	for y := 0; y < 4; y++ {
+		if pix[y*stride+3] != 12 || pix[y*stride+4] != 18 {
+			t.Fatalf("row %d: %v", y, pix[y*stride:y*stride+8])
+		}
+	}
+}
+
 func TestLumaEdge_HorizontalOrientation(t *testing.T) {
 	// 水平边界：q0 在 (0,y)，p0 在上一行；lineStep=1、acrossStep=stride。
 	const stride = 8
