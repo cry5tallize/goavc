@@ -14,11 +14,15 @@ package transform
 // 行列两遍使用同一组蝶形；第二遍的 >>1 是规范中的 (d[1]>>1)-d[3]
 // 形式，注意 Go 的算术右移对负数是向下取整，与 C 在 x86 上的行为一致。
 func IDCT4x4(dst *[16]int32, src *[16]int32) {
-	var b [16]int32
-	copy(b[:], src[:])
+	// 反量化可合法返回接近 int32 边界的值；蝶形临时量使用 int64，
+	// 避免在最后的归一化右移之前发生回绕。
+	var b [16]int64
+	for i, v := range src {
+		b[i] = int64(v)
+	}
 	b[0] += 32
 
-	var tmp [16]int32
+	var tmp [16]int64
 	// 列方向（第一遍）：对每一列做 4 点蝶形。
 	for i := 0; i < 4; i++ {
 		z0 := b[i+0*4] + b[i+2*4]
@@ -36,10 +40,10 @@ func IDCT4x4(dst *[16]int32, src *[16]int32) {
 		z1 := tmp[i*4+0] - tmp[i*4+2]
 		z2 := (tmp[i*4+1] >> 1) - tmp[i*4+3]
 		z3 := tmp[i*4+1] + (tmp[i*4+3] >> 1)
-		dst[i*4+0] = (z0 + z3) >> 6
-		dst[i*4+1] = (z1 + z2) >> 6
-		dst[i*4+2] = (z1 - z2) >> 6
-		dst[i*4+3] = (z0 - z3) >> 6
+		dst[i*4+0] = int32((z0 + z3) >> 6)
+		dst[i*4+1] = int32((z1 + z2) >> 6)
+		dst[i*4+2] = int32((z1 - z2) >> 6)
+		dst[i*4+3] = int32((z0 - z3) >> 6)
 	}
 }
 
@@ -49,5 +53,5 @@ func IDCT4x4(dst *[16]int32, src *[16]int32) {
 // 因此残差为 (dc + 32) >> 6。CAVLC 中大量块属于这种情况，
 // 单独提供该函数可避免 16 次蝶形运算；语义与 IDCT4x4 完全一致。
 func IDCT4x4DC(dc int32) int32 {
-	return (dc + 32) >> 6
+	return int32((int64(dc) + 32) >> 6)
 }

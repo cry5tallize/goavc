@@ -2,6 +2,20 @@ package transform
 
 import "testing"
 
+func TestIDCT4x4_LargeDCDoesNotWrap(t *testing.T) {
+	var in, out [16]int32
+	in[0] = 1<<31 - 1
+	IDCT4x4(&out, &in)
+	for _, v := range out {
+		if v != 33554432 {
+			t.Fatalf("large DC wraps: %v", out)
+		}
+	}
+	if got := IDCT4x4DC(in[0]); got != 33554432 {
+		t.Fatal(got)
+	}
+}
+
 func TestIDCT4x4_DCOnly(t *testing.T) {
 	for _, tc := range []struct {
 		dc, want int32
