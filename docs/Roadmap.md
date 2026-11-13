@@ -267,7 +267,7 @@ M6/M7/M8 ───────────► M9 生产化与发布
 |---|---|---|---|---|
 | M0 | 工程基础与规范准备 | 骨架、API 草案、CI、Oracle 框架、语料 manifest | S | WIP（本地通过，待 CI） |
 | M1 | Bitstream Foundation | BitReader/Writer、RBSP/EBSP、NAL、Annex-B/AVCC、avcC、AU 组装、SPS/PPS | M | WIP（本地门禁通过，待 CI） |
-| M2 | Decoder Baseline | CAVLC + Intra + P + MC + 4×4 IDCT + Deblock + 基础 DPB，与 FFmpeg 逐像素一致 | L | TODO |
+| M2 | Decoder Baseline | CAVLC + Intra + P + MC + 4×4 IDCT + Deblock + 基础 DPB，与 FFmpeg 逐像素一致 | L | WIP（本地门禁通过，待 CI；见 gates/m2.md） |
 | M3 | Decoder Main/High | CABAC、B Slice、POC、RefList、MMCO、8×8、ScalingMatrix、延迟输出 | L | TODO |
 | M4 | Encoder Baseline | SPS/PPS Writer、IDR、I_PCM、I4×4/I16×16、CAVLC、CQP、本地重建、Annex-B | L | TODO |
 | M5 | Encoder Main/High | P Slice、ME/MC、亚像素、模式决策、RD、B Frame、CABAC、8×8、GOP、RC | XL | TODO |
@@ -351,19 +351,19 @@ M6/M7/M8 ───────────► M9 生产化与发布
 - 4:2:0 8-bit 反扫描与重建。
 - P Slice：MV 预测、整像素/亚像素 MC（4×4/8×8/16×16 分割至少到 8×8）、P_Skip。
 - Deblocking（luma + chroma，边界强度 bS 计算，alpha/beta 表）。
-- 基础 DPB：单参考帧 + `frame_num` 校验；POC type 0 基础实现。
+- 基础 DPB：单参考帧 + `frame_num` 校验；无重排 POC type 0/2（type 2 提前接入 x264 Baseline 语料）。
 - 错误处理：非法码流返回明确错误并进入"等待 IDR"状态。
 
 **范围外：** CABAC、B Slice、8×8 transform、ScalingMatrix、MMCO、Weighted Prediction、多参考帧 reordering、字段编码。
 
-**退出标准：**
-- [ ] 至少 3 份 Baseline 语料（不同分辨率、含 I/P、含多 slice）解码输出与 FFmpeg `-f rawvideo -pix_fmt yuv420p` **Y/U/V 三平面逐像素完全相等**（按显示顺序、按 crop 尺寸比较）。
-- [ ] 多 slice 帧可正确解码（slice 边界滤波强度正确）。
-- [ ] P_Skip 与 MV 边界裁剪（超出图像边界）与 Oracle 一致。
-- [ ] CAVLC 对 `nC = -1`（chroma DC）与 16×16 DC 的特殊路径有独立测试。
-- [ ] 语料中所有 Baseline 样本 `manifest.json` 状态标为 `Conformant`；不支持的码流标 `Unsupported` 并验证返回 `ErrUnsupported`。
-- [ ] 1080p 解码基准记录首次实测值到 `docs/performance.md`（作为 M8 优化基线）。
-- [ ] 解码路径 `alloc/op` 基线记录（用于 M8 目标）。
+**退出标准：** 本地证据见 [M2 门禁记录](gates/m2.md)，远端 CI 尚待执行。
+- [x] 至少 3 份 Baseline 语料（不同分辨率、含 I/P、含多 slice）解码输出与 FFmpeg `-f rawvideo -pix_fmt yuv420p` **Y/U/V 三平面逐像素完全相等**（按显示顺序、按 crop 尺寸比较）。
+- [x] 多 slice 帧可正确解码（slice 边界滤波强度正确）。
+- [x] P_Skip 与 MV 边界裁剪（超出图像边界）与 Oracle 一致。
+- [x] CAVLC 对 `nC = -1`（chroma DC）与 16×16 DC 的特殊路径有独立测试。
+- [x] 语料中所有 Baseline 样本 `manifest.json` 状态标为 `Conformant`；不支持的码流标 `Unsupported` 并验证返回 `ErrUnsupported`。
+- [x] 1080p 解码基准记录首次实测值到 `docs/performance.md`（作为 M8 优化基线）。
+- [x] 解码路径 `alloc/op` 基线记录（用于 M8 目标）。
 
 **风险：**
 - 差分测试"看起来对但顺序错" → 强制按 PTS/显示顺序对齐比较，禁止按解码顺序比较。

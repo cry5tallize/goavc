@@ -7,6 +7,7 @@
 > 输出 8-bit YUV420；支持 CAVLC、I/P、单参考、多 slice、P_Skip、去块与裁剪。
 > 五份真实 Baseline 语料（含 1080p）通过 FFmpeg 逐像素对比，CI 可核验固定
 > Oracle 输出哈希。编码器从 M4 开始；CABAC/B/多参考等工具明确返回 `ErrUnsupported`。
+> 本地退出证据见 [M2 门禁记录](docs/gates/m2.md)，远端 CI 待执行。
 > 进度及边界见 [实现状态](docs/implementation-status.md) 与 [支持矩阵](docs/supported-features.md)。
 
 ## 硬约束
