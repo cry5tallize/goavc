@@ -127,7 +127,15 @@ Main I/P 回归保持通过。最终清单共 27 条，26 条支持样本 217 �
 全量 verify、race、两项 fuzz、六目标交叉编译均通过；性能与码率/PSNR 已记录。
 完整证据见 `docs/gates/m4.md`，用法见 `docs/encoder.md`。本地标签 `v0.5.0`；远端 CI 尚待执行。
 
-## M5–M9
+## M5：Encoder Inter / Main / High（进行中）
+
+质量协议已在开工时固定于 `docs/conformance.md`；M5a/b/c/d 各自验证，不能替代整体门禁。
+
+| Module | 规范条款/职责 | Scope | Status | Tests | Known gaps |
+|---|---|---|---|---|---|
+| `motion/search` | 编码分析；MC 契约 8.4.2 | SAD、穷举、菱形、范围自适应、半/四像素细化 | Conformant | SAD 解析值、已知整数/亚像素平移、边界与局部搜索差值 | 编码流水线尚未接入；菱形非全局最优承诺；独立子包避免 prediction→motion 的依赖环 |
+
+## M6–M9
 
 后续里程碑的模块表在对应里程碑开工时补全；开工前这里只保留占位，
 避免出现"提前承诺、实际未实现"的记录失真。

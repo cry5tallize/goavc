@@ -1,5 +1,8 @@
 # 支持矩阵
 
+> **M5 开工：** 先推进 M5a。SAD、full/diamond 与亚像素搜索已有解析向量验证，
+> 连续 P 帧流水线尚待接入；M5 整体门禁未通过，质量阈值见 conformance.md。
+
 > **M4 进展：** `encoder.New` 默认执行串行 Baseline CQP 的 I4/I16/色度压缩，
 > 每帧独立 IDR；支持 I_PCM 选项、1..64 slice、偶数显示尺寸裁剪和宏块 QP 覆盖。
 > 两条路径及混合 PCM 已通过 FFmpeg/自研解码/本地重建逐像素验证。
