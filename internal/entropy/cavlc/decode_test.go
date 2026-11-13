@@ -118,12 +118,23 @@ func TestDecodeBlock_ChromaDC(t *testing.T) {
 	writeVLC(t, w, chromaDCTotalZerosLen[0][:], chromaDCTotalZerosBits[0][:], 3)
 
 	var dst [16]int32
-	nnz, err := DecodeBlock(newReader(t, w), &dst, ChromaDC, 0)
+	nnz, err := DecodeBlock(newReader(t, w), &dst, ChromaDC, -1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if nnz != 1 || dst[3] != 1 {
 		t.Fatalf("nnz=%d dst=%v, want nnz=1 dst[3]=1", nnz, dst)
+	}
+}
+
+func TestDecodeBlock_LumaDCSpatialScan(t *testing.T) {
+	// Spec: 表 9-5、9-7。01=一个 trailing one，0=正，011=一个零；
+	// 系数位于扫描位置 1，即光栅坐标 (1,0)，不能转置为 (0,1)。
+	r := bitstream.NewReader([]byte{0b01001100})
+	var dst [16]int32
+	n, err := DecodeBlock(r, &dst, LumaDC, 0)
+	if err != nil || n != 1 || dst[1] != 1 || dst[4] != 0 {
+		t.Fatalf("n=%d dst=%v err=%v", n, dst, err)
 	}
 }
 

@@ -113,6 +113,9 @@ func DecodeBlock(r *bitstream.Reader, dst *[16]int32, typ BlockType, nC int) (in
 	maxCoeff := 16
 	scan := transform.Zigzag4x4[:]
 	switch typ {
+	case LumaDC:
+		// DC 保持规范光栅布局，由共享 Hadamard 内核消费。
+		scan = transform.LumaDCScan[:]
 	case LumaAC:
 		maxCoeff = 15
 		scan = transform.Zigzag4x4[1:]

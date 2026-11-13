@@ -35,3 +35,26 @@ func TestDequantChromaDC_KnownValues(t *testing.T) {
 		t.Fatalf("out = %v, want %v", out, want)
 	}
 }
+
+func TestDequantLumaDC_SpatialBasis(t *testing.T) {
+	// Spec: 8.5.10。H 的第二列为 {1,1,-1,-1}；QP=0、level=8
+	// 对应幅值 8*10/4=20，水平与垂直基底不能交换或按 8×8 重排。
+	for _, index := range []int{1, 4} {
+		var in, out [16]int32
+		in[index] = 8
+		if err := DequantLumaDC(&out, &in, 0); err != nil {
+			t.Fatal(err)
+		}
+		for y := 0; y < 4; y++ {
+			for x := 0; x < 4; x++ {
+				want := int32(20)
+				if index == 1 && x >= 2 || index == 4 && y >= 2 {
+					want = -20
+				}
+				if out[y*4+x] != want {
+					t.Fatalf("basis %d (%d,%d): %d want %d", index, x, y, out[y*4+x], want)
+				}
+			}
+		}
+	}
+}

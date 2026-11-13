@@ -6,7 +6,7 @@ import (
 	h264 "github.com/goavc/h264"
 )
 
-// 输出是每个 4×4 亮度块 DC 位置的重建值，按 DC 阵列光栅顺序返回。
+// DequantLumaDC 返回每个 4×4 亮度块的 DC，输入输出均为光栅顺序。
 //
 // 与普通 4×4 反量化不同，DC 块使用固定位置 (0,0) 的 levelScale，并且
 // 反变换后的归一化是 >>8（Hadamard 增益 16，与 4×4 IDCT 的 >>6 合并）。
@@ -33,7 +33,7 @@ func DequantLumaDC(dst *[16]int32, levels *[16]int32, qp int) error {
 		tmp[i*4+2] = d01 - d23
 		tmp[i*4+3] = d01 + d23
 	}
-	// levelScale[qP%6][0] 在 (0,0)，所有 DC 位置共用。
+	// Spec: 8.5.10。列方向使用相同 Hadamard 矩阵，输出保持空间布局。
 	qmul := int64(levelScale4x4[qp%6][0]) * 16 << (uint(qp)/6 + 2)
 	for i := 0; i < 4; i++ {
 		s01 := tmp[0*4+i] + tmp[1*4+i]
@@ -85,8 +85,3 @@ func DequantChromaDC(dst *[4]int32, levels *[4]int32, qp int) error {
 	}
 	return nil
 }
-
-// ChromaQP 返回 8-bit 4:2:0 下由 QP Y 推导的色度 QP（规范表 8-10）。
-//
-// offset 是 pps 的 chroma_qp_index_offset / second_chroma_qp_index_offset。
-// 推导过程分两步：先 qPI = Clip3(0, 51, QPY + offset)，再查表映射；
