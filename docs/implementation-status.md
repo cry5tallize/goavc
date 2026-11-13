@@ -141,6 +141,7 @@ M5a 已完成本地门禁（`v0.5.1`，远端 CI 待执行）：两种大尺寸�
 | P 早期 Skip / 搜索策略 | 编码分析 | 规范 Skip MV 的三平面量化残差全零时提前选择；整像素分区选择后做亚像素细化 | Conformant | 全部双解码器 Oracle、分区/静态 Skip 实际选择、搜索解析向量 | SAD 启发式可能选择不同分区，不宣称与旧搜索逐比特相同；质量待 M5 整体门禁 |
 | I/P 状态与参考更新 | 公共 API / POC type2 | IDRInterval、输入 KeyFrame 强制 IDR、无重排 PTS=DTS、失败不更新参考 | Conformant | 40 帧序列中 0/17/33 帧 IDR，NAL 实际类型、PTS、三方像素一致 | 暂要求 GOPSize=IDRInterval；完整 I/B/GOP 策略在 M5d；PCM 选项仍为全 IDR |
 | CQP AU 资源门禁 | Annex A / 事务边界 | Auto 几何/帧率校验，实际 AU 上限检查，1080p30 不再因最坏预算在 New 拒绝 | Conformant | `LevelBudgetIsTransactional` 注入超限、已有 Oracle 回归 | 超限返回 ErrResourceLimit 且不发布输出；仍非 HRD/VBV 保证；显式 Level 与 PCM 保留保守初始化检查 |
+| SATD | 编码分析 | 4×4 Hadamard、8×8/16×16 聚合、非对齐 stride | Conformant | 独立常量/脉冲解析解，正负极值 | RD 流水线接入待完成；不参与解码重建 |
 
 ## M6–M9
 
