@@ -28,12 +28,10 @@ func (e *Encoder) parameters() error {
 		if fs > int64(l.fs) || int64(mw*mw) > int64(l.fs)*8 || int64(mh*mh) > int64(l.fs)*8 || fs*int64(c.FPSNum) > int64(l.mbps)*int64(c.FPSDen) {
 			continue
 		}
-		// PCM 的完整 NAL 最坏包含防竞争字节，保守按每 MB 600 字节计算。
-		rate := int64(c.Bitrate)
-		if e.pcm {
-			rate = (fs*600 + int64(e.slices)*64 + 256) * 8 * int64(c.FPSNum) / int64(c.FPSDen)
-		}
-		if rate > int64(l.br)*1000 {
+		// I_PCM 大小决策上限 + EBSP 最坏扩展，保守按每 MB 600 字节计算。
+		// 在 New 阶段即可拒绝不够的显式 Level；不依赖内容或 CQP 平均码率猜测。
+		bitsPerFrame := (fs*600 + int64(e.slices)*64 + 256) * 8
+		if bitsPerFrame*int64(c.FPSNum) > int64(l.br)*1000*int64(c.FPSDen) || int64(c.Bitrate) > int64(l.br)*1000 {
 			continue
 		}
 		selected = l.id

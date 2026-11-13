@@ -48,6 +48,9 @@ func TestEncoder_StateAndOwnership(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if r.PTS != 17 || r.Duration != 3 {
+		t.Fatal("reconstruction timestamps", r.PTS, r.Duration)
+	}
 	if r.Planes[0].Data[1] != 3 || r.Planes[0].Data[0] != old {
 		t.Fatal("input was retained")
 	}

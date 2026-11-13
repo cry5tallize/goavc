@@ -115,9 +115,12 @@ Main I/P 回归保持通过。最终清单共 27 条，26 条支持样本 217 �
 | Module | 规范条款 | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|---|
 | Annex-B Writer | B.1 | 四字节起始码、EBSP NAL、短写错误 | Conformant | `nal/annexb_writer_test.go` 固定字节与重扫 | — |
-| CAVLC 编码 | 9.2 | token、尾随符号、level 转义、zeros/run、4 种块类型 | Partial | 固定规范码字、14,400 组极端/随机往返、fuzz 入口 | 完整独立 Oracle 待 Intra slice 集成；复用现有规范码长/码字表，不生成重复编码表 |
+| CAVLC 编码 | 9.2 | token、尾随符号、level 转义、zeros/run、4 种块类型 | Conformant | 固定规范码字、14,400 组极端/随机往返、完整 Intra FFmpeg Oracle、fuzz 入口 | 复用现有规范码长/码字表，不生成重复编码表；4:2:2 DC 属 M7 |
 | 正向变换与量化 | 8.5（逆路径契约） | 4×4 整数变换、I16/色度 DC Hadamard、QP 0..51 平坦矩阵 intra 量化 | Conformant | `forward_test.go` 独立矩阵基底/常量解析解 | 非平坦正向矩阵和 8×8 属 M5c；整帧质量尚待记录 |
-| Encoder 状态与 I_PCM | 7.3.3 / 7.3.5 | 单槽背压、Flush/Reset/Close、独立 IDR、裁剪、1..64 slice、参数集/VUI | Conformant | `encoder/encoder_test.go`、`tests/codec` 自解码与 FFmpeg 逐像素 | 当前仅 PCM；I4/I16、正变换/量化/CAVLC 编码和去块尚待实现；4:2:0 奇数显示尺寸不能用 SPS crop 表达，显式拒绝 |
+| Encoder 状态与 I_PCM | 7.3.3 / 7.3.5 | 单槽背压、Flush/Reset/Close、独立 IDR、裁剪、1..64 slice、参数集/VUI | Conformant | `encoder/encoder_test.go`、`tests/codec` 自解码与 FFmpeg 逐像素 | 4:2:0 奇数显示尺寸不能用 SPS crop 表达，显式拒绝；无 P/B、GOP 和重排 |
+| Intra 编码与本地重建 | 8.3 / 8.5 / 8.7 | I4 九模式、I16/色度各四模式、SAD、MPM、共享预测/反量化/IDCT/相加/滤波、PCM 大小决策 | Conformant | `intra_test.go` 全模式实际决策覆盖；`tests/codec` 27 组尺寸/QP/slice + 120 帧六类图案双解码器 Oracle | 仅渐进式 8-bit 4:2:0，QP=0 仍为有损变换，不等同 PCM |
+| CQP / 宏块 QP | 7.3.5 / 表 7-13 | QP 0..51、回调覆盖、delta 回绕、无残差沿用 QP | Conformant | 0↔51/25↔26 等宏块变化与混合 PCM 的双解码器/FFmpeg Oracle | ABR/CBR/VBV、自适应活动度决策在 M5 |
+| 参数集与 Level | Annex A / E.1 | Baseline IDR、POC type2、最小 VUI、MaxFS/MBPS/单维上限/保守码率预算 | Conformant | SPS/PPS 结构往返、ffprobe profile/level/尺寸、FFmpeg trace_headers 检查 timing | Level 按最坏 PCM 上限保守选择；非 HRD/VBV 编码器；裸流 ffprobe 帧率猜测不作 VUI Oracle |
 
 普通构建与测试使用 Go 1.27.4、CGO_ENABLED=0。M4 尚未通过整体退出门禁。
 

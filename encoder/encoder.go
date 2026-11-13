@@ -14,15 +14,18 @@ import (
 // Encoder 是串行 Baseline 帧内编码器，每帧输出一个独立 IDR AU。
 // 同一实例非并发安全；输入在 SendFrame 返回前消费完毕。
 type Encoder struct {
-	cfg             h264.EncoderConfig
-	pcm             bool
-	slices          int
-	sps             *syntax.SPS
-	pps             *syntax.PPS
-	out             *h264.Packet
-	recon           *picture.Picture
-	idr             uint32
-	flushed, closed bool
+	cfg                     h264.EncoderConfig
+	pcm                     bool
+	qpAt                    func(x, y int) int
+	last                    *intraState
+	slices                  int
+	sps                     *syntax.SPS
+	pps                     *syntax.PPS
+	out                     *h264.Packet
+	recon                   *picture.Picture
+	reconPTS, reconDuration int64
+	idr                     uint32
+	flushed, closed         bool
 }
 
 // Option 配置编码通道；选项在构造时校验，不允许静默回退。
@@ -59,7 +62,7 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	if uint64(cfg.FPSNum) > uint64(^uint32(0))/2 || uint64(cfg.FPSDen) > uint64(^uint32(0)) {
 		return nil, fmt.Errorf("encoder: VUI timing overflows: %w", h264.ErrInvalidData)
 	}
-	e := &Encoder{cfg: cfg, slices: 1, pcm: true}
+	e := &Encoder{cfg: cfg, slices: 1}
 	for _, option := range options {
 		if option == nil {
 			return nil, fmt.Errorf("encoder: nil option: %w", h264.ErrInvalidData)
@@ -67,6 +70,9 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 		if err := option(e); err != nil {
 			return nil, err
 		}
+	}
+	if e.pcm && e.qpAt != nil {
+		return nil, fmt.Errorf("encoder: PCM has no QP override: %w", h264.ErrUnsupported)
 	}
 	if err := e.parameters(); err != nil {
 		return nil, err
@@ -108,11 +114,22 @@ func (e *Encoder) SendFrame(f *h264.Frame) error {
 			}
 		}
 	}
-	data, err := e.encodePCM(pic)
+	var data []byte
+	var state *intraState
+	if e.pcm {
+		data, err = e.encodePCM(pic)
+	} else {
+		data, state, err = e.encodeIntra(pic)
+		if state != nil {
+			pic = state.pic
+		}
+	}
 	if err != nil {
 		return err
 	}
 	e.recon = pic
+	e.reconPTS, e.reconDuration = f.PTS, f.Duration
+	e.last = state
 	e.out = &h264.Packet{Data: data, PTS: f.PTS, DTS: f.PTS, Duration: f.Duration, KeyFrame: true}
 	e.idr = (e.idr + 1) & 65535
 	return nil
@@ -140,7 +157,7 @@ func (e *Encoder) Reconstruction() (*h264.Frame, error) {
 	if e.recon == nil {
 		return nil, h264.ErrAgain
 	}
-	f := &h264.Frame{Width: e.cfg.Width, Height: e.cfg.Height, Format: h264.YUV420P, KeyFrame: true}
+	f := &h264.Frame{Width: e.cfg.Width, Height: e.cfg.Height, Format: h264.YUV420P, KeyFrame: true, PTS: e.reconPTS, Duration: e.reconDuration}
 	for c := range f.Planes {
 		w, h := f.Format.PlaneDimensions(c, f.Width, f.Height)
 		f.Planes[c] = h264.Plane{Data: make([]byte, w*h), Stride: w}
@@ -167,13 +184,20 @@ func (e *Encoder) Reset() error {
 	}
 	e.out = nil
 	e.recon = nil
+	e.last = nil
 	e.idr = 0
 	e.flushed = false
 	return nil
 }
 
 // Close 幂等释放实例资源。
-func (e *Encoder) Close() error { e.out = nil; e.recon = nil; e.closed = true; return nil }
+func (e *Encoder) Close() error {
+	e.out = nil
+	e.recon = nil
+	e.last = nil
+	e.closed = true
+	return nil
+}
 
 func (e *Encoder) encodePCM(pic *picture.Picture) ([]byte, error) {
 	var b bytes.Buffer
