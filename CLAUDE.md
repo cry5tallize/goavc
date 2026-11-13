@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Pure Go H.264/AVC encoder + decoder with **zero CGO**, stdlib-only runtime, and optional Go assembly (SSE2/AVX2/NEON) with mandatory scalar fallbacks. Module path: `github.com/goavc/h264` (root package is `h264`); `go.mod` declares Go 1.24 and CI uses 1.24.x.
+Pure Go H.264/AVC encoder + decoder with **zero CGO**, stdlib-only runtime, and optional Go assembly (SSE2/AVX2/NEON) with mandatory scalar fallbacks. Module path: `github.com/goavc/h264` (root package is `h264`); `go.mod` declares Go 1.27 and CI uses 1.27.x.
 
-The repository is currently at **M0 bootstrap**: public types/config/errors and verification infrastructure exist, but all codec packages (`bitstream`, `nal`, `syntax`, `decoder`, `encoder`, `stream`, `internal/*`) are placeholders (`doc.go` only). Do not assume `NewEncoder`/`NewDecoder` or any codec logic exists. Authoritative progress lives in `docs/implementation-status.md`; milestones and exit criteria live in `docs/Roadmap.md`; gate evidence is under `docs/gates/`.
+Check actual code and tests before assuming an API or codec feature exists. Authoritative progress lives in `docs/implementation-status.md`; milestones and exit criteria live in `docs/Roadmap.md`; gate evidence is under `docs/gates/`. See `AGENTS.md` for the repository-wide working rules and PowerShell verification commands.
 
 ## Commands
 
