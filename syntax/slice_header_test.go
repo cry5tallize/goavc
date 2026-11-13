@@ -388,6 +388,9 @@ func TestParseSliceHeader_MMCOConsumed(t *testing.T) {
 	if !h.AdaptiveRefPicMarking || h.MMCOCount != 1 {
 		t.Fatalf("MMCO = %+v", h)
 	}
+	if len(h.MemoryManagement) != 1 || h.MemoryManagement[0].Operation != 1 || h.MemoryManagement[0].DifferenceOfPicNumsMinus1 != 2 {
+		t.Fatal("MMCO operands were discarded")
+	}
 	if h.SliceQPDelta != 3 {
 		t.Fatalf("slice_qp_delta = %d, want 3", h.SliceQPDelta)
 	}

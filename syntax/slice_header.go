@@ -40,10 +40,7 @@ func sliceTypeFromCode(code uint32) (SliceType, bool) {
 
 // SliceHeader 是 slice header 的解析结果（规范 7.3.3）。
 //
-// 覆盖 M2 Baseline 解码需要的全部字段：参考帧数量、参考列表重排、
-// 参考帧标记、CABAC 初始化、QP 与去块参数。B 切片、加权预测、
-// MMCO 与参考列表重排命令属于 M3，解析到时会显式返回 ErrUnsupported，
-// 不会静默跳过。
+// 保留 I/P/B 参考列表、MMCO 和加权预测的完整值，供 M3 图像管理与预测消费。
 //
 // Has* 标志用于区分"字段不存在"与"字段值为 0"。
 type SliceHeader struct {
@@ -73,20 +70,22 @@ type SliceHeader struct {
 	NumRefIdxL0ActiveMinus1     uint32
 	NumRefIdxL1ActiveMinus1     uint32
 
-	// 参考列表重排。语法层完整消费命令，但只记录是否存在；
-	// M2 解码器在解码前显式拒绝重排（M3 实现）。
+	// 参考列表重排标志与原始命令。
 	RefPicListReorderingL0 bool
 	RefPicListReorderingL1 bool
+	RefListModifications   [2][]RefListModification
 
 	// 参考帧标记（nal_ref_idc != 0 时存在）。
 	NoOutputOfPriorPicsFlag bool
 	LongTermReferenceFlag   bool
 	AdaptiveRefPicMarking   bool
 	MMCOCount               int
+	MemoryManagement        []MMCO
 
 	// HasPredWeightTable 表示 header 携带 pred_weight_table()。
-	// 语法层消费完整表；M2 解码器在解码前拒绝加权预测。
+	// PredictionWeights 保存分母、默认权重和显式权重。
 	HasPredWeightTable bool
+	PredictionWeights  *WeightTable
 
 	// CABAC 初始化（仅 CABAC 且非 I/SI 切片存在）。
 	CabacInitIDC uint32
@@ -266,7 +265,7 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 			return nil, err
 		}
 		if h.RefPicListReorderingL0 {
-			if err := parseRefPicListReordering(r, "l0", h.NumRefIdxL0ActiveMinus1+1); err != nil {
+			if h.RefListModifications[0], err = parseRefPicListReordering(r); err != nil {
 				return nil, err
 			}
 		}
@@ -275,7 +274,7 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 				return nil, err
 			}
 			if h.RefPicListReorderingL1 {
-				if err := parseRefPicListReordering(r, "l1", h.NumRefIdxL1ActiveMinus1+1); err != nil {
+				if h.RefListModifications[1], err = parseRefPicListReordering(r); err != nil {
 					return nil, err
 				}
 			}
@@ -286,7 +285,7 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 	if (pps.WeightedPredFlag && typ == SliceTypeP) ||
 		(pps.WeightedBipredIDC == 1 && typ == SliceTypeB) {
 		h.HasPredWeightTable = true
-		if err := parsePredWeightTable(r, sps, typ, h.NumRefIdxL0ActiveMinus1, h.NumRefIdxL1ActiveMinus1); err != nil {
+		if h.PredictionWeights, err = parsePredWeightTable(r, sps, typ, h.NumRefIdxL0ActiveMinus1, h.NumRefIdxL1ActiveMinus1); err != nil {
 			return nil, err
 		}
 	}
@@ -304,9 +303,10 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 				return nil, err
 			}
 			if h.AdaptiveRefPicMarking {
-				if h.MMCOCount, err = parseDecRefPicMarking(r); err != nil {
+				if h.MemoryManagement, err = parseDecRefPicMarking(r); err != nil {
 					return nil, err
 				}
+				h.MMCOCount = len(h.MemoryManagement)
 			}
 		}
 	}
@@ -356,156 +356,4 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 
 	h.HeaderBits = r.BitsRead()
 	return h, nil
-}
-
-// parseRefPicListReordering 消费 ref_pic_list_reordering() 的命令序列。
-//
-// 语法（7.3.3.1）：
-//
-//	do {
-//	    idc ue(v)
-//	    if idc == 0 || idc == 1: idc_value ue(v)
-//	    else if idc == 2: idc_value ue(v)
-//	} while idc != 3
-//
-// 命令数量由码流决定；这里用 activeRefs 做上界并额外限制总条数，
-// 防止畸形码流用大量命令耗尽解析时间。
-func parseRefPicListReordering(r *bitstream.Reader, list string, activeRefs uint32) error {
-	limit := int(activeRefs) + 2
-	if limit < 4 {
-		limit = 4
-	}
-	for i := 0; i < limit; i++ {
-		idc, err := readUE(r, "ref_pic_list_reordering_idc")
-		if err != nil {
-			return err
-		}
-		switch idc {
-		case 0, 1, 2:
-			if _, err := readUE(r, "ref_pic_list_reordering_value"); err != nil {
-				return err
-			}
-		case 3:
-			return nil
-		default:
-			return fmt.Errorf("syntax: ref_pic_list_reordering %s idc = %d exceeds 3: %w",
-				list, idc, h264.ErrInvalidData)
-		}
-	}
-	return fmt.Errorf("syntax: ref_pic_list_reordering %s has too many commands: %w",
-		list, h264.ErrInvalidData)
-}
-
-// parsePredWeightTable 消费 pred_weight_table()（7.3.3.2）。
-//
-// M2 不使用权重值，但必须完整消费语法以保持 header 位偏移正确；
-// 数值本身交给 M3 的加权预测实现。
-func parsePredWeightTable(r *bitstream.Reader, sps *SPS, typ SliceType, l0Minus1, l1Minus1 uint32) error {
-	lumaDenom, err := readUE(r, "luma_log2_weight_denom")
-	if err != nil {
-		return err
-	}
-	if lumaDenom > 7 {
-		return fmt.Errorf("syntax: luma_log2_weight_denom = %d exceeds 7: %w", lumaDenom, h264.ErrInvalidData)
-	}
-	if sps.effectiveChromaFormatIDC() != 0 {
-		chromaDenom, err := readUE(r, "chroma_log2_weight_denom")
-		if err != nil {
-			return err
-		}
-		if chromaDenom > 7 {
-			return fmt.Errorf("syntax: chroma_log2_weight_denom = %d exceeds 7: %w", chromaDenom, h264.ErrInvalidData)
-		}
-	}
-	lists := 1
-	if typ == SliceTypeB {
-		lists = 2
-	}
-	for list := 0; list < lists; list++ {
-		n := l0Minus1 + 1
-		if list == 1 {
-			n = l1Minus1 + 1
-		}
-		if n > 32 {
-			return fmt.Errorf("syntax: active ref count %d exceeds 32: %w", n, h264.ErrInvalidData)
-		}
-		for i := uint32(0); i < n; i++ {
-			lumaFlag, err := readFlag(r, "luma_weight_flag")
-			if err != nil {
-				return err
-			}
-			if lumaFlag {
-				if _, err := readSE(r, "luma_weight"); err != nil {
-					return err
-				}
-				if _, err := readSE(r, "luma_offset"); err != nil {
-					return err
-				}
-			}
-			if sps.effectiveChromaFormatIDC() != 0 {
-				chromaFlag, err := readFlag(r, "chroma_weight_flag")
-				if err != nil {
-					return err
-				}
-				if chromaFlag {
-					for j := 0; j < 2; j++ {
-						if _, err := readSE(r, "chroma_weight"); err != nil {
-							return err
-						}
-						if _, err := readSE(r, "chroma_offset"); err != nil {
-							return err
-						}
-					}
-				}
-			}
-		}
-	}
-	return nil
-}
-
-// parseDecRefPicMarking 消费 MMCO 命令序列（7.3.3.3），返回命令数。
-//
-// 操作码 0 是结束标记；1/2/3/4/6 携带不同参数，5 无参数。
-// 为防御畸形码流，命令数限制为 66（规范允许的 DPB 上限量级）。
-func parseDecRefPicMarking(r *bitstream.Reader) (int, error) {
-	for count := 0; count < 66; count++ {
-		op, err := readUE(r, "memory_management_control_operation")
-		if err != nil {
-			return 0, err
-		}
-		if op == 0 {
-			return count, nil
-		}
-		switch op {
-		case 1:
-			if _, err := readUE(r, "difference_of_pic_nums_minus1"); err != nil {
-				return 0, err
-			}
-		case 2:
-			if _, err := readUE(r, "long_term_pic_num"); err != nil {
-				return 0, err
-			}
-		case 3:
-			if _, err := readUE(r, "difference_of_pic_nums_minus1"); err != nil {
-				return 0, err
-			}
-			if _, err := readUE(r, "long_term_frame_idx"); err != nil {
-				return 0, err
-			}
-		case 4:
-			if _, err := readUE(r, "max_long_term_frame_idx_plus1"); err != nil {
-				return 0, err
-			}
-		case 5:
-			// 无参数。
-		case 6:
-			if _, err := readUE(r, "long_term_frame_idx"); err != nil {
-				return 0, err
-			}
-		default:
-			return 0, fmt.Errorf("syntax: memory_management_control_operation = %d exceeds 6: %w",
-				op, h264.ErrInvalidData)
-		}
-	}
-	return 0, fmt.Errorf("syntax: too many MMCO commands: %w", h264.ErrInvalidData)
 }
