@@ -124,3 +124,27 @@ func TestIntra4x4_RequiresNeighbors(t *testing.T) {
 		}
 	}
 }
+
+func TestIntra4x4_DirectionalAnalyticVectors(t *testing.T) {
+	s := Intra4x4Samples{Top: [4]byte{10, 20, 30, 40}, TopRight: [4]byte{50, 60, 70, 80}, Left: [4]byte{90, 100, 110, 120}, TopLeft: 70}
+	// Spec: 8.3.1。使用不同方向的非均匀邻域，避免常量样本掩盖转置或
+	// 错位；期望矩阵由对应方向的二/三抽头插值逐点计算。
+	cases := []struct {
+		mode int
+		want [16]byte
+	}{
+		{Intra4x4DiagonalRight, [16]byte{60, 28, 20, 30, 88, 60, 28, 20, 100, 88, 60, 28, 110, 100, 88, 60}},
+		{Intra4x4VerticalRight, [16]byte{40, 15, 25, 35, 60, 28, 20, 30, 88, 40, 15, 25, 100, 60, 28, 20}},
+		{Intra4x4HorizontalDown, [16]byte{80, 60, 28, 20, 95, 88, 80, 60, 105, 100, 95, 88, 115, 110, 105, 100}},
+		{Intra4x4VerticalLeft, [16]byte{15, 25, 35, 45, 20, 30, 40, 50, 25, 35, 45, 55, 30, 40, 50, 60}},
+	}
+	for _, tc := range cases {
+		var out [16]byte
+		if err := Intra4x4(out[:], 4, tc.mode, s, true, true); err != nil {
+			t.Fatal(err)
+		}
+		if out != tc.want {
+			t.Fatalf("mode %d: %v want %v", tc.mode, out, tc.want)
+		}
+	}
+}

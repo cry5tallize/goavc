@@ -31,12 +31,29 @@ func Intra16x16(dst []byte, stride, mode int, s IntraBlockSamples, topAvail, lef
 	return intraBlock(dst, stride, 16, mode, s, topAvail, leftAvail, true)
 }
 
-// Chroma8x8 计算 8×8 色度帧内预测（模式 0..3）。
+// Chroma8x8 计算 8×8 色度帧内预测。
+//
+// 注意 chroma 的模式编号与 16×16 不同（规范表 8-4）：
+// 0=DC、1=水平、2=垂直、3=Plane。这里先做映射再复用 intraBlock，
+// 避免把垂直当成 DC（这是逐像素对比才能发现的错误）。
 func Chroma8x8(dst []byte, stride, mode int, s IntraBlockSamples, topAvail, leftAvail bool) error {
 	if len(s.Top) < 8 || len(s.Left) < 8 {
 		return fmt.Errorf("prediction: chroma8x8 needs 8 top and left samples")
 	}
-	return intraBlock(dst, stride, 8, mode, s, topAvail, leftAvail, false)
+	var internal int
+	switch mode {
+	case 0:
+		internal = Intra16x16DC
+	case 1:
+		internal = Intra16x16Horizontal
+	case 2:
+		internal = Intra16x16Vertical
+	case 3:
+		internal = Intra16x16Plane
+	default:
+		return fmt.Errorf("prediction: invalid chroma mode %d: %w", mode, h264.ErrInvalidData)
+	}
+	return intraBlock(dst, stride, 8, internal, s, topAvail, leftAvail, false)
 }
 
 // intraBlock 是 16×16/8×8 的共享实现。
@@ -66,6 +83,51 @@ func intraBlock(dst []byte, stride, n, mode int, s IntraBlockSamples, topAvail, 
 			}
 		}
 	case Intra16x16DC:
+		if n == 8 {
+			// 8×8 DC 按四个 4×4 象限分别计算（规范 8.3.3.4 与
+			// libavcodec 的 pred8x8_dc 一致），不是一个 16 样本平均。
+			var top0, top1, left0, left1 int
+			for i := 0; i < 4; i++ {
+				top0 += int(s.Top[i])
+				top1 += int(s.Top[4+i])
+				left0 += int(s.Left[i])
+				left1 += int(s.Left[4+i])
+			}
+			var d00, d01, d10, d11 byte
+			switch {
+			case topAvail && leftAvail:
+				d00 = byte((top0 + left0 + 4) >> 3)
+				d01 = byte((top1 + 2) >> 2)
+				d10 = byte((left1 + 2) >> 2)
+				d11 = byte((top1 + left1 + 4) >> 3)
+			case topAvail:
+				d00 = byte((top0 + 2) >> 2)
+				d01 = byte((top1 + 2) >> 2)
+				d10, d11 = d00, d01
+			case leftAvail:
+				d00 = byte((left0 + 2) >> 2)
+				d10 = byte((left1 + 2) >> 2)
+				d01, d11 = d00, d10
+			default:
+				d00, d01, d10, d11 = 128, 128, 128, 128
+			}
+			for y := 0; y < 8; y++ {
+				row := dst[y*stride : y*stride+8]
+				for x := 0; x < 8; x++ {
+					switch {
+					case y < 4 && x < 4:
+						row[x] = d00
+					case y < 4:
+						row[x] = d01
+					case x < 4:
+						row[x] = d10
+					default:
+						row[x] = d11
+					}
+				}
+			}
+			break
+		}
 		var dc int
 		switch {
 		case topAvail && leftAvail:

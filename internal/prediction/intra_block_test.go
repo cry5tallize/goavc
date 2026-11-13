@@ -83,13 +83,22 @@ func TestChroma8x8_DC(t *testing.T) {
 	fill(left, 20)
 	s := IntraBlockSamples{Top: top, Left: left}
 	dst := make([]byte, 64)
-	if err := Chroma8x8(dst, 8, Intra16x16DC, s, true, true); err != nil {
+	if err := Chroma8x8(dst, 8, 0, s, true, true); err != nil {
 		t.Fatal(err)
 	}
-	want := byte((80 + 160 + 8) >> 4)
-	for _, v := range dst {
-		if v != want {
-			t.Fatalf("dc = %d, want %d", v, want)
+	// 8x8 DC 按四个象限：左上 (top0+left0+4)>>3=15、右上 (top1+2)>>2=10、
+	// 左下 (left1+2)>>2=20、右下 (top1+left1+4)>>3=15。
+	for y := 0; y < 8; y++ {
+		for x := 0; x < 8; x++ {
+			want := byte(15)
+			if y < 4 && x >= 4 {
+				want = 10
+			} else if y >= 4 && x < 4 {
+				want = 20
+			}
+			if got := dst[y*8+x]; got != want {
+				t.Fatalf("dc[%d][%d] = %d, want %d", y, x, got, want)
+			}
 		}
 	}
 }

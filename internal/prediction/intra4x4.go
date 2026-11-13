@@ -87,31 +87,37 @@ func Intra4x4(dst []byte, stride, mode int, s Intra4x4Samples, topAvail, leftAva
 		if !topAvail || !leftAvail {
 			return fmt.Errorf("prediction: diagonal down-right requires top and left: %w", h264.ErrInvalidData)
 		}
+		// 与 libavcodec 的 pred4x4_down_right 逐行对应：
+		// 对角线以上用左上/上侧样本，以下用左侧样本。
 		p := [16]byte{
-			avg3(m, a, b), avg3(a, b, c), avg3(b, c, d), avg3(c, d, d),
 			avg3(i0, m, a), avg3(m, a, b), avg3(a, b, c), avg3(b, c, d),
 			avg3(j, i0, m), avg3(i0, m, a), avg3(m, a, b), avg3(a, b, c),
 			avg3(k, j, i0), avg3(j, i0, m), avg3(i0, m, a), avg3(m, a, b),
+			avg3(l, k, j), avg3(k, j, i0), avg3(j, i0, m), avg3(i0, m, a),
 		}
 		write4x4(dst, stride, p)
 	case Intra4x4VerticalRight:
 		if !topAvail || !leftAvail {
 			return fmt.Errorf("prediction: vertical-right requires top and left: %w", h264.ErrInvalidData)
 		}
+		// 与 pred4x4_vertical_right 对应：上半部分沿垂直方向，
+		// 下半部分转向左侧样本。
 		p := [16]byte{
 			avg2(m, a), avg2(a, b), avg2(b, c), avg2(c, d),
 			avg3(i0, m, a), avg3(m, a, b), avg3(a, b, c), avg3(b, c, d),
-			avg3(m, i0, j), avg3(i0, m, a), avg3(m, a, b), avg3(a, b, c),
-			avg3(i0, j, k), avg3(j, i0, m), avg3(i0, m, a), avg3(m, a, b),
+			avg3(m, i0, j), avg2(m, a), avg2(a, b), avg2(b, c),
+			avg3(i0, j, k), avg3(i0, m, a), avg3(m, a, b), avg3(a, b, c),
 		}
 		write4x4(dst, stride, p)
 	case Intra4x4HorizontalDown:
 		if !topAvail || !leftAvail {
 			return fmt.Errorf("prediction: horizontal-down requires top and left: %w", h264.ErrInvalidData)
 		}
+		// 与 pred4x4_horizontal_down 对应：左上三角从左侧样本过渡到
+		// 上方样本，右下半部分重复左侧插值。
 		p := [16]byte{
-			avg2(m, i0), avg3(m, a, b), avg3(a, b, c), avg3(b, c, d),
-			avg2(i0, j), avg3(m, i0, j), avg2(m, a), avg3(a, b, c),
+			avg2(m, i0), avg3(i0, m, a), avg3(m, a, b), avg3(a, b, c),
+			avg2(i0, j), avg3(m, i0, j), avg2(m, i0), avg3(i0, m, a),
 			avg2(j, k), avg3(i0, j, k), avg2(i0, j), avg3(m, i0, j),
 			avg2(k, l), avg3(j, k, l), avg2(j, k), avg3(i0, j, k),
 		}
@@ -120,11 +126,13 @@ func Intra4x4(dst []byte, stride, mode int, s Intra4x4Samples, topAvail, leftAva
 		if !topAvail {
 			return fmt.Errorf("prediction: vertical-left without top samples: %w", h264.ErrInvalidData)
 		}
+		// 与 pred4x4_vertical_left 对应：奇数列取半像素，偶数列取
+		// 三抽头；两者交替，不是简单的 2×2 重复。
 		p := [16]byte{
-			avg2(a, b), avg3(a, b, c), avg2(b, c), avg3(b, c, d),
-			avg2(b, c), avg3(b, c, d), avg2(c, d), avg3(c, d, e),
-			avg2(c, d), avg3(c, d, e), avg2(d, e), avg3(d, e, f),
-			avg2(d, e), avg3(d, e, f), avg2(e, f), avg3(e, f, g),
+			avg2(a, b), avg2(b, c), avg2(c, d), avg2(d, e),
+			avg3(a, b, c), avg3(b, c, d), avg3(c, d, e), avg3(d, e, f),
+			avg2(b, c), avg2(c, d), avg2(d, e), avg2(e, f),
+			avg3(b, c, d), avg3(c, d, e), avg3(d, e, f), avg3(e, f, g),
 		}
 		write4x4(dst, stride, p)
 	case Intra4x4HorizontalUp:
