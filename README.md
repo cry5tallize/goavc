@@ -3,9 +3,10 @@
 从零实现的 H.264/AVC 软件编解码器：**纯 Go**，允许 Go 汇编（amd64 SSE2/AVX2、arm64 NEON），
 **零 CGO、零 C/C++、零外部编解码库**。Encoder 与 Decoder 共享同一套预测、变换、重建、滤波内核。
 
-> 当前状态：**M0（工程基础）完成**。仓库里还没有可用的编解码功能——
-> 这一阶段的目的是把约束、公共 API 契约、依赖规则、验证工具和 CI 门禁钉死，
-> 让后续每一个算法提交都能被独立验证。进度见 [docs/implementation-status.md](docs/implementation-status.md)。
+> 当前状态：**M1（Bitstream Foundation）完成**。`bitstream`、`nal`、`syntax`
+> 已能解析并重序列化 SPS / PPS / VUI / ScalingList / SEI，支持 Annex-B、AVCC 与
+> avcC，并通过真实 x264 语料往返与 ffprobe Oracle；**解码/编码流水线尚未实现**
+>（M2 起）。进度见 [docs/implementation-status.md](docs/implementation-status.md)。
 
 ## 硬约束
 
