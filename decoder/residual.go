@@ -2,7 +2,6 @@ package decoder
 
 import (
 	"fmt"
-	"github.com/goavc/h264/bitstream"
 	"github.com/goavc/h264/internal/entropy/cavlc"
 	"github.com/goavc/h264/internal/motion"
 	"github.com/goavc/h264/internal/picture"
@@ -11,7 +10,11 @@ import (
 )
 
 // decodeResiduals 按语法顺序解码一个宏块的亮度/色度 level。
-func (fs *frameState) decodeResiduals(r *bitstream.Reader, addr, mbx, mby int, i16, lumaAC bool, cbp int, res *residual) error {
+func (fs *frameState) decodeResiduals(s *sliceEntry, addr, mbx, mby int, i16, lumaAC bool, cbp int, res *residual) error {
+	if s.cabac != nil {
+		return fs.decodeCABACResidual(s, addr, mbx, mby, i16, lumaAC, cbp, res)
+	}
+	r := s.data
 	if i16 {
 		bx, by := 0, 0
 		nC := fs.lumaNC(mbx, mby, bx, by)

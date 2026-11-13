@@ -160,7 +160,6 @@ func TestDecoder_UnsupportedTools(t *testing.T) {
 	p := &syntax.PPS{}
 	h := &syntax.SliceHeader{Type: syntax.SliceTypeI}
 	for _, mutate := range []func(*syntax.SPS, *syntax.PPS, *syntax.SliceHeader){
-		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { p.EntropyCodingModeFlag = true },
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { p.Transform8x8ModeFlag = true },
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.SeqScalingMatrixPresentFlag = true },
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { h.Type = syntax.SliceTypeB },
@@ -344,6 +343,11 @@ func TestDecoder_PCMAndEdgeMotionOracle(t *testing.T) {
 }
 
 func FuzzDecoder_NoPanic(f *testing.F) {
+	if data, err := os.ReadFile("../testdata/main/main_64x48_yuv420p_cabac_i_002.264"); err == nil {
+		f.Add(data)
+	} else {
+		f.Fatal(err)
+	}
 	f.Add(pcmStream(f, -400, 400, false))
 	f.Add([]byte{0, 0, 1, 0x65, 0x80})
 	f.Fuzz(func(t *testing.T, data []byte) {

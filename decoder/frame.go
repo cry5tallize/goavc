@@ -13,12 +13,13 @@ import (
 
 // sliceEntry 是解析后的一个 slice：header 与定位好的 slice data reader。
 type sliceEntry struct {
-	unit nal.Unit
-	hdr  *syntax.SliceHeader
-	sps  *syntax.SPS
-	pps  *syntax.PPS
-	rbsp []byte
-	data *bitstream.Reader
+	unit  nal.Unit
+	hdr   *syntax.SliceHeader
+	sps   *syntax.SPS
+	pps   *syntax.PPS
+	rbsp  []byte
+	data  *bitstream.Reader
+	cabac *cabacSyntax
 }
 
 // mbInfo 是去块滤波与后续 MB 预测需要的宏块元数据。
@@ -51,6 +52,8 @@ type frameState struct {
 	info            []mbInfo
 	lumaNZ          []uint8
 	chromaNZ        [2][]uint8
+	dcCoded         [3][]bool
+	mvd             []motion.MV
 	mv              *motion.Grid
 }
 
@@ -77,6 +80,12 @@ func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS) (*frameState, e
 	}
 	fs.chromaNZ[0] = make([]uint8, total*4)
 	fs.chromaNZ[1] = make([]uint8, total*4)
+	if pps.EntropyCodingModeFlag {
+		for i := range fs.dcCoded {
+			fs.dcCoded[i] = make([]bool, total)
+		}
+		fs.mvd = make([]motion.MV, total*16)
+	}
 	for i := range fs.info {
 		fs.info[i].intraModes = [16]int8{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
 		fs.info[i].chromaMode = -1
@@ -302,9 +311,6 @@ func (d *Decoder) checkSupported(sps *syntax.SPS, pps *syntax.PPS, hdr *syntax.S
 	if hdr.LongTermReferenceFlag || hdr.RedundantPicCnt > 0 || sps.MaxNumRefFrames > 1 {
 		return fmt.Errorf("decoder: long term, redundant or multiple references: %w", h264.ErrUnsupported)
 	}
-	if pps.EntropyCodingModeFlag {
-		return fmt.Errorf("decoder: CABAC is not supported in M2: %w", h264.ErrUnsupported)
-	}
 	if pps.Transform8x8ModeFlag {
 		return fmt.Errorf("decoder: 8x8 transform is not supported in M2: %w", h264.ErrUnsupported)
 	}
@@ -337,6 +343,9 @@ func (d *Decoder) checkSupported(sps *syntax.SPS, pps *syntax.PPS, hdr *syntax.S
 // qscale 在 slice 内跨宏块保持，mb_qp_delta 逐 MB 累积；P_Skip 沿用
 // 当前值而不是重置为 slice QP。
 func decodeSlice(fs *frameState, s *sliceEntry, sliceID int, first, end int) error {
+	if s.pps.EntropyCodingModeFlag {
+		return decodeCABACSlice(fs, s, sliceID, first, end)
+	}
 	fs.mv.BeginSlice(first)
 	qscale := s.hdr.SliceQP
 	for addr := first; addr < end; addr++ {

@@ -1,11 +1,29 @@
 # testdata
 
+## M3 首批 CABAC 语料
+
+新增三份 Main 语料：64×48 全 I（3 帧）、176×144 I/P（5 帧，init_idc=1）、
+320×240 双 slice I/P（4 帧，init_idc=2）。三者均为单参考、无 B 帧、无加权预测，
+状态为 `conformant`，只证明 M3 已交付的 I/P 子集。原有含 CABAC/B 的 Main 样本
+仍为 `unsupported`，因为 B 帧与重排尚未接入。
+
+生成环境 FFmpeg 8.0 + libx264，通用命令如下；替换 size/count/idc/slices/keyint：
+
+```text
+ffmpeg -v error -f lavfi -i testsrc2=size=<size>:rate=5 -frames:v <count> -c:v libx264 -preset medium -profile:v main -qp 26 -x264-params cabac=1:cabac-idc=<idc>:bframes=0:ref=1:weightp=0:keyint=<keyint>:scenecut=0:threads=1:aud=1:slices=<slices> -f h264 <output.264>
+```
+
+全 I 使用 keyint=1、idc=0、slices=1；176×144 使用 keyint=30、slices=1；
+320×240 使用 keyint=30、slices=2。执行 `go test ./decoder -run TestCABAC -v`
+可验证真实像素、PCM 后的算术引擎重启及截断后的 IDR 恢复。固定 Oracle 哈希
+由 `TestCorpus_ManifestOutputDigests` 在没有 FFmpeg 的环境中继续核验。
+
 ## M2 语料与 Oracle
 
 `manifest.json` 登记五份 Baseline I/P 样本，共 21 帧；多 slice 样本每帧两个
 slice，并在中途再次出现 IDR。全部通过 FFmpeg 8.0 的 Y/U/V 逐像素对比，
 `expectedYUVSha256` 是 FFmpeg 输出的完整原始 YUV 序列哈希，不需要入库大体积 YUV。
-Main/CABAC/B 样本标记 `unsupported`，由解码测试断言 `ErrUnsupported`。
+原有含 CABAC/B 的 Main 样本标记 `unsupported`，由解码测试断言 `ErrUnsupported`。
 
 前四份 Baseline 文件来自接手时工作区中的 x264 语料，原始生成命令未保留；
 其内容由 manifest 输入哈希固定。1080p 样本新增于 M2，生成命令为：

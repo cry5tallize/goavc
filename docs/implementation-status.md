@@ -84,7 +84,26 @@ POC type 2 的无重排路径提前纳入 M2，因为 x264 的 Baseline 无 B �
 type 2；type 0 使用合成 PCM/P 码流及独立内核测试验证。这里不宣称完整 Baseline
 Profile 一致性：高级工具仍按支持矩阵返回 `ErrUnsupported`。
 
-## M3–M9
+## M3：Decoder Main / High（进行中）
+
+当前完成首批 CABAC 基础与 I/P 接入，未完成 M3 退出门禁。Go 1.27.4、
+CGO_ENABLED=0、FFmpeg 8.0 下，三份新增 Main 样本共 12 帧（64×48 全 I、
+176×144 I/P init_idc=1、320×240 双 slice I/P init_idc=2）通过独立像素 Oracle，
+输入与 Oracle YUV 哈希已登记在 manifest。M2 五份 Baseline 回归继续通过。
+
+| Module | 规范条款 | Scope | Status | Tests | Known gaps |
+|---|---|---|---|---|---|
+| CABAC 算术引擎 | 9.3.1 / 9.3.3.2 | range/offset、MPS/LPS、bypass、terminate、截断粘性错误 | Conformant | `cabac/decoder_test.go` 固定解析 trace、64 状态×双 MPS 转移；真实 Oracle | 编码器在 M5；无 SIMD |
+| CABAC 上下文初始化 | 表 9-12..9-24、9-44/45 | I/PB0/PB1/PB2，ctxIdx 0..459；可复现 CSV→Go 生成 | Conformant | 全部上下文×QP 0..51 的初始化检查、生成复现 | 4:4:4 扩展上下文在 M7 |
+| CABAC 残差 | 9.3.3.1.3 | 4×4 亮度 DC/AC、色度 DC/AC、显著性与 level 转义 | Conformant | `cabac/residual_test.go` 固定向量、残差 fuzz、三份 Main Oracle | 8×8 ctxBlockCat=5 待接入 |
+| CABAC 宏块与 MVD | 9.3.3 / 7.3.5 | I4×4/I16×16/PCM、P 各分区、Skip、QP delta、CBP、MVD 上下文 | Conformant | 三份 Main Oracle；`TestCABAC_PCMRestartOracle` 验证 PCM 后引擎重启 | B 宏块、ref_idx 在后续批次接入 |
+| Main 解码流水线 | M3 范围 | CABAC 单参考、无重排 I/P、4×4 变换、多 slice | Partial | `TestCABAC_IntraPixelOracle`、固定 Oracle 哈希、M2 回归 | B、双向/direct、多参考/MMCO、加权预测、POC type 1、显示重排尚未实现，显式拒绝 |
+| High 解码流水线 | M3 范围 | 8×8 / ScalingMatrix | TODO | 尚无新增 High 验证 | 8×8 逆变换、I8×8 预测、缩放矩阵选择与应用待实现 |
+
+后续按 `docs/Implementation-Plan.md` M3 的参考列表/MMCO、B 帧与重排、
+High 8×8/ScalingMatrix、完整 Oracle 与 race 门禁继续推进；当前不创建 v0.4.0 标签。
+
+## M4–M9
 
 后续里程碑的模块表在对应里程碑开工时补全；开工前这里只保留占位，
 避免出现"提前承诺、实际未实现"的记录失真。

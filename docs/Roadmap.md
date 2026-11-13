@@ -268,7 +268,7 @@ M6/M7/M8 ───────────► M9 生产化与发布
 | M0 | 工程基础与规范准备 | 骨架、API 草案、CI、Oracle 框架、语料 manifest | S | WIP（本地通过，待 CI） |
 | M1 | Bitstream Foundation | BitReader/Writer、RBSP/EBSP、NAL、Annex-B/AVCC、avcC、AU 组装、SPS/PPS | M | WIP（本地门禁通过，待 CI） |
 | M2 | Decoder Baseline | CAVLC + Intra + P + MC + 4×4 IDCT + Deblock + 基础 DPB，与 FFmpeg 逐像素一致 | L | WIP（本地门禁通过，待 CI；见 gates/m2.md） |
-| M3 | Decoder Main/High | CABAC、B Slice、POC、RefList、MMCO、8×8、ScalingMatrix、延迟输出 | L | TODO |
+| M3 | Decoder Main/High | CABAC、B Slice、POC、RefList、MMCO、8×8、ScalingMatrix、延迟输出 | L | WIP（CABAC 单参考 I/P 已验证；其余门禁进行中） |
 | M4 | Encoder Baseline | SPS/PPS Writer、IDR、I_PCM、I4×4/I16×16、CAVLC、CQP、本地重建、Annex-B | L | TODO |
 | M5 | Encoder Main/High | P Slice、ME/MC、亚像素、模式决策、RD、B Frame、CABAC、8×8、GOP、RC | XL | TODO |
 | M6 | 完整流式处理 | 增量 Reader、AU 组装、YUV I/O、Pipeline、背压、取消、Flush | M | TODO |

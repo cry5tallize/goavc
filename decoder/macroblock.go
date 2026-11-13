@@ -5,6 +5,7 @@ import (
 
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/bitstream"
+	"github.com/goavc/h264/internal/entropy/cabac"
 	"github.com/goavc/h264/internal/motion"
 	"github.com/goavc/h264/internal/picture"
 	"github.com/goavc/h264/internal/transform"
@@ -74,7 +75,7 @@ func decodeMacroblock(fs *frameState, addr int, s *sliceEntry, sliceID int, qsca
 	info.alphaDiv2 = int8(s.hdr.SliceAlphaC0OffsetDiv2)
 	info.betaDiv2 = int8(s.hdr.SliceBetaOffsetDiv2)
 
-	mbType, err := s.data.ReadUE()
+	mbType, err := s.readMBType(fs, addr)
 	if err != nil {
 		return fmt.Errorf("mb_type: %w", err)
 	}
@@ -110,17 +111,9 @@ func decodeIntraMacroblock(fs *frameState, addr, mbx, mby, mbType int, s *sliceE
 		for n := 0; n < 16; n++ {
 			raster := blockRaster(n)
 			pred := fs.mostProbableMode(mbx, mby, raster)
-			flag, err := readBit(s.data)
+			mode, err := s.readIntraMode(pred)
 			if err != nil {
-				return fmt.Errorf("prev_intra4x4_pred_mode_flag: %w", err)
-			}
-			mode := pred
-			if flag == 0 {
-				rem, err := readBits(s.data, 3)
-				if err != nil {
-					return fmt.Errorf("rem_intra4x4_pred_mode: %w", err)
-				}
-				mode = int(rem) + boolToInt(int(rem) >= pred)
+				return err
 			}
 			if mode < 0 || mode > 8 {
 				return fmt.Errorf("intra4x4 mode %d out of range: %w", mode, h264.ErrInvalidData)
@@ -132,7 +125,7 @@ func decodeIntraMacroblock(fs *frameState, addr, mbx, mby, mbType int, s *sliceE
 			// 若等整个循环结束再赋值，所有 pred 都会退化为 DC。
 			info.intraModes[raster] = int8(mode)
 		}
-		chromaMode, err := s.data.ReadUE()
+		chromaMode, err := s.readChromaMode(fs, addr)
 		if err != nil {
 			return fmt.Errorf("intra_chroma_pred_mode: %w", err)
 		}
@@ -141,23 +134,19 @@ func decodeIntraMacroblock(fs *frameState, addr, mbx, mby, mbType int, s *sliceE
 		}
 		info.intraModes = modes
 		info.chromaMode = int8(chromaMode)
-		cbpCode, err := s.data.ReadUE()
+		cbp, err := s.readCBP(fs, addr, true)
 		if err != nil {
-			return fmt.Errorf("coded_block_pattern: %w", err)
+			return err
 		}
-		if cbpCode > 47 {
-			return fmt.Errorf("coded_block_pattern %d exceeds 47: %w", cbpCode, h264.ErrInvalidData)
-		}
-		cbp := int(intraCBPMap[cbpCode])
 		info.cbp = cbp
 		var res residual
 		if cbp != 0 {
-			if err := updateQScale(s.data, qscale); err != nil {
+			if err := s.updateQP(qscale); err != nil {
 				return err
 			}
 			info.qp = *qscale
 		}
-		if err := fs.decodeResiduals(s.data, addr, mbx, mby, false, false, cbp, &res); err != nil {
+		if err := fs.decodeResiduals(s, addr, mbx, mby, false, false, cbp, &res); err != nil {
 			return err
 		}
 		if err := fs.reconstructIntra4x4(mbx, mby, cbp, *qscale, &res); err != nil {
@@ -172,7 +161,7 @@ func decodeIntraMacroblock(fs *frameState, addr, mbx, mby, mbType int, s *sliceE
 
 	// Intra16x16：mb_type 1..24。
 	predMode, lumaAC, chromaCBP := intra16Info(mbType)
-	chromaMode, err := s.data.ReadUE()
+	chromaMode, err := s.readChromaMode(fs, addr)
 	if err != nil {
 		return fmt.Errorf("intra_chroma_pred_mode: %w", err)
 	}
@@ -186,12 +175,12 @@ func decodeIntraMacroblock(fs *frameState, addr, mbx, mby, mbType int, s *sliceE
 		cbp |= 0x0F
 	}
 	info.cbp = cbp
-	if err := updateQScale(s.data, qscale); err != nil {
+	if err := s.updateQP(qscale); err != nil {
 		return err
 	}
 	info.qp = *qscale
 	var res residual
-	if err := fs.decodeResiduals(s.data, addr, mbx, mby, true, lumaAC, cbp, &res); err != nil {
+	if err := fs.decodeResiduals(s, addr, mbx, mby, true, lumaAC, cbp, &res); err != nil {
 		return err
 	}
 	if err := fs.reconstructI16(mbx, mby, predMode, int(chromaMode), lumaAC, *qscale, &res); err != nil {
@@ -236,6 +225,7 @@ func decodePCMMacroblock(fs *frameState, addr, mbx, mby int, s *sliceEntry) erro
 	info.intra = true
 	info.pcm = true
 	info.qp = 0 // 规范：I_PCM 的去块 QP 为 0
+	info.cbp = 47
 	base := addr * 16
 	for i := 0; i < 16; i++ {
 		fs.lumaNZ[base+i] = 16
@@ -246,6 +236,17 @@ func decodePCMMacroblock(fs *frameState, addr, mbx, mby int, s *sliceEntry) erro
 		fs.chromaNZ[1][cb+i] = 16
 	}
 	fs.mv.SetRect(mbx*4, mby*4, 4, 4, motion.MV{}, -1)
+	if s.cabac != nil {
+		for i := range fs.dcCoded {
+			fs.dcCoded[i][addr] = true
+		}
+		engine, err := cabac.New(s.data)
+		if err != nil {
+			return err
+		}
+		s.cabac.d = engine
+		s.cabac.lastDelta = false
+	}
 	return nil
 }
 
@@ -258,22 +259,52 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 	info := &fs.info[addr]
 	baseX, baseY := mbx*4, mby*4
 
+	var mvdX, mvdY int
+	var difference motion.MV
+	predict := func(x, y, w, kind int) motion.MV {
+		mvdX, mvdY = x, y
+		switch kind {
+		case 1, 2:
+			return motion.Predict16x8(fs.mv, x, y, kind == 2, 0)
+		case 3, 4:
+			return motion.Predict8x16(fs.mv, x, y, kind == 4, 0)
+		}
+		return motion.Predict(fs.mv, x, y, w, 0)
+	}
 	setMV := func(bx, by, w, h int, mv motion.MV) error {
 		if err := mv.Validate(); err != nil {
 			return err
 		}
 		fs.mv.SetRect(baseX+bx, baseY+by, w, h, mv, 0)
+		if s.cabac != nil {
+			for y := baseY + by; y < baseY+by+h; y++ {
+				for x := baseX + bx; x < baseX+bx+w; x++ {
+					fs.mvd[y*fs.mv.BlockW+x] = difference
+				}
+			}
+		}
 		return nil
 	}
 	readMVD := func(pred motion.MV) (motion.MV, error) {
-		dx, err := s.data.ReadSE()
+		var dx, dy int32
+		var err error
+		if s.cabac != nil {
+			dx, err = s.cabac.readMVDComponent(fs, mvdX, mvdY, 0)
+		} else {
+			dx, err = s.data.ReadSE()
+		}
 		if err != nil {
 			return motion.MV{}, fmt.Errorf("mvd_l0 x: %w", err)
 		}
-		dy, err := s.data.ReadSE()
+		if s.cabac != nil {
+			dy, err = s.cabac.readMVDComponent(fs, mvdX, mvdY, 1)
+		} else {
+			dy, err = s.data.ReadSE()
+		}
 		if err != nil {
 			return motion.MV{}, fmt.Errorf("mvd_l0 y: %w", err)
 		}
+		difference = motion.MV{X: dx, Y: dy}
 		x, y := int64(pred.X)+int64(dx), int64(pred.Y)+int64(dy)
 		if x < -motion.MaxAbsMV || x > motion.MaxAbsMV || y < -motion.MaxAbsMV || y > motion.MaxAbsMV {
 			return motion.MV{}, fmt.Errorf("decoder: motion vector overflow: %w", h264.ErrInvalidData)
@@ -283,7 +314,7 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 
 	switch pType {
 	case 0: // 16x16
-		mv, err := readMVD(motion.Predict(fs.mv, baseX, baseY, 4, 0))
+		mv, err := readMVD(predict(baseX, baseY, 4, 0))
 		if err != nil {
 			return err
 		}
@@ -293,7 +324,7 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 		fs.mcPartition(ref, mbx, mby, 0, 0, 16, 16, mv)
 	case 1: // 16x8
 		for i := 0; i < 2; i++ {
-			mv, err := readMVD(motion.Predict16x8(fs.mv, baseX, baseY+i*2, i == 1, 0))
+			mv, err := readMVD(predict(baseX, baseY+i*2, 4, 1+i))
 			if err != nil {
 				return err
 			}
@@ -304,7 +335,7 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 		}
 	case 2: // 8x16
 		for i := 0; i < 2; i++ {
-			mv, err := readMVD(motion.Predict8x16(fs.mv, baseX+i*2, baseY, i == 1, 0))
+			mv, err := readMVD(predict(baseX+i*2, baseY, 2, 3+i))
 			if err != nil {
 				return err
 			}
@@ -318,7 +349,7 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 		// 不能“读一个 sub_mb_type 就跟它的 mvd”，否则位流错位。
 		var subTypes [4]int
 		for i8 := 0; i8 < 4; i8++ {
-			subType, err := s.data.ReadUE()
+			subType, err := s.readPSubType()
 			if err != nil {
 				return fmt.Errorf("sub_mb_type[%d]: %w", i8, err)
 			}
@@ -332,7 +363,7 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 			y8 := (i8 >> 1) * 2
 			switch subTypes[i8] {
 			case 0: // 8x8
-				mv, err := readMVD(motion.Predict(fs.mv, baseX+x8, baseY+y8, 2, 0))
+				mv, err := readMVD(predict(baseX+x8, baseY+y8, 2, 0))
 				if err != nil {
 					return err
 				}
@@ -342,7 +373,7 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 				fs.mcPartition(ref, mbx, mby, x8*4, y8*4, 8, 8, mv)
 			case 1: // 8x4
 				for j := 0; j < 2; j++ {
-					mv, err := readMVD(motion.Predict(fs.mv, baseX+x8, baseY+y8+j, 2, 0))
+					mv, err := readMVD(predict(baseX+x8, baseY+y8+j, 2, 0))
 					if err != nil {
 						return err
 					}
@@ -353,7 +384,7 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 				}
 			case 2: // 4x8
 				for j := 0; j < 2; j++ {
-					mv, err := readMVD(motion.Predict(fs.mv, baseX+x8+j, baseY+y8, 1, 0))
+					mv, err := readMVD(predict(baseX+x8+j, baseY+y8, 1, 0))
 					if err != nil {
 						return err
 					}
@@ -365,7 +396,7 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 			case 3: // 4x4
 				for j := 0; j < 4; j++ {
 					bx, by := x8+j%2, y8+j/2
-					mv, err := readMVD(motion.Predict(fs.mv, baseX+bx, baseY+by, 1, 0))
+					mv, err := readMVD(predict(baseX+bx, baseY+by, 1, 0))
 					if err != nil {
 						return err
 					}
@@ -380,23 +411,19 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 		return fmt.Errorf("P mb_type %d out of range: %w", pType, h264.ErrInvalidData)
 	}
 
-	cbpCode, err := s.data.ReadUE()
+	cbp, err := s.readCBP(fs, addr, false)
 	if err != nil {
-		return fmt.Errorf("coded_block_pattern: %w", err)
+		return err
 	}
-	if cbpCode > 47 {
-		return fmt.Errorf("coded_block_pattern %d exceeds 47: %w", cbpCode, h264.ErrInvalidData)
-	}
-	cbp := int(interCBPMap[cbpCode])
 	info.cbp = cbp
 	if cbp != 0 {
-		if err := updateQScale(s.data, qscale); err != nil {
+		if err := s.updateQP(qscale); err != nil {
 			return err
 		}
 		info.qp = *qscale
 	}
 	var res residual
-	if err := fs.decodeResiduals(s.data, addr, mbx, mby, false, false, cbp, &res); err != nil {
+	if err := fs.decodeResiduals(s, addr, mbx, mby, false, false, cbp, &res); err != nil {
 		return err
 	}
 	if err := fs.addLumaResidual(mbx, mby, cbp, false, *qscale, &res); err != nil {

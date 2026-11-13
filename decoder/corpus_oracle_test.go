@@ -86,7 +86,7 @@ func TestCorpus_BaselinePixelExact(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, e := range m.Entries {
-		if e.Status != manifest.StatusConformant {
+		if e.Status != manifest.StatusConformant || e.Profile != "baseline" {
 			continue
 		}
 		path := filepath.Join("..", filepath.FromSlash(e.Path))

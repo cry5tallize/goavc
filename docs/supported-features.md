@@ -11,13 +11,16 @@
 > **M2 状态说明：** Baseline 的无重排、单参考 CAVLC I/P 解码已通过整帧 Oracle。
 > `Conformant` 仅针对表内注明的范围；Baseline Profile 整体保留 `Partial`，因为
 > FMO/ASO、冗余 slice 等高级工具仍未实现。编码流水线从 M4 开始。
+>
+> **M3 进展：** CABAC 单参考、无重排 I/P 的 4×4 解码路径已验证；B/多参考与
+> High 8×8/ScalingMatrix 仍待实现。Main 保留 `Partial`，M3 门禁尚未完成。
 
 ## 1. Profile
 
 | Profile | profile_idc | 关键工具 | Decoder | Encoder | 目标里程碑 |
 |---|---|---|---|---|---|
 | Baseline | 66 | CAVLC、I/P | Partial | TODO | M2 单参考无重排已验证；高级工具 M7 / Encoder M4 |
-| Main | 77 | CABAC、B、隔行 | TODO | TODO | M3 / M5c |
+| Main | 77 | CABAC、B、隔行 | Partial | TODO | M3 CABAC 单参考 I/P 已验证；B/多参考待接入；隔行 M7 |
 | High | 100 | 8×8 变换、ScalingMatrix | TODO | TODO | M3 / M5c |
 | High 10 | 110 | 10 bit | TODO | TODO | M7 |
 | High 4:2:2 | 122 | 4:2:2、10 bit | TODO | TODO | M7 |
@@ -54,10 +57,10 @@
 | CAVLC：coeff_token / trailing ones | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
 | CAVLC：total_zeros / run_before | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
 | CAVLC：level prefix / suffix / 转义 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
-| CABAC：算术编解码器 | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
-| CABAC：上下文初始化与状态转移 | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
-| CABAC：宏块/MV/残差上下文 | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
-| CABAC：terminate / cabac_zero_word | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
+| CABAC：算术编解码器 | Conformant | TODO | M3 解码 MPS/LPS/bypass/terminate 解析解与 Oracle；编码 M5 |
+| CABAC：上下文初始化与状态转移 | Conformant | TODO | M3 4:2:0 使用的 460 个上下文、64 状态已验证；4:4:4 M7 |
+| CABAC：宏块/MV/残差上下文 | Partial | TODO | M3 I/P、单参考、4×4 残差已验证；B/ref_idx/8×8 待接入 |
+| CABAC：terminate / cabac_zero_word | Partial | TODO | M3 end_of_slice 和 PCM terminate/restart 已验证；填充边界覆盖待补 |
 
 ## 5. 预测
 

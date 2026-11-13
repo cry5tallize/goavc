@@ -1,8 +1,8 @@
 // Package decoder 实现 H.264 Baseline 解码流水线。
 //
 // 输入单位是访问单元（Packet.Data 为 Annex-B），输出是显示顺序的
-// 4:2:0 8-bit Frame。M2 范围：CAVLC、I/P 切片、单参考帧、4x4 变换、
-// 基础去块与无重排的 POC type 0/2；CABAC/B/8x8/MMCO 等返回 ErrUnsupported。
+// 4:2:0 8-bit Frame。当前支持 CAVLC/CABAC 的 I/P、单参考帧、4x4 变换、
+// 基础去块与无重排的 POC type 0/2；B/8x8/MMCO 等返回 ErrUnsupported。
 package decoder
 
 import (

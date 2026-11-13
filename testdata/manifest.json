@@ -152,6 +152,83 @@
       "expectedYUVSha256": "92fa19f1e4340648be9b7aaa7dba84dc4eaf7f02badcf8a2ca722efe15f59341",
       "status": "conformant",
       "notes": "FFmpeg 8.0 Y/U/V pixel-exact; 4 frames; POC type 2."
+    },
+    {
+      "name": "main_64x48_yuv420p_cabac_i_002",
+      "path": "testdata/main/main_64x48_yuv420p_cabac_i_002.264",
+      "source": "x264",
+      "profile": "main",
+      "level": "1.0",
+      "width": 64,
+      "height": 48,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I"
+      ],
+      "sliceCount": 1,
+      "refFrames": 1,
+      "tags": [
+        "m3_cabac",
+        "cabac_init_0"
+      ],
+      "sha256": "ce17a286f8b3e39a72900712bdbf782daf4f3427fac7ecc5b0c0c4e2c8dc0fcf",
+      "expectedYUVSha256": "5ea08483b5f3e73f2a98c8d552b305e7040ccc9f8d3dca2e0c9b46fa85f9aef4",
+      "status": "conformant",
+      "notes": "M3 CABAC I/P subset; 3 frames; init_idc=0; FFmpeg 8.0 pixel exact; B/multireference pending."
+    },
+    {
+      "name": "main_176x144_yuv420p_cabac_ip_003",
+      "path": "testdata/main/main_176x144_yuv420p_cabac_ip_003.264",
+      "source": "x264",
+      "profile": "main",
+      "level": "1.0",
+      "width": 176,
+      "height": 144,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P"
+      ],
+      "sliceCount": 1,
+      "refFrames": 1,
+      "tags": [
+        "m3_cabac",
+        "cabac_init_1"
+      ],
+      "sha256": "22f4f5d9ebdecc6e8ffc78458c945a20d4646c583da4fd37ee68579c147126bc",
+      "expectedYUVSha256": "0d43d450195f17949cd01b48dfb87ba66eb7c61248cccd572c88fc27236b67d7",
+      "status": "conformant",
+      "notes": "M3 CABAC I/P subset; 5 frames; init_idc=1; FFmpeg 8.0 pixel exact; B/multireference pending."
+    },
+    {
+      "name": "main_320x240_yuv420p_cabac_ip_multislice_004",
+      "path": "testdata/main/main_320x240_yuv420p_cabac_ip_multislice_004.264",
+      "source": "x264",
+      "profile": "main",
+      "level": "1.1",
+      "width": 320,
+      "height": 240,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P"
+      ],
+      "sliceCount": 2,
+      "refFrames": 1,
+      "tags": [
+        "m3_cabac",
+        "cabac_init_2"
+      ],
+      "sha256": "9f79a4c9a6dd656177cf525581378b2988930f002b29ccc059eefa9949f610d0",
+      "expectedYUVSha256": "8a0c6a97eceb5358acd5192c4afccb9383ade6633d6cc43282edbecb2b79f5ac",
+      "status": "conformant",
+      "notes": "M3 CABAC I/P subset; 4 frames; init_idc=2; FFmpeg 8.0 pixel exact; B/multireference pending."
     }
   ]
 }

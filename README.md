@@ -3,10 +3,11 @@
 从零实现的 H.264/AVC 软件编解码器：**纯 Go**，允许 Go 汇编（amd64 SSE2/AVX2、arm64 NEON），
 **零 CGO、零 C/C++、零外部编解码库**。Encoder 与 Decoder 共享同一套预测、变换、重建、滤波内核。
 
-> 当前状态：**M2 Baseline 解码已实现**。`decoder.New` 接收 Annex-B 访问单元，
+> 当前状态：**M3 开发中，M2 Baseline 已完成本地门禁**。`decoder.New` 接收 Annex-B 访问单元，
 > 输出 8-bit YUV420；支持 CAVLC、I/P、单参考、多 slice、P_Skip、去块与裁剪。
 > 五份真实 Baseline 语料（含 1080p）通过 FFmpeg 逐像素对比，CI 可核验固定
-> Oracle 输出哈希。编码器从 M4 开始；CABAC/B/多参考等工具明确返回 `ErrUnsupported`。
+> Oracle 输出哈希。M3 新增 CABAC 单参考 I/P 的 4×4 路径，三份 Main 样本通过
+> FFmpeg 对比。编码器从 M4 开始；B/多参考/8×8 等工具当前返回 `ErrUnsupported`。
 > 本地退出证据见 [M2 门禁记录](docs/gates/m2.md)，远端 CI 待执行。
 > 进度及边界见 [实现状态](docs/implementation-status.md) 与 [支持矩阵](docs/supported-features.md)。
 
