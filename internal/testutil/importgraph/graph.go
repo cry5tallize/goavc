@@ -125,6 +125,12 @@ func Load(root string) (*Graph, error) {
 			if err != nil {
 				continue
 			}
+			// 外部测试包（package foo_test）可以 import 自己所在的 foo 目录。
+			// 依赖图按目录聚合，会把这条边误判成 foo -> foo 的自环；
+			// 生产代码不可能合法 import 自身，因此直接忽略自引用。
+			if imp == pkgPath {
+				continue
+			}
 			if !pkg.hasImport(imp) {
 				pkg.Imports = append(pkg.Imports, imp)
 			}

@@ -188,6 +188,25 @@ func TestCheckR5Cycle(t *testing.T) {
 	}
 }
 
+// 外部测试包（package foo_test）import 自身目录是合法的，
+// 依赖图按目录聚合时不得把它当成 foo -> foo 的 import 环。
+func TestCheckExternalTestSelfImportNotCycle(t *testing.T) {
+	root := newModule(t)
+	writeFile(t, root, "syntax/s.go", "package syntax\n")
+	writeFile(t, root, "syntax/s_external_test.go",
+		"package syntax_test\n\nimport _ \"example.com/m/syntax\"\n")
+
+	g, err := Load(root)
+	if err != nil {
+		t.Fatalf("Load 失败: %v", err)
+	}
+	for _, v := range g.Check() {
+		if v.Rule == "R5" {
+			t.Fatalf("外部测试包自引用被误判为环: %v", v)
+		}
+	}
+}
+
 func TestCleanModuleHasNoViolations(t *testing.T) {
 	root := newModule(t)
 	writeFile(t, root, "internal/simd/s.go", "package simd\n")
