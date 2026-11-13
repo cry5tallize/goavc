@@ -49,7 +49,7 @@ go run ./tools/manifest -file testdata/manifest.json
 
 开发时先运行相关包或用例，例如 `go test -run TestCAVLC -v ./internal/entropy/cavlc`；代码变更完成后执行完整门禁。文档改动核对内容与引用即可；报告实际执行结果及未完成项，不把跳过项算作通过。`make cross` 编译 Windows/Linux/macOS 的 amd64/arm64 六种组合，只证明可编译，不证明原生执行或 SIMD 正确。
 
-性能变更需提供同环境前后基准，参见 `docs/performance.md`；可用 `make bench`。并行实现须与串行输出逐比特一致并通过竞态检测；当前 `make race` 继承 `CGO_ENABLED=0`，使用前需处理 Go race 工具链对 CGO 的要求，不得把未执行的检测报告为通过。
+性能变更需提供同环境前后基准，参见 `docs/performance.md`；可用 `make bench`。并行实现须与串行输出逐比特一致并通过竞态检测。`make race` 是开发期工具链例外：显式用 `CGO_ENABLED=1 go test -race ./...`，需要 C 编译器；项目仍禁止导入 C 或外部编解码库，常规验证继续使用 `CGO_ENABLED=0`。竞态检测未执行时必须如实记录。
 
 ## 实现约束
 

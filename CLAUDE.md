@@ -10,14 +10,14 @@ Check actual code and tests before assuming an API or codec feature exists. Auth
 
 ## Commands
 
-Every build/test command must run with `CGO_ENABLED=0`. The Makefile and `scripts/verify.sh` export it; direct `go` invocations must set it explicitly.
+常规构建、测试与工具运行必须设置 `CGO_ENABLED=0`；Makefile 与 verify.sh 已导出该值。唯一例外是开发期 `make race`：Go 竞态检测工具链需要 `CGO_ENABLED=1` 和 C 编译器；项目源码仍禁止导入 C，正常运行时保持纯 Go。
 
 ```bash
 make verify            # full pre-commit gate: vet, build, test, deps, manifest
 ./scripts/verify.sh    # equivalent when make is unavailable (e.g. Git Bash on Windows)
 make build             # compile all packages, including tools/ and benchmarks/
 make test              # CGO_ENABLED=0 go test ./...
-make race              # go test -race ./... (required once parallel work lands in M8)
+make race              # CGO_ENABLED=1 go test -race ./... (M3 gate; needs C compiler)
 make vet
 make fmt               # gofmt -w .
 make fmt-check         # fails if any file is not gofmt-clean (PR gate)

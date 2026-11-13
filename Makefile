@@ -1,7 +1,8 @@
 # Pure Go H.264/AVC 编解码器 —— 构建入口
 #
-# 所有目标都在 CGO_ENABLED=0 下执行：这是项目的硬约束，
-# 任何目标若隐式引入 cgo 依赖，必须在 CI 暴露而不是等到发布才发现。
+# 常规目标都在 CGO_ENABLED=0 下执行，阻止库引入 cgo 运行时依赖。
+# race 是开发期工具链例外：Go 的竞态检测器要求 CGO_ENABLED=1 和 C 编译器；
+# 它不改变常规构建门禁，也不允许项目源码导入 C 或外部编解码库。
 #
 # 注意：Makefile 的 recipe 行必须以 TAB 缩进，改成空格会直接报
 # "missing separator"。编辑本文件时请勿让编辑器自动展开 TAB。
@@ -27,9 +28,9 @@ build:
 test:
 	$(GO) test ./...
 
-## race: 竞态检测（M8 并行实现落地后为必跑项）
+## race: 开发期竞态检测（M3 起为门禁项，需要本机 C 编译器）
 race:
-	$(GO) test -race ./...
+	CGO_ENABLED=1 $(GO) test -race ./...
 
 ## bench: 基准测试（需要可复现的硬件与空闲机器）
 bench:

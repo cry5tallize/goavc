@@ -64,3 +64,18 @@ jobs:
       - name: corpus manifest
         shell: bash
         run: go run ./tools/manifest -file testdata/manifest.json
+
+  race:
+    name: race (linux)
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+          check-latest: true
+      # 开发期检测器需要 C 工具链；常规三平台构建仍使用上方的 CGO=0。
+      - name: race detector
+        run: go test -race ./...
