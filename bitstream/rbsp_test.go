@@ -99,6 +99,69 @@ func TestEBSPToRBSP_DoesNotModifyInput(t *testing.T) {
 	}
 }
 
+// TestValidateRBSPTrailingBits 验证最后一个字节非零这一判据。
+func TestValidateRBSPTrailingBits(t *testing.T) {
+	valid := [][]byte{
+		{0x80},
+		{0x01},
+		{0x03},
+		{0xFF},
+		{0x00, 0x80},
+		{0xAA, 0x01},
+	}
+	for _, rbsp := range valid {
+		if err := ValidateRBSPTrailingBits(rbsp); err != nil {
+			t.Fatalf("合法 RBSP %x 被拒绝: %v", rbsp, err)
+		}
+	}
+
+	invalid := [][]byte{
+		nil,
+		{},
+		{0x00},
+		{0x80, 0x00},
+		{0x00, 0x00},
+	}
+	for _, rbsp := range invalid {
+		if err := ValidateRBSPTrailingBits(rbsp); !errors.Is(err, h264.ErrInvalidData) {
+			t.Fatalf("非法 RBSP %x 错误 = %v，期望 ErrInvalidData", rbsp, err)
+		}
+	}
+}
+
+// TestWriteRBSPTrailingBits 验证停止位与零填充对齐。
+func TestWriteRBSPTrailingBits(t *testing.T) {
+	w := NewWriter()
+	if err := w.WriteBits(3, 0b101); err != nil {
+		t.Fatalf("写入失败: %v", err)
+	}
+	if err := WriteRBSPTrailingBits(w); err != nil {
+		t.Fatalf("写尾位失败: %v", err)
+	}
+	if w.BitsWritten() != 8 {
+		t.Fatalf("写尾位后 %d bit，期望 8", w.BitsWritten())
+	}
+	got := w.Bytes()
+	if !bytes.Equal(got, []byte{0b10110000}) {
+		t.Fatalf("尾位结果 %08b，期望 10110000", got)
+	}
+	if err := ValidateRBSPTrailingBits(got); err != nil {
+		t.Fatalf("自产 RBSP 校验失败: %v", err)
+	}
+
+	// 已对齐时停止位单独占一个字节。
+	w = NewWriter()
+	if err := w.WriteByte(0xAA); err != nil {
+		t.Fatalf("写入失败: %v", err)
+	}
+	if err := WriteRBSPTrailingBits(w); err != nil {
+		t.Fatalf("写尾位失败: %v", err)
+	}
+	if got := w.Bytes(); !bytes.Equal(got, []byte{0xAA, 0x80}) {
+		t.Fatalf("对齐后的尾位结果 %x，期望 aa80", got)
+	}
+}
+
 // TestRBSPToEBSP_DoesNotModifyInput 验证转换是纯函数。
 func TestRBSPToEBSP_DoesNotModifyInput(t *testing.T) {
 	in := []byte{0x00, 0x00, 0x01, 0x02}
