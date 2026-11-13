@@ -8,7 +8,7 @@ import (
 // Spec: table 9-4 的 Intra CBP 映射；值是 luma 位图 | chroma<<4。
 var intraCBP = [48]int{47, 31, 15, 0, 23, 27, 29, 30, 7, 11, 13, 14, 39, 43, 45, 46, 16, 3, 5, 10, 12, 19, 21, 26, 28, 35, 37, 42, 44, 1, 2, 4, 8, 17, 18, 20, 24, 6, 9, 22, 25, 32, 33, 34, 36, 40, 38, 41}
 
-func (s *intraState) writeMB(w *bitstream.Writer, addr int, qp *int, res *intraResidual) error {
+func (s *frameState) writeMB(w *bitstream.Writer, addr int, qp *int, res *residual) error {
 	info := &s.info[addr]
 	if info.is16 {
 		typ := 1 + info.mode16 + (info.cbp>>4)*4
@@ -56,6 +56,12 @@ func (s *intraState) writeMB(w *bitstream.Writer, addr int, qp *int, res *intraR
 	} else {
 		info.qp = *qp
 	}
+	return s.writeResidual(w, addr, res)
+}
+
+// writeResidual 是 I/P 共用的 CAVLC 残差写出，不根据 slice 类型另维护一份。
+func (s *frameState) writeResidual(w *bitstream.Writer, addr int, res *residual) error {
+	info := &s.info[addr]
 	if info.is16 {
 		if _, err := cavlc.EncodeBlock(w, &res.lumaDC, cavlc.LumaDC, s.nc(addr, 0, 0)); err != nil {
 			return err

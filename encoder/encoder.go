@@ -17,7 +17,7 @@ type Encoder struct {
 	cfg                     h264.EncoderConfig
 	pcm                     bool
 	qpAt                    func(x, y int) int
-	last                    *intraState
+	last                    *frameState
 	slices                  int
 	sps                     *syntax.SPS
 	pps                     *syntax.PPS
@@ -115,7 +115,7 @@ func (e *Encoder) SendFrame(f *h264.Frame) error {
 		}
 	}
 	var data []byte
-	var state *intraState
+	var state *frameState
 	if e.pcm {
 		data, err = e.encodePCM(pic)
 	} else {

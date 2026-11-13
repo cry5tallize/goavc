@@ -2,11 +2,11 @@ package encoder
 
 import "github.com/goavc/h264/internal/prediction"
 
-func (s *intraState) available(addr, other int) bool {
+func (s *frameState) available(addr, other int) bool {
 	return other >= s.info[addr].start && other < addr
 }
 
-func (s *intraState) blockSamples(addr, c int) (prediction.IntraBlockSamples, bool, bool, bool) {
+func (s *frameState) blockSamples(addr, c int) (prediction.IntraBlockSamples, bool, bool, bool) {
 	n := 16
 	if c > 0 {
 		n = 8
@@ -33,7 +33,7 @@ func (s *intraState) blockSamples(addr, c int) (prediction.IntraBlockSamples, bo
 	return a, top, left, tl
 }
 
-func (s *intraState) samples4(addr, bx, by int) (prediction.Intra4x4Samples, bool, bool, bool) {
+func (s *frameState) samples4(addr, bx, by int) (prediction.Intra4x4Samples, bool, bool, bool) {
 	mw := s.pic.MBWidth
 	mbx, mby := addr%mw, addr/mw
 	x, y := mbx*16+bx*4, mby*16+by*4
@@ -71,7 +71,7 @@ func (s *intraState) samples4(addr, bx, by int) (prediction.Intra4x4Samples, boo
 	return a, top, left, tl
 }
 
-func (s *intraState) probable(addr, r int) int {
+func (s *frameState) probable(addr, r int) int {
 	mw := s.pic.MBWidth
 	bx, by := r%4, r/4
 	left, top := -1, -1
@@ -88,7 +88,7 @@ func (s *intraState) probable(addr, r int) int {
 	return prediction.MostProbableIntra4x4(left, top)
 }
 
-func (s *intraState) nc(addr, r, c int) int {
+func (s *frameState) nc(addr, r, c int) int {
 	n := 4
 	grid := s.nz
 	if c > 0 {

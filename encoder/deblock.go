@@ -8,7 +8,7 @@ import (
 // Spec: 8.7。M4 全部是 intra，宏块外边 bS=4、内部 bS=3。
 // 与解码器调用同一 LumaEdge/ChromaEdge 内核；顺序为宏块光栅、先垂直后水平。
 // slice 的 idc=0，所以跨 slice 边也滤波；预测在整帧滤波前完成。
-func (s *intraState) deblock() {
+func (s *frameState) deblock() {
 	mw := s.pic.MBWidth
 	for addr, info := range s.info {
 		mx, my := addr%mw, addr/mw

@@ -41,7 +41,7 @@ func TestIntraSelection_AllModes(t *testing.T) {
 	for mode := 0; mode < 4; mode++ {
 		src, _ := picture.New(2, 2)
 		recon, _ := picture.New(2, 2)
-		s := &intraState{src: src, pic: recon, info: make([]intraMB, 4)}
+		s := &frameState{src: src, pic: recon, info: make([]mbInfo, 4)}
 		s.info[3].qp = 0
 		for c := 1; c < 3; c++ {
 			p := &recon.Planes[c]
@@ -55,7 +55,7 @@ func TestIntraSelection_AllModes(t *testing.T) {
 			prediction.Chroma8x8(target[:], 8, mode, a, t, l)
 			putBlock(&src.Planes[c], 8, 8, 8, target[:])
 		}
-		var r intraResidual
+		var r residual
 		s.chroma(3, &r)
 		if s.info[3].chromaMode != mode {
 			t.Fatalf("chroma target %d selected %d", mode, s.info[3].chromaMode)

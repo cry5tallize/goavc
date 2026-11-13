@@ -12,21 +12,21 @@ import (
 	"github.com/goavc/h264/nal"
 )
 
-type intraMB struct {
+type mbInfo struct {
 	start, qp, cbp, mode16, chromaMode int
 	is16                               bool
 	pcm                                bool
 	modes                              [16]int8
 }
-type intraResidual struct {
+type residual struct {
 	luma     [16][16]int32
 	lumaDC   [16]int32
 	chroma   [2][4][16]int32
 	chromaDC [2][4]int32
 }
-type intraState struct {
+type frameState struct {
 	src, pic *picture.Picture
-	info     []intraMB
+	info     []mbInfo
 	nz       []uint8
 	cnz      [2][]uint8
 }
@@ -43,13 +43,13 @@ func WithMacroblockQP(qp func(x, y int) int) Option {
 	}
 }
 
-func (e *Encoder) encodeIntra(src *picture.Picture) ([]byte, *intraState, error) {
+func (e *Encoder) encodeIntra(src *picture.Picture) ([]byte, *frameState, error) {
 	pic, err := picture.New(src.MBWidth, src.MBHeight)
 	if err != nil {
 		return nil, nil, err
 	}
 	total := src.MBWidth * src.MBHeight
-	s := &intraState{src: src, pic: pic, info: make([]intraMB, total), nz: make([]uint8, total*16)}
+	s := &frameState{src: src, pic: pic, info: make([]mbInfo, total), nz: make([]uint8, total*16)}
 	for c := range s.cnz {
 		s.cnz[c] = make([]uint8, total*4)
 	}
@@ -124,7 +124,7 @@ func appendBits(dst, src *bitstream.Writer) {
 	}
 }
 
-func (s *intraState) writePCM(w *bitstream.Writer, addr int) {
+func (s *frameState) writePCM(w *bitstream.Writer, addr int) {
 	info := &s.info[addr]
 	info.pcm = true
 	info.qp = 0
@@ -158,7 +158,7 @@ func (s *intraState) writePCM(w *bitstream.Writer, addr int) {
 
 // analyze 用重建邻块做 SAD 搜索；I4 候选按规范扫描边预测边重建。
 // I16 获胜时覆盖当前宏块，不影响已经重建的邻块或熵上下文。
-func (s *intraState) analyze(addr int) intraResidual {
+func (s *frameState) analyze(addr int) residual {
 	info := &s.info[addr]
 	mw := s.pic.MBWidth
 	x, y := addr%mw*16, addr/mw*16
@@ -166,7 +166,7 @@ func (s *intraState) analyze(addr int) intraResidual {
 	samples, top, left, tl := s.blockSamples(addr, 0)
 	var best16 [256]byte
 	mode16, cost16 := select16(&best16, &s.src.Planes[0], x, y, samples, top, left, tl)
-	var res intraResidual
+	var res residual
 	cost4 := 0
 	for n := 0; n < 16; n++ {
 		r := raster(n)
@@ -213,7 +213,7 @@ func (s *intraState) analyze(addr int) intraResidual {
 	return res
 }
 
-func (s *intraState) chroma(addr int, res *intraResidual) {
+func (s *frameState) chroma(addr int, res *residual) {
 	info := &s.info[addr]
 	x, y := addr%s.pic.MBWidth*8, addr/s.pic.MBWidth*8
 	var best [2][64]byte
