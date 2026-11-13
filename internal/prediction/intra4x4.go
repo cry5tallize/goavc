@@ -1,0 +1,174 @@
+// Package prediction 实现编解码共享的帧内/帧间预测。
+//
+// 编码器与解码器必须调用同一份实现（docs/architecture.md §3）。本包只做
+// 像素预测，不访问宏块语法；边界可用性与模式回退由 decoder 层决定。
+package prediction
+
+import (
+	"fmt"
+
+	h264 "github.com/goavc/h264"
+)
+
+// 帧内 4×4 模式编号（规范表 8-2）。
+const (
+	Intra4x4Vertical       = 0
+	Intra4x4Horizontal     = 1
+	Intra4x4DC             = 2
+	Intra4x4DiagonalLeft   = 3
+	Intra4x4DiagonalRight  = 4
+	Intra4x4VerticalRight  = 5
+	Intra4x4HorizontalDown = 6
+	Intra4x4VerticalLeft   = 7
+	Intra4x4HorizontalUp   = 8
+)
+
+// Intra4x4Samples 是 4×4 预测所需的邻域样本。
+//
+// Top 是上方 A..D，TopRight 是右上方 E..H，Left 是左侧 I..L，
+// TopLeft 是左上 M。调用方负责在右上不可用时用 Top[3] 复制填充，
+// 这是规范 8.3.1.2 的边界外推规则。
+type Intra4x4Samples struct {
+	Top      [4]byte
+	TopRight [4]byte
+	Left     [4]byte
+	TopLeft  byte
+}
+
+// Intra4x4 计算一个 4×4 帧内预测块并写入 dst（stride 为字节跨度）。
+//
+// topAvail/leftAvail 只影响 DC 模式；其他模式要求对应方向可用，
+// 不可用时返回 ErrInvalidData，由调用方按规范回退到 DC 模式。
+func Intra4x4(dst []byte, stride, mode int, s Intra4x4Samples, topAvail, leftAvail bool) error {
+	if len(dst) < 3*stride+4 || stride < 4 {
+		return fmt.Errorf("prediction: intra4x4 destination too small: %w", h264.ErrInvalidData)
+	}
+	a, b, c, d := s.Top[0], s.Top[1], s.Top[2], s.Top[3]
+	e, f, g, h := s.TopRight[0], s.TopRight[1], s.TopRight[2], s.TopRight[3]
+	i0, j, k, l := s.Left[0], s.Left[1], s.Left[2], s.Left[3]
+	m := s.TopLeft
+
+	switch mode {
+	case Intra4x4Vertical:
+		if !topAvail {
+			return fmt.Errorf("prediction: vertical mode without top samples: %w", h264.ErrInvalidData)
+		}
+		for y := 0; y < 4; y++ {
+			row := dst[y*stride : y*stride+4]
+			row[0], row[1], row[2], row[3] = a, b, c, d
+		}
+	case Intra4x4Horizontal:
+		if !leftAvail {
+			return fmt.Errorf("prediction: horizontal mode without left samples: %w", h264.ErrInvalidData)
+		}
+		vals := [4]byte{i0, j, k, l}
+		for y := 0; y < 4; y++ {
+			row := dst[y*stride : y*stride+4]
+			row[0], row[1], row[2], row[3] = vals[y], vals[y], vals[y], vals[y]
+		}
+	case Intra4x4DC:
+		dc := intraDC4(s, topAvail, leftAvail)
+		for y := 0; y < 4; y++ {
+			row := dst[y*stride : y*stride+4]
+			row[0], row[1], row[2], row[3] = dc, dc, dc, dc
+		}
+	case Intra4x4DiagonalLeft:
+		if !topAvail {
+			return fmt.Errorf("prediction: diagonal down-left without top samples: %w", h264.ErrInvalidData)
+		}
+		p := [16]byte{
+			avg3(a, b, c), avg3(b, c, d), avg3(c, d, e), avg3(d, e, f),
+			avg3(b, c, d), avg3(c, d, e), avg3(d, e, f), avg3(e, f, g),
+			avg3(c, d, e), avg3(d, e, f), avg3(e, f, g), avg3(f, g, h),
+			avg3(d, e, f), avg3(e, f, g), avg3(f, g, h), avg3(g, h, h),
+		}
+		write4x4(dst, stride, p)
+	case Intra4x4DiagonalRight:
+		if !topAvail || !leftAvail {
+			return fmt.Errorf("prediction: diagonal down-right requires top and left: %w", h264.ErrInvalidData)
+		}
+		p := [16]byte{
+			avg3(m, a, b), avg3(a, b, c), avg3(b, c, d), avg3(c, d, d),
+			avg3(i0, m, a), avg3(m, a, b), avg3(a, b, c), avg3(b, c, d),
+			avg3(j, i0, m), avg3(i0, m, a), avg3(m, a, b), avg3(a, b, c),
+			avg3(k, j, i0), avg3(j, i0, m), avg3(i0, m, a), avg3(m, a, b),
+		}
+		write4x4(dst, stride, p)
+	case Intra4x4VerticalRight:
+		if !topAvail || !leftAvail {
+			return fmt.Errorf("prediction: vertical-right requires top and left: %w", h264.ErrInvalidData)
+		}
+		p := [16]byte{
+			avg2(m, a), avg2(a, b), avg2(b, c), avg2(c, d),
+			avg3(i0, m, a), avg3(m, a, b), avg3(a, b, c), avg3(b, c, d),
+			avg3(m, i0, j), avg3(i0, m, a), avg3(m, a, b), avg3(a, b, c),
+			avg3(i0, j, k), avg3(j, i0, m), avg3(i0, m, a), avg3(m, a, b),
+		}
+		write4x4(dst, stride, p)
+	case Intra4x4HorizontalDown:
+		if !topAvail || !leftAvail {
+			return fmt.Errorf("prediction: horizontal-down requires top and left: %w", h264.ErrInvalidData)
+		}
+		p := [16]byte{
+			avg2(m, i0), avg3(m, a, b), avg3(a, b, c), avg3(b, c, d),
+			avg2(i0, j), avg3(m, i0, j), avg2(m, a), avg3(a, b, c),
+			avg2(j, k), avg3(i0, j, k), avg2(i0, j), avg3(m, i0, j),
+			avg2(k, l), avg3(j, k, l), avg2(j, k), avg3(i0, j, k),
+		}
+		write4x4(dst, stride, p)
+	case Intra4x4VerticalLeft:
+		if !topAvail {
+			return fmt.Errorf("prediction: vertical-left without top samples: %w", h264.ErrInvalidData)
+		}
+		p := [16]byte{
+			avg2(a, b), avg3(a, b, c), avg2(b, c), avg3(b, c, d),
+			avg2(b, c), avg3(b, c, d), avg2(c, d), avg3(c, d, e),
+			avg2(c, d), avg3(c, d, e), avg2(d, e), avg3(d, e, f),
+			avg2(d, e), avg3(d, e, f), avg2(e, f), avg3(e, f, g),
+		}
+		write4x4(dst, stride, p)
+	case Intra4x4HorizontalUp:
+		if !leftAvail {
+			return fmt.Errorf("prediction: horizontal-up without left samples: %w", h264.ErrInvalidData)
+		}
+		p := [16]byte{
+			avg2(i0, j), avg3(i0, j, k), avg2(j, k), avg3(j, k, l),
+			avg2(j, k), avg3(j, k, l), avg2(k, l), avg3(k, l, l),
+			avg2(k, l), avg3(k, l, l), l, l,
+			l, l, l, l,
+		}
+		write4x4(dst, stride, p)
+	default:
+		return fmt.Errorf("prediction: invalid intra4x4 mode %d: %w", mode, h264.ErrInvalidData)
+	}
+	return nil
+}
+
+func intraDC4(s Intra4x4Samples, topAvail, leftAvail bool) byte {
+	switch {
+	case topAvail && leftAvail:
+		sum := int(s.Top[0]) + int(s.Top[1]) + int(s.Top[2]) + int(s.Top[3]) +
+			int(s.Left[0]) + int(s.Left[1]) + int(s.Left[2]) + int(s.Left[3])
+		return byte((sum + 4) >> 3)
+	case topAvail:
+		sum := int(s.Top[0]) + int(s.Top[1]) + int(s.Top[2]) + int(s.Top[3])
+		return byte((sum + 2) >> 2)
+	case leftAvail:
+		sum := int(s.Left[0]) + int(s.Left[1]) + int(s.Left[2]) + int(s.Left[3])
+		return byte((sum + 2) >> 2)
+	default:
+		return 128
+	}
+}
+
+func write4x4(dst []byte, stride int, p [16]byte) {
+	copy(dst[0*stride:0*stride+4], p[0:4])
+	copy(dst[1*stride:1*stride+4], p[4:8])
+	copy(dst[2*stride:2*stride+4], p[8:12])
+	copy(dst[3*stride:3*stride+4], p[12:16])
+}
+
+func avg2(a, b byte) byte { return byte((int(a) + int(b) + 1) >> 1) }
+func avg3(a, b, c byte) byte {
+	return byte((int(a) + 2*int(b) + int(c) + 2) >> 2)
+}
