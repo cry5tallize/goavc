@@ -40,25 +40,30 @@ func (m MV) Validate() error {
 // 坐标：bx/by 是从图像左上角开始的 4×4 块坐标（不是宏块内坐标）。
 // Ref < 0 表示该块没有可用的 list0 预测（帧内块或尚未解码）。
 type Grid struct {
-	MBWidth  int
-	MBHeight int
-	BlockW   int
-	BlockH   int
-	MV       []MV
-	Ref      []int8
+	MBWidth    int
+	MBHeight   int
+	BlockW     int
+	BlockH     int
+	MV         []MV
+	Ref        []int8
+	valid      []bool
+	sliceStart int
 }
 
 // NewGrid 分配一张与图像尺寸匹配的网格。
 func NewGrid(mbWidth, mbHeight int) *Grid {
 	bw, bh := mbWidth*4, mbHeight*4
-	return &Grid{
+	g := &Grid{
 		MBWidth:  mbWidth,
 		MBHeight: mbHeight,
 		BlockW:   bw,
 		BlockH:   bh,
 		MV:       make([]MV, bw*bh),
 		Ref:      make([]int8, bw*bh),
+		valid:    make([]bool, bw*bh),
 	}
+	g.Reset()
+	return g
 }
 
 func (g *Grid) index(bx, by int) int { return by*g.BlockW + bx }
@@ -68,8 +73,12 @@ func (g *Grid) Available(bx, by int) bool {
 	if g == nil || bx < 0 || by < 0 || bx >= g.BlockW || by >= g.BlockH {
 		return false
 	}
-	return g.Ref[g.index(bx, by)] >= 0
+	return (by/4)*g.MBWidth+bx/4 >= g.sliceStart && g.valid[g.index(bx, by)]
 }
+
+// BeginSlice 限制预测邻块到当前 slice；调用 BeginSlice(0) 可恢复整帧
+// 视图供去块使用。M2 的 slice 按宏块地址递增且不重叠。
+func (g *Grid) BeginSlice(firstMB int) { g.sliceStart = firstMB }
 
 // Get 返回块的 MV 与参考索引；不可用时 ok=false。
 func (g *Grid) Get(bx, by int) (MV, int8, bool) {
@@ -93,15 +102,18 @@ func (g *Grid) SetRect(bx, by, w, h int, mv MV, ref int8) {
 			i := g.index(x, y)
 			g.MV[i] = mv
 			g.Ref[i] = ref
+			g.valid[i] = true
 		}
 	}
 }
 
 // Reset 清空网格，供新帧复用。
 func (g *Grid) Reset() {
+	g.sliceStart = 0
 	for i := range g.MV {
 		g.MV[i] = MV{}
 		g.Ref[i] = -1
+		g.valid[i] = false
 	}
 }
 
@@ -185,6 +197,10 @@ func PredictSkip(g *Grid, bx, by int, ref int8) MV {
 	a, aRef, aOK := g.Get(bx-1, by)
 	b, bRef, bOK := g.Get(bx, by-1)
 	c, cRef, cOK := diagonal(g, bx, by, 4)
+	// Spec: 8.4.1.1。左或上邻块不可用时，P_Skip 必须取零矢量。
+	if !aOK || !bOK {
+		return MV{}
+	}
 	if aOK && aRef == ref && a.IsZero() {
 		return MV{}
 	}

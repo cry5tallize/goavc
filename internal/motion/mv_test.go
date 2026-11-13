@@ -101,3 +101,34 @@ func TestMV_Validate(t *testing.T) {
 		t.Fatal("out-of-range MV accepted")
 	}
 }
+
+func TestPredict_IntraDiagonalAndSliceBoundary(t *testing.T) {
+	g := newTestGrid()
+	g.SetRect(1, 2, 1, 1, MV{8, 2}, 0)
+	g.SetRect(2, 1, 1, 1, MV{12, 4}, 0)
+	// C 是已解码帧内块；它可用但没有参考，不能回退到 D。
+	g.SetRect(4, 1, 1, 1, MV{}, -1)
+	g.SetRect(1, 1, 1, 1, MV{100, 100}, 0)
+	if got := Predict(g, 2, 2, 2, 0); got != (MV{8, 2}) {
+		t.Fatalf("intra C: %v", got)
+	}
+	g.BeginSlice(2)
+	if got := PredictSkip(g, 0, 4, 0); got != (MV{}) {
+		t.Fatal(got)
+	}
+	if g.Available(2, 1) {
+		t.Fatal("previous slice is available")
+	}
+	g.BeginSlice(0)
+	if !g.Available(2, 1) {
+		t.Fatal("deblock view lost previous slice")
+	}
+}
+
+func TestPredictSkip_UnavailableNeighbor(t *testing.T) {
+	g := newTestGrid()
+	g.SetRect(1, 0, 1, 1, MV{12, 8}, 0)
+	if got := PredictSkip(g, 2, 0, 0); got != (MV{}) {
+		t.Fatalf("missing B must force zero, got %v", got)
+	}
+}
