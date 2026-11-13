@@ -104,11 +104,62 @@ CGO_ENABLED=0 go test -run '^$' -bench . -benchmem -count 5 ./benchmarks
 M8 首先针对每帧上下文和帧内预测临时分配、逐样本亚像素 MC 建立 profile，
 在保持 Oracle 一致性的前提下复审 30 FPS 目标。
 
-## 6. 编码基准
+## 6. M4 帧内编码基线
 
-| 分辨率 | Profile | 码控 | QP/码率 | FPS | PSNR-Y | 码率实测 | commit |
+2026-11-14，HW-M2，代码/工具 commit：`aff921bca98ba77db7bd36f3937f3e15992460c8`。
+Go 1.27.4 windows/amd64、CGO_ENABLED=0、默认 GOFLAGS/GOMAXPROCS=16，实例内部
+单线程，generic 标量；无 SIMD。IDR 每帧、B=0、QP=26、CQP、单 slice、LevelAuto。
+Level 根据最坏 PCM/EBSP 预算选择，当前 720p@30 与 1080p@15 都为 Level 6.2；
+不能据此声称 1080p@30 已支持。GOPSize 不参与 M4 决策。
+
+质量语料为 `internal/testutil/pattern.Frame(1280,720,index)` 的 index=0..5，
+共六帧噪声、二维斜坡、水平/垂直斜坡、对角和分块图案，按 30 FPS 计算码率。
+它是合成基线，不代表自然视频或 M5 质量目标。完整输入 SHA-256：
+`dd292d5f102f2956bd27e2b5a1f9ea627a09342fa27ac0d729bb3d71221a589d`。
+
+```powershell
+$env:CGO_ENABLED = '0'
+go run ./tools/encodebench -width 1280 -height 720 -frames 6 -qp 26
+go run ./tools/encodebench -width 1280 -height 720 -frames 6 -qp 26 -pcm
+go test -run '^$' -bench . -benchmem -benchtime=300ms -count=5 ./encoder
+```
+
+六帧混合图案实测（计时仅 SendFrame+ReceivePacket，不计图案生成、重建快照、质量统计与 I/O）：
+
+| 通道 | 字节数 | 码率 kbit/s | PSNR Y/U/V dB | FPS | 平均 ms/帧 | P95 ms/帧 | HeapSys 采样最大字节 |
 |---|---|---|---|---|---|---|---|
-| _待 M4_ | | | | | | | |
+| I4/I16 + CAVLC | 1,222,486 | 48,899.44 | 41.1507 / 41.0844 / 41.0850 | 13.7144 | 72.9161 | 117.6486 | 20,709,376 |
+| 强制 I_PCM | 8,337,847 | 333,513.88 | +Inf / +Inf / +Inf | 90.1674 | 11.0905 | 13.1590 | 37,519,360 |
+
+两份输出都经 FFmpeg 独立解码（`-v warning -xerror -probesize 32M`），无 warning/error，
+YUV 哈希与本地重建严格相等。PCM 文件超过默认 5 MiB 探测预算，所以显式增大探测范围。
+
+| 通道 | Annex-B SHA-256 | 重建/FFmpeg YUV SHA-256 |
+|---|---|---|
+| Intra | `e8312c684fb42cc709799b49bd7bde51237d8d09caeca8ff383444b8aad1ca56` | `78f1750bcdf855196db0b39036ebec8ef8896fffb239b1d06a7cc96369527472` |
+| PCM | `937129138d3dd92c1a491795b404212d7407391c7ac4c02a29431e91904ce687` | `dd292d5f102f2956bd27e2b5a1f9ea627a09342fa27ac0d729bb3d71221a589d` |
+
+Go benchmark 使用固定 index=1 的二维斜坡单帧，包含输入边缘复制、编码和取包，
+不包含重建快照和图案生成。以下为五次测量中位数；同一行的 B/op、alloc/op 也各取中位数。
+
+| 基准 | ns/op | FPS | B/op | alloc/op | 输入单帧 SHA-256 |
+|---|---|---|---|---|---|
+| Encoder_720p_Generic（配置 30 FPS） | 70,918,920 | 14.1006 | 6,994,448 | 121,058 | `b7fc8e5048a11a8a56e17f10cdc1073c840b8e1850e79f0fce9200b23ca22590` |
+| Encoder_1080p_Generic（配置 15 FPS） | 156,516,100 | 6.3891 | 15,195,604 | 273,079 | `dd6adffe8c40e27ea0e7279247643839368ba853543d57b699bf23a96e5b9cfc` |
+| EncoderPCM_720p_Generic（配置 30 FPS） | 10,000,464 | 99.9954 | 13,876,536 | 55 | 同 720p 单帧 |
+
+五次耗时原始数据（ns/op）：
+
+```text
+720p Intra: 70918920 73671260 68483800 71173340 68412520
+1080p Intra: 150019100 159657300 151388150 156516100 170226650
+720p PCM: 9969374 9990270 10054416 10000464 10241385
+```
+
+HeapSys 是工具进程每帧后的堆保留量采样，包含保留码流和质量统计，不等同 RSS 或精确峰值。
+本次未测 CPU 利用率、SSIM、自然视频、x264 等 QP/码率差异或长期内存稳定性。
+M4 没有优化前后加速声明：这是首次标量编码基线；30 FPS 目标仍未达到，不能算性能门禁通过。
+M5 引入帧间压缩，M8 再处理邻域分配与热路径优化。
 
 ## 7. 内核对比
 
