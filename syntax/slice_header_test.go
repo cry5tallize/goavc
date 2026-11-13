@@ -30,6 +30,34 @@ func ppsMap(p *PPS) map[uint32]*PPS {
 	return map[uint32]*PPS{p.PicParameterSetID: p}
 }
 
+// writeDecRefPicMarking 写入 nal_ref_idc != 0 时的参考帧标记。
+// 旧测试入口默认 nal_ref_idc=3，因此非 IDR 也要写 adaptive flag。
+func writeDecRefPicMarking(t *testing.T, w *bitstream.Writer, idr bool) {
+	t.Helper()
+	if idr {
+		writeBitOrFail(t, w, 0) // no_output_of_prior_pics_flag
+		writeBitOrFail(t, w, 0) // long_term_reference_flag
+		return
+	}
+	writeBitOrFail(t, w, 0) // adaptive_ref_pic_marking_mode_flag
+}
+
+// writeSliceHeaderTail 写入 P/B 切片的参考列表相关位与 slice_qp_delta。
+func writeSliceHeaderTail(t *testing.T, w *bitstream.Writer, typ SliceType) {
+	t.Helper()
+	if typ == SliceTypeB {
+		writeBitOrFail(t, w, 0) // direct_spatial_mv_pred_flag
+	}
+	if typ == SliceTypeP || typ == SliceTypeB {
+		writeBitOrFail(t, w, 0) // num_ref_idx_active_override_flag
+		writeBitOrFail(t, w, 0) // ref_pic_list_reordering_flag_l0
+		if typ == SliceTypeB {
+			writeBitOrFail(t, w, 0) // ref_pic_list_reordering_flag_l1
+		}
+	}
+	writeSEOrFail(t, w, 0) // slice_qp_delta
+}
+
 func TestParseSliceHeader_BaselineIDR(t *testing.T) {
 	sps := testSPSForSlice()
 	pps := testPPSForSlice()
@@ -52,6 +80,8 @@ func TestParseSliceHeader_BaselineIDR(t *testing.T) {
 	if err := w.WriteBits(4, 10); err != nil { // pic_order_cnt_lsb
 		t.Fatal(err)
 	}
+	writeDecRefPicMarking(t, w, true)
+	writeSliceHeaderTail(t, w, SliceTypeI)
 
 	h, err := ParseSliceHeader(w.Bytes(), sps, ppsMap(pps), true)
 	if err != nil {
@@ -82,6 +112,8 @@ func TestParseSliceHeader_DeltaPOCBottom(t *testing.T) {
 	writeBitsOrFail(t, w, 4, 1) // frame_num
 	writeBitsOrFail(t, w, 4, 2) // POC lsb
 	writeSEOrFail(t, w, -3)     // delta_pic_order_cnt_bottom
+	writeDecRefPicMarking(t, w, false)
+	writeSliceHeaderTail(t, w, SliceTypeP)
 
 	h, err := ParseSliceHeader(w.Bytes(), sps, ppsMap(pps), false)
 	if err != nil {
@@ -106,6 +138,8 @@ func TestParseSliceHeader_POCType1(t *testing.T) {
 	writeBitsOrFail(t, w, 4, 0) // frame_num
 	writeSEOrFail(t, w, 7)      // delta_pic_order_cnt[0]
 	writeSEOrFail(t, w, -7)     // delta_pic_order_cnt[1]
+	writeDecRefPicMarking(t, w, false)
+	writeSliceHeaderTail(t, w, SliceTypeB)
 
 	h, err := ParseSliceHeader(w.Bytes(), sps, ppsMap(pps), false)
 	if err != nil {
@@ -131,6 +165,8 @@ func TestParseSliceHeader_FieldPicture(t *testing.T) {
 	writeBitOrFail(t, w, 1)     // field_pic_flag
 	writeBitOrFail(t, w, 1)     // bottom_field_flag
 	writeBitsOrFail(t, w, 4, 4) // POC lsb
+	writeDecRefPicMarking(t, w, false)
+	writeSliceHeaderTail(t, w, SliceTypeI)
 
 	h, err := ParseSliceHeader(w.Bytes(), sps, ppsMap(pps), false)
 	if err != nil {
@@ -152,6 +188,8 @@ func TestParseSliceHeader_RedundantPicCnt(t *testing.T) {
 	writeBitsOrFail(t, w, 4, 0)
 	writeBitsOrFail(t, w, 4, 0)
 	writeUEOrFail(t, w, 7)
+	writeDecRefPicMarking(t, w, false)
+	writeSliceHeaderTail(t, w, SliceTypeI)
 
 	h, err := ParseSliceHeader(w.Bytes(), sps, ppsMap(pps), false)
 	if err != nil {
@@ -255,5 +293,102 @@ func writeBitOrFail(t *testing.T, w *bitstream.Writer, v uint8) {
 	t.Helper()
 	if err := w.WriteBit(v); err != nil {
 		t.Fatalf("WriteBit(%d) 失败: %v", v, err)
+	}
+}
+
+func TestParseSliceHeader_BaselineDecodingFields(t *testing.T) {
+	sps := testSPSForSlice()
+	pps := testPPSForSlice()
+	pps.PicInitQPMinus26 = -3
+	pps.DeblockingFilterControlPresentFlag = true
+
+	w := bitstream.NewWriter()
+	writeUEOrFail(t, w, 0)      // first_mb
+	writeUEOrFail(t, w, 0)      // slice_type P
+	writeUEOrFail(t, w, 0)      // pps id
+	writeBitsOrFail(t, w, 4, 2) // frame_num
+	writeBitsOrFail(t, w, 4, 1) // poc_lsb
+	writeBitOrFail(t, w, 1)     // num_ref_idx_active_override_flag
+	writeUEOrFail(t, w, 1)      // num_ref_idx_l0_active_minus1
+	writeBitOrFail(t, w, 0)     // ref_pic_list_reordering_flag_l0
+	writeBitOrFail(t, w, 0)     // adaptive_ref_pic_marking_mode_flag
+	writeSEOrFail(t, w, -2)     // slice_qp_delta
+	writeUEOrFail(t, w, 2)      // disable_deblocking_filter_idc
+	writeSEOrFail(t, w, -3)     // slice_alpha_c0_offset_div2
+	writeSEOrFail(t, w, 2)      // slice_beta_offset_div2
+
+	h, err := ParseSliceHeaderEx(w.Bytes(), sps, ppsMap(pps), false, 1)
+	if err != nil {
+		t.Fatalf("解析失败: %v", err)
+	}
+	if !h.NumRefIdxActiveOverrideFlag || h.NumRefIdxL0ActiveMinus1 != 1 {
+		t.Fatalf("ref idx = %+v", h)
+	}
+	if h.SliceQPDelta != -2 || h.SliceQP != 21 {
+		t.Fatalf("QP = %d/%d, want -2/21", h.SliceQPDelta, h.SliceQP)
+	}
+	if h.DisableDeblockingFilterIDC != 2 || h.SliceAlphaC0OffsetDiv2 != -3 || h.SliceBetaOffsetDiv2 != 2 {
+		t.Fatalf("deblock = %+v", h)
+	}
+	if h.HeaderBits != w.BitsWritten() {
+		t.Fatalf("HeaderBits = %d, want %d", h.HeaderBits, w.BitsWritten())
+	}
+}
+
+func TestParseSliceHeader_RefListReorderingConsumed(t *testing.T) {
+	sps := testSPSForSlice()
+	pps := testPPSForSlice()
+	w := bitstream.NewWriter()
+	writeUEOrFail(t, w, 0)
+	writeUEOrFail(t, w, 0) // P
+	writeUEOrFail(t, w, 0)
+	writeBitsOrFail(t, w, 4, 0)
+	writeBitsOrFail(t, w, 4, 0)
+	writeBitOrFail(t, w, 0) // override
+	writeBitOrFail(t, w, 1) // reorder flag
+	writeUEOrFail(t, w, 0)  // idc 0
+	writeUEOrFail(t, w, 0)  // idc_value
+	writeUEOrFail(t, w, 3)  // end
+	writeBitOrFail(t, w, 0) // adaptive marking
+	writeSEOrFail(t, w, 5)  // slice_qp_delta
+
+	h, err := ParseSliceHeaderEx(w.Bytes(), sps, ppsMap(pps), false, 1)
+	if err != nil {
+		t.Fatalf("解析失败: %v", err)
+	}
+	if !h.RefPicListReorderingL0 {
+		t.Fatal("RefPicListReorderingL0 = false, want true")
+	}
+	if h.SliceQPDelta != 5 {
+		t.Fatalf("slice_qp_delta = %d, want 5 (命令序列未正确消费)", h.SliceQPDelta)
+	}
+}
+
+func TestParseSliceHeader_MMCOConsumed(t *testing.T) {
+	sps := testSPSForSlice()
+	pps := testPPSForSlice()
+	w := bitstream.NewWriter()
+	writeUEOrFail(t, w, 0)
+	writeUEOrFail(t, w, 0) // P
+	writeUEOrFail(t, w, 0)
+	writeBitsOrFail(t, w, 4, 0)
+	writeBitsOrFail(t, w, 4, 0)
+	writeBitOrFail(t, w, 0) // override
+	writeBitOrFail(t, w, 0) // reorder
+	writeBitOrFail(t, w, 1) // adaptive marking
+	writeUEOrFail(t, w, 1)  // MMCO 1
+	writeUEOrFail(t, w, 2)  // difference_of_pic_nums_minus1
+	writeUEOrFail(t, w, 0)  // end
+	writeSEOrFail(t, w, 3)  // slice_qp_delta
+
+	h, err := ParseSliceHeaderEx(w.Bytes(), sps, ppsMap(pps), false, 1)
+	if err != nil {
+		t.Fatalf("解析失败: %v", err)
+	}
+	if !h.AdaptiveRefPicMarking || h.MMCOCount != 1 {
+		t.Fatalf("MMCO = %+v", h)
+	}
+	if h.SliceQPDelta != 3 {
+		t.Fatalf("slice_qp_delta = %d, want 3", h.SliceQPDelta)
 	}
 }

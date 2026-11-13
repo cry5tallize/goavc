@@ -208,7 +208,7 @@ func TestCorpus_SliceHeaderAndAUAssembly(t *testing.T) {
 					if err != nil {
 						t.Fatalf("slice EBSP→RBSP 失败: %v", err)
 					}
-					h, err := ParseSliceHeader(rbsp, ce.sps, ppsByID, u.Header.IsIDR())
+					h, err := ParseSliceHeaderEx(rbsp, ce.sps, ppsByID, u.Header.IsIDR(), u.Header.RefIDC)
 					if err != nil {
 						t.Fatalf("slice header 解析失败: %v", err)
 					}
