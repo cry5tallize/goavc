@@ -2,11 +2,15 @@ package codec_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/decoder"
 	"github.com/goavc/h264/encoder"
 	"github.com/goavc/h264/nal"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"testing"
 )
 
@@ -112,6 +116,63 @@ func TestEncoder_InterSequenceOracle(t *testing.T) {
 				}
 				ffmpegCheck(t, stream, want)
 			})
+		}
+	}
+}
+
+func TestEncoder_InterPictureTypes(t *testing.T) {
+	if _, err := exec.LookPath("ffprobe"); err != nil {
+		t.Skip("ffprobe absent; picture type Oracle skipped")
+	}
+	c := h264.DefaultEncoderConfig()
+	c.Width = 64
+	c.Height = 48
+	c.GOPSize = 3
+	e, err := encoder.New(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Close()
+	var stream []byte
+	for i := 0; i < 5; i++ {
+		if err = e.SendFrame(movingFrame(c.Width, c.Height, i)); err != nil {
+			t.Fatal(err)
+		}
+		p, _ := e.ReceivePacket()
+		stream = append(stream, p.Data...)
+	}
+	path := filepath.Join(t.TempDir(), "types.264")
+	if err = os.WriteFile(path, stream, 0600); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("ffprobe", "-v", "warning", "-show_frames", "-show_entries", "frame=key_frame,pict_type", "-of", "json", path)
+	var log bytes.Buffer
+	cmd.Stderr = &log
+	raw, err := cmd.Output()
+	if err != nil || log.Len() != 0 {
+		t.Fatalf("ffprobe %v %s", err, log.String())
+	}
+	var result struct {
+		Frames []struct {
+			Type string `json:"pict_type"`
+			Key  int    `json:"key_frame"`
+		}
+	}
+	if err = json.Unmarshal(raw, &result); err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Frames) != 5 {
+		t.Fatal(string(raw))
+	}
+	for i, frame := range result.Frames {
+		want := "P"
+		key := 0
+		if i%3 == 0 {
+			want = "I"
+			key = 1
+		}
+		if frame.Type != want || frame.Key != key {
+			t.Fatal(i, frame, want, key)
 		}
 	}
 }
