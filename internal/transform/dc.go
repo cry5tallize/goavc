@@ -41,7 +41,7 @@ func DequantLumaDCWithScaling(dst *[16]int32, levels *[16]int32, qp int, scale u
 		tmp[i*4+3] = d01 + d23
 	}
 	// Spec: 8.5.10。列方向使用相同 Hadamard 矩阵，输出保持空间布局。
-	qmul := int64(levelScale4x4[qp%6][0]) * int64(scale) << (uint(qp)/6 + 2)
+	qmul := dequantMul(levelScale4x4[qp%6][0], qp, scale)
 	for i := 0; i < 4; i++ {
 		s01 := tmp[0*4+i] + tmp[1*4+i]
 		d01 := tmp[0*4+i] - tmp[1*4+i]
@@ -83,7 +83,7 @@ func DequantChromaDCWithScaling(dst *[4]int32, levels *[4]int32, qp int, scale u
 		return fmt.Errorf("transform: qp %d out of range 0..%d: %w", qp, MaxQP, h264.ErrInvalidData)
 	}
 	a, b, c, d := levels[0], levels[1], levels[2], levels[3]
-	qmul := int64(levelScale4x4[qp%6][0]) * int64(scale) << (uint(qp)/6 + 2)
+	qmul := dequantMul(levelScale4x4[qp%6][0], qp, scale)
 	sums := [4]int32{
 		a + b + c + d,
 		a - b + c - d,

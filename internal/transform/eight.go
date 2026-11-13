@@ -84,17 +84,18 @@ func IDCT8x8(dst, src *[64]int32) error {
 }
 
 func Dequant4x4WithScaling(dst, levels *[16]int32, qp int, scaling *[16]uint8) error {
-	if scaling == nil {
-		return Dequant4x4(dst, levels, qp)
-	}
 	if qp < 0 || qp > 51 {
 		return fmt.Errorf("transform: 4x4 QP %d: %w", qp, h264.ErrInvalidData)
 	}
 	for i := 0; i < 16; i++ {
-		if scaling[i] == 0 {
+		matrix := uint8(16)
+		if scaling != nil {
+			matrix = scaling[i]
+		}
+		if matrix == 0 {
 			return fmt.Errorf("transform: zero 4x4 scaling entry: %w", h264.ErrInvalidData)
 		}
-		mul := int64(levelScale4x4[qp%6][i]) * int64(scaling[i]) << uint(qp/6+2)
+		mul := dequantMul(levelScale4x4[qp%6][i], qp, matrix)
 		v := (int64(levels[i])*mul + 32) >> 6
 		if v < -1<<31 || v > 1<<31-1 {
 			return fmt.Errorf("transform: scaled 4x4 coefficient overflow: %w", h264.ErrInvalidData)

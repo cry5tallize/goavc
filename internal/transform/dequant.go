@@ -1,11 +1,5 @@
 package transform
 
-import (
-	"fmt"
-
-	h264 "github.com/goavc/h264"
-)
-
 // levelScale4x4 是规范表 8-15 的 levelScale4x4[qP%6][i][j]（光栅顺序）。
 //
 // 表值按 i、j 的奇偶性取三个数 a、b、c：
@@ -39,8 +33,8 @@ const MaxQP = 51
 //
 // 当 qP >= 24 时 qmul 至少是 levelScale<<6，上式是精确的左移；
 // 当 qP < 24 时 +32>>6 恰好复现规范中的 +2^(3-qP/6) 舍入。
-func dequantMul(scale int32, qp int) int64 {
-	return int64(scale) * 16 << (uint(qp)/6 + 2)
+func dequantMul(scale int32, qp int, matrix uint8) int64 {
+	return int64(scale) * int64(matrix) << (uint(qp)/6 + 2)
 }
 
 // Dequant4x4 对 16 个系数做 4×4 反量化。
@@ -49,19 +43,7 @@ func dequantMul(scale int32, qp int) int64 {
 // qp 必须在 0..51 内；越界返回 ErrInvalidData 而不是静默截断。
 // 系数乘积用 int64 计算并检查 int32 溢出，防止恶意 level 造成回绕。
 func Dequant4x4(dst *[16]int32, levels *[16]int32, qp int) error {
-	if qp < 0 || qp > MaxQP {
-		return fmt.Errorf("transform: qp %d out of range 0..%d: %w", qp, MaxQP, h264.ErrInvalidData)
-	}
-	row := &levelScale4x4[qp%6]
-	for i := 0; i < 16; i++ {
-		v := (int64(levels[i])*dequantMul(row[i], qp) + 32) >> 6
-		if v < -1<<31 || v > 1<<31-1 {
-			return fmt.Errorf("transform: dequantized coefficient %d overflows int32: %w",
-				v, h264.ErrInvalidData)
-		}
-		dst[i] = int32(v)
-	}
-	return nil
+	return Dequant4x4WithScaling(dst, levels, qp, nil)
 }
 
 // ChromaQP 按表 8-10 映射 Clip3(0,51,QPY+offset)，包括非线性高 QP 段。
