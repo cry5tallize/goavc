@@ -75,6 +75,29 @@ func writeBits(w *bitstream.Writer, n uint, v uint64, name string) error {
 	return nil
 }
 
+// consumeRBSPTrailingBits 校验并消费 rbsp_trailing_bits()。
+//
+// 与 bitstream.ValidateRBSPTrailingBits 相比，这里还要求尾位恰好从当前
+// 位置开始：剩余 0 bit（没有停止位）或超过 8 bit（停止位后还有整字节数据）
+// 都视为非法。这样可以发现解析器读少了字段或码流尾部有多余字节。
+func consumeRBSPTrailingBits(r *bitstream.Reader) error {
+	remaining := r.BitsRemaining()
+	if remaining == 0 || remaining > 8 {
+		return fmt.Errorf("syntax: rbsp trailing bits occupy %d bits, expected 1..8: %w",
+			remaining, h264.ErrInvalidData)
+	}
+	bits, err := r.PeekBits(uint(remaining))
+	if err != nil {
+		return err
+	}
+	stop := uint64(1) << (remaining - 1)
+	if bits != stop {
+		return fmt.Errorf("syntax: invalid rbsp trailing bits %0*b: %w",
+			remaining, bits, h264.ErrInvalidData)
+	}
+	return r.SkipBits(uint(remaining))
+}
+
 // moreRBSPData 判断当前读取位置之后是否还有语法元素（而非只剩尾位）。
 //
 // 判据：RBSP 的尾位最多 8 bit（一个停止位 1 + 零填充）。如果剩余超过
