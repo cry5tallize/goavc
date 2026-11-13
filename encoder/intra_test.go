@@ -1,6 +1,7 @@
 package encoder
 
 import (
+	"bytes"
 	"errors"
 	"reflect"
 	"testing"
@@ -59,6 +60,43 @@ func TestIntraSelection_AllModes(t *testing.T) {
 		if s.info[3].chromaMode != mode {
 			t.Fatalf("chroma target %d selected %d", mode, s.info[3].chromaMode)
 		}
+	}
+}
+
+func TestEncoder_DeterminismAndReset(t *testing.T) {
+	c := h264.DefaultEncoderConfig()
+	c.Width = 34
+	c.Height = 18
+	e, err := New(c, WithSliceCount(4))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Close()
+	f := testFrame(c.Width, c.Height)
+	if err = e.SendFrame(f); err != nil {
+		t.Fatal(err)
+	}
+	p, _ := e.ReceivePacket()
+	original := bytes.Clone(p.Data)
+	if e.last.src != nil {
+		t.Fatal("source retained after SendFrame")
+	}
+	if err = e.SendFrame(f); err != nil {
+		t.Fatal(err)
+	}
+	e.ReceivePacket()
+	if !bytes.Equal(p.Data, original) {
+		t.Fatal("packet overwritten by next SendFrame")
+	}
+	if err = e.Reset(); err != nil {
+		t.Fatal(err)
+	}
+	if err = e.SendFrame(f); err != nil {
+		t.Fatal(err)
+	}
+	p, _ = e.ReceivePacket()
+	if !bytes.Equal(p.Data, original) {
+		t.Fatal("reset did not restore deterministic IDR state")
 	}
 }
 

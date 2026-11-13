@@ -340,3 +340,46 @@ func TestEncoder_IntraCompatibility(t *testing.T) {
 		}
 	}
 }
+
+func TestEncoder_LargeFramesOracle(t *testing.T) {
+	for _, size := range [][3]int{{1280, 720, 30}, {1920, 1080, 15}} {
+		for _, pcm := range []bool{false, true} {
+			c := h264.DefaultEncoderConfig()
+			c.Width = size[0]
+			c.Height = size[1]
+			c.FPSNum = size[2]
+			options := []encoder.Option{encoder.WithSliceCount(64)}
+			if pcm {
+				options = append(options, encoder.WithPCM())
+			}
+			e, err := encoder.New(c, options...)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = e.SendFrame(testpattern.Frame(c.Width, c.Height, 1)); err != nil {
+				t.Fatal(err)
+			}
+			p, _ := e.ReceivePacket()
+			r, _ := e.Reconstruction()
+			d, err := decoder.New(h264.DecoderConfig{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = d.SendPacket(p); err != nil {
+				t.Fatal(err)
+			}
+			got, err := d.ReceiveFrame()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(packed(got), packed(r)) {
+				t.Fatal("large frame differs")
+			}
+			ffmpegCheck(t, p.Data, packed(r))
+			got.Release()
+			r.Release()
+			d.Close()
+			e.Close()
+		}
+	}
+}
