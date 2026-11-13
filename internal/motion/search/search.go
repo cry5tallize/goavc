@@ -10,6 +10,10 @@ import (
 
 type MV = motion.MV
 
+// Scorer 将运动矢量和像素 SAD 映射为编码代价；由上层提供比特模型，
+// 搜索包不依赖编码流水线。nil 表示只比较 SAD。
+type Scorer func(MV, int) uint64
+
 // SAD 返回有效矩形的绝对差和。调用方须先验证缓冲/stride；只读有效像素，
 // 不读取行尾填充，所以支持奇数尺寸与非对齐 stride。
 func SAD(a []byte, as int, b []byte, bs, width, height int) int {
@@ -28,11 +32,13 @@ type window struct {
 	ref                 *picture.Plane
 	x, y, w, h, radius  int
 	best                MV
-	cost                int
+	cost                uint64
+	sad                 int
+	scorer              Scorer
 }
 
 func newWindow(src, ref *picture.Plane, x, y, w, h, radius int) window {
-	s := window{ref: ref, x: x, y: y, w: w, h: h, radius: min(max(1, radius), 64, max(4, min(ref.Width, ref.Height)/4)), cost: int(^uint(0) >> 1)}
+	s := window{ref: ref, x: x, y: y, w: w, h: h, radius: min(max(1, radius), 64, max(4, min(ref.Width, ref.Height)/4)), cost: ^uint64(0)}
 	for j := 0; j < h; j++ {
 		copy(s.original[j*16:j*16+w], src.Row(y + j)[x:x+w])
 	}
@@ -53,16 +59,26 @@ func (s *window) consider(m MV) {
 		prediction.MCBlockLuma(s.candidate[:], 16, s.ref, s.x, s.y, s.w, s.h, int(m.X), int(m.Y))
 		cost = SAD(s.original[:], 16, s.candidate[:], 16, s.w, s.h)
 	}
-	if cost < s.cost {
+	rank := uint64(cost)
+	if s.scorer != nil {
+		rank = s.scorer(m, cost)
+	}
+	if rank < s.cost {
 		s.best = m
-		s.cost = cost
+		s.cost = rank
+		s.sad = cost
 	}
 }
 
 // Integer 对最大 16×16 区域做整像素估计。radius=1..64，小图像自适应收缩。
 // full 选择穷举，否则从零与 MVP 中较优点执行严格下降的有限菱形搜索。
 func Integer(src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool) (MV, int) {
+	return integerWithCost(src, ref, x, y, w, h, predictor, radius, full, nil)
+}
+
+func integerWithCost(src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool, scorer Scorer) (MV, int) {
 	s := newWindow(src, ref, x, y, w, h, radius)
+	s.scorer = scorer
 	s.consider(MV{})
 	s.consider(MV{X: int32(min(s.radius, max(-s.radius, int(predictor.X)/4)) * 4), Y: int32(min(s.radius, max(-s.radius, int(predictor.Y)/4)) * 4)})
 	if full {
@@ -82,13 +98,18 @@ func Integer(src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, 
 			}
 		}
 	}
-	return s.best, s.cost
+	return s.best, s.sad
 }
 
 // Refine 使用共享规范 MC 对给定整像素点做半/四像素细化。
 // 可以在分区选择之后调用，避免为被丢弃的分区重复计算六抽头插值。
 func Refine(src, ref *picture.Plane, x, y, w, h int, base MV, radius int) (MV, int) {
+	return refineWithCost(src, ref, x, y, w, h, base, radius, nil)
+}
+
+func refineWithCost(src, ref *picture.Plane, x, y, w, h int, base MV, radius int, scorer Scorer) (MV, int) {
 	s := newWindow(src, ref, x, y, w, h, radius)
+	s.scorer = scorer
 	s.consider(base)
 	for _, step := range []int32{2, 1} {
 		center := s.best
@@ -98,11 +119,17 @@ func Refine(src, ref *picture.Plane, x, y, w, h int, base MV, radius int) (MV, i
 			}
 		}
 	}
-	return s.best, s.cost
+	return s.best, s.sad
 }
 
 // Estimate 组合整像素搜索与亚像素细化，供独立小块搜索和验证使用。
 func Estimate(src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool) (MV, int) {
 	base, _ := Integer(src, ref, x, y, w, h, predictor, radius, full)
 	return Refine(src, ref, x, y, w, h, base, radius)
+}
+
+// EstimateWithCost 在整像素与亚像素两阶段一致使用上层代价，返回原始 SAD。
+func EstimateWithCost(src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool, scorer Scorer) (MV, int) {
+	base, _ := integerWithCost(src, ref, x, y, w, h, predictor, radius, full, scorer)
+	return refineWithCost(src, ref, x, y, w, h, base, radius, scorer)
 }

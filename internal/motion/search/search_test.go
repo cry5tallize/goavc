@@ -62,3 +62,17 @@ func TestSearch_DiamondAndBounds(t *testing.T) {
 		}
 	}
 }
+
+func TestSearch_CostCallbackPreservesReportedSAD(t *testing.T) {
+	ref, _ := picture.New(2, 2)
+	src, _ := picture.New(2, 2)
+	// 常量块所有位移的 SAD 都为 0；上层代价可以选择零之外的 MVP。
+	want := MV{X: 8, Y: 4}
+	got, sad := EstimateWithCost(&src.Planes[0], &ref.Planes[0], 8, 8, 8, 8, want, 4, true, func(m MV, sad int) uint64 {
+		dx, dy := int(m.X-want.X), int(m.Y-want.Y)
+		return uint64(sad + max(dx, -dx) + max(dy, -dy))
+	})
+	if got != want || sad != 0 {
+		t.Fatal(got, sad)
+	}
+}
