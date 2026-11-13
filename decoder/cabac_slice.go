@@ -27,11 +27,14 @@ func decodeCABACSlice(fs *frameState, s *sliceEntry, sliceID, first, end int) er
 	}
 	s.cabac = &cabacSyntax{d: engine, ctx: ctx}
 	fs.mv.BeginSlice(first)
+	if fs.mv1 != nil {
+		fs.mv1.BeginSlice(first)
+	}
 	qp := s.hdr.SliceQP
 	for addr := first; addr < end; addr++ {
 		fs.info[addr].sliceID = sliceID
 		skip := false
-		if s.hdr.Type == syntax.SliceTypeP {
+		if s.hdr.Type == syntax.SliceTypeP || s.hdr.Type == syntax.SliceTypeB {
 			inc := 0
 			for side, other := range []int{addr - 1, addr - fs.mbW} {
 				if side == 0 && addr%fs.mbW == 0 {
@@ -41,7 +44,11 @@ func decodeCABACSlice(fs *frameState, s *sliceEntry, sliceID, first, end int) er
 					inc++
 				}
 			}
-			skip = s.cabac.bin(11+inc) != 0
+			base := 11
+			if s.hdr.Type == syntax.SliceTypeB {
+				base = 24
+			}
+			skip = s.cabac.bin(base+inc) != 0
 		}
 		if engine.Err() != nil {
 			return engine.Err()

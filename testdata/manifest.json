@@ -43,13 +43,14 @@
         "B"
       ],
       "sliceCount": 1,
-      "refFrames": 1,
+      "refFrames": 4,
       "tags": [
-        "m1_syntax"
+        "m3_bframes"
       ],
       "sha256": "17d76f1e2058f4048eaa902fb55dc8fd8541a146a62caf0fcf17e744bce45a25",
-      "status": "unsupported",
-      "notes": "M2 decoder explicitly rejects CABAC/B slices; syntax parsing remains covered."
+      "status": "conformant",
+      "notes": "3 frames; FFmpeg 8.0 display-order YUV pixel exact; B/direct/weighted coverage.",
+      "expectedYUVSha256": "6b9fb592a1003a1de06c29479e02fa895f231ba903560e8b2b697ddffa040f0e"
     },
     {
       "name": "baseline_176x144_yuv420p_cavlc_ip_002",
@@ -335,6 +336,166 @@
       "expectedYUVSha256": "a65d3ec10d28eff45614a12e562bab9860fef199fd4e22d36a593176fa88c3b7",
       "status": "conformant",
       "notes": "6 frames; FFmpeg 8.0 pixel exact; MMCO operations 1..6 and long-term reordering."
+    },
+    {
+      "name": "main_96x64_yuv420p_cabac_default_008",
+      "path": "testdata/main/main_96x64_yuv420p_cabac_default_008.264",
+      "source": "x264",
+      "profile": "main",
+      "level": "1.0",
+      "width": 96,
+      "height": 64,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 1,
+      "refFrames": 4,
+      "tags": [
+        "m3_bframes",
+        "default"
+      ],
+      "sha256": "1532fddb93d033b9c1213b21a07af69f0c3aafabb81638e9ef46cb24c2ccabfd",
+      "expectedYUVSha256": "d8fe180ce6767cb42c0a495de695ac006aeea37d8179996dfcd95b2211f1443a",
+      "status": "conformant",
+      "notes": "16 frames; FFmpeg 8.0 display-order YUV pixel exact; B/direct/weighted coverage."
+    },
+    {
+      "name": "main_176x144_yuv420p_cabac_default_009",
+      "path": "testdata/main/main_176x144_yuv420p_cabac_default_009.264",
+      "source": "x264",
+      "profile": "main",
+      "level": "1.0",
+      "width": 176,
+      "height": 144,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 1,
+      "refFrames": 4,
+      "tags": [
+        "m3_bframes",
+        "default"
+      ],
+      "sha256": "76a4dfa1cbff35691c0774cabc2249d426d46a267d342213d10a134db2c3eeba",
+      "expectedYUVSha256": "67f85d9aeaa843ca5ceaf8826952d0ed9166a613b88cddfe4ffdfa99b8732de6",
+      "status": "conformant",
+      "notes": "14 frames; FFmpeg 8.0 display-order YUV pixel exact; B/direct/weighted coverage."
+    },
+    {
+      "name": "main_320x240_yuv420p_cabac_default_010",
+      "path": "testdata/main/main_320x240_yuv420p_cabac_default_010.264",
+      "source": "x264",
+      "profile": "main",
+      "level": "1.2",
+      "width": 320,
+      "height": 240,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 1,
+      "refFrames": 4,
+      "tags": [
+        "m3_bframes",
+        "default"
+      ],
+      "sha256": "ef4ed67e1ee9d77ca1778cb967a5760962859d70152c0626b67d381a14bf5cd3",
+      "expectedYUVSha256": "4fed8fad8b1b4f906152586493825ed8b68a86ebb4698ca0557175047c5502e5",
+      "status": "conformant",
+      "notes": "12 frames; FFmpeg 8.0 display-order YUV pixel exact; B/direct/weighted coverage."
+    },
+    {
+      "name": "main_128x96_yuv420p_cavlc_temporal_001",
+      "path": "testdata/bframes/main_128x96_yuv420p_cavlc_temporal_001.264",
+      "source": "x264",
+      "profile": "main",
+      "level": "1.0",
+      "width": 128,
+      "height": 96,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 1,
+      "refFrames": 4,
+      "tags": [
+        "m3_bframes",
+        "temporal_direct"
+      ],
+      "sha256": "413346acec00f5739d52e00a93ada9608cafa23f6cd27178b46ea5b18720b938",
+      "expectedYUVSha256": "0a7d4f0c7c830cabe6b53b083cb3e0b7b1b454126535e58e949647444e512f2c",
+      "status": "conformant",
+      "notes": "16 frames; FFmpeg 8.0 display-order YUV pixel exact; B/direct/weighted coverage."
+    },
+    {
+      "name": "main_160x96_yuv420p_cabac_weighted_011",
+      "path": "testdata/main/main_160x96_yuv420p_cabac_weighted_011.264",
+      "source": "x264",
+      "profile": "main",
+      "level": "1.0",
+      "width": 160,
+      "height": 96,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P"
+      ],
+      "sliceCount": 1,
+      "refFrames": 3,
+      "tags": [
+        "m3_weighted",
+        "fade"
+      ],
+      "sha256": "eeda27d610baa1c9a838aa31af2c25aa88ed91036d84bc700d2861c2c9843886",
+      "expectedYUVSha256": "840e6f4d1946ca689cae50eed9364b728850b33f5db278e7d0b42591c29a7083",
+      "status": "conformant",
+      "notes": "12 frames; FFmpeg 8.0 display-order YUV pixel exact; B/direct/weighted coverage."
+    },
+    {
+      "name": "main_16x16_yuv420p_cavlc_weightedb_012",
+      "path": "testdata/main/main_16x16_yuv420p_cavlc_weightedb_012.264",
+      "source": "synthetic",
+      "profile": "main",
+      "level": "1.0",
+      "width": 16,
+      "height": 16,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "B"
+      ],
+      "sliceCount": 1,
+      "refFrames": 2,
+      "tags": [
+        "m3_weighted",
+        "explicit_b"
+      ],
+      "sha256": "acf59a06f518dae613ba61ae62189af700a4a0f052d142e47f1ff868f61a9442",
+      "expectedYUVSha256": "41e461ebd97d1b7aa13fef7116b4fbf8110a0216c36f5de3e8ed53ec1f864236",
+      "status": "conformant",
+      "notes": "3 frames; FFmpeg 8.0 display-order YUV pixel exact; B/direct/weighted coverage."
     }
   ]
 }

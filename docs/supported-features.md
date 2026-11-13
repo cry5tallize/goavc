@@ -12,15 +12,15 @@
 > `Conformant` 仅针对表内注明的范围；Baseline Profile 整体保留 `Partial`，因为
 > FMO/ASO、冗余 slice 等高级工具仍未实现。编码流水线从 M4 开始。
 >
-> **M3 进展：** CABAC/CAVLC 多参考、无重排 I/P 的 4×4 路径、MMCO 与长期参考已验证；B 与
-> High 8×8/ScalingMatrix 仍待实现。Main 保留 `Partial`，M3 门禁尚未完成。
+> **M3 进展：** CABAC/CAVLC 多参考 I/P/B、MMCO 与长期参考已验证；
+> High 8×8/ScalingMatrix 仍待实现。Main 渐进帧 I/P/B、direct、加权预测和重排已验证；M3 门禁尚未完成。
 
 ## 1. Profile
 
 | Profile | profile_idc | 关键工具 | Decoder | Encoder | 目标里程碑 |
 |---|---|---|---|---|---|
 | Baseline | 66 | CAVLC、I/P | Partial | TODO | M2 单参考无重排已验证；高级工具 M7 / Encoder M4 |
-| Main | 77 | CABAC、B、隔行 | Partial | TODO | M3 CABAC 多参考 I/P、MMCO 已验证；B 待接入；隔行 M7 |
+| Main | 77 | CABAC、B、隔行 | Partial | TODO | M3 渐进帧 I/P/B、MMCO、权重与显示重排已验证；隔行 M7 |
 | High | 100 | 8×8 变换、ScalingMatrix | TODO | TODO | M3 / M5c |
 | High 10 | 110 | 10 bit | TODO | TODO | M7 |
 | High 4:2:2 | 122 | 4:2:2、10 bit | TODO | TODO | M7 |
@@ -59,8 +59,8 @@
 | CAVLC：level prefix / suffix / 转义 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
 | CABAC：算术编解码器 | Conformant | TODO | M3 解码 MPS/LPS/bypass/terminate 解析解与 Oracle；编码 M5 |
 | CABAC：上下文初始化与状态转移 | Conformant | TODO | M3 4:2:0 使用的 460 个上下文、64 状态已验证；4:4:4 M7 |
-| CABAC：宏块/MV/残差上下文 | Partial | TODO | M3 多参考 I/P、ref_idx、4×4 残差已验证；B/8×8 待接入 |
-| CABAC：terminate / cabac_zero_word | Partial | TODO | M3 end_of_slice 和 PCM terminate/restart 已验证；填充边界覆盖待补 |
+| CABAC：宏块/MV/残差上下文 | Partial | TODO | M3 多参考 I/P/B、双列表 MVD、ref_idx、4×4 已验证；8×8 待接入 |
+| CABAC：terminate / cabac_zero_word | Conformant | TODO | M3 停止位、PCM 重启、Annex-B zero-word 与 Oracle 已验证 |
 
 ## 5. 预测
 
@@ -74,8 +74,8 @@
 | Chroma 4:4:4 | TODO | TODO | M7 |
 | Inter 16×16 / 16×8 / 8×16 / 8×8 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
 | 亚像素插值（1/2、1/4） | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
-| Weighted Prediction（explicit / implicit） | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
-| B Direct（temporal / spatial） | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
+| Weighted Prediction（explicit / implicit） | Conformant | TODO | M3 P/B 三平面显式与 POC 隐式权重解析解及 Oracle |
+| B Direct（temporal / spatial） | Conformant | TODO | M3 CABAC/CAVLC、B_Skip 与两类 direct Oracle |
 | 帧场自适应（MBAFF / PAFF） | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
 
 ## 6. 变换与量化
@@ -105,10 +105,10 @@
 |---|---|---|---|
 | 单参考帧 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
 | 多参考帧 + reordering | Conformant | TODO | M3 P 列表、短期/长期重排已通过解析解与 Oracle；B 接入待完成 |
-| POC type 0 / 1 / 2 | Partial | TODO | M3 三种类型推导已验证；显示重排待 B 流水线接入 |
+| POC type 0 / 1 / 2 | Conformant | TODO | M3 三种渐进帧推导、MMCO5 与 B 显示重排已验证 |
 | 滑动窗口标记 | TODO | TODO | M3 |
 | MMCO（含长期参考） | Conformant | TODO | M3 操作 1..6、长期参考、重置及专设 Oracle 语料；字段 M7 |
-| 输出重排序与延迟输出 | TODO | TODO | M3 |
+| 输出重排序与延迟输出 | Conformant | TODO | M3 VUI/POC 缓冲、PTS/Duration 与 Flush 已验证 |
 | Flush 排空语义 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
 
 ## 9. 编码器工具

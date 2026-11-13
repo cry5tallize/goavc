@@ -1,6 +1,7 @@
 package decoder
 
 import (
+	"github.com/goavc/h264/internal/dpb"
 	"github.com/goavc/h264/internal/motion"
 	"github.com/goavc/h264/syntax"
 	"testing"
@@ -35,6 +36,32 @@ func TestDeblock_StrengthAndSliceControl(t *testing.T) {
 	fs.info[1].deblockIDC = 0
 	if fs.skipSliceBoundary(1, 0, 0, 0) {
 		t.Fatal("must filter cross-slice edge")
+	}
+}
+
+func TestDeblock_BReferenceSwap(t *testing.T) {
+	fs := &frameState{mbW: 2, total: 2, info: make([]mbInfo, 2), lumaNZ: make([]uint8, 32), mv: motion.NewGrid(2, 1), mv1: motion.NewGrid(2, 1)}
+	fs.referenceIDs[0] = make([]*dpb.Identity, 32)
+	fs.referenceIDs[1] = make([]*dpb.Identity, 32)
+	a, b := &dpb.Identity{ID: 1}, &dpb.Identity{ID: 2}
+	fs.referenceIDs[0][3], fs.referenceIDs[1][3] = a, b
+	fs.referenceIDs[0][4], fs.referenceIDs[1][4] = b, a
+	fs.mv.SetRect(3, 0, 1, 1, motion.MV{X: 4}, 0)
+	fs.mv1.SetRect(3, 0, 1, 1, motion.MV{X: -4}, 1)
+	fs.mv.SetRect(4, 0, 1, 1, motion.MV{X: -4}, 0)
+	fs.mv1.SetRect(4, 0, 1, 1, motion.MV{X: 4}, 1)
+	if got := fs.bSAtBlocks(3, 0, 4, 0, true); got != 0 {
+		t.Fatal("swapped references must match", got)
+	}
+	fs.mv1.SetRect(4, 0, 1, 1, motion.MV{X: 8}, 1)
+	if got := fs.bSAtBlocks(3, 0, 4, 0, true); got != 1 {
+		t.Fatal("MV difference must raise strength", got)
+	}
+	fs.referenceIDs[0][4], fs.referenceIDs[1][4] = a, b
+	fs.mv.SetRect(4, 0, 1, 1, motion.MV{X: 4}, 0)
+	fs.mv1.SetRect(4, 0, 1, 1, motion.MV{X: -4}, 1)
+	if got := fs.bSAtBlocks(3, 0, 4, 0, true); got != 0 {
+		t.Fatal("normal pair must match", got)
 	}
 }
 

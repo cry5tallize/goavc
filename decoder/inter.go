@@ -119,6 +119,7 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 			r := s.refs[0][g.ref]
 			fs.setReferenceIdentity(0, x, y, p.w, p.h, r.Identity)
 			fs.mcPartition(r.Picture, mbx, mby, p.x*4, p.y*4, p.w*4, p.h*4, mv)
+			s.applyPWeights(fs, mbx, mby, p.x*4, p.y*4, p.w*4, p.h*4, int(g.ref))
 		}
 	}
 	return fs.interResidual(s, addr, mbx, mby, qscale)

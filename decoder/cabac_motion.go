@@ -9,10 +9,18 @@ import (
 // readMVDComponent 实现 Spec: 9.3.3 的 UEG3，首 bin 依赖 A/B 邻块
 // 的绝对 MVD 和。预测矢量与差分矢量分开缓存，不能把 MV 误作 MVD。
 func (c *cabacSyntax) readMVDComponent(fs *frameState, bx, by, component int) (int32, error) {
+	return c.readMVDForList(fs, bx, by, component, 0)
+}
+
+func (c *cabacSyntax) readMVDForList(fs *frameState, bx, by, component, list int) (int32, error) {
+	grid, differences := fs.mv, fs.mvd
+	if list == 1 {
+		grid, differences = fs.mv1, fs.mvd1
+	}
 	sum := 0
 	for _, p := range [][2]int{{bx - 1, by}, {bx, by - 1}} {
-		if fs.mv.Available(p[0], p[1]) {
-			m := fs.mvd[p[1]*fs.mv.BlockW+p[0]]
+		if grid.Available(p[0], p[1]) {
+			m := differences[p[1]*grid.BlockW+p[0]]
 			if component == 0 {
 				sum += absInt(int(m.X))
 			} else {

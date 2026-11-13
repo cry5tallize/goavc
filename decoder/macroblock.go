@@ -46,6 +46,14 @@ func blockRaster(n int) int {
 
 func decodeSkipMacroblock(fs *frameState, addr int, s *sliceEntry, qp int, sliceID int) error {
 	mbx, mby := addr%fs.mbW, addr/fs.mbW
+	if s.hdr.Type == syntax.SliceTypeB {
+		info := &fs.info[addr]
+		*info = mbInfo{skip: true, direct: true, qp: qp, sliceID: sliceID, deblockIDC: uint8(s.hdr.DisableDeblockingFilterIDC), alphaDiv2: int8(s.hdr.SliceAlphaC0OffsetDiv2), betaDiv2: int8(s.hdr.SliceBetaOffsetDiv2), chromaMode: -1}
+		for i := range info.intraModes {
+			info.intraModes[i] = -1
+		}
+		return decodeBMacroblock(fs, addr, mbx, mby, 0, s, &qp, true)
+	}
 	if len(s.refs[0]) == 0 {
 		return fmt.Errorf("decoder: P_Skip without reference: %w", h264.ErrInvalidData)
 	}
@@ -57,6 +65,7 @@ func decodeSkipMacroblock(fs *frameState, addr int, s *sliceEntry, qp int, slice
 	fs.mv.SetRect(mbx*4, mby*4, 4, 4, mv, 0)
 	fs.setReferenceIdentity(0, mbx*4, mby*4, 4, 4, s.refs[0][0].Identity)
 	fs.mcPartition(ref, mbx, mby, 0, 0, 16, 16, mv)
+	s.applyPWeights(fs, mbx, mby, 0, 0, 16, 16, 0)
 	info := &fs.info[addr]
 	*info = mbInfo{skip: true, qp: qp, sliceID: sliceID}
 	info.intraModes = [16]int8{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
@@ -86,6 +95,12 @@ func decodeMacroblock(fs *frameState, addr int, s *sliceEntry, sliceID int, qsca
 		}
 		mbType -= 5
 	}
+	if s.hdr.Type == syntax.SliceTypeB {
+		if mbType <= 22 {
+			return decodeBMacroblock(fs, addr, mbx, mby, int(mbType), s, qscale, false)
+		}
+		mbType -= 23
+	}
 	if mbType > 25 {
 		return fmt.Errorf("intra mb_type %d exceeds 25: %w", mbType, h264.ErrInvalidData)
 	}
@@ -97,6 +112,9 @@ func decodeIntraMacroblock(fs *frameState, addr, mbx, mby, mbType int, s *sliceE
 	info := &fs.info[addr]
 	info.intra = true
 	fs.mv.SetRect(mbx*4, mby*4, 4, 4, motion.MV{}, -1)
+	if fs.mv1 != nil {
+		fs.mv1.SetRect(mbx*4, mby*4, 4, 4, motion.MV{}, -1)
+	}
 
 	if mbType == 25 {
 		return decodePCMMacroblock(fs, addr, mbx, mby, s)

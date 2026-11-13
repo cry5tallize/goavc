@@ -1,5 +1,19 @@
 # testdata
 
+## M3 B 帧、加权与显示重排
+
+三份 `main_*_cabac_default_008/009/010` 分别为 96×64/16 帧、176×144/14 帧、
+320×240/12 帧：x264 medium/Main/8-bit 4:2:0 默认编码工具，仅固定 threads=1、
+aud=1 和 testsrc2 rate=5，覆盖 B-pyramid、多参考、CABAC 与隐式权重。
+`bframes/main_128x96_yuv420p_cavlc_temporal_001` 为 16 帧，额外设 cabac=0、
+direct=temporal、b-adapt=0，验证另一熵模式及 temporal direct。
+
+`main_160x96_yuv420p_cabac_weighted_011` 为 12 帧 testsrc2 + fade=out:st=0:d=2，
+Main medium、bframes=0，测试确认权重并非全为恒等值。三帧合成显式 B 权重样本
+由 `go run ./tools/fixtures -kind weighted-b` 重建，输入顺序 I0/I4/B2，三平面
+权重和偏移各不相同；其解析解首样本和 FFmpeg 输出同时核验。
+原有 `main_64x48_yuv420p_cabac_ipb_001` 已从 unsupported 更新为 conformant。
+
 ## M3 多参考与 MMCO 定向语料
 
 `main_128x96_yuv420p_cabac_multiref_005` 为 12 帧、ref=4 的 Main CABAC I/P；
@@ -17,8 +31,7 @@ threads=1、aud=1、keyint=30 生成，并以 FFmpeg 的完整 rawvideo 输出�
 
 新增三份 Main 语料：64×48 全 I（3 帧）、176×144 I/P（5 帧，init_idc=1）、
 320×240 双 slice I/P（4 帧，init_idc=2）。三者均为单参考、无 B 帧、无加权预测，
-状态为 `conformant`，只证明 M3 已交付的 I/P 子集。原有含 CABAC/B 的 Main 样本
-仍为 `unsupported`，因为 B 帧与重排尚未接入。
+状态为 `conformant`，最初证明 M3 的 I/P 子集；后续 B 与重排验证见上节。
 
 生成环境 FFmpeg 8.0 + libx264，通用命令如下；替换 size/count/idc/slices/keyint：
 
@@ -36,7 +49,7 @@ ffmpeg -v error -f lavfi -i testsrc2=size=<size>:rate=5 -frames:v <count> -c:v l
 `manifest.json` 登记五份 Baseline I/P 样本，共 21 帧；多 slice 样本每帧两个
 slice，并在中途再次出现 IDR。全部通过 FFmpeg 8.0 的 Y/U/V 逐像素对比，
 `expectedYUVSha256` 是 FFmpeg 输出的完整原始 YUV 序列哈希，不需要入库大体积 YUV。
-原有含 CABAC/B 的 Main 样本标记 `unsupported`，由解码测试断言 `ErrUnsupported`。
+该阶段原有 Main/CABAC/B 样本尚未支持；M3 已补齐并更新其验证状态。
 
 前四份 Baseline 文件来自接手时工作区中的 x264 语料，原始生成命令未保留；
 其内容由 manifest 输入哈希固定。1080p 样本新增于 M2，生成命令为：

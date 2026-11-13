@@ -86,32 +86,26 @@ Profile 一致性：高级工具仍按支持矩阵返回 `ErrUnsupported`。
 
 ## M3：Decoder Main / High（进行中）
 
-当前完成首批 CABAC 基础与 I/P 接入，未完成 M3 退出门禁。Go 1.27.4、
-CGO_ENABLED=0、FFmpeg 8.0 下，三份新增 Main 样本共 12 帧（64×48 全 I、
-176×144 I/P init_idc=1、320×240 双 slice I/P init_idc=2）通过独立像素 Oracle，
-输入与 Oracle YUV 哈希已登记在 manifest。M2 五份 Baseline 回归继续通过。
+Main 的逐帧 I/P/B、CABAC/CAVLC、多参考、MMCO/长期参考、加权预测和显示重排已接入。
+三份 x264 默认 Main 样本（96×64、176×144、320×240，合计 42 帧）包含 B-pyramid、
+多参考、隐式加权与 CABAC，全部与 FFmpeg 逐像素一致；另有 CAVLC temporal-direct、
+淡出显式 P 权重及三平面不同显式 B 权重的独立语料。全部 19 条语料已登记输入与
+独立 Oracle 输出哈希。High 8×8/ScalingMatrix 与最终 race 门禁仍待完成。
 
 | Module | 规范条款 | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|---|
-| CABAC 算术引擎 | 9.3.1 / 9.3.3.2 | range/offset、MPS/LPS、bypass、terminate、截断粘性错误 | Conformant | `cabac/decoder_test.go` 固定解析 trace、64 状态×双 MPS 转移；真实 Oracle | 编码器在 M5；无 SIMD |
-| CABAC 上下文初始化 | 表 9-12..9-24、9-44/45 | I/PB0/PB1/PB2，ctxIdx 0..459；可复现 CSV→Go 生成 | Conformant | 全部上下文×QP 0..51 的初始化检查、生成复现 | 4:4:4 扩展上下文在 M7 |
-| CABAC 残差 | 9.3.3.1.3 | 4×4 亮度 DC/AC、色度 DC/AC、显著性与 level 转义 | Conformant | `cabac/residual_test.go` 固定向量、残差 fuzz、三份 Main Oracle | 8×8 ctxBlockCat=5 待接入 |
-| CABAC 宏块与 MVD | 9.3.3 / 7.3.5 | I4×4/I16×16/PCM、P 各分区、Skip、QP delta、CBP、MVD 上下文 | Conformant | 三份 Main Oracle；`TestCABAC_PCMRestartOracle` 验证 PCM 后引擎重启 | B 宏块、ref_idx 在后续批次接入 |
-| Main 解码流水线 | M3 范围 | CABAC 单参考、无重排 I/P、4×4 变换、多 slice | Partial | `TestCABAC_IntraPixelOracle`、固定 Oracle 哈希、M2 回归 | B、双向/direct、多参考/MMCO、加权预测、POC type 1、显示重排尚未实现，显式拒绝 |
-| High 解码流水线 | M3 范围 | 8×8 / ScalingMatrix | TODO | 尚无新增 High 验证 | 8×8 逆变换、I8×8 预测、缩放矩阵选择与应用待实现 |
+| CABAC 算术/初始化 | 9.3.1 / 9.3.3.2 | 460 上下文、64 状态、I/PB0..2、QP 0..51、停止位、PCM restart、zero-word | Conformant | CABAC 解析 trace、全表测试、真实 Oracle、PCM/填充回归 | 4:4:4 上下文 M7 |
+| CABAC 残差 | 9.3.3.1.3 | 4×4 luma/chroma DC/AC、显著性、level 转义 | Conformant | 固定向量、残差 fuzz、Main Oracle | 8×8 cat5 待接入 |
+| CABAC 宏块/MV/ref_idx | 9.3.3 | I/P/B 各宏块与子分区、skip、QP/CBP、双列表 MVD | Conformant | 默认 Main B-pyramid、多 slice I/P Oracle | 8×8 transform flag 待接入 |
+| 参考列表与 MMCO | 8.2.4 / 8.2.5 | P/B 默认列表、短期/长期重排、滑窗、MMCO 1..6、图像池所有权 | Conformant | DPB 独立解析向量、两份 MMCO 语料 | 字段参考 M7 |
+| POC | 8.2.1 | type 0/1/2、非参考帧、周期、回绕、MMCO5 锚点 | Conformant | POC 向量、type1/MMCO Oracle | 字段 POC M7 |
+| B/direct 与去块 | 8.4.1 / 8.7 | 双向预测、spatial/temporal direct、B_Skip、参考身份交换匹配 | Conformant | Main/CAVLC temporal Oracle、B 边界交换单测 | 字段 direct M7 |
+| 加权预测 | 8.4.3.2 | 单向显式、双向显式/隐式、三平面权重与偏移 | Conformant | 淡出样本、显式 B 解析样本、权重/距离向量与 Oracle | 8-bit 4:2:0 范围 |
+| 显示输出 | 公共 API / VUI | POC 排序、VUI 重排深度、PTS/Duration、Flush、IDR/MMCO5 边界 | Conformant | PTS 0..30000 显示顺序、Again/EOF/重复 Flush、输入复用测试 | 增量字节输入 M6 |
+| High | M3 范围 | 8×8 inverse/prediction、ScalingMatrix | TODO | 尚无新增 High 验证 | 下一实现步骤 |
 
-M3 第二批补齐多参考 P 帧、参考列表重排、MMCO 1..6、长期参考和 POC type 1。
-两份 x264 多参考样本（CABAC 12 帧、CAVLC 10 帧）及两份规范合成 MMCO 样本
-（type 0/type 1 各 6 帧）均通过 FFmpeg 逐像素对比，输入/输出哈希已登记。
-
-| Module | Scope | Status | Tests | Known gaps |
-|---|---|---|---|---|
-| 参考列表 / ref_idx | P 列表初始化、短期/长期重排、CAVLC te(v) 与 CABAC 索引、跨 slice 身份去块 | Conformant | `references_test.go`、`TestReferenceLists_MultiReferenceOracle` | B 列表内核有解析向量，B 流水线待接入 |
-| MMCO / 长期参考 | 滑窗、操作 1..6、长期索引上限/替换、图像归还、轻量共位身份 | Conformant | 独立 DPB 所有权测试、`mmco` 专设语料与 Oracle | 字段参考在 M7 |
-| POC type 1/2 | 周期偏移、非参考帧、frame_num 回绕、MMCO5 后锚点 | Conformant | `poc_test.go`、type 1 合成语料 Oracle | 显示顺序缓存待 B 帧接入 |
-
-后续按 `docs/Implementation-Plan.md` M3 的 B 帧与重排、
-High 8×8/ScalingMatrix、完整 Oracle 与 race 门禁继续推进；当前不创建 v0.4.0 标签。
+全部普通验证使用 Go 1.27.4、CGO_ENABLED=0、FFmpeg 8.0。M2 Baseline 及之前的
+Main I/P 回归保持通过。当前不把这些证据当作完整 M3 退出门禁，不创建 v0.4.0。
 
 ## M4–M9
 

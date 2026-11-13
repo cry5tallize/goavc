@@ -59,7 +59,7 @@ func TestCABAC_TruncationRecoversAtIDR(t *testing.T) {
 	if err := d.SendPacket(h264.Packet{Data: data}); err != nil {
 		t.Fatal(err)
 	}
-	if d.waitingForIDR || len(d.out) != 3 {
+	if d.waitingForIDR || len(d.out)+len(d.pending) != 3 {
 		t.Fatalf("IDR recovery: waiting=%v frames=%d", d.waitingForIDR, len(d.out))
 	}
 }
@@ -115,5 +115,35 @@ func TestCABAC_PCMRestartOracle(t *testing.T) {
 	}
 	if ref := ffmpegRaw(t, ffmpegPath(t), path); !bytes.Equal(got, ref) {
 		t.Fatal("PCM differs from FFmpeg")
+	}
+}
+
+func TestCABAC_ZeroWordPadding(t *testing.T) {
+	data, err := os.ReadFile("../testdata/main/main_96x64_yuv420p_cabac_default_008.264")
+	if err != nil {
+		t.Fatal(err)
+	}
+	units, err := nal.SplitAnnexB(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var padded []byte
+	for _, u := range units {
+		padded = append(padded, annex(u)...)
+		if u.Header.IsVCL() {
+			padded = append(padded, 0, 0, 0, 0)
+		}
+	}
+	path := filepath.Join(t.TempDir(), "padded.264")
+	if err := os.WriteFile(path, padded, 0600); err != nil {
+		t.Fatal(err)
+	}
+	got := decodeFile(t, path)
+	base := decodeFile(t, "../testdata/main/main_96x64_yuv420p_cabac_default_008.264")
+	if !bytes.Equal(got, base) {
+		t.Fatal("CABAC zero words changed output")
+	}
+	if want := ffmpegRaw(t, ffmpegPath(t), path); !bytes.Equal(got, want) {
+		t.Fatal("zero-word stream differs from FFmpeg")
 	}
 }

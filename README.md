@@ -8,7 +8,8 @@
 > 五份真实 Baseline 语料（含 1080p）通过 FFmpeg 逐像素对比，CI 可核验固定
 > Oracle 输出哈希。M3 新增 CABAC 单参考 I/P 的 4×4 路径，三份 Main 样本通过
 > FFmpeg 对比。多参考、重排命令、MMCO/长期参考与 POC type 1 已接入并验证。
-> 编码器从 M4 开始；B/8×8/加权预测等工具当前返回 `ErrUnsupported`。
+> B 帧、双向/direct、加权预测和显示重排已通过默认 Main Oracle；High 8×8/ScalingMatrix 正在接入。
+> 编码器从 M4 开始，M3 最终门禁尚未关闭。
 > 本地退出证据见 [M2 门禁记录](docs/gates/m2.md)，远端 CI 待执行。
 > 进度及边界见 [实现状态](docs/implementation-status.md) 与 [支持矩阵](docs/supported-features.md)。
 

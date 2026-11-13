@@ -54,6 +54,9 @@ func (s *sliceEntry) readMBType(fs *frameState, addr int) (uint32, error) {
 	if s.hdr.Type == syntax.SliceTypeI {
 		return uint32(c.intraType(fs, addr, 3, true)), c.d.Err()
 	}
+	if s.hdr.Type == syntax.SliceTypeB {
+		return uint32(c.bType(fs, addr)), c.d.Err()
+	}
 	if c.bin(14) != 0 {
 		return uint32(5 + c.intraType(fs, addr, 17, false)), c.d.Err()
 	}

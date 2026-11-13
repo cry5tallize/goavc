@@ -162,8 +162,6 @@ func TestDecoder_UnsupportedTools(t *testing.T) {
 	for _, mutate := range []func(*syntax.SPS, *syntax.PPS, *syntax.SliceHeader){
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { p.Transform8x8ModeFlag = true },
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.SeqScalingMatrixPresentFlag = true },
-		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { h.Type = syntax.SliceTypeB },
-		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { h.HasPredWeightTable = true },
 	} {
 		ss, pp, hh := *s, *p, *h
 		mutate(&ss, &pp, &hh)
@@ -176,7 +174,7 @@ func TestDecoder_UnsupportedTools(t *testing.T) {
 		t.Fatal(err)
 	}
 	d := mustDecoder(t, h264.DecoderConfig{})
-	if err := d.SendPacket(h264.Packet{Data: data}); !errors.Is(err, h264.ErrUnsupported) {
+	if err := d.SendPacket(h264.Packet{Data: data}); err != nil {
 		t.Fatal(err)
 	}
 }

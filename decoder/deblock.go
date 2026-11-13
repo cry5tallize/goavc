@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	h264 "github.com/goavc/h264"
+	"github.com/goavc/h264/internal/dpb"
 	"github.com/goavc/h264/internal/filter"
+	"github.com/goavc/h264/internal/motion"
 	"github.com/goavc/h264/internal/transform"
 )
 
@@ -214,6 +216,9 @@ func (fs *frameState) bSAtBlocks(pbx, pby, qbx, qby int, boundary bool) int {
 	if pNZ != 0 || qNZ != 0 {
 		return 2
 	}
+	if fs.mv1 != nil {
+		return fs.bMotionStrength(pbx, pby, qbx, qby)
+	}
 	pmv, pref, pok := fs.mv.Get(pbx, pby)
 	qmv, qref, qok := fs.mv.Get(qbx, qby)
 	sameReference := pref == qref
@@ -227,6 +232,37 @@ func (fs *frameState) bSAtBlocks(pbx, pby, qbx, qby int, boundary bool) int {
 		return 1
 	}
 	return 0
+}
+
+// B 边界允许两侧参考列表互换；若两方向恰好引用同一图像，任一成对
+// 匹配即可，不能只比较 list0 或把不同 slice 的 ref_idx 视为图像身份。
+func (fs *frameState) bMotionStrength(px, py, qx, qy int) int {
+	pi, qi := py*fs.mv.BlockW+px, qy*fs.mv.BlockW+qx
+	pIDs := [2]*dpb.Identity{fs.referenceIDs[0][pi], fs.referenceIDs[1][pi]}
+	qIDs := [2]*dpb.Identity{fs.referenceIDs[0][qi], fs.referenceIDs[1][qi]}
+	pMV0, _, _ := fs.mv.Get(px, py)
+	pMV1, _, _ := fs.mv1.Get(px, py)
+	qMV0, _, _ := fs.mv.Get(qx, qy)
+	qMV1, _, _ := fs.mv1.Get(qx, qy)
+	pm, qm := [2]motion.MV{pMV0, pMV1}, [2]motion.MV{qMV0, qMV1}
+	for _, swap := range []int{0, 1} {
+		match := true
+		for l := 0; l < 2; l++ {
+			other := l ^ swap
+			if pIDs[l] != qIDs[other] {
+				match = false
+				break
+			}
+			if pIDs[l] != nil && (absInt(int(pm[l].X-qm[other].X)) >= 4 || absInt(int(pm[l].Y-qm[other].Y)) >= 4) {
+				match = false
+				break
+			}
+		}
+		if match {
+			return 0
+		}
+	}
+	return 1
 }
 
 func absInt(v int) int {

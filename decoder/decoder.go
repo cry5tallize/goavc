@@ -1,8 +1,8 @@
 // Package decoder 实现 H.264 Baseline 解码流水线。
 //
 // 输入单位是访问单元（Packet.Data 为 Annex-B），输出是显示顺序的
-// 4:2:0 8-bit Frame。当前支持 CAVLC/CABAC 的 I/P、多参考与 MMCO、4x4 变换、
-// 去块与无重排的 POC type 0/1/2；B/8x8/加权预测等返回 ErrUnsupported。
+// 4:2:0 8-bit Frame。支持 CAVLC/CABAC 的 I/P/B、多参考/MMCO、direct、加权
+// 预测和 POC 显示重排；High 8x8/ScalingMatrix 正在接入。
 package decoder
 
 import (
@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/bitstream"
@@ -30,18 +31,18 @@ type Decoder struct {
 	dpb  *dpb.DPB
 	poc  *dpb.POCState
 
-	out []*h264.Frame
+	out            []*h264.Frame
+	pending        []orderedFrame
+	hasEmitted     bool
+	lastEmittedPOC int32
 
 	// waitingForIDR 在致命错误后置位；后续包只有出现 IDR 才会重新解码。
 	waitingForIDR bool
 	flushed       bool
 
 	// 序列参数缓存，DPB/POC 在 SPS 变化时重建。
-	activeSPS      *syntax.SPS
-	maxFrameNum    uint32
-	frameNumOffset int64
-	lastOutputPOC  int32
-	hasOutput      bool
+	activeSPS   *syntax.SPS
+	maxFrameNum uint32
 
 	closed bool
 }
@@ -188,11 +189,12 @@ func (d *Decoder) ReceiveFrame() (*h264.Frame, error) {
 	return nil, h264.ErrAgain
 }
 
-// Flush 表示输入结束。I/P 无重排序，M2 没有滞留帧；M3 会排空 DPB。
+// Flush 表示输入结束，按显示顺序排空滞留帧；输出耗尽后 ReceiveFrame 返回 EOF。
 func (d *Decoder) Flush() error {
 	if d.closed {
 		return h264.ErrEOF
 	}
+	d.drainPending()
 	d.flushed = true
 	return nil
 }
@@ -206,6 +208,8 @@ func (d *Decoder) Reset() error {
 		f.Release()
 	}
 	d.out = nil
+	d.discardPending()
+	d.hasEmitted = false
 	if d.dpb != nil {
 		d.dpb.Reset()
 	}
@@ -213,8 +217,6 @@ func (d *Decoder) Reset() error {
 	d.pps = make(map[uint32]*syntax.PPS)
 	d.activeSPS = nil
 	d.poc = nil
-	d.frameNumOffset = 0
-	d.hasOutput = false
 	d.waitingForIDR = false
 	d.flushed = false
 	return nil
@@ -233,6 +235,8 @@ func (d *Decoder) Close() error {
 
 func (d *Decoder) fail(err error) error {
 	if h264.IsFatal(err) {
+		d.discardPending()
+		d.hasEmitted = false
 		d.waitingForIDR = true
 		if d.dpb != nil {
 			d.dpb.Reset()
@@ -246,6 +250,10 @@ func (d *Decoder) fail(err error) error {
 
 func (d *Decoder) activateSPS(s *syntax.SPS) error {
 	if d.activeSPS == s && d.dpb != nil {
+		return nil
+	}
+	if d.activeSPS != nil && d.dpb != nil && reflect.DeepEqual(d.activeSPS, s) {
+		d.activeSPS = s
 		return nil
 	}
 	d.activeSPS = s
@@ -289,6 +297,14 @@ func (d *Decoder) checkSPSLimits(s *syntax.SPS) error {
 	}
 	if s.MaxNumRefFrames > uint32(d.cfg.MaxDPBFrames) {
 		return fmt.Errorf("decoder: DPB limit %d: %w", d.cfg.MaxDPBFrames, h264.ErrResourceLimit)
+	}
+	if s.VUI != nil && s.VUI.BitstreamRestrictionFlag {
+		if s.VUI.MaxNumReorderFrames > s.VUI.MaxDecFrameBuffering {
+			return fmt.Errorf("decoder: reorder count exceeds buffer declaration: %w", h264.ErrInvalidData)
+		}
+		if s.VUI.MaxNumReorderFrames > uint32(d.cfg.MaxDPBFrames) || s.VUI.MaxDecFrameBuffering > uint32(d.cfg.MaxDPBFrames) {
+			return fmt.Errorf("decoder: VUI DPB exceeds configured limit: %w", h264.ErrResourceLimit)
+		}
 	}
 	return nil
 }

@@ -30,6 +30,7 @@ type mbInfo struct {
 	intra16    bool
 	pcm        bool
 	skip       bool
+	direct     bool
 	qp         int
 	cbp        int
 	sliceID    int
@@ -48,6 +49,7 @@ type frameState struct {
 	pic *picture.Picture
 	sps *syntax.SPS
 	pps *syntax.PPS
+	poc int32
 
 	mbW, mbH, total int
 	decoded         []bool
@@ -58,9 +60,12 @@ type frameState struct {
 	mvd             []motion.MV
 	referenceIDs    [2][]*dpb.Identity
 	mv              *motion.Grid
+	mv1             *motion.Grid
+	mvd1            []motion.MV
+	directBlocks    []bool
 }
 
-func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS) (*frameState, error) {
+func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFrame bool) (*frameState, error) {
 	mbW := int(sps.PicWidthInMbs())
 	mbH := int(sps.FrameHeightInMbs())
 	pic, err := d.pool.Get(mbW, mbH)
@@ -84,6 +89,14 @@ func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS) (*frameState, e
 	fs.chromaNZ[0] = make([]uint8, total*4)
 	fs.chromaNZ[1] = make([]uint8, total*4)
 	fs.referenceIDs[0] = make([]*dpb.Identity, total*16)
+	if bFrame {
+		fs.mv1 = motion.NewGrid(mbW, mbH)
+		fs.referenceIDs[1] = make([]*dpb.Identity, total*16)
+		fs.directBlocks = make([]bool, total*16)
+		if pps.EntropyCodingModeFlag {
+			fs.mvd1 = make([]motion.MV, total*16)
+		}
+	}
 	if pps.EntropyCodingModeFlag {
 		for i := range fs.dcCoded {
 			fs.dcCoded[i] = make([]bool, total)
@@ -172,16 +185,9 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 	idr := first.hdr.IDR
 	ref := first.unit.Header.RefIDC != 0
 	if idr {
-		if first.hdr.NoOutputOfPriorPicsFlag {
-			for _, f := range d.out {
-				f.Release()
-			}
-			d.out = nil
-		}
+		d.outputBoundary(first.hdr.NoOutputOfPriorPicsFlag)
 		d.dpb.Reset()
 		d.poc.Reset()
-		d.frameNumOffset = 0
-		d.hasOutput = false
 	}
 	if !idr && sps.GapsInFrameNumValueAllowedFlag && first.hdr.FrameNum != (d.dpb.ReferenceFrameNum()+1)%d.maxFrameNum {
 		return fmt.Errorf("decoder: non-existing reference pictures are not supported: %w", h264.ErrUnsupported)
@@ -203,14 +209,18 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 	if err != nil {
 		return err
 	}
-	if d.hasOutput && poc <= d.lastOutputPOC {
-		return fmt.Errorf("decoder: display reordering requires M3: %w", h264.ErrUnsupported)
-	}
 
-	fs, err := newFrameState(d, sps, pps)
+	bFrame := false
+	for _, entry := range slices {
+		if entry.hdr.Type == syntax.SliceTypeB {
+			bFrame = true
+		}
+	}
+	fs, err := newFrameState(d, sps, pps, bFrame)
 	if err != nil {
 		return err
 	}
+	fs.poc = poc
 	ok := false
 	defer func() {
 		if !ok {
@@ -273,6 +283,9 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 	}
 
 	fs.mv.BeginSlice(0)
+	if fs.mv1 != nil {
+		fs.mv1.BeginSlice(0)
+	}
 	if err := fs.deblock(); err != nil {
 		return err
 	}
@@ -285,28 +298,27 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 	if ref {
 		r := d.dpb.NewReference(fs.pic, first.hdr.FrameNum, poc)
 		r.Motion[0] = fs.mv
+		r.Motion[1] = fs.mv1
 		r.BlockReferences = fs.referenceIDs
 		if err := d.dpb.Store(r, idr, first.hdr.LongTermReferenceFlag, first.hdr.AdaptiveRefPicMarking, first.hdr.MemoryManagement); err != nil {
 			frame.Release()
 			return err
 		}
+		fs.pic = nil
 		for _, m := range first.hdr.MemoryManagement {
 			if m.Operation == 5 {
 				d.poc.AfterMMCO5(top - poc)
-				d.frameNumOffset = 0
 				r.POC = 0
-				d.lastOutputPOC = 0
+				poc = 0
+				d.outputBoundary(false)
 			}
 		}
 	} else {
 		fs.release()
 	}
-	d.out = append(d.out, frame)
-	d.lastOutputPOC, d.hasOutput = poc, true
-	for _, m := range first.hdr.MemoryManagement {
-		if m.Operation == 5 {
-			d.lastOutputPOC = 0
-		}
+	if err := d.queueFrame(frame, poc); err != nil {
+		frame.Release()
+		return err
 	}
 	d.waitingForIDR = false
 	ok = true
@@ -327,12 +339,6 @@ func (d *Decoder) checkSupported(sps *syntax.SPS, pps *syntax.PPS, hdr *syntax.S
 	if sps.SeqScalingMatrixPresentFlag || pps.PicScalingMatrixPresentFlag {
 		return fmt.Errorf("decoder: scaling matrices are not supported in M2: %w", h264.ErrUnsupported)
 	}
-	if hdr.Type == syntax.SliceTypeB {
-		return fmt.Errorf("decoder: B slices are not supported in M2: %w", h264.ErrUnsupported)
-	}
-	if hdr.HasPredWeightTable {
-		return fmt.Errorf("decoder: weighted prediction is not supported in M2: %w", h264.ErrUnsupported)
-	}
 	return nil
 }
 
@@ -345,12 +351,15 @@ func decodeSlice(fs *frameState, s *sliceEntry, sliceID int, first, end int) err
 		return decodeCABACSlice(fs, s, sliceID, first, end)
 	}
 	fs.mv.BeginSlice(first)
+	if fs.mv1 != nil {
+		fs.mv1.BeginSlice(first)
+	}
 	qscale := s.hdr.SliceQP
 	for addr := first; addr < end; addr++ {
 		if fs.decoded[addr] {
 			return fmt.Errorf("decoder: macroblock %d decoded twice: %w", addr, h264.ErrInvalidData)
 		}
-		if s.hdr.Type == syntax.SliceTypeP {
+		if s.hdr.Type == syntax.SliceTypeP || s.hdr.Type == syntax.SliceTypeB {
 			run, err := s.data.ReadUE()
 			if err != nil {
 				return fmt.Errorf("decoder: mb_skip_run at mb %d: %w", addr, err)

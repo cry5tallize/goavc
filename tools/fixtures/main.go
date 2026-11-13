@@ -20,7 +20,19 @@ func must(err error) {
 func main() {
 	output := flag.String("output", "testdata/main/main_16x16_yuv420p_cavlc_mmco_006.264", "输出 Annex-B 路径")
 	pocType := flag.Uint("poc-type", 0, "POC 类型 0/1/2")
+	kind := flag.String("kind", "mmco", "mmco 或 weighted-b")
 	flag.Parse()
+	if *kind == "weighted-b" {
+		path := *output
+		if path == "testdata/main/main_16x16_yuv420p_cavlc_mmco_006.264" {
+			path = "testdata/main/main_16x16_yuv420p_cavlc_weightedb_012.264"
+		}
+		generateWeightedB(path)
+		return
+	}
+	if *kind != "mmco" {
+		panic("unknown fixture kind")
+	}
 	if *pocType > 2 {
 		panic("poc-type must be 0/1/2")
 	}
