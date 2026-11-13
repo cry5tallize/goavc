@@ -43,33 +43,63 @@ func NewReader(data []byte) *Reader {
 //
 // n 的范围是 0..64。n == 0 时返回 0 且不改变位置；n > 64 属于调用方错误，
 // 同样返回 ErrInvalidData 而不是 panic。读取失败时位置保持不变。
-func (r *Reader) ReadBits(n uint) (uint64, error) {
-	v, err := r.PeekBits(n)
-	if err != nil {
-		return 0, err
-	}
-	r.consume(n)
-	return v, nil
-}
-
-// PeekBits 预读接下来 n 个比特，但不推进读取位置。
 //
-// 该函数主要用于需要判断"剩余比特是否只是 rbsp_trailing_bits"的场景：
-// 解析器可以在不破坏 Reader 状态的前提下检查后续位模式。
-func (r *Reader) PeekBits(n uint) (uint64, error) {
+// 超过 56 bit 的读取会拆成两段：reservoir 最多容纳 64 bit，而 refill 只在
+// 剩余空间足够装入一个完整字节时装载（nbits <= 56）。直接请求 64 bit 时，
+// reservoir 可能只有 57..63 位可用；先读高位再读低 56 位可以避免这个缺口。
+func (r *Reader) ReadBits(n uint) (uint64, error) {
 	if n > 64 {
 		return 0, fmt.Errorf("bitstream: read width %d exceeds 64 bits: %w", n, h264.ErrInvalidData)
 	}
 	if n == 0 {
 		return 0, nil
 	}
-	r.refill()
-	if uint(r.nbits) < n {
+	// 先整体检查，保证失败读取不推进位置；否则第二段失败时第一段已被消费。
+	if uint64(n) > r.BitsRemaining() {
 		return 0, fmt.Errorf("bitstream: need %d bits at position %d but only %d remain: %w",
 			n, r.consumed, r.BitsRemaining(), h264.ErrInvalidData)
 	}
+	if n <= 56 {
+		return r.readBitsSmall(n)
+	}
+
+	hi, err := r.readBitsSmall(n - 56)
+	if err != nil {
+		return 0, err
+	}
+	lo, err := r.readBitsSmall(56)
+	if err != nil {
+		return 0, err
+	}
+	return hi<<56 | lo, nil
+}
+
+// readBitsSmall 读取不超过 56 bit 的值；调用方必须保证输入足够。
+func (r *Reader) readBitsSmall(n uint) (uint64, error) {
+	if n == 0 {
+		return 0, nil
+	}
+	r.refill()
+	if uint(r.nbits) < n {
+		// 理论上不可达（ReadBits 已做总长度检查），保留为防御性分支。
+		return 0, fmt.Errorf("bitstream: need %d bits at position %d but only %d in reservoir: %w",
+			n, r.consumed, r.nbits, h264.ErrInvalidData)
+	}
 	// reservoir 左对齐：最高 n 位就是接下来的 n 个比特。
-	return r.reservoir >> (64 - n), nil
+	v := r.reservoir >> (64 - n)
+	r.consume(n)
+	return v, nil
+}
+
+// PeekBits 预读接下来 n 个比特，但不推进读取位置。
+//
+// 该函数主要用于需要判断"剩余比特是否只是 rbsp_trailing_bits"的场景。
+// 实现方式是复制 Reader 状态后执行一次 ReadBits：data 只读，复制结构体
+// 不会影响原 Reader；这比单独维护一套"预读但不消费"的 reservoir 逻辑更
+// 不容易出现边界偏差。
+func (r *Reader) PeekBits(n uint) (uint64, error) {
+	tmp := *r
+	return tmp.ReadBits(n)
 }
 
 // ReadBit 读取单个比特，返回 0 或 1。
