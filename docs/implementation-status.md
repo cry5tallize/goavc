@@ -143,6 +143,7 @@ M5a 已完成本地门禁（`v0.5.1`，远端 CI 待执行）：两种大尺寸�
 | CQP AU 资源门禁 | Annex A / 事务边界 | Auto 几何/帧率校验，实际 AU 上限检查，1080p30 不再因最坏预算在 New 拒绝 | Conformant | `LevelBudgetIsTransactional` 注入超限、已有 Oracle 回归 | 超限返回 ErrResourceLimit 且不发布输出；仍非 HRD/VBV 保证；显式 Level 与 PCM 保留保守初始化检查 |
 | SATD | 编码分析 | 4×4 Hadamard、8×8/16×16 聚合、非对齐 stride | Conformant | 独立常量/脉冲解析解，正负极值 | RD 流水线接入待完成；不参与解码重建 |
 | RD 基础代价 | 编码分析 | Q8 lambda、SSE+lambda×bits、MV/UE/SE 精确位数 | Conformant | QP 0..51 单调性、位数与实际 writer 相等、零/极端 MVD | 模式候选比较尚待集成；没有用自往返宣称新的码流工具支持 |
+| 活动度 QP | 编码分析 / mb_qp_delta | AQ strength 0..6、方差分档、QP 0..51 裁剪 | Conformant | 平坦/棋盘解析活动度、实际 QP=23/29、0/26/51 的 36 帧双解码器 Oracle | 默认关闭；与显式宏块 QP 或 PCM 通道冲突时拒绝 |
 
 ## M6–M9
 

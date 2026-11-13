@@ -176,3 +176,46 @@ func TestEncoder_InterPictureTypes(t *testing.T) {
 		}
 	}
 }
+
+func TestEncoder_AdaptiveQPOracle(t *testing.T) {
+	for _, base := range []int{0, 26, 51} {
+		c := h264.DefaultEncoderConfig()
+		c.Width = 64
+		c.Height = 48
+		c.GOPSize = 9
+		c.QP = base
+		e, err := encoder.New(c, encoder.WithAdaptiveQP(3), encoder.WithSliceCount(3))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer e.Close()
+		d, err := decoder.New(h264.DecoderConfig{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer d.Close()
+		var stream, want []byte
+		for i := 0; i < 12; i++ {
+			if err = e.SendFrame(movingFrame(c.Width, c.Height, i)); err != nil {
+				t.Fatal(err)
+			}
+			packet, _ := e.ReceivePacket()
+			r, _ := e.Reconstruction()
+			if err = d.SendPacket(packet); err != nil {
+				t.Fatal(err)
+			}
+			got, err := d.ReceiveFrame()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(packed(got), packed(r)) {
+				t.Fatalf("QP%d frame%d differs", base, i)
+			}
+			stream = append(stream, packet.Data...)
+			want = append(want, packed(r)...)
+			r.Release()
+			got.Release()
+		}
+		ffmpegCheck(t, stream, want)
+	}
+}

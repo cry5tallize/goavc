@@ -19,6 +19,7 @@ type Encoder struct {
 	searchRange             int
 	fullSearch              bool
 	maxAUBytes              int
+	adaptiveQP              int
 	reference               *picture.Picture
 	frameNum                uint32
 	framesSinceIDR          int
@@ -83,6 +84,9 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	}
 	if e.pcm && e.qpAt != nil {
 		return nil, fmt.Errorf("encoder: PCM has no QP override: %w", h264.ErrUnsupported)
+	}
+	if e.adaptiveQP > 0 && (e.pcm || e.qpAt != nil) {
+		return nil, fmt.Errorf("encoder: AQ conflicts with PCM or explicit QP callback: %w", h264.ErrUnsupported)
 	}
 	if err := e.parameters(); err != nil {
 		return nil, err

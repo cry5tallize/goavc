@@ -26,6 +26,7 @@ func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
 		if qp < 0 || qp > 51 {
 			return nil, fmt.Errorf("encoder: macroblock qp %d: %w", qp, h264.ErrInvalidData)
 		}
+		qp = activityQP(&src.Planes[0], addr%src.MBWidth*16, addr/src.MBWidth*16, qp, e.adaptiveQP)
 		s.info[addr].qp = qp
 	}
 	return s, nil
