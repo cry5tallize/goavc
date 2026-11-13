@@ -15,6 +15,13 @@ import (
 //	qmul = levelScale[qP%6][0] * 16 << (qP/6+2)
 //	dc   = (hadamard(levels) * qmul + 128) >> 8
 func DequantLumaDC(dst *[16]int32, levels *[16]int32, qp int) error {
+	return DequantLumaDCWithScaling(dst, levels, qp, 16)
+}
+
+func DequantLumaDCWithScaling(dst *[16]int32, levels *[16]int32, qp int, scale uint8) error {
+	if scale == 0 {
+		return fmt.Errorf("transform: zero luma DC scale: %w", h264.ErrInvalidData)
+	}
 	if qp < 0 || qp > MaxQP {
 		return fmt.Errorf("transform: qp %d out of range 0..%d: %w", qp, MaxQP, h264.ErrInvalidData)
 	}
@@ -34,7 +41,7 @@ func DequantLumaDC(dst *[16]int32, levels *[16]int32, qp int) error {
 		tmp[i*4+3] = d01 + d23
 	}
 	// Spec: 8.5.10。列方向使用相同 Hadamard 矩阵，输出保持空间布局。
-	qmul := int64(levelScale4x4[qp%6][0]) * 16 << (uint(qp)/6 + 2)
+	qmul := int64(levelScale4x4[qp%6][0]) * int64(scale) << (uint(qp)/6 + 2)
 	for i := 0; i < 4; i++ {
 		s01 := tmp[0*4+i] + tmp[1*4+i]
 		d01 := tmp[0*4+i] - tmp[1*4+i]
@@ -65,11 +72,18 @@ func DequantLumaDC(dst *[16]int32, levels *[16]int32, qp int) error {
 // 注意这里没有 +64；这是规范 8.5.11 与 8.5.10 的差异之一，
 // 多一个舍入常数就会让 P 帧逐像素对比出现系统性偏差。
 func DequantChromaDC(dst *[4]int32, levels *[4]int32, qp int) error {
+	return DequantChromaDCWithScaling(dst, levels, qp, 16)
+}
+
+func DequantChromaDCWithScaling(dst *[4]int32, levels *[4]int32, qp int, scale uint8) error {
+	if scale == 0 {
+		return fmt.Errorf("transform: zero chroma DC scale: %w", h264.ErrInvalidData)
+	}
 	if qp < 0 || qp > MaxQP {
 		return fmt.Errorf("transform: qp %d out of range 0..%d: %w", qp, MaxQP, h264.ErrInvalidData)
 	}
 	a, b, c, d := levels[0], levels[1], levels[2], levels[3]
-	qmul := int64(levelScale4x4[qp%6][0]) * 16 << (uint(qp)/6 + 2)
+	qmul := int64(levelScale4x4[qp%6][0]) * int64(scale) << (uint(qp)/6 + 2)
 	sums := [4]int32{
 		a + b + c + d,
 		a - b + c - d,
