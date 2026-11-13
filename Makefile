@@ -16,7 +16,7 @@ export CGO_ENABLED
 all: verify
 
 ## verify: 提交前必跑的完整检查（不修改任何文件）
-verify: vet build test deps manifest
+verify: fmt-check vet build test deps manifest
 	@echo "verify: 全部通过"
 
 ## build: 编译所有包（含 tools/ 与 benchmarks/）

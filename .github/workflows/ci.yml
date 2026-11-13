@@ -35,6 +35,16 @@ jobs:
         shell: bash
         run: go version
 
+      - name: gofmt
+        shell: bash
+        run: |
+          out="$(gofmt -l .)"
+          if [ -n "$out" ]; then
+            echo "以下文件需要 gofmt："
+            echo "$out"
+            exit 1
+          fi
+
       - name: vet
         shell: bash
         run: go vet ./...

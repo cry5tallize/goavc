@@ -1,0 +1,11 @@
+# 统一换行策略：仓库内文本文件一律 LF。
+# gofmt 会把 CRLF 规范化为 LF，若检出时又转回 CRLF，make fmt-check 会在
+# Windows 上永久失败。这里显式固定行尾，避免"格式化结果依赖本地 git 配置"。
+* text=auto
+*.go text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.sh text eol=lf
+Makefile text eol=lf
