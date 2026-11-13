@@ -3,7 +3,8 @@
 > **M4 进展：** `encoder.New` 默认执行串行 Baseline CQP 的 I4/I16/色度压缩，
 > 每帧独立 IDR；支持 I_PCM 选项、1..64 slice、偶数显示尺寸裁剪和宏块 QP 覆盖。
 > 两条路径及混合 PCM 已通过 FFmpeg/自研解码/本地重建逐像素验证。
-> 性能记录与最终门禁尚待收尾；Main/High、P/B、ABR/CBR 明确拒绝。
+> 本地门禁及性能记录已完成，证据见 gates/m4.md；远端 CI 尚待执行。
+> Main/High、P/B、ABR/CBR 明确拒绝；Level 使用保守大小预算，1080p@30 当前超限。
 
 > 状态图例：`TODO` 未开始 · `WIP` 进行中 · `Partial` 部分可用（有已知不支持路径）·
 > `Conformant` 通过规定验证 · `Unsupported` 明确拒绝并返回 `ErrUnsupported`

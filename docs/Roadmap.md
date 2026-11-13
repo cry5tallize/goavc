@@ -269,7 +269,7 @@ M6/M7/M8 ───────────► M9 生产化与发布
 | M1 | Bitstream Foundation | BitReader/Writer、RBSP/EBSP、NAL、Annex-B/AVCC、avcC、AU 组装、SPS/PPS | M | WIP（本地门禁通过，待 CI） |
 | M2 | Decoder Baseline | CAVLC + Intra + P + MC + 4×4 IDCT + Deblock + 基础 DPB，与 FFmpeg 逐像素一致 | L | WIP（本地门禁通过，待 CI；见 gates/m2.md） |
 | M3 | Decoder Main/High | CABAC、B Slice、POC、RefList、MMCO、8×8、ScalingMatrix、延迟输出 | L | WIP（本地门禁通过，待 CI；见 gates/m3.md） |
-| M4 | Encoder Baseline | SPS/PPS Writer、IDR、I_PCM、I4×4/I16×16、CAVLC、CQP、本地重建、Annex-B | L | TODO |
+| M4 | Encoder Baseline | SPS/PPS Writer、IDR、I_PCM、I4×4/I16×16、CAVLC、CQP、本地重建、Annex-B | L | WIP（本地门禁通过，待 CI；见 gates/m4.md） |
 | M5 | Encoder Main/High | P Slice、ME/MC、亚像素、模式决策、RD、B Frame、CABAC、8×8、GOP、RC | XL | TODO |
 | M6 | 完整流式处理 | 增量 Reader、AU 组装、YUV I/O、Pipeline、背压、取消、Flush | M | TODO |
 | M7 | 高级 AVC 特性 | High10/422/444、Interlaced、MBAFF/PAFF、FMO、Data Partitioning 等 | XL | TODO |
@@ -423,13 +423,15 @@ M6/M7/M8 ───────────► M9 生产化与发布
 **范围外：** P Slice、运动估计、CABAC、B 帧、GOP 结构、rate control（ABR/CBR）。
 
 **退出标准：**
-- [ ] FFmpeg 能解码全部产出码流，无 warning/error，`ffprobe` 识别 profile/level/分辨率正确。
-- [ ] 自校验：`encode → decode` 与 encoder 本地重建逐像素一致（I_PCM 与 Intra 两条路径各测）。
-- [ ] Intra 9 + 4 + 4 模式全部被实际选中过（用合成图案构造测试，断言模式分布）。
-- [ ] CAVLC 编码器对极端系数分布（全零、长游程、大 level 转义）有定向测试，且解码器可逆回原始系数。
-- [ ] 生成的 SPS/PPS 能被 M1 的 parser round-trip。
-- [ ] 输出码率与 PSNR 记录到 `docs/performance.md`（作为 M5 对比基线）。
-- [ ] 单帧内多个 slice 可选开启（参数化，不强求默认）。
+- [x] FFmpeg 能解码全部产出码流，无 warning/error，`ffprobe` 识别 profile/level/分辨率正确。
+- [x] 自校验：`encode → decode` 与 encoder 本地重建逐像素一致（I_PCM 与 Intra 两条路径各测）。
+- [x] Intra 9 + 4 + 4 模式全部被实际选中过（用合成图案构造测试，断言模式分布）。
+- [x] CAVLC 编码器对极端系数分布（全零、长游程、大 level 转义）有定向测试，且解码器可逆回原始系数。
+- [x] 生成的 SPS/PPS 能被 M1 的 parser round-trip。
+- [x] 输出码率与 PSNR 记录到 `docs/performance.md`（作为 M5 对比基线）。
+- [x] 单帧内多个 slice 可选开启（参数化，不强求默认）。
+
+本地逐项证据见 [M4 门禁记录](gates/m4.md)，远端 CI 尚待执行。
 
 **风险：** 本地重建与解码路径"看起来一致但舍入不同" → 强制共用同一 kernel 并加"双路径对比测试"，禁止 encoder 内另写一套反变换。
 

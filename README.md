@@ -6,9 +6,16 @@
 > 当前状态：**M3 Main / High 解码已完成本地门禁**。`decoder.New` 接收完整 Annex-B 访问单元，
 > 输出渐进式8-bit YUV420；支持CAVLC/CABAC、I/P/B、多参考/MMCO、双向/direct、加权预测、
 > 4×4/8×8及ScalingMatrix、去块、裁剪与按显示顺序输出。26份已支持语料共217帧通过
-> FFmpeg逐像素/固定哈希回归，另1份合法隔行语料明确拒绝并验证错误恢复。编码器从M4开始。
+> FFmpeg逐像素/固定哈希回归，另1份合法隔行语料明确拒绝并验证错误恢复。
 > [M3门禁记录](docs/gates/m3.md)含完整证据；本地标签`v0.4.0`，远端CI待执行。
 > 进度及边界见[实现状态](docs/implementation-status.md)与[支持矩阵](docs/supported-features.md)。
+
+> **M4 Baseline 帧内编码已通过本地门禁**。`encoder.New` 提供 CQP、I4/I16/色度 SAD
+> 决策、CAVLC、共享本地重建与去块、独立 IDR Annex-B AU、I_PCM 和 1..64 slice 选项。
+> 187 帧通过本地重建/自研解码/FFmpeg 逐像素比较；完整测试、race、fuzz 与六目标构建通过。
+> 仅支持渐进式 8-bit YUV420 偶数显示尺寸；Level 保守预算下 1080p@30 当前超限，
+> P/B、GOP 与其他码控在 M5。见[编码用法](docs/encoder.md)、[M4 门禁](docs/gates/m4.md)和
+> [性能基线](docs/performance.md#6-m4-帧内编码基线)。本地标签 `v0.5.0`，远端 CI 待执行。
 
 ## 硬约束
 
