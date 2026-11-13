@@ -6,6 +6,7 @@ import (
 
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/bitstream"
+	"github.com/goavc/h264/internal/motion"
 	"github.com/goavc/h264/internal/picture"
 	"github.com/goavc/h264/internal/prediction"
 	"github.com/goavc/h264/internal/transform"
@@ -16,6 +17,8 @@ type mbInfo struct {
 	start, qp, cbp, mode16, chromaMode int
 	is16                               bool
 	pcm                                bool
+	inter, skip                        bool
+	partition                          int
 	modes                              [16]int8
 }
 type residual struct {
@@ -25,10 +28,12 @@ type residual struct {
 	chromaDC [2][4]int32
 }
 type frameState struct {
-	src, pic *picture.Picture
-	info     []mbInfo
-	nz       []uint8
-	cnz      [2][]uint8
+	src, pic  *picture.Picture
+	info      []mbInfo
+	nz        []uint8
+	cnz       [2][]uint8
+	reference *picture.Picture
+	mv        *motion.Grid
 }
 
 // WithMacroblockQP 使用坐标回调覆盖 CQP；返回值必须为 0..51。
@@ -44,26 +49,11 @@ func WithMacroblockQP(qp func(x, y int) int) Option {
 }
 
 func (e *Encoder) encodeIntra(src *picture.Picture) ([]byte, *frameState, error) {
-	pic, err := picture.New(src.MBWidth, src.MBHeight)
+	s, err := e.newFrameState(src)
 	if err != nil {
 		return nil, nil, err
 	}
 	total := src.MBWidth * src.MBHeight
-	s := &frameState{src: src, pic: pic, info: make([]mbInfo, total), nz: make([]uint8, total*16)}
-	for c := range s.cnz {
-		s.cnz[c] = make([]uint8, total*4)
-	}
-	// 先校验所有回调值再编码，失败时不发布半帧或递增 IDR。
-	for addr := range s.info {
-		qp := e.cfg.QP
-		if e.qpAt != nil {
-			qp = e.qpAt(addr%src.MBWidth, addr/src.MBWidth)
-		}
-		if qp < 0 || qp > 51 {
-			return nil, nil, fmt.Errorf("encoder: macroblock qp %d: %w", qp, h264.ErrInvalidData)
-		}
-		s.info[addr].qp = qp
-	}
 	var b bytes.Buffer
 	out := nal.NewAnnexBWriter(&b)
 	emit := func(typ nal.UnitType, rb []byte) error {
@@ -138,7 +128,11 @@ func (s *frameState) writePCM(w *bitstream.Writer, addr int) {
 			s.cnz[c][addr*4+i] = 16
 		}
 	}
-	w.WriteUE(25)
+	typ := uint32(25)
+	if s.reference != nil {
+		typ += 5
+	}
+	w.WriteUE(typ)
 	w.ByteAlign()
 	for c := 0; c < 3; c++ {
 		n := 16

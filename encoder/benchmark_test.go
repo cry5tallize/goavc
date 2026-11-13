@@ -11,6 +11,7 @@ func benchmarkEncoder(b *testing.B, w, h, fps int, pcm bool) {
 	c.Width = w
 	c.Height = h
 	c.QP = 26
+	c.GOPSize = 1
 	c.FPSNum = fps
 	var options []Option
 	if pcm {

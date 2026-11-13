@@ -133,7 +133,9 @@ Main I/P 回归保持通过。最终清单共 27 条，26 条支持样本 217 �
 
 | Module | 规范条款/职责 | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|---|
-| `motion/search` | 编码分析；MC 契约 8.4.2 | SAD、穷举、菱形、范围自适应、半/四像素细化 | Conformant | SAD 解析值、已知整数/亚像素平移、边界与局部搜索差值 | 编码流水线尚未接入；菱形非全局最优承诺；独立子包避免 prediction→motion 的依赖环 |
+| `motion/search` | 编码分析；MC 契约 8.4.2 | SAD、穷举、菱形、范围自适应、半/四像素细化 | Conformant | SAD 解析值、已知整数/亚像素平移、边界与局部搜索差值 | 菱形非全局最优承诺；独立子包避免 prediction→motion 的依赖环 |
+| P 帧单参考闭环 | 7.3.3 / 8.4 / 8.7 | P16/16×8/8×16/8×8、MV/MVD、CAVLC 残差、P_Skip、混合 PCM、共享 MC/重建/滤波 | Conformant | `InterSequenceOracle` 九组共 360 帧，含裁剪/多 slice/0↔51/frame_num 回绕/场景变化；`InterPartitionCoverageAndSkip` 四种分区实际选中 | 尚无 Intra/Inter RD 比较；非默认 entropy/profile 仍拒绝；M5 总门禁未过 |
+| I/P 状态与参考更新 | 公共 API / POC type2 | IDRInterval、输入 KeyFrame 强制 IDR、无重排 PTS=DTS、失败不更新参考 | Conformant | 40 帧序列中 0/17/33 帧 IDR，NAL 实际类型、PTS、三方像素一致 | 暂要求 GOPSize=IDRInterval；完整 I/B/GOP 策略在 M5d；PCM 选项仍为全 IDR |
 
 ## M6–M9
 

@@ -1,8 +1,19 @@
 package motion
 
-import (
-	"testing"
-)
+import "testing"
+
+// ClearRect 必须只撤销候选区域，不能破坏左邻宏块的 MVP 来源。
+func TestGrid_ClearRectPreservesNeighbors(t *testing.T) {
+	g := NewGrid(2, 1)
+	g.SetRect(0, 0, 8, 4, MV{X: 12}, 0)
+	g.ClearRect(4, 0, 4, 4)
+	if _, _, ok := g.Get(4, 0); ok {
+		t.Fatal("cleared block remained available")
+	}
+	if mv, _, ok := g.Get(3, 0); !ok || mv.X != 12 {
+		t.Fatal("neighbor was cleared", mv, ok)
+	}
+}
 
 func newTestGrid() *Grid {
 	g := NewGrid(2, 2) // 8x8 个 4x4 块

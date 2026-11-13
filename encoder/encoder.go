@@ -11,11 +11,17 @@ import (
 	"github.com/goavc/h264/syntax"
 )
 
-// Encoder 是串行 Baseline 帧内编码器，每帧输出一个独立 IDR AU。
+// Encoder 是串行 Baseline I/P 编码器，单参考、无显示重排。
 // 同一实例非并发安全；输入在 SendFrame 返回前消费完毕。
 type Encoder struct {
 	cfg                     h264.EncoderConfig
 	pcm                     bool
+	searchRange             int
+	fullSearch              bool
+	reference               *picture.Picture
+	frameNum                uint32
+	framesSinceIDR          int
+	reconKeyFrame           bool
 	qpAt                    func(x, y int) int
 	last                    *frameState
 	slices                  int
@@ -45,8 +51,8 @@ func WithSliceCount(count int) Option {
 	}
 }
 
-// New 创建编码器。M4 每帧独立编码；GOPSize/IDRInterval 保留为后续帧间编码配置，
-// 当前每帧均为 IDR。仅接受 Baseline、8-bit 4:2:0、CQP 和串行执行。
+// New 创建 Baseline、8-bit 4:2:0、CQP 串行编码器。首帧与 IDRInterval 边界
+// 输出 IDR，其余输出单参考 P 帧；GOPSize=1 保留全帧内通道。
 func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	cfg.SetDefaults()
 	if err := cfg.Validate(); err != nil {
@@ -55,6 +61,9 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	if cfg.Profile != h264.ProfileBaseline || cfg.PixelFormat != h264.YUV420P || cfg.RateControl != h264.RateControlCQP || cfg.MaxBFrames != 0 || cfg.Threads > 1 {
 		return nil, fmt.Errorf("encoder: only serial baseline yuv420p CQP is supported: %w", h264.ErrUnsupported)
 	}
+	if cfg.IDRInterval != cfg.GOPSize {
+		return nil, fmt.Errorf("encoder: independent GOP/IDR intervals are pending: %w", h264.ErrUnsupported)
+	}
 	// Spec: 7.4.2.1.1，4:2:0 渐进帧的 crop 单位为 2×2，不能无损表达奇数显示尺寸。
 	if cfg.Width%2 != 0 || cfg.Height%2 != 0 {
 		return nil, fmt.Errorf("encoder: 420 SPS crop requires even dimensions: %w", h264.ErrUnsupported)
@@ -62,7 +71,7 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	if uint64(cfg.FPSNum) > uint64(^uint32(0))/2 || uint64(cfg.FPSDen) > uint64(^uint32(0)) {
 		return nil, fmt.Errorf("encoder: VUI timing overflows: %w", h264.ErrInvalidData)
 	}
-	e := &Encoder{cfg: cfg, slices: 1}
+	e := &Encoder{cfg: cfg, slices: 1, searchRange: 16}
 	for _, option := range options {
 		if option == nil {
 			return nil, fmt.Errorf("encoder: nil option: %w", h264.ErrInvalidData)
@@ -116,8 +125,14 @@ func (e *Encoder) SendFrame(f *h264.Frame) error {
 	}
 	var data []byte
 	var state *frameState
+	isIDR := e.pcm || e.reference == nil || e.framesSinceIDR >= e.cfg.IDRInterval || f.KeyFrame
 	if e.pcm {
 		data, err = e.encodePCM(pic)
+	} else if !isIDR {
+		data, state, err = e.encodeP(pic)
+		if state != nil {
+			pic = state.pic
+		}
 	} else {
 		data, state, err = e.encodeIntra(pic)
 		if state != nil {
@@ -130,8 +145,19 @@ func (e *Encoder) SendFrame(f *h264.Frame) error {
 	e.recon = pic
 	e.reconPTS, e.reconDuration = f.PTS, f.Duration
 	e.last = state
-	e.out = &h264.Packet{Data: data, PTS: f.PTS, DTS: f.PTS, Duration: f.Duration, KeyFrame: true}
-	e.idr = (e.idr + 1) & 65535
+	e.reconKeyFrame = isIDR
+	e.out = &h264.Packet{Data: data, PTS: f.PTS, DTS: f.PTS, Duration: f.Duration, KeyFrame: isIDR}
+	if isIDR {
+		e.idr = (e.idr + 1) & 65535
+		e.frameNum = 1
+		e.framesSinceIDR = 1
+	} else {
+		e.frameNum = (e.frameNum + 1) & 15
+		e.framesSinceIDR++
+	}
+	if !e.pcm {
+		e.reference = pic
+	}
 	return nil
 }
 
@@ -157,7 +183,7 @@ func (e *Encoder) Reconstruction() (*h264.Frame, error) {
 	if e.recon == nil {
 		return nil, h264.ErrAgain
 	}
-	f := &h264.Frame{Width: e.cfg.Width, Height: e.cfg.Height, Format: h264.YUV420P, KeyFrame: true, PTS: e.reconPTS, Duration: e.reconDuration}
+	f := &h264.Frame{Width: e.cfg.Width, Height: e.cfg.Height, Format: h264.YUV420P, KeyFrame: e.reconKeyFrame, PTS: e.reconPTS, Duration: e.reconDuration}
 	for c := range f.Planes {
 		w, h := f.Format.PlaneDimensions(c, f.Width, f.Height)
 		f.Planes[c] = h264.Plane{Data: make([]byte, w*h), Stride: w}
@@ -185,6 +211,9 @@ func (e *Encoder) Reset() error {
 	e.out = nil
 	e.recon = nil
 	e.last = nil
+	e.reference = nil
+	e.frameNum = 0
+	e.framesSinceIDR = 0
 	e.idr = 0
 	e.flushed = false
 	return nil
@@ -195,6 +224,7 @@ func (e *Encoder) Close() error {
 	e.out = nil
 	e.recon = nil
 	e.last = nil
+	e.reference = nil
 	e.closed = true
 	return nil
 }

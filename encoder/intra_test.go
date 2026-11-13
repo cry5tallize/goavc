@@ -105,6 +105,7 @@ func TestEncoder_DecisionCoverage(t *testing.T) {
 	c.Width = 96
 	c.Height = 64
 	c.QP = 18
+	c.GOPSize = 1
 	e, err := New(c)
 	if err != nil {
 		t.Fatal(err)

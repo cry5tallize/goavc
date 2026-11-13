@@ -36,6 +36,7 @@ func main() {
 	flag.IntVar(&c.Width, "width", 1280, "显示宽度")
 	flag.IntVar(&c.Height, "height", 720, "显示高度")
 	flag.IntVar(&c.QP, "qp", 26, "CQP 0..51")
+	flag.IntVar(&c.GOPSize, "gop", 1, "IDR 间隔，1 为帧内基线")
 	flag.IntVar(&c.FPSNum, "fps", 30, "整数帧率")
 	frames := flag.Int("frames", 6, "帧数，图案按六类循环")
 	slices := flag.Int("slices", 1, "每帧 slice 数")

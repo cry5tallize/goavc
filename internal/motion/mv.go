@@ -117,6 +117,18 @@ func (g *Grid) Reset() {
 	}
 }
 
+// ClearRect 撤销当前候选分区的可用性；试探运动搜索不得使未来块参与 MVP。
+func (g *Grid) ClearRect(bx, by, w, h int) {
+	for y := max(0, by); y < min(g.BlockH, by+h); y++ {
+		for x := max(0, bx); x < min(g.BlockW, bx+w); x++ {
+			i := g.index(x, y)
+			g.MV[i] = MV{}
+			g.Ref[i] = -1
+			g.valid[i] = false
+		}
+	}
+}
+
 // Predict 计算普通 P 宏块分区的 MV 预测（8.4.1.3）。
 //
 // bx/by 是分区左上角 4×4 块坐标，partW 是分区宽度（1/2/4 个 4×4 块）。

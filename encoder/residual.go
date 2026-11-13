@@ -10,14 +10,18 @@ var intraCBP = [48]int{47, 31, 15, 0, 23, 27, 29, 30, 7, 11, 13, 14, 39, 43, 45,
 
 func (s *frameState) writeMB(w *bitstream.Writer, addr int, qp *int, res *residual) error {
 	info := &s.info[addr]
+	offset := 0
+	if s.reference != nil {
+		offset = 5
+	}
 	if info.is16 {
 		typ := 1 + info.mode16 + (info.cbp>>4)*4
 		if info.cbp&15 != 0 {
 			typ += 12
 		}
-		w.WriteUE(uint32(typ))
+		w.WriteUE(uint32(typ + offset))
 	} else {
-		w.WriteUE(0)
+		w.WriteUE(uint32(offset))
 		for n := 0; n < 16; n++ {
 			r := raster(n)
 			mode := int(info.modes[r])
