@@ -7,6 +7,10 @@
 > 仅靠自研编解码器互相验证的，最高只能标 `Partial`。
 >
 > 本文档与每个 PR 同步更新。任何新增的 `Unsupported` 必须写明原因与计划。
+>
+> **M1 状态说明：** 下表中的 `Partial` 表示语法层的解析/序列化已实现并通过
+> 单元测试、真实语料往返或 ffprobe Oracle，但解码/编码流水线尚未接入
+>（M2/M4）。端到端能力仍以 Profile 表中的 `TODO` 为准。
 
 ## 1. Profile
 
@@ -23,10 +27,10 @@
 
 | 特性 | Decoder | Encoder | 备注 |
 |---|---|---|---|
-| Annex-B（3/4 字节起始码） | TODO | TODO | M1 |
-| AVCC（1/2/3/4 字节长度前缀） | TODO | TODO | M1 |
-| avcC 配置记录 | TODO | TODO | M1 |
-| Access Unit 组装（多 slice） | TODO | TODO | M1 接口 / M6 增量 |
+| Annex-B（3/4 字节起始码） | Partial | Partial | M1 扫描/写出已验证；流水线 M2/M4 |
+| AVCC（1/2/3/4 字节长度前缀） | Partial | Partial | M1 读写已验证；尚无真实 MP4 语料 |
+| avcC 配置记录 | Partial | Partial | M1 解析/序列化；尚无真实 avcC 语料 |
+| Access Unit 组装（多 slice） | Partial | Partial | 单 slice 与 hint 驱动的多 slice 已验证；M6 增量输入 |
 | MP4 demux / mux | Unsupported | Unsupported | 明确不在核心范围内 |
 | RTP 打包 | Unsupported | Unsupported | 未来独立适配层 |
 
@@ -34,12 +38,12 @@
 
 | 语法元素 | Spec | Decoder | Encoder | 备注 |
 |---|---|---|---|---|
-| SPS | 7.3.2.1 | TODO | TODO | M1 |
-| PPS | 7.3.2.2 | TODO | TODO | M1 |
-| VUI | E.1 | TODO | TODO | M1 解析 / M7 完整 HRD |
-| ScalingList | 7.3.2.1.1.1 | TODO | TODO | M1 解析 / M3 应用 |
-| SEI（user_data / recovery point） | 7.3.2.3 | TODO | TODO | M1 基础 |
-| Slice Header | 7.3.3 | TODO | TODO | M2 / M4 |
+| SPS | 7.3.2.1 | Partial | Partial | M1 解析/序列化 + ffprobe；流水线 M2/M4 |
+| PPS | 7.3.2.2 | Partial | Partial | M1 解析/序列化；独立 PPS Oracle 待补 |
+| VUI | E.1 | Partial | Partial | M1 结构往返；timing/HRD 语义待 Oracle |
+| ScalingList | 7.3.2.1.1.1 | Partial | Partial | M1 解析/序列化；应用在 M3 |
+| SEI（user_data / recovery point） | 7.3.2.3 | Partial | Partial | M1 框架与 user_data；其余语义消息 M2/M3 |
+| Slice Header | 7.3.3 | Partial | Partial | M1 仅 AU 判定所需字段；完整头部 M2/M4 |
 | Macroblock Layer | 7.3.4 | TODO | TODO | M2 |
 | Slice Data Partitioning | 7.3.5 | TODO | Unsupported | M7 |
 

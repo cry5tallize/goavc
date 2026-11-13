@@ -326,7 +326,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 23 | `feat[syntax]: add vui parsing and serialization` | 宽高比、timing、HRD 标志位、bitstream restriction | round-trip |
 | 24 | `feat[syntax]: add scaling list parsing and serialization` | 4×4/8×8、`useDefaultScalingMatrix`、delta 编码 | round-trip |
 | 25 | `feat[syntax]: add sei message framing and user data parsing` | SEI payload 类型/长度、user_data_unregistered | 定向用例 |
-| 26 | `feat[syntax]: add minimal slice header parsing for access unit boundaries` | `slice_type`、`frame_num`、`pic_order_cnt_lsb` | AU 判定依赖通过 |
+| 26 | `feat[syntax]: add minimal slice header parsing for au boundaries` | `slice_type`、`frame_num`、`pic_order_cnt_lsb` | AU 判定依赖通过 |
 | 27 | `feat[syntax]: add unsupported syntax detection with explicit errors` | 未支持工具 → `ErrUnsupported` | 定向用例 |
 | 28 | `test[syntax]: add round trip corpus tests for sps pps vui` | 语料全量 round-trip | 全量通过 |
 | 29 | `test[oracle]: add nal level comparison against ffprobe output` | ffprobe JSON 与解析结果对照 | 差异即失败 |

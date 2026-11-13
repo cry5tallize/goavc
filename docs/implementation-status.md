@@ -38,20 +38,26 @@
 
 ## M1：Bitstream Foundation
 
+> 验证环境：go1.27.4 windows/amd64（本地，2026-11-13）。
+> 真实语料：`testdata/baseline`、`testdata/main`（x264，64×48，8-bit 4:2:0）。
+> ffprobe Oracle 只在装有 FFmpeg 的环境执行；缺少 ffprobe 时测试显式 skip。
+
 | Module | 规范条款 | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|---|
-| `bitstream.Reader` | — | TODO | TODO | — | — |
-| `bitstream.Writer` | — | TODO | TODO | — | — |
-| Exp-Golomb | 9.1 | TODO | TODO | — | — |
-| RBSP ↔ EBSP | 7.3.1 / 7.4.1 | TODO | TODO | — | — |
-| NAL Header | 7.3.1 | TODO | TODO | — | — |
-| Annex-B 扫描 | B.1 | TODO | TODO | — | — |
-| AVCC / avcC | ISO/IEC 14496-15 | TODO | TODO | — | — |
-| Access Unit 组装 | 7.4.1.2.3 | TODO | TODO | — | — |
-| SPS / PPS 解析与序列化 | 7.3.2.1 / 7.3.2.2 | TODO | TODO | — | — |
-| VUI | E.1 | TODO | TODO | — | — |
-| ScalingList | 7.3.2.1.1.1 | TODO | TODO | — | — |
-| SEI 基础 | 7.3.2.3 | TODO | TODO | — | — |
+| `bitstream.Reader` | — | 0..64 bit、Peek/Skip/Align；失败不推进位置 | Conformant | `reader_test.go`、`fuzz_test.go`、`roundtrip_test.go` | — |
+| `bitstream.Writer` | — | 0..64 bit、字节对齐、非破坏 `Bytes` | Conformant | `writer_test.go`、`roundtrip_test.go` | — |
+| Exp-Golomb | 9.1 / 9.1.1 | ue/se 读写、32 前导零上限、uint32/int32 溢出拒绝 | Conformant | `golomb_test.go`、`golomb_write_test.go` | — |
+| RBSP ↔ EBSP | 7.3.1 / 7.4.1 | 插入/移除、非法 00 00 xx 拒绝、尾位校验 | Conformant | `rbsp_test.go`、`rbsp_roundtrip_test.go`（真实 x264 SPS/PPS） | CABAC `cabac_zero_word` 由 M2/M3 的 slice 路径单独处理 |
+| NAL Header | 7.3.1 | 单字节头、表 7-1 类型、VCL/参数集分类 | Conformant | `nal_test.go`、`supported_test.go`、语料测试 | — |
+| Annex-B 扫描 | B.1 | 3/4 字节起始码、任意分块、前导/尾随零 | Conformant | `annexb_test.go`、`annexb_chunk_test.go`、语料测试 | 前导非零字节按同步恢复策略跳过 |
+| AVCC / avcC | ISO/IEC 14496-15 | 1..4 字节长度、8 MiB 上限、avcC 解析与序列化 | Partial | `avcc_test.go`、`avcc_writer_test.go`、`avcconfig_test.go`、`avcconfig_writer_test.go` | 尚无真实 MP4/avcC 语料，目前只有合成记录 |
+| Access Unit 组装 | 7.4.1.2.3 | AUD/前缀/后缀、first_mb/frame_num/POC 等判定、显式 hint | Conformant | `accessunit_test.go`、`assembler_test.go`、`corpus_test.go` | 多 slice 且无 AUD 时依赖 SliceInfo hint；suffix SEI 归类保守 |
+| SPS 解析与序列化 | 7.3.2.1 | Baseline/Main/High 8-bit 4:2:0、VUI/ScalingList、裁剪尺寸 | Conformant | `sps_test.go`、`sps_write_test.go`、`corpus_test.go`、`ffprobe_oracle_test.go` | High10/422/444、隔行、qpprime 显式返回 `ErrUnsupported`（M7） |
+| PPS 解析与序列化 | 7.3.2.2 | 核心字段、可选 8×8/scaling 扩展、FMO 拒绝 | Partial | `pps_test.go`、`corpus_test.go` | 无独立 PPS 级 Oracle；依赖 x264 原始字节往返与 manifest 熵模式 |
+| VUI | E.1 | 宽高比、overscan、video signal、timing、HRD、bitstream restriction | Partial | `vui_test.go`、`corpus_test.go` | timing/HRD 语义未与独立 Oracle 对比（裸流 ffprobe 帧率不可靠） |
+| ScalingList | 7.3.2.1.1.1 | 4×4/8×8、保留原始 delta 序列 | Partial | `scaling_list_test.go`、`sps_write_test.go` | 无自定义矩阵真实语料；应用层（反量化）在 M3 |
+| SEI 基础 | 7.3.2.3 | payloadType/Size 扩展、user_data_unregistered | Partial | `sei_test.go`、`corpus_test.go` | 仅框架与 user_data；recovery point 等语义消息在 M2/M3 |
+| Slice Header（最小） | 7.3.3 | AU 判定字段、POC type 0/1、field flags、redundant_pic_cnt | Partial | `slice_header_test.go`、`corpus_test.go` | 参考列表/加权预测/去块等字段在 M2 扩展；SP/SI 返回 `ErrUnsupported`（M7） |
 
 ## M2–M9
 
