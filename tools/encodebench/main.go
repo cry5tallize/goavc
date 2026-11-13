@@ -47,7 +47,9 @@ func main() {
 	inputPath := flag.String("input", "", "可选紧密 YUV420P 文件；未指定时生成六类图案")
 	flag.Parse()
 	var input io.Reader
-	if *inputPath != "" {
+	if *inputPath == "-" {
+		input = os.Stdin
+	} else if *inputPath != "" {
 		f, err := os.Open(*inputPath)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
