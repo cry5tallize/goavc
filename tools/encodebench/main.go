@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"hash"
+	"io"
 	"math"
 	"os"
 	"runtime"
@@ -43,8 +44,19 @@ func main() {
 	slices := flag.Int("slices", 1, "每帧 slice 数")
 	pcm := flag.Bool("pcm", false, "强制 I_PCM")
 	output := flag.String("output", "", "可选 Annex-B 输出文件")
+	inputPath := flag.String("input", "", "可选紧密 YUV420P 文件；未指定时生成六类图案")
 	flag.Parse()
-	result, stream, err := measure(c, *frames, *slices, *pcm)
+	var input io.Reader
+	if *inputPath != "" {
+		f, err := os.Open(*inputPath)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		input = f
+	}
+	result, stream, err := measureInput(c, *frames, *slices, *pcm, input)
 	if err == nil && *output != "" {
 		err = os.WriteFile(*output, stream, 0644)
 	}
@@ -61,6 +73,10 @@ func main() {
 }
 
 func measure(c h264.EncoderConfig, count, slices int, pcm bool) (report, []byte, error) {
+	return measureInput(c, count, slices, pcm, nil)
+}
+
+func measureInput(c h264.EncoderConfig, count, slices int, pcm bool, reader io.Reader) (report, []byte, error) {
 	if count < 1 || count > 600 {
 		return report{}, nil, fmt.Errorf("frames must be 1..600")
 	}
@@ -80,7 +96,19 @@ func measure(c h264.EncoderConfig, count, slices int, pcm bool) (report, []byte,
 	var samples [3]uint64
 	var durations []time.Duration
 	for i := 0; i < count; i++ {
-		f := pattern.Frame(c.Width, c.Height, i)
+		var f *h264.Frame
+		if reader == nil {
+			f = pattern.Frame(c.Width, c.Height, i)
+		} else {
+			f = &h264.Frame{Width: c.Width, Height: c.Height, Format: h264.YUV420P, PTS: int64(i), Duration: 1}
+			for comp := range f.Planes {
+				w, h := f.Format.PlaneDimensions(comp, c.Width, c.Height)
+				f.Planes[comp] = h264.Plane{Data: make([]byte, w*h), Stride: w}
+				if _, err = io.ReadFull(reader, f.Planes[comp].Data); err != nil {
+					return r, nil, fmt.Errorf("input frame %d plane %d: %w", i, comp, err)
+				}
+			}
+		}
 		hashFrame(input, f)
 		start := time.Now()
 		if err = e.SendFrame(f); err != nil {
