@@ -84,7 +84,7 @@ POC type 2 的无重排路径提前纳入 M2，因为 x264 的 Baseline 无 B �
 type 2；type 0 使用合成 PCM/P 码流及独立内核测试验证。这里不宣称完整 Baseline
 Profile 一致性：高级工具仍按支持矩阵返回 `ErrUnsupported`。
 
-## M3：Decoder Main / High（本地功能已实现）
+## M3：Decoder Main / High（本地门禁通过，待 CI）
 
 Main 的逐帧 I/P/B、CABAC/CAVLC、多参考、MMCO/长期参考、加权预测和显示重排已接入。
 三份 x264 默认 Main 样本（96×64、176×144、320×240，合计 42 帧）包含 B-pyramid、
@@ -108,6 +108,7 @@ Main 的逐帧 I/P/B、CABAC/CAVLC、多参考、MMCO/长期参考、加权预�
 Main I/P 回归保持通过。最终清单共 27 条，26 条支持样本 217 帧逐像素/固定哈希回归，
 1 条隔行样本明确拒绝。字段不支持及恢复、PTS/Flush、完整 race 均有测试。
 正常构建为 CGO=0；race 使用 Go 检测工具链要求的 CGO=1，不引入编解码运行时依赖。
+本地标签为 `v0.4.0`，最终逐项证据见 `docs/gates/m3.md`；远端 CI 尚未执行。
 
 ## M4–M9
 

@@ -268,7 +268,7 @@ M6/M7/M8 ───────────► M9 生产化与发布
 | M0 | 工程基础与规范准备 | 骨架、API 草案、CI、Oracle 框架、语料 manifest | S | WIP（本地通过，待 CI） |
 | M1 | Bitstream Foundation | BitReader/Writer、RBSP/EBSP、NAL、Annex-B/AVCC、avcC、AU 组装、SPS/PPS | M | WIP（本地门禁通过，待 CI） |
 | M2 | Decoder Baseline | CAVLC + Intra + P + MC + 4×4 IDCT + Deblock + 基础 DPB，与 FFmpeg 逐像素一致 | L | WIP（本地门禁通过，待 CI；见 gates/m2.md） |
-| M3 | Decoder Main/High | CABAC、B Slice、POC、RefList、MMCO、8×8、ScalingMatrix、延迟输出 | L | WIP（CABAC 单参考 I/P 已验证；其余门禁进行中） |
+| M3 | Decoder Main/High | CABAC、B Slice、POC、RefList、MMCO、8×8、ScalingMatrix、延迟输出 | L | WIP（本地门禁通过，待 CI；见 gates/m3.md） |
 | M4 | Encoder Baseline | SPS/PPS Writer、IDR、I_PCM、I4×4/I16×16、CAVLC、CQP、本地重建、Annex-B | L | TODO |
 | M5 | Encoder Main/High | P Slice、ME/MC、亚像素、模式决策、RD、B Frame、CABAC、8×8、GOP、RC | XL | TODO |
 | M6 | 完整流式处理 | 增量 Reader、AU 组装、YUV I/O、Pipeline、背压、取消、Flush | M | TODO |
@@ -388,15 +388,15 @@ M6/M7/M8 ───────────► M9 生产化与发布
 
 **范围外：** 字段编码 / MBAFF；High10/422/444；FMO/ASO；Data Partitioning；SP/SI；Redundant Slice。
 
-**退出标准：**
-- [ ] 至少 3 份 Main 与 3 份 High 语料（x264 默认参数，含 B 帧、多参考、CABAC）逐像素一致。
-- [ ] B 帧重排序：输出顺序与 Oracle 完全一致，PTS 映射正确。
-- [ ] `Flush` 后剩余帧数量与顺序正确，随后返回 `io.EOF`；未 Flush 时 `ReceiveFrame` 返回 `ErrAgain` 的时机正确。
-- [ ] MMCO / 长期参考帧场景有专设语料（`manifest.json` 标注 `mmco` 标签）。
-- [ ] CABAC 每个 context 有独立单元测试（初值、状态转移、MPS 翻转、terminate）。
-- [ ] 8×8 transform 与 ScalingMatrix 组合有解析解对照测试（构造已知输入 → 期望输出逐系数）。
-- [ ] 遇到字段编码 / 未支持工具时返回 `ErrUnsupported`，且不污染后续状态（有测试）。
-- [ ] `go test -race` 通过；解码任意语料无 panic（fuzz smoke 覆盖 slice header + CABAC 入口）。
+**退出标准：** 本地证据见 [M3 门禁记录](gates/m3.md)，远端 CI 尚待执行。
+- [x] 至少 3 份 Main 与 3 份 High 语料（x264 默认参数，含 B 帧、多参考、CABAC）逐像素一致。
+- [x] B 帧重排序：输出顺序与 Oracle 完全一致，PTS 映射正确。
+- [x] `Flush` 后剩余帧数量与顺序正确，随后返回 `io.EOF`；未 Flush 时 `ReceiveFrame` 返回 `ErrAgain` 的时机正确。
+- [x] MMCO / 长期参考帧场景有专设语料（`manifest.json` 标注 `mmco` 标签）。
+- [x] CABAC 每个 context 有独立单元测试（初值、状态转移、MPS 翻转、terminate）。
+- [x] 8×8 transform 与 ScalingMatrix 组合有解析解对照测试（构造已知输入 → 期望输出逐系数）。
+- [x] 遇到字段编码 / 未支持工具时返回 `ErrUnsupported`，且不污染后续状态（有测试）。
+- [x] `go test -race` 通过；解码任意语料无 panic（fuzz smoke 覆盖 slice header + CABAC 入口）。
 
 **风险：**
 - CABAC 一个 context 索引错位会导致整帧花屏但难定位 → 缓解：逐语法元素与参考实现做 trace 对比工具（开发期 dump），并在 ledger 记录每个 context 的消费位置。

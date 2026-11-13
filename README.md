@@ -3,15 +3,12 @@
 从零实现的 H.264/AVC 软件编解码器：**纯 Go**，允许 Go 汇编（amd64 SSE2/AVX2、arm64 NEON），
 **零 CGO、零 C/C++、零外部编解码库**。Encoder 与 Decoder 共享同一套预测、变换、重建、滤波内核。
 
-> 当前状态：**M3 开发中，M2 Baseline 已完成本地门禁**。`decoder.New` 接收 Annex-B 访问单元，
-> 输出 8-bit YUV420；支持 CAVLC、I/P、单参考、多 slice、P_Skip、去块与裁剪。
-> 五份真实 Baseline 语料（含 1080p）通过 FFmpeg 逐像素对比，CI 可核验固定
-> Oracle 输出哈希。M3 新增 CABAC 单参考 I/P 的 4×4 路径，三份 Main 样本通过
-> FFmpeg 对比。多参考、重排命令、MMCO/长期参考与 POC type 1 已接入并验证。
-> B 帧、双向/direct、加权预测和显示重排已通过默认 Main Oracle；High 8×8/ScalingMatrix
-> 已通过默认、JVT、CAVLC 与多 slice Oracle。编码器从 M4 开始，M3 本地门禁证据见文档。
-> 本地退出证据见 [M2 门禁记录](docs/gates/m2.md)，远端 CI 待执行。
-> 进度及边界见 [实现状态](docs/implementation-status.md) 与 [支持矩阵](docs/supported-features.md)。
+> 当前状态：**M3 Main / High 解码已完成本地门禁**。`decoder.New` 接收完整 Annex-B 访问单元，
+> 输出渐进式8-bit YUV420；支持CAVLC/CABAC、I/P/B、多参考/MMCO、双向/direct、加权预测、
+> 4×4/8×8及ScalingMatrix、去块、裁剪与按显示顺序输出。26份已支持语料共217帧通过
+> FFmpeg逐像素/固定哈希回归，另1份合法隔行语料明确拒绝并验证错误恢复。编码器从M4开始。
+> [M3门禁记录](docs/gates/m3.md)含完整证据；本地标签`v0.4.0`，远端CI待执行。
+> 进度及边界见[实现状态](docs/implementation-status.md)与[支持矩阵](docs/supported-features.md)。
 
 ## 硬约束
 
