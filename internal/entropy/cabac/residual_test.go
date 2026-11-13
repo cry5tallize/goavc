@@ -2,6 +2,7 @@ package cabac
 
 import (
 	"github.com/goavc/h264/bitstream"
+	"github.com/goavc/h264/internal/transform"
 	"testing"
 )
 
@@ -36,13 +37,15 @@ func FuzzDecoder_Residual(f *testing.F) {
 			return
 		}
 		ctx, _ := InitContexts(true, 0, 26)
-		var dst [16]int32
+		var dst [64]int32
 		scan := []int{0, 1, 4, 8, 5, 2, 3, 6, 9, 12, 13, 10, 7, 11, 14, 15}
-		c := int(cat % 5)
+		c := int(cat % 6)
 		if c == ChromaDC {
 			scan = []int{0, 1, 2, 3}
 		} else if c == LumaAC || c == ChromaAC {
 			scan = scan[1:]
+		} else if c == Luma8x8 {
+			scan = transform.Zigzag8x8[:]
 		}
 		n, err := d.Residual(&ctx, c, dst[:], scan)
 		if err == nil && (n < 1 || n > len(scan)) {
