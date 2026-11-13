@@ -27,6 +27,22 @@ func TestDPB_FrameNumSequence(t *testing.T) {
 	}
 }
 
+func TestDPB_WrapRequiresZero(t *testing.T) {
+	d := New(16, false)
+	if err := d.BeginFrame(false, 15); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.BeginFrame(false, 3); !errors.Is(err, h264.ErrInvalidData) {
+		t.Fatal("accepted gap at wrap", err)
+	}
+	if err := d.BeginFrame(false, 16); !errors.Is(err, h264.ErrInvalidData) {
+		t.Fatal("accepted out-of-range frame_num", err)
+	}
+	if err := d.BeginFrame(false, 0); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestDPB_GapsAllowed(t *testing.T) {
 	d := New(16, true)
 	if err := d.BeginFrame(true, 0); err != nil {

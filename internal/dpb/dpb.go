@@ -47,6 +47,9 @@ func (d *DPB) Reset() {
 // 出现空洞且 gaps_in_frame_num_value_allowed_flag=0 时返回 ErrInvalidData：
 // 继续解码会让后续 P 帧参考到不存在的图像。
 func (d *DPB) BeginFrame(idr bool, frameNum uint32) error {
+	if d.maxFrameNum == 0 || frameNum >= d.maxFrameNum {
+		return fmt.Errorf("dpb: frame_num %d outside modulus %d: %w", frameNum, d.maxFrameNum, h264.ErrInvalidData)
+	}
 	if idr {
 		if frameNum != 0 {
 			return fmt.Errorf("dpb: IDR frame_num %d, must be 0: %w", frameNum, h264.ErrInvalidData)
@@ -62,21 +65,12 @@ func (d *DPB) BeginFrame(idr bool, frameNum uint32) error {
 		d.hasPrev = true
 		return nil
 	}
-	expected := d.prevFrameNum + 1
+	expected := (d.prevFrameNum + 1) % d.maxFrameNum
 	if frameNum == d.prevFrameNum {
 		return fmt.Errorf("dpb: duplicate frame_num %d: %w", frameNum, h264.ErrInvalidData)
 	}
-	if frameNum > d.prevFrameNum {
-		if frameNum != expected && !d.gapsAllowed {
-			return fmt.Errorf("dpb: frame_num gap %d -> %d not allowed: %w",
-				d.prevFrameNum, frameNum, h264.ErrInvalidData)
-		}
-	} else {
-		// 回绕：只有越过 maxFrameNum 才合法。
-		if d.prevFrameNum != d.maxFrameNum-1 && !d.gapsAllowed {
-			return fmt.Errorf("dpb: frame_num wrapped %d -> %d not allowed: %w",
-				d.prevFrameNum, frameNum, h264.ErrInvalidData)
-		}
+	if frameNum != expected && !d.gapsAllowed {
+		return fmt.Errorf("dpb: frame_num gap %d -> %d not allowed: %w", d.prevFrameNum, frameNum, h264.ErrInvalidData)
 	}
 	d.prevFrameNum = frameNum
 	return nil
