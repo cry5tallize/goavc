@@ -2,11 +2,21 @@ package nal
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"testing"
 
 	h264 "github.com/goavc/h264"
 )
+
+func decodeHex(t *testing.T, s string) []byte {
+	t.Helper()
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		t.Fatalf("解码十六进制失败: %v", err)
+	}
+	return b
+}
 
 // baselineRecord 是一份结构完整的 Baseline avcC 记录。
 func baselineRecord() []byte {
@@ -55,6 +65,46 @@ func TestParseAVCDecoderConfig_Baseline(t *testing.T) {
 	}
 	if len(cfg.PPS) != 1 || !bytes.Equal(cfg.PPS[0], []byte{0x68, 0xCE}) {
 		t.Fatalf("PPS = %x", cfg.PPS)
+	}
+}
+
+// realX264AvcC 是 ffmpeg + x264（Main profile，64x48，yuv420p）写出的
+// 真实 AVCDecoderConfigurationRecord，由 MP4 的 avcC box 提取：
+//
+//	ffmpeg -f lavfi -i testsrc2=size=64x48:rate=10 -frames:v 3 \
+//	  -c:v libx264 -profile:v main -level 1.0 -pix_fmt yuv420p \
+//	  -x264-params keyint=10:bframes=2:cabac=1 -f mp4 sample.mp4
+const realX264AvcC = "014d400affe10017" +
+	"674d400aeca23d8088000003000800000300a078912cb0" +
+	"01000568ebe3cb20"
+
+func TestParseAVCDecoderConfig_RealX264(t *testing.T) {
+	record := decodeHex(t, realX264AvcC)
+	cfg, err := ParseAVCDecoderConfig(record)
+	if err != nil {
+		t.Fatalf("解析失败: %v", err)
+	}
+	if cfg.ProfileIndication != 77 || cfg.LevelIndication != 10 {
+		t.Fatalf("profile/level = %d/%d", cfg.ProfileIndication, cfg.LevelIndication)
+	}
+	if cfg.LengthSize() != 4 {
+		t.Fatalf("LengthSize = %d，期望 4", cfg.LengthSize())
+	}
+	if len(cfg.SPS) != 1 || len(cfg.PPS) != 1 {
+		t.Fatalf("SPS/PPS 数量 = %d/%d", len(cfg.SPS), len(cfg.PPS))
+	}
+	if got := hex.EncodeToString(cfg.SPS[0]); got != "674d400aeca23d8088000003000800000300a078912cb0" {
+		t.Fatalf("SPS = %s", got)
+	}
+	if got := hex.EncodeToString(cfg.PPS[0]); got != "68ebe3cb20" {
+		t.Fatalf("PPS = %s", got)
+	}
+	back, err := cfg.MarshalBinary()
+	if err != nil {
+		t.Fatalf("序列化失败: %v", err)
+	}
+	if !bytes.Equal(back, record) {
+		t.Fatalf("真实 avcC 往返不一致:\n got %x\nwant %x", back, record)
 	}
 }
 
