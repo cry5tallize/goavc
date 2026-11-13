@@ -131,10 +131,13 @@ Main I/P 回归保持通过。最终清单共 27 条，26 条支持样本 217 �
 
 质量协议已在开工时固定于 `docs/conformance.md`；M5a/b/c/d 各自验证，不能替代整体门禁。
 
+M5a 已完成本地门禁（`v0.5.1`，远端 CI 待执行）：两种大尺寸各 300 帧、短序列 360 帧、
+完整 verify/race、参考帧 fuzz、六目标构建与 P 帧基线已记录。证据见 `docs/gates/m5a.md`。
+
 | Module | 规范条款/职责 | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|---|
 | `motion/search` | 编码分析；MC 契约 8.4.2 | SAD、穷举、菱形、范围自适应、半/四像素细化 | Conformant | SAD 解析值、已知整数/亚像素平移、边界与局部搜索差值 | 菱形非全局最优承诺；独立子包避免 prediction→motion 的依赖环 |
-| P 帧单参考闭环 | 7.3.3 / 8.4 / 8.7 | P16/16×8/8×16/8×8、MV/MVD、CAVLC 残差、P_Skip、混合 PCM、共享 MC/重建/滤波 | Conformant | `InterSequenceOracle` 九组共 360 帧，含裁剪/多 slice/0↔51/frame_num 回绕/场景变化；`InterPartitionCoverageAndSkip` 四种分区实际选中 | 尚无 Intra/Inter RD 比较；非默认 entropy/profile 仍拒绝；M5 总门禁未过 |
+| P 帧单参考闭环 | 7.3.3 / 8.4 / 8.7 | P16/16×8/8×16/8×8、MV/MVD、CAVLC 残差、P_Skip、混合 PCM、共享 MC/重建/滤波 | Conformant | 九组共 360 帧 + 720p/1080p 各300帧；裁剪/多 slice/frame_num 回绕/场景变化；四种分区实际选中 | 尚无 Intra/Inter RD 比较；非默认 entropy/profile 仍拒绝；M5 总门禁未过 |
 | P 早期 Skip / 搜索策略 | 编码分析 | 规范 Skip MV 的三平面量化残差全零时提前选择；整像素分区选择后做亚像素细化 | Conformant | 全部双解码器 Oracle、分区/静态 Skip 实际选择、搜索解析向量 | SAD 启发式可能选择不同分区，不宣称与旧搜索逐比特相同；质量待 M5 整体门禁 |
 | I/P 状态与参考更新 | 公共 API / POC type2 | IDRInterval、输入 KeyFrame 强制 IDR、无重排 PTS=DTS、失败不更新参考 | Conformant | 40 帧序列中 0/17/33 帧 IDR，NAL 实际类型、PTS、三方像素一致 | 暂要求 GOPSize=IDRInterval；完整 I/B/GOP 策略在 M5d；PCM 选项仍为全 IDR |
 | CQP AU 资源门禁 | Annex A / 事务边界 | Auto 几何/帧率校验，实际 AU 上限检查，1080p30 不再因最坏预算在 New 拒绝 | Conformant | `LevelBudgetIsTransactional` 注入超限、已有 Oracle 回归 | 超限返回 ErrResourceLimit 且不发布输出；仍非 HRD/VBV 保证；显式 Level 与 PCM 保留保守初始化检查 |

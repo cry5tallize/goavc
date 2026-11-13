@@ -9,7 +9,7 @@
 > 两条路径及混合 PCM 已通过 FFmpeg/自研解码/本地重建逐像素验证。
 > 本地门禁及性能记录已完成，证据见 gates/m4.md；远端 CI 尚待执行。
 > Main/High、B、ABR/CBR 明确拒绝。M5a 已接入单参考 P；LevelAuto 新增实际 AU 预算门禁，
-> 1080p@30 的初始化不再受 M4 最坏预算限制，长序列门禁尚待执行。
+> 1080p@30 已通过 300 帧三方像素验证。M5a 本地门禁见 gates/m5a.md；M5 整体未完成。
 
 > 状态图例：`TODO` 未开始 · `WIP` 进行中 · `Partial` 部分可用（有已知不支持路径）·
 > `Conformant` 通过规定验证 · `Unsupported` 明确拒绝并返回 `ErrUnsupported`
@@ -84,8 +84,8 @@
 | Chroma 8×8（4:2:0） | Conformant | Conformant | M4 全模式实际选中、双平面 SAD、共享 DC/AC/滤波 Oracle |
 | Chroma 4:2:2 | Unsupported | TODO | 当前 SPS 显式拒绝；M7 实现 |
 | Chroma 4:4:4 | TODO | TODO | M7 |
-| Inter 16×16 / 16×8 / 8×16 / 8×8 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
-| 亚像素插值（1/2、1/4） | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| Inter 16×16 / 16×8 / 8×16 / 8×8 | Conformant | Conformant | M5a 四种分区实际选中；单参考 P，360+600 帧双解码器 Oracle |
+| 亚像素插值（1/2、1/4） | Conformant | Conformant | M5a 共享 MC、解析亚像素平移与完整 P 帧 Oracle |
 | Weighted Prediction（explicit / implicit） | Conformant | TODO | M3 P/B 三平面显式与 POC 隐式权重解析解及 Oracle |
 | B Direct（temporal / spatial） | Conformant | TODO | M3 CABAC/CAVLC、B_Skip 与两类 direct Oracle |
 | 帧场自适应（MBAFF / PAFF） | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
@@ -115,9 +115,9 @@
 
 | 特性 | Decoder | Encoder | 备注 |
 |---|---|---|---|
-| 单参考帧 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| 单参考帧 | Conformant | Conformant | M5a 已滤波参考、IDR 边界、P_Skip、16 帧号回绕与长序列 Oracle |
 | 多参考帧 + reordering | Conformant | TODO | M3 P/B 列表、短期/长期重排通过解析解与 Oracle |
-| POC type 0 / 1 / 2 | Conformant | TODO | M3 三种渐进帧推导、MMCO5 与 B 显示重排已验证 |
+| POC type 0 / 1 / 2 | Conformant | Partial | M5a 编码仅渐进帧 type2，无重排；0/1 编码尚待实现 |
 | 滑动窗口标记 | Conformant | TODO | M3 PicNum 回绕排序、淘汰与所有权单测/Oracle |
 | MMCO（含长期参考） | Conformant | TODO | M3 操作 1..6、长期参考、重置及专设 Oracle 语料；字段 M7 |
 | 输出重排序与延迟输出 | Conformant | TODO | M3 VUI/POC 缓冲、PTS/Duration 与 Flush 已验证 |
@@ -129,7 +129,7 @@
 |---|---|---|
 | CQP | Conformant | M4 固定 QP 与宏块 QP 回调，QP=0 仍为有损；无残差沿用前 QP |
 | ABR / CBR / VBV | TODO | M5d |
-| GOP 结构 / IDR 间隔 | TODO | M5d |
+| GOP 结构 / IDR 间隔 | Partial | M5a IDRInterval 与强制 KeyFrame 已验证；暂要求 GOPSize=IDRInterval，无 B；完整 M5d |
 | 场景切换检测 | TODO | M5d |
 | Lookahead | TODO | M5d |
 | RD 模式决策（J = D + λR） | TODO | M5b |
