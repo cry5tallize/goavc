@@ -6,6 +6,25 @@ import (
 	"testing"
 )
 
+func TestEncoder_LevelBudgetIsTransactional(t *testing.T) {
+	c := h264.DefaultEncoderConfig()
+	c.Width = 1920
+	c.Height = 1080
+	e, err := New(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Close()
+	// 注入一个极小预算检查“写完再发布”边界，不分配或产出超限码流。
+	e.maxAUBytes = 1
+	if err = e.SendFrame(testFrame(c.Width, c.Height)); !errors.Is(err, h264.ErrResourceLimit) {
+		t.Fatal(err)
+	}
+	if e.reference != nil || e.recon != nil || e.out != nil || e.idr != 0 || e.frameNum != 0 {
+		t.Fatal("failed AU modified state")
+	}
+}
+
 func testFrame(w, h int) *h264.Frame {
 	f := &h264.Frame{Width: w, Height: h, Format: h264.YUV420P, PTS: 17, Duration: 3}
 	for c := range f.Planes {

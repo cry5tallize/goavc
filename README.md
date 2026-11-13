@@ -13,8 +13,9 @@
 > **M4 Baseline 帧内编码已通过本地门禁**。`encoder.New` 提供 CQP、I4/I16/色度 SAD
 > 决策、CAVLC、共享本地重建与去块、独立 IDR Annex-B AU、I_PCM 和 1..64 slice 选项。
 > 187 帧通过本地重建/自研解码/FFmpeg 逐像素比较；完整测试、race、fuzz 与六目标构建通过。
-> 仅支持渐进式 8-bit YUV420 偶数显示尺寸；Level 保守预算下 1080p@30 当前超限，
-> P/B、GOP 与其他码控在 M5。见[编码用法](docs/encoder.md)、[M4 门禁](docs/gates/m4.md)和
+> 仅支持渐进式 8-bit YUV420 偶数显示尺寸。M5a 现已接入单参考 P 帧、四种分区与 Skip，
+> LevelAuto 支持按实际 AU 预算校验 1080p@30；M5 总门禁尚未通过，B 与其他码控仍待开发。
+> 见[编码用法](docs/encoder.md)、[M4 门禁](docs/gates/m4.md)和
 > [性能基线](docs/performance.md#6-m4-帧内编码基线)。本地标签 `v0.5.0`，远端 CI 待执行。
 
 ## 硬约束

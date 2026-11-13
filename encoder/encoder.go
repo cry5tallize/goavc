@@ -18,6 +18,7 @@ type Encoder struct {
 	pcm                     bool
 	searchRange             int
 	fullSearch              bool
+	maxAUBytes              int
 	reference               *picture.Picture
 	frameNum                uint32
 	framesSinceIDR          int
@@ -141,6 +142,9 @@ func (e *Encoder) SendFrame(f *h264.Frame) error {
 	}
 	if err != nil {
 		return err
+	}
+	if len(data) > e.maxAUBytes {
+		return fmt.Errorf("encoder: access unit %d exceeds level budget %d: %w", len(data), e.maxAUBytes, h264.ErrResourceLimit)
 	}
 	e.recon = pic
 	e.reconPTS, e.reconDuration = f.PTS, f.Duration

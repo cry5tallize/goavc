@@ -1,7 +1,8 @@
 # Baseline 帧内编码 API
 
 `encoder.New(cfg, options...)` 创建非并发安全的编码器。M4 范围为串行、渐进式
-8-bit YUV420、CQP、偶数显示尺寸，每帧输出独立 IDR Annex-B AU。Profile 整体仍为 Partial。
+8-bit YUV420、CQP、偶数显示尺寸；M5a 默认使用 IDR/P 单参考，GOPSize=1 可选择 M4
+全帧内路径。Profile 整体仍为 Partial，Main/High/B 与其他码控尚待实现。
 
 ```go
 cfg := h264.DefaultEncoderConfig()
@@ -34,8 +35,9 @@ if err != nil {
   不能 Reset。用 errors.Is 判断哨兵错误。
 - Reconstruction 返回最近成功编码帧的独立重建快照，不消耗 packet；保留 PTS/Duration。
   未编码返回 `ErrAgain`，关闭后返回 `ErrEOF`。返回帧使用完毕调用 Release。
-- 每 AU 包含 SPS/PPS + IDR slice，PTS=DTS，KeyFrame=true，Duration 保留。
-  M4 没有 P/B、延迟或重排，GOPSize/IDRInterval 为后续配置，当前每帧都是 IDR。
+- IDR AU 包含 SPS/PPS；P AU 只包含 slice，PTS=DTS，Duration 保留。
+  KeyFrame 与实际 IDR 一致。首帧、IDRInterval 边界或输入 KeyFrame=true 时写 IDR。
+  暂要求 GOPSize=IDRInterval，尚无 B 或延迟/重排；PCM 通道仍全帧 IDR。
 
 选项：
 
@@ -45,13 +47,18 @@ if err != nil {
 | WithPCM() | 整帧无损 I_PCM，关闭滤波；用于传输与独立像素验证，QP 不影响输出 |
 | WithSliceCount(n) | 1..64，且不超过宏块总数；连续光栅地址等分；预测和熵上下文在 slice 边界隔离 |
 | WithMacroblockQP(fn) | fn(mbX,mbY) 返回 0..51；同步回调，不得重入实例；不与 WithPCM 共用 |
+| WithSearchRange(n) | 运动搜索半径 1..64 整数像素，默认16；按小图像自适应收缩 |
+| WithFullSearch() | 用穷举代替默认菱形；两者都通过共享 MC 细化半/四像素 |
 
 QP=0 仍为有损变换，不等同 PCM。无残差的 I4 不携带 mb_qp_delta，滤波沿用前一宏块 QP。
 QP 回调所有返回值先校验，失败不发布半帧、不递增 IDR；调用方可修正输入后重试。
 
 New 显式拒绝 Main/High、非 YUV420P、非 CQP、Threads>1、无法满足的 Level 和奇数
 显示尺寸。LevelAuto 按最坏 PCM/EBSP 预算保守选择，可能明显高于平均码率需要的 Level。
-例如 1080p 30 FPS 目前超出保守预算，1080p 15 FPS 已验证；这与编码速度是两个限制。
+M5a 对最坏预算超出最高 Level 的 Auto 配置，改为选择满足几何/帧率的最高级别，
+并在发布 AU 前检查实际大小。1080p30 可初始化；内容超限返回 ErrResourceLimit，
+保持原参考帧与编号，调用方可降低帧率/调整质量或 Reset。
+这不是 HRD/VBV 码控保证；显式 Level 与 PCM 通道仍执行保守初始化预算。
 
 运行时不依赖 FFmpeg；独立 Oracle、质量与分配记录见 [M4 门禁](gates/m4.md) 和
 [性能基线](performance.md#6-m4-帧内编码基线)。AVCC 与增量流式 I/O 在 M6 接入。
