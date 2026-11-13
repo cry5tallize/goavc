@@ -86,10 +86,11 @@ decoder              encoder
 
 | 场景 | 契约 |
 |---|---|
-| `SendFrame(*Frame)` | 返回后编码器可继续持有该帧直到内部消费完毕；调用方在 Send 返回后可复用缓冲 |
+| `SendFrame(*Frame)` | 返回后调用方可复用/释放输入；M4 在调用内完成消费，不保留调用方 Frame 或 Data 引用 |
 | `ReceiveFrame() (*Frame, error)` | 返回帧归调用方；用完必须 `Release()`，否则缓冲无法回池 |
 | `SendPacket(Packet)` | 解码器不在返回后持有 `Data` 引用（需要保留则内部拷贝） |
 | `ReceivePacket() (Packet, error)` | `Data` 归调用方所有 |
+| `Encoder.Reconstruction()` | 最近成功编码帧的独立重建快照，不消耗 Packet；调用方用完 Release |
 | `Frame.Clone()` | 独立内存，不参与池管理，调用方负责释放（GC 回收即可） |
 | `Frame.Release()` | 幂等；调用后帧失效，`Validate` 返回 `ErrInvalidData` |
 
