@@ -115,6 +115,8 @@ Main I/P 回归保持通过。最终清单共 27 条，26 条支持样本 217 �
 | Module | 规范条款 | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|---|
 | Annex-B Writer | B.1 | 四字节起始码、EBSP NAL、短写错误 | Conformant | `nal/annexb_writer_test.go` 固定字节与重扫 | — |
+| CAVLC 编码 | 9.2 | token、尾随符号、level 转义、zeros/run、4 种块类型 | Partial | 固定规范码字、14,400 组极端/随机往返、fuzz 入口 | 完整独立 Oracle 待 Intra slice 集成；复用现有规范码长/码字表，不生成重复编码表 |
+| 正向变换与量化 | 8.5（逆路径契约） | 4×4 整数变换、I16/色度 DC Hadamard、QP 0..51 平坦矩阵 intra 量化 | Conformant | `forward_test.go` 独立矩阵基底/常量解析解 | 非平坦正向矩阵和 8×8 属 M5c；整帧质量尚待记录 |
 | Encoder 状态与 I_PCM | 7.3.3 / 7.3.5 | 单槽背压、Flush/Reset/Close、独立 IDR、裁剪、1..64 slice、参数集/VUI | Conformant | `encoder/encoder_test.go`、`tests/codec` 自解码与 FFmpeg 逐像素 | 当前仅 PCM；I4/I16、正变换/量化/CAVLC 编码和去块尚待实现；4:2:0 奇数显示尺寸不能用 SPS crop 表达，显式拒绝 |
 
 普通构建与测试使用 Go 1.27.4、CGO_ENABLED=0。M4 尚未通过整体退出门禁。
