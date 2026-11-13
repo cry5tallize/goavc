@@ -95,6 +95,9 @@ func ParseSliceHeader(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool) 
 		return nil, fmt.Errorf("syntax: slice_type = %d exceeds 9: %w", h.SliceTypeCode, h264.ErrInvalidData)
 	}
 	h.Type = typ
+	if typ == SliceTypeSP || typ == SliceTypeSI {
+		return nil, fmt.Errorf("syntax: slice type %s is not supported in M1: %w", typ, h264.ErrUnsupported)
+	}
 
 	if h.PicParameterSetID, err = readUE(r, "pic_parameter_set_id"); err != nil {
 		return nil, err

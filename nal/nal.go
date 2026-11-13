@@ -118,6 +118,30 @@ func (t UnitType) IsParameterSet() bool {
 	}
 }
 
+// IsSupported 判断 M1 的语法层是否处理该 NAL 类型。
+//
+// 支持类型：普通/IDR slice、SEI、SPS、PPS、AUD、end of sequence/stream、
+// filler data。数据分区、SPS 扩展、prefix/subset SPS、辅助 slice、slice
+// extension 等属于 M7 或扩展项目范围，调用方应显式返回 ErrUnsupported。
+func (t UnitType) IsSupported() bool {
+	switch t {
+	case TypeSlice, TypeSliceIDR, TypeSEI, TypeSPS, TypePPS,
+		TypeAUD, TypeEndOfSequence, TypeEndOfStream, TypeFiller:
+		return true
+	default:
+		return false
+	}
+}
+
+// ValidateSupported 对未支持的 NAL 类型返回包装 ErrUnsupported 的错误。
+func (h Header) ValidateSupported() error {
+	if !h.Type.IsSupported() {
+		return fmt.Errorf("nal: unit type %d (%s) is not supported: %w",
+			h.Type, h.Type, h264.ErrUnsupported)
+	}
+	return nil
+}
+
 // Header 是 NAL unit header（H.264 §7.3.1）：
 //
 //	forbidden_zero_bit  f(1)

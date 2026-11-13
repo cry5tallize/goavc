@@ -108,6 +108,7 @@ type testSPS struct {
 	chroma      uint32
 	lumaDepth   uint32
 	chromaDepth uint32
+	qpprime     bool
 
 	pocType         uint32
 	frameMbsOnly    bool
@@ -146,7 +147,7 @@ func encodeTestSPS(t *testing.T, p testSPS) []byte {
 		}
 		writeOrFail(t, w.WriteUE(p.lumaDepth))
 		writeOrFail(t, w.WriteUE(p.chromaDepth))
-		writeOrFail(t, w.WriteBit(0)) // qpprime
+		writeOrFail(t, w.WriteBit(boolBit(p.qpprime)))
 		writeOrFail(t, w.WriteBit(0)) // seq_scaling_matrix_present
 	}
 

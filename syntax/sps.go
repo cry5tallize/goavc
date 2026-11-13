@@ -300,6 +300,9 @@ func (s *SPS) validateSupported() error {
 		if s.SeparateColourPlaneFlag {
 			return fmt.Errorf("syntax: separate_colour_plane_flag is not supported: %w", h264.ErrUnsupported)
 		}
+		if s.QPPPrimeYZeroTransformBypassFlag {
+			return fmt.Errorf("syntax: qpprime_y_zero_transform_bypass_flag is not supported: %w", h264.ErrUnsupported)
+		}
 		if s.ChromaFormatIDC != 1 {
 			return fmt.Errorf("syntax: chroma_format_idc %d is not supported (only 4:2:0): %w",
 				s.ChromaFormatIDC, h264.ErrUnsupported)
