@@ -14,10 +14,11 @@ import (
 
 // corpusEntry 是某个 manifest 条目解析出的参数集与 NAL 序列。
 type corpusEntry struct {
-	name  string
-	units []nal.Unit
-	sps   *SPS
-	pps   *PPS
+	name           string
+	slicesPerFrame int
+	units          []nal.Unit
+	sps            *SPS
+	pps            *PPS
 }
 
 // loadCorpus 读取并解析测试语料。
@@ -38,7 +39,7 @@ func loadCorpus(t *testing.T) []corpusEntry {
 		if err != nil {
 			t.Fatalf("%s: 切分失败: %v", e.Name, err)
 		}
-		ce := corpusEntry{name: e.Name, units: units}
+		ce := corpusEntry{name: e.Name, units: units, slicesPerFrame: e.SliceCount}
 		for _, u := range units {
 			switch u.Header.Type {
 			case nal.TypeSPS:
@@ -238,21 +239,16 @@ func TestCorpus_SliceHeaderAndAUAssembly(t *testing.T) {
 			if sliceCount == 0 {
 				t.Fatal("语料没有 VCL NAL")
 			}
-			if len(aus) != 3 {
-				t.Fatalf("组装出 %d 个 AU，期望 3", len(aus))
+			if len(aus)*ce.slicesPerFrame != sliceCount {
+				t.Fatalf("组装出 %d 个 AU，每帧期望 %d slice，总共 %d slice", len(aus), ce.slicesPerFrame, sliceCount)
 			}
 			for i, au := range aus {
-				if au.VCLCount() != 1 {
-					t.Fatalf("AU %d 有 %d 个 VCL，期望 1", i, au.VCLCount())
+				if au.VCLCount() != ce.slicesPerFrame {
+					t.Fatalf("AU %d 有 %d 个 VCL，期望 %d", i, au.VCLCount(), ce.slicesPerFrame)
 				}
 			}
 			if !aus[0].IsIDR() {
 				t.Fatal("第一个 AU 应为 IDR")
-			}
-			for i := 1; i < len(aus); i++ {
-				if aus[i].IsIDR() {
-					t.Fatalf("AU %d 不应为 IDR", i)
-				}
 			}
 		})
 	}

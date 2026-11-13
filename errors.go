@@ -44,9 +44,10 @@ var (
 	ErrResourceLimit = errors.New("h264: resource limit exceeded")
 )
 
-// IsFatal 判断 err 是否会让当前流永久不可用。
+// IsFatal 判断 err 是否会使当前解码状态失效。
 //
-// 判定依据：语法错误、未支持特性、超限都需要 Reset 之后才能继续处理新输入；
+// 判定依据：语法错误、未支持特性、超限都需要丢弃当前图像和参考状态，
+// 经 Reset 或后续 IDR 恢复后才能继续解码；
 // 而 ErrAgain / io.EOF 属于正常流控，不是致命错误。
 // 返回 false 不代表可以忽略 err，只代表管道状态仍然有效。
 func IsFatal(err error) bool {

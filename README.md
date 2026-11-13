@@ -3,15 +3,17 @@
 从零实现的 H.264/AVC 软件编解码器：**纯 Go**，允许 Go 汇编（amd64 SSE2/AVX2、arm64 NEON），
 **零 CGO、零 C/C++、零外部编解码库**。Encoder 与 Decoder 共享同一套预测、变换、重建、滤波内核。
 
-> 当前状态：**M1（Bitstream Foundation）完成**。`bitstream`、`nal`、`syntax`
-> 已能解析并重序列化 SPS / PPS / VUI / ScalingList / SEI，支持 Annex-B、AVCC 与
-> avcC，并通过真实 x264 语料往返与 ffprobe Oracle；**解码/编码流水线尚未实现**
->（M2 起）。进度见 [docs/implementation-status.md](docs/implementation-status.md)。
+> 当前状态：**M2 Baseline 解码已实现**。`decoder.New` 接收 Annex-B 访问单元，
+> 输出 8-bit YUV420；支持 CAVLC、I/P、单参考、多 slice、P_Skip、去块与裁剪。
+> 五份真实 Baseline 语料（含 1080p）通过 FFmpeg 逐像素对比，CI 可核验固定
+> Oracle 输出哈希。编码器从 M4 开始；CABAC/B/多参考等工具明确返回 `ErrUnsupported`。
+> 进度及边界见 [实现状态](docs/implementation-status.md) 与 [支持矩阵](docs/supported-features.md)。
 
 ## 硬约束
 
 | 项目 | 约束 |
 |---|---|
+| Go | 最新 Go 1.27 补丁版，当前工具链基线 1.27.4；CI 自动选择 1.27.x 最新版 |
 | CGO | 禁止，所有目标在 `CGO_ENABLED=0` 下执行 |
 | C/C++ 源码 | 禁止 |
 | 外部动态库 | 禁止 |
@@ -76,7 +78,7 @@ go run ./tools/manifest -file testdata/manifest.json
 | [docs/Roadmap.md](docs/Roadmap.md) | 里程碑、退出标准、风险 |
 | [docs/Implementation-Plan.md](docs/Implementation-Plan.md) | 提交规范与逐阶段提交计划 |
 | [docs/architecture.md](docs/architecture.md) | 分层、依赖规则、内存所有权 |
-| [docs/supported-features.md](docs/supported-features.md) | 支持矩阵（当前全部 TODO） |
+| [docs/supported-features.md](docs/supported-features.md) | 支持矩阵与 M2 已验证范围 |
 | [docs/implementation-status.md](docs/implementation-status.md) | 逐模块实现状态（Translation Ledger） |
 | [docs/performance.md](docs/performance.md) | 基准口径与结果 |
 | [docs/licensing.md](docs/licensing.md) | 代码许可与专利许可（两件独立的事） |

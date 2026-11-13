@@ -8,15 +8,15 @@
 >
 > 本文档与每个 PR 同步更新。任何新增的 `Unsupported` 必须写明原因与计划。
 >
-> **M1 状态说明：** 下表中的 `Partial` 表示语法层的解析/序列化已实现并通过
-> 单元测试、真实语料往返或 ffprobe Oracle，但解码/编码流水线尚未接入
->（M2/M4）。端到端能力仍以 Profile 表中的 `TODO` 为准。
+> **M2 状态说明：** Baseline 的无重排、单参考 CAVLC I/P 解码已通过整帧 Oracle。
+> `Conformant` 仅针对表内注明的范围；Baseline Profile 整体保留 `Partial`，因为
+> FMO/ASO、冗余 slice 等高级工具仍未实现。编码流水线从 M4 开始。
 
 ## 1. Profile
 
 | Profile | profile_idc | 关键工具 | Decoder | Encoder | 目标里程碑 |
 |---|---|---|---|---|---|
-| Baseline | 66 | CAVLC、I/P | TODO | TODO | M2 / M4 |
+| Baseline | 66 | CAVLC、I/P | Partial | TODO | M2 单参考无重排已验证；高级工具 M7 / Encoder M4 |
 | Main | 77 | CABAC、B、隔行 | TODO | TODO | M3 / M5c |
 | High | 100 | 8×8 变换、ScalingMatrix | TODO | TODO | M3 / M5c |
 | High 10 | 110 | 10 bit | TODO | TODO | M7 |
@@ -27,10 +27,10 @@
 
 | 特性 | Decoder | Encoder | 备注 |
 |---|---|---|---|
-| Annex-B（3/4 字节起始码） | Partial | Partial | M1 扫描/写出已验证；流水线 M2/M4 |
+| Annex-B（3/4 字节起始码） | Conformant | Partial | M2 解码接收完整 AU，支持分配前 NAL 限长；编码流水线 M4 |
 | AVCC（1/2/3/4 字节长度前缀） | Partial | Partial | M1 读写已验证；尚无真实 MP4 语料 |
 | avcC 配置记录 | Partial | Partial | M1 解析/序列化；尚无真实 avcC 语料 |
-| Access Unit 组装（多 slice） | Partial | Partial | 单 slice 与 hint 驱动的多 slice 已验证；M6 增量输入 |
+| Access Unit 组装（多 slice） | Conformant | Partial | M2 双 slice 整帧 Oracle、slice 邻块隔离；M6 增量输入 |
 | MP4 demux / mux | Unsupported | Unsupported | 明确不在核心范围内 |
 | RTP 打包 | Unsupported | Unsupported | 未来独立适配层 |
 
@@ -43,69 +43,70 @@
 | VUI | E.1 | Partial | Partial | M1 结构往返；timing/HRD 语义待 Oracle |
 | ScalingList | 7.3.2.1.1.1 | Partial | Partial | M1 解析/序列化；应用在 M3 |
 | SEI（user_data / recovery point） | 7.3.2.3 | Partial | Partial | M1 框架与 user_data；其余语义消息 M2/M3 |
-| Slice Header | 7.3.3 | Partial | Partial | M1 仅 AU 判定所需字段；完整头部 M2/M4 |
-| Macroblock Layer | 7.3.4 | TODO | TODO | M2 |
+| Slice Header | 7.3.3 | Conformant | Partial | M2 CAVLC I/P 完整头部已接入；高级工具显式拒绝 |
+| Macroblock Layer | 7.3.4 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
 | Slice Data Partitioning | 7.3.5 | TODO | Unsupported | M7 |
 
 ## 4. 熵编码
 
 | 特性 | Decoder | Encoder | 备注 |
 |---|---|---|---|
-| CAVLC：coeff_token / trailing ones | TODO | TODO | M2 / M4 |
-| CAVLC：total_zeros / run_before | TODO | TODO | M2 / M4 |
-| CAVLC：level prefix / suffix / 转义 | TODO | TODO | M2 / M4 |
-| CABAC：算术编解码器 | TODO | TODO | M3 / M5c |
-| CABAC：上下文初始化与状态转移 | TODO | TODO | M3 / M5c |
-| CABAC：宏块/MV/残差上下文 | TODO | TODO | M3 / M5c |
-| CABAC：terminate / cabac_zero_word | TODO | TODO | M3 / M5c |
+| CAVLC：coeff_token / trailing ones | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| CAVLC：total_zeros / run_before | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| CAVLC：level prefix / suffix / 转义 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| CABAC：算术编解码器 | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
+| CABAC：上下文初始化与状态转移 | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
+| CABAC：宏块/MV/残差上下文 | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
+| CABAC：terminate / cabac_zero_word | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
 
 ## 5. 预测
 
 | 特性 | Decoder | Encoder | 备注 |
 |---|---|---|---|
-| Intra 4×4（9 模式） | TODO | TODO | M2 / M4 |
-| Intra 8×8（High） | TODO | TODO | M3 / M5c |
-| Intra 16×16（4 模式） | TODO | TODO | M2 / M4 |
-| Chroma 8×8（4:2:0 / 4:2:2） | TODO | TODO | M2 |
+| Intra 4×4（9 模式） | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| Intra 8×8（High） | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
+| Intra 16×16（4 模式） | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| Chroma 8×8（4:2:0） | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| Chroma 4:2:2 | Unsupported | TODO | 当前 SPS 显式拒绝；M7 实现 |
 | Chroma 4:4:4 | TODO | TODO | M7 |
-| Inter 16×16 / 16×8 / 8×16 / 8×8 | TODO | TODO | M2 / M5a |
-| 亚像素插值（1/2、1/4） | TODO | TODO | M2 / M5a |
-| Weighted Prediction（explicit / implicit） | TODO | TODO | M3 / M5c |
-| B Direct（temporal / spatial） | TODO | TODO | M3 / M5c |
-| 帧场自适应（MBAFF / PAFF） | TODO | TODO | M7 |
+| Inter 16×16 / 16×8 / 8×16 / 8×8 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| 亚像素插值（1/2、1/4） | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| Weighted Prediction（explicit / implicit） | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
+| B Direct（temporal / spatial） | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
+| 帧场自适应（MBAFF / PAFF） | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
 
 ## 6. 变换与量化
 
 | 特性 | Decoder | Encoder | 备注 |
 |---|---|---|---|
-| 4×4 逆/正整数变换 | TODO | TODO | M2 / M4 |
-| 4×4 亮度 DC Hadamard | TODO | TODO | M2 / M4 |
-| 2×2 色度 DC Hadamard | TODO | TODO | M2 / M4 |
-| 8×8 逆/正变换 | TODO | TODO | M3 / M5c |
-| 量化 / 反量化 | TODO | TODO | M2 / M4 |
-| ScalingMatrix 应用 | TODO | TODO | M3 / M5c |
+| 4×4 逆/正整数变换 | Partial | TODO | M2 逆变换 Conformant；正变换 M4 |
+| 4×4 亮度 DC Hadamard | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| 2×2 色度 DC Hadamard | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| 8×8 逆/正变换 | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
+| 量化 / 反量化 | Partial | TODO | M2 反量化 Conformant；量化 M4 |
+| ScalingMatrix 应用 | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
 | 10 bit 变换路径 | TODO | TODO | M7 |
 
 ## 7. 滤波
 
 | 特性 | Decoder | Encoder | 备注 |
 |---|---|---|---|
-| 边界强度 bS 推导 | TODO | TODO | M2 |
-| 亮度边缘滤波 | TODO | TODO | M2 |
-| 色度边缘滤波 | TODO | TODO | M2 |
-| slice 边界 / disable_deblocking | TODO | TODO | M3 |
+| 边界强度 bS 推导 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| 亮度边缘滤波 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| 色度边缘滤波 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| slice 边界 / disable_deblocking | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
 
 ## 8. 参考帧管理
 
 | 特性 | Decoder | Encoder | 备注 |
 |---|---|---|---|
-| 单参考帧 | TODO | TODO | M2 |
-| 多参考帧 + reordering | TODO | TODO | M3 / M5a |
-| POC type 0 / 1 / 2 | TODO | TODO | M2(type0) / M3 |
+| 单参考帧 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
+| 多参考帧 + reordering | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
+| POC type 0 / 1 / 2 | Partial | TODO | M2 无重排 type 0/2 已验证；type 1 与重排 M3 |
 | 滑动窗口标记 | TODO | TODO | M3 |
-| MMCO（含长期参考） | TODO | TODO | M3 |
+| MMCO（含长期参考） | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
 | 输出重排序与延迟输出 | TODO | TODO | M3 |
-| Flush 排空语义 | TODO | TODO | M3 |
+| Flush 排空语义 | Conformant | TODO | M2 Oracle/解析解已验证；编码流水线按原计划推进 |
 
 ## 9. 编码器工具
 

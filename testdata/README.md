@@ -1,5 +1,25 @@
 # testdata
 
+## M2 语料与 Oracle
+
+`manifest.json` 登记五份 Baseline I/P 样本，共 21 帧；多 slice 样本每帧两个
+slice，并在中途再次出现 IDR。全部通过 FFmpeg 8.0 的 Y/U/V 逐像素对比，
+`expectedYUVSha256` 是 FFmpeg 输出的完整原始 YUV 序列哈希，不需要入库大体积 YUV。
+Main/CABAC/B 样本标记 `unsupported`，由解码测试断言 `ErrUnsupported`。
+
+前四份 Baseline 文件来自接手时工作区中的 x264 语料，原始生成命令未保留；
+其内容由 manifest 输入哈希固定。1080p 样本新增于 M2，生成命令为：
+
+```text
+ffmpeg -v error -f lavfi -i testsrc2=size=1920x1080:rate=30 -frames:v 3 -c:v libx264 -preset veryfast -profile:v baseline -qp 26 -pix_fmt yuv420p -x264-params ref=1:bframes=0:weightp=0:scenecut=0:threads=1:aud=1:keyint=30 -f h264 testdata/baseline/baseline_1920x1080_yuv420p_cavlc_ip_005.264
+```
+
+Oracle 复现：`ffmpeg -v error -i <input.264> -f rawvideo -pix_fmt yuv420p <output.yuv>`，
+对输出计算 SHA-256。实时对比执行 `go test ./decoder -run TestCorpus_BaselinePixelExact -v`；
+固定哈希与不支持样本执行 `go test ./decoder -run TestCorpus_ManifestOutputDigests -v`。
+运行 Go 命令前设置 `CGO_ENABLED=0`。这些哈希来自独立 FFmpeg，不能用待验证的
+解码器输出来重写。
+
 测试语料目录。文件本身的纳入与否由体积决定，但**每一条语料都必须在
 `manifest.json` 中登记**，否则无法参与 CI 校验。
 

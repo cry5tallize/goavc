@@ -12,13 +12,19 @@
       "pixFmt": "yuv420p",
       "bitDepth": 8,
       "entropy": "cavlc",
-      "sliceTypes": ["I", "P"],
+      "sliceTypes": [
+        "I",
+        "P"
+      ],
       "sliceCount": 1,
       "refFrames": 1,
-      "tags": ["m1_syntax"],
-      "sha256": "cf5e409b5733b6413c0cddded9675fc3fee3d5510e5a56dfbae6a3db5d61bc8b",
-      "status": "wip",
-      "notes": "M1 syntax round-trip and ffprobe coverage; pixel oracle pending M2."
+      "tags": [
+        "m2_baseline"
+      ],
+      "sha256": "ec33deac340d752c1da1d645797365a7f5de955f09769ef9db06ef6d4b250b65",
+      "status": "conformant",
+      "notes": "FFmpeg 8.0 Y/U/V pixel-exact; 3 frames; POC type 2.",
+      "expectedYUVSha256": "835673c845a57eefb2a26445a7a76939cec58fbac37f8b6892f346a3f2af0457"
     },
     {
       "name": "main_64x48_yuv420p_cabac_ipb_001",
@@ -31,13 +37,121 @@
       "pixFmt": "yuv420p",
       "bitDepth": 8,
       "entropy": "cabac",
-      "sliceTypes": ["I", "P", "B"],
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
       "sliceCount": 1,
       "refFrames": 1,
-      "tags": ["m1_syntax"],
+      "tags": [
+        "m1_syntax"
+      ],
       "sha256": "17d76f1e2058f4048eaa902fb55dc8fd8541a146a62caf0fcf17e744bce45a25",
-      "status": "wip",
-      "notes": "M1 syntax round-trip and ffprobe coverage; pixel oracle pending M3."
+      "status": "unsupported",
+      "notes": "M2 decoder explicitly rejects CABAC/B slices; syntax parsing remains covered."
+    },
+    {
+      "name": "baseline_176x144_yuv420p_cavlc_ip_002",
+      "path": "testdata/baseline/baseline_176x144_yuv420p_cavlc_ip_002.264",
+      "source": "x264",
+      "profile": "baseline",
+      "level": "1.1",
+      "width": 176,
+      "height": 144,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "P"
+      ],
+      "sliceCount": 1,
+      "refFrames": 1,
+      "tags": [
+        "m2_baseline"
+      ],
+      "sha256": "b934177366b42a5ed3b093984c33e454d3e33a9e153a3474a160070c016346cb",
+      "expectedYUVSha256": "5184a844b289d7cfe614f5c114d3891149bf307d8b4bf490fcf622e4d33f2fd9",
+      "status": "conformant",
+      "notes": "FFmpeg 8.0 Y/U/V pixel-exact; 5 frames; POC type 2."
+    },
+    {
+      "name": "baseline_1920x1080_yuv420p_cavlc_ip_005",
+      "path": "testdata/baseline/baseline_1920x1080_yuv420p_cavlc_ip_005.264",
+      "source": "x264",
+      "profile": "baseline",
+      "level": "4.0",
+      "width": 1920,
+      "height": 1080,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "P"
+      ],
+      "sliceCount": 1,
+      "refFrames": 1,
+      "tags": [
+        "m2_baseline",
+        "benchmark"
+      ],
+      "sha256": "14d2afa7048b4ca21e5f44c3206a55b9b195fc11cea3bff65e1c93104e23cc5a",
+      "expectedYUVSha256": "ec128b834374c4afecc2b746b19ae9abe76147c6eedfaf7fa9e4e8ea31a63f4d",
+      "status": "conformant",
+      "notes": "FFmpeg 8.0 Y/U/V pixel-exact; 3 frames; POC type 2."
+    },
+    {
+      "name": "baseline_320x240_yuv420p_cavlc_ip_multislice_003",
+      "path": "testdata/baseline/baseline_320x240_yuv420p_cavlc_ip_multislice_003.264",
+      "source": "x264",
+      "profile": "baseline",
+      "level": "1.3",
+      "width": 320,
+      "height": 240,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "P"
+      ],
+      "sliceCount": 2,
+      "refFrames": 1,
+      "tags": [
+        "m2_baseline"
+      ],
+      "sha256": "98b62ca9d664126b52a91503c52cac1f3f25f361b2c86c4953af50d439874d51",
+      "expectedYUVSha256": "b75d9f142a171e2af914277b29eb4aca068e8c18dd0f2e0a60ee9b660b58e2dc",
+      "status": "conformant",
+      "notes": "FFmpeg 8.0 Y/U/V pixel-exact; 6 frames; POC type 2."
+    },
+    {
+      "name": "baseline_64x48_yuv420p_cavlc_skip_004",
+      "path": "testdata/baseline/baseline_64x48_yuv420p_cavlc_skip_004.264",
+      "source": "x264",
+      "profile": "baseline",
+      "level": "1.0",
+      "width": 64,
+      "height": 48,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "P"
+      ],
+      "sliceCount": 1,
+      "refFrames": 1,
+      "tags": [
+        "m2_baseline",
+        "skip"
+      ],
+      "sha256": "5c9330d6fe957228bd8b05b95103a6124a27dec89f8f27e860b720dab6a6ea8a",
+      "expectedYUVSha256": "92fa19f1e4340648be9b7aaa7dba84dc4eaf7f02badcf8a2ca722efe15f59341",
+      "status": "conformant",
+      "notes": "FFmpeg 8.0 Y/U/V pixel-exact; 4 frames; POC type 2."
     }
   ]
 }

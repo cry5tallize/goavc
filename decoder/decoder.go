@@ -1,0 +1,306 @@
+// Package decoder 实现 H.264 Baseline 解码流水线。
+//
+// 输入单位是访问单元（Packet.Data 为 Annex-B），输出是显示顺序的
+// 4:2:0 8-bit Frame。M2 范围：CAVLC、I/P 切片、单参考帧、4x4 变换、
+// 基础去块与无重排的 POC type 0/2；CABAC/B/8x8/MMCO 等返回 ErrUnsupported。
+package decoder
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"io"
+
+	h264 "github.com/goavc/h264"
+	"github.com/goavc/h264/bitstream"
+	"github.com/goavc/h264/internal/dpb"
+	"github.com/goavc/h264/internal/picture"
+	"github.com/goavc/h264/nal"
+	"github.com/goavc/h264/syntax"
+)
+
+// Decoder 是单实例解码器。与公共契约一致：实例非并发安全。
+type Decoder struct {
+	cfg h264.DecoderConfig
+
+	sps map[uint32]*syntax.SPS
+	pps map[uint32]*syntax.PPS
+
+	pool *picture.Pool
+	dpb  *dpb.DPB
+	poc  *dpb.POCState
+
+	out []*h264.Frame
+
+	// waitingForIDR 在致命错误后置位；后续包只有出现 IDR 才会重新解码。
+	waitingForIDR bool
+	flushed       bool
+
+	// 序列参数缓存，DPB/POC 在 SPS 变化时重建。
+	activeSPS      *syntax.SPS
+	maxFrameNum    uint32
+	frameNumOffset int64
+	lastOutputPOC  int32
+	hasOutput      bool
+
+	closed bool
+}
+
+// New 创建解码器并校验配置。
+func New(cfg h264.DecoderConfig) (*Decoder, error) {
+	cfg.SetDefaults()
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	if cfg.OutputFormat != h264.YUV420P || cfg.Threads > 1 {
+		return nil, fmt.Errorf("decoder: only serial yuv420p output is supported: %w", h264.ErrUnsupported)
+	}
+	d := &Decoder{
+		cfg:  cfg,
+		sps:  make(map[uint32]*syntax.SPS),
+		pps:  make(map[uint32]*syntax.PPS),
+		pool: picture.NewPool(4),
+	}
+	return d, nil
+}
+
+// SendPacket 送入一个访问单元（Annex-B）。
+//
+// 返回 nil 表示输入已被消费，调用方应继续调用 ReceiveFrame 取输出。
+// 语法错误返回 ErrInvalidData；合法但未实现的工具返回 ErrUnsupported；
+// 两者都会让解码器进入等待 IDR 状态。
+func (d *Decoder) SendPacket(p h264.Packet) error {
+	if d.closed || d.flushed {
+		return h264.ErrEOF
+	}
+	if len(p.Data) == 0 {
+		return nil
+	}
+	scanner := nal.NewAnnexBScannerWithLimit(bytes.NewReader(p.Data), d.cfg.MaxNALSize)
+	var entries []sliceEntry
+	seen := false
+	finish := func() error {
+		if len(entries) == 0 {
+			return nil
+		}
+		err := d.decodeFrame(entries, p)
+		entries = entries[:0]
+		return err
+	}
+	for {
+		u, err := scanner.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return d.fail(err)
+		}
+		seen = true
+		if !u.Header.IsVCL() && len(entries) > 0 {
+			if err := finish(); err != nil {
+				return d.fail(err)
+			}
+		}
+		switch u.Header.Type {
+		case nal.TypeSPS:
+			rbsp, err := bitstream.EBSPToRBSP(u.Payload)
+			if err != nil {
+				return d.fail(fmt.Errorf("decoder: sps rbsp: %w", err))
+			}
+			s, err := syntax.ParseSPS(rbsp)
+			if err != nil {
+				return d.fail(err)
+			}
+			if err := d.checkSPSLimits(s); err != nil {
+				return d.fail(err)
+			}
+			d.sps[s.SeqParameterSetID] = s
+		case nal.TypePPS:
+			rbsp, err := bitstream.EBSPToRBSP(u.Payload)
+			if err != nil {
+				return d.fail(fmt.Errorf("decoder: pps rbsp: %w", err))
+			}
+			// 参数集按码流顺序生效，避免同 ID 的后续 SPS/PPS 覆盖前一帧。
+			_, spsID, err := peekPPSIDs(rbsp)
+			if err != nil {
+				return d.fail(fmt.Errorf("decoder: pps header: %w", err))
+			}
+			s := d.sps[spsID]
+			if s == nil {
+				return d.fail(fmt.Errorf("decoder: pps references unknown sps %d: %w",
+					spsID, h264.ErrInvalidData))
+			}
+			pp, err := syntax.ParsePPS(rbsp, s)
+			if err != nil {
+				return d.fail(err)
+			}
+			d.pps[pp.PicParameterSetID] = pp
+		case nal.TypeSEI, nal.TypeAUD, nal.TypeEndOfSequence, nal.TypeEndOfStream:
+			// M2 忽略 SEI/AUD/EOS；它们不影响重建。
+		default:
+			if u.Header.Type != nal.TypeSlice && u.Header.Type != nal.TypeSliceIDR {
+				if err := u.Header.ValidateSupported(); err != nil {
+					return d.fail(err)
+				}
+				continue
+			}
+			if d.waitingForIDR && !u.Header.IsIDR() {
+				continue
+			}
+			entry, err := d.parseSlice(u)
+			if err != nil {
+				return d.fail(err)
+			}
+			if len(entries) > 0 && !samePicture(entries[0], entry) {
+				if err := finish(); err != nil {
+					return d.fail(err)
+				}
+			}
+			if len(entries) >= d.cfg.MaxSliceCount {
+				return d.fail(fmt.Errorf("decoder: slice count exceeds %d: %w", d.cfg.MaxSliceCount, h264.ErrResourceLimit))
+			}
+			entries = append(entries, entry)
+		}
+	}
+	if !seen {
+		return d.fail(fmt.Errorf("decoder: missing Annex-B NAL: %w", h264.ErrInvalidData))
+	}
+	if err := finish(); err != nil {
+		return d.fail(err)
+	}
+	return nil
+}
+
+// ReceiveFrame 取出一帧。没有输出时返回 ErrAgain；Flush 后输出排空返回 io.EOF。
+func (d *Decoder) ReceiveFrame() (*h264.Frame, error) {
+	if d.closed {
+		return nil, h264.ErrEOF
+	}
+	if len(d.out) > 0 {
+		f := d.out[0]
+		d.out[0] = nil
+		d.out = d.out[1:]
+		return f, nil
+	}
+	if d.flushed {
+		return nil, h264.ErrEOF
+	}
+	return nil, h264.ErrAgain
+}
+
+// Flush 表示输入结束。I/P 无重排序，M2 没有滞留帧；M3 会排空 DPB。
+func (d *Decoder) Flush() error {
+	if d.closed {
+		return h264.ErrEOF
+	}
+	d.flushed = true
+	return nil
+}
+
+// Reset 清空参数集、DPB 与输出队列，回到初始状态。
+func (d *Decoder) Reset() error {
+	if d.closed {
+		return h264.ErrEOF
+	}
+	for _, f := range d.out {
+		f.Release()
+	}
+	d.out = nil
+	if d.dpb != nil {
+		d.dpb.Reset()
+	}
+	d.sps = make(map[uint32]*syntax.SPS)
+	d.pps = make(map[uint32]*syntax.PPS)
+	d.activeSPS = nil
+	d.poc = nil
+	d.frameNumOffset = 0
+	d.hasOutput = false
+	d.waitingForIDR = false
+	d.flushed = false
+	return nil
+}
+
+// Close 释放所有内部缓冲。Close 后解码器不可再用。
+func (d *Decoder) Close() error {
+	if d.closed {
+		return nil
+	}
+	_ = d.Reset()
+	d.pool.Trim()
+	d.closed = true
+	return nil
+}
+
+func (d *Decoder) fail(err error) error {
+	if h264.IsFatal(err) {
+		d.waitingForIDR = true
+		if d.dpb != nil {
+			d.dpb.Reset()
+		}
+		if d.poc != nil {
+			d.poc.Reset()
+		}
+	}
+	return err
+}
+
+func (d *Decoder) activateSPS(s *syntax.SPS) error {
+	if d.activeSPS == s && d.dpb != nil {
+		return nil
+	}
+	d.activeSPS = s
+	d.maxFrameNum = uint32(1) << (s.Log2MaxFrameNumMinus4 + 4)
+	if d.dpb != nil {
+		d.dpb.Reset()
+	}
+	d.dpb = dpb.New(d.maxFrameNum, s.GapsInFrameNumValueAllowedFlag)
+	maxLsb := int32(1) << (s.Log2MaxPicOrderCntLsbMinus4 + 4)
+	d.poc = dpb.NewPOCState(maxLsb)
+	return nil
+}
+
+// checkSPSLimits 在解析后立即校验资源上限，避免后续按恶意尺寸分配。
+func (d *Decoder) checkSPSLimits(s *syntax.SPS) error {
+	if !s.FrameMbsOnlyFlag {
+		return fmt.Errorf("decoder: interlaced sequences are not supported in M2: %w", h264.ErrUnsupported)
+	}
+	if s.MbAdaptiveFrameFieldFlag {
+		return fmt.Errorf("decoder: MBAFF is not supported: %w", h264.ErrUnsupported)
+	}
+	w, h := uint64(s.PicWidthInMbs())*16, uint64(s.FrameHeightInMbs())*16
+	dw, err := s.DisplayWidth()
+	if err != nil {
+		return err
+	}
+	dh, err := s.DisplayHeight()
+	if err != nil {
+		return err
+	}
+	if w == 0 || h == 0 || dw > uint64(d.cfg.MaxWidth) || dh > uint64(d.cfg.MaxHeight) || w > uint64(h264.MaxFrameWidth) || h > uint64(h264.MaxFrameHeight) {
+		return fmt.Errorf("decoder: %dx%d exceeds configured limit %dx%d: %w",
+			w, h, d.cfg.MaxWidth, d.cfg.MaxHeight, h264.ErrResourceLimit)
+	}
+	if d.cfg.MaxFrameSize > 0 && w*h*2 > uint64(d.cfg.MaxFrameSize) {
+		return fmt.Errorf("decoder: frame size %d exceeds limit %d: %w",
+			w*h*2, d.cfg.MaxFrameSize, h264.ErrResourceLimit)
+	}
+	if s.MaxNumRefFrames > uint32(d.cfg.MaxDPBFrames) {
+		return fmt.Errorf("decoder: DPB limit %d: %w", d.cfg.MaxDPBFrames, h264.ErrResourceLimit)
+	}
+	return nil
+}
+
+// peekPPSIDs 只读取 PPS 的前两个 ue(v) 字段，用于在完整解析前定位 SPS。
+//
+// 不直接调用 syntax.ParsePPS 是因为它需要 SPS 上下文（决定 scaling list
+// 数量），而这两个字段本身与 SPS 无关。
+func peekPPSIDs(rbsp []byte) (ppsID, spsID uint32, err error) {
+	r := bitstream.NewReader(rbsp)
+	if ppsID, err = r.ReadUE(); err != nil {
+		return 0, 0, err
+	}
+	if spsID, err = r.ReadUE(); err != nil {
+		return 0, 0, err
+	}
+	return ppsID, spsID, nil
+}

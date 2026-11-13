@@ -60,7 +60,31 @@
 | SEI 基础 | 7.3.2.3 | payloadType/Size 扩展、user_data_unregistered | Partial | `sei_test.go`、`corpus_test.go` | 仅框架与 user_data；recovery point 等语义消息在 M2/M3 |
 | Slice Header（最小） | 7.3.3 | AU 判定字段、POC type 0/1、field flags、redundant_pic_cnt | Partial | `slice_header_test.go`、`corpus_test.go` | 参考列表/加权预测/去块等字段在 M2 扩展；SP/SI 返回 `ErrUnsupported`（M7） |
 
-## M2–M9
+## M2：Decoder Baseline
+
+验证环境：Go 1.27.4 windows/amd64、`CGO_ENABLED=0`、FFmpeg/ffprobe 8.0。
+五份真实 Baseline 语料合计 21 帧，64×48、176×144、320×240、1920×1080，
+含双 slice、重复 IDR、P_Skip 和 1080p crop，Y/U/V 与 FFmpeg 逐像素相等。
+独立 Oracle 原始 YUV 哈希保存在 manifest，未安装 FFmpeg 的 CI 仍执行哈希回归。
+本地验证不等同于远端 CI 已执行；最终门禁证据见 `docs/gates/m2.md`。
+
+| Module | 规范条款 | Scope | Status | Tests | Known gaps |
+|---|---|---|---|---|---|
+| `decoder` 状态机 | 公共 API 契约 | Send/Receive、Flush、Reset、Close、参数集按序生效、错误后等待 IDR | Conformant | `decoder_test.go` | 单实例串行；输入须为完整 Annex-B AU，M6 接入 AVCC/增量输入 |
+| Macroblock / I_PCM | 7.3.4 / 7.3.5 | I4×4、I16×16、PCM、P16×16/16×8/8×16/8×8 及子分区、Skip | Conformant | PCM 解析解、真实语料 Oracle | FMO/ASO、冗余 slice 在 M7；当前显式拒绝 |
+| `entropy/cavlc` | 9.2 | token、level、zeros/run、亮度 DC/AC、nC=-1 色度 DC | Conformant | `decode_test.go`、`tables_test.go`、整帧 Oracle | 4:2:2 色度 DC 在 M7 |
+| `prediction` | 8.3 / 8.4.2 | 九种 I4×4、四种 I16×16/色度模式、亚像素 MC、越界复制 | Conformant | 非均匀解析解、`PCMAndEdgeMotionOracle`、真实语料 | 加权预测、B Direct 在 M3 |
+| `transform` | 8.5 | 4×4 反量化/IDCT、光栅 DC Hadamard、色度 QP | Conformant | `dc_test.go` 空间基底、极值 IDCT、Oracle | 正变换在 M4；8×8/ScalingMatrix 在 M3 |
+| `motion` | 8.4.1 | 分区 MV 预测、slice 邻块隔离、P_Skip 零矢量规则 | Conformant | `mv_test.go`、Oracle | M2 仅 list0 单参考；运动搜索在 M5 |
+| `filter` / 调度 | 8.7 | bS、亮度/色度去块、两分量 QP、slice 边界 idc=0/2 | Conformant | `luma_test.go`、`chroma_test.go`、`deblock_test.go`、多 slice Oracle | 无并行/SIMD，M8 优化 |
+| `dpb` / POC | 8.2.1 / 8.2.5 | 单参考、frame_num 回绕、type 0/2、非参考帧不覆盖参考状态 | Conformant | `dpb_test.go`、`poc_test.go`、`NonReferenceAndPOC`、Oracle | type 1、多参考/MMCO、显示重排序、缺帧合成在 M3，当前显式拒绝 |
+| 资源与坏流 | 架构安全契约 | 配置、NAL 分配前限长、分辨率/帧大小/DPB/slice 上限、覆盖与尾位校验 | Conformant | `ConfigurationAndLimits`、`InvalidSliceCoverage`、NAL 限长、decoder fuzz | MaxFrameSize 限制单帧图像预算，不是整个进程内存上限 |
+
+POC type 2 的无重排路径提前纳入 M2，因为 x264 的 Baseline 无 B 帧样本默认使用
+type 2；type 0 使用合成 PCM/P 码流及独立内核测试验证。这里不宣称完整 Baseline
+Profile 一致性：高级工具仍按支持矩阵返回 `ErrUnsupported`。
+
+## M3–M9
 
 后续里程碑的模块表在对应里程碑开工时补全；开工前这里只保留占位，
 避免出现"提前承诺、实际未实现"的记录失真。

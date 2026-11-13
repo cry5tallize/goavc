@@ -1,8 +1,10 @@
 // Package decoder 实现解码流水线。
 //
 // 流水线顺序：NAL → RBSP → SPS/PPS/SEI → Slice Header → 熵解码
-// （CAVLC/CABAC）→ 反量化 → 逆变换 → 帧内/帧间预测 → 残差重建
-// → 去块滤波 → DPB/POC 重排序 → 输出帧。
+// （M2 为 CAVLC）→ 反量化 → 逆变换 → 帧内/帧间预测 → 残差重建
+// → 去块滤波 → 单参考 DPB/POC → 按 SPS 裁剪输出帧。
+// CABAC、B 帧和需要显示重排序的流由 M3 扩展，当前显式拒绝。
+// 输入为完整 Annex-B 访问单元；增量字节流/AVCC 适配属于 M6。
 //
 // 关键约束：
 //   - 本包不得 import encoder 包（单向依赖，见 docs/architecture.md R1）；
