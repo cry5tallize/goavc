@@ -1,0 +1,56 @@
+name: ci
+
+# 主 CI：在三个原生平台上以 CGO_ENABLED=0 完成构建与测试。
+# 不在这一步做交叉编译：交叉编译只能证明"能编译"，见 cross.yml。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    env:
+      CGO_ENABLED: "0"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.x"
+          check-latest: true
+
+      - name: report toolchain
+        shell: bash
+        run: go version
+
+      - name: vet
+        shell: bash
+        run: go vet ./...
+
+      - name: build
+        shell: bash
+        run: go build ./...
+
+      - name: test
+        shell: bash
+        run: go test ./...
+
+      - name: dependency rules
+        shell: bash
+        run: go run ./tools/depscheck
+
+      - name: corpus manifest
+        shell: bash
+        run: go run ./tools/manifest -file testdata/manifest.json
