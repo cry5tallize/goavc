@@ -17,6 +17,7 @@ type Decoder struct {
 	offset     uint32
 	err        error
 	terminated bool
+	lastBit    uint8
 }
 
 func New(r *bitstream.Reader) (*Decoder, error) {
@@ -30,7 +31,7 @@ func New(r *bitstream.Reader) (*Decoder, error) {
 	if v >= 510 {
 		return nil, fmt.Errorf("cabac: initial offset %d: %w", v, h264.ErrInvalidData)
 	}
-	return &Decoder{r: r, rangeValue: 510, offset: uint32(v)}, nil
+	return &Decoder{r: r, rangeValue: 510, offset: uint32(v), lastBit: uint8(v & 1)}, nil
 }
 
 func (d *Decoder) Err() error { return d.err }
@@ -82,6 +83,9 @@ func (d *Decoder) Terminate() uint8 {
 	d.rangeValue -= 2
 	if d.offset >= d.rangeValue {
 		d.terminated = true
+		if d.lastBit != 1 {
+			d.err = fmt.Errorf("cabac: missing termination stop bit: %w", h264.ErrInvalidData)
+		}
 		return 1
 	}
 	d.renormalize()
@@ -107,6 +111,7 @@ func (d *Decoder) readBit() uint8 {
 	if err != nil {
 		d.err = err
 	}
+	d.lastBit = uint8(v)
 	return uint8(v)
 }
 

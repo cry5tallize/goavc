@@ -40,6 +40,17 @@ func TestDecoder_AnalyticDecisionTrace(t *testing.T) {
 }
 
 func TestDecoder_TerminationAndTruncation(t *testing.T) {
+	bad := bitstream.NewWriter()
+	bad.WriteBits(9, 508)
+	bad.ByteAlign()
+	invalid, err := New(bitstream.NewReader(bad.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	invalid.Terminate()
+	if !errors.Is(invalid.Err(), h264.ErrInvalidData) {
+		t.Fatal("accepted a zero stop bit")
+	}
 	w := bitstream.NewWriter()
 	w.WriteBits(9, 509)
 	w.ByteAlign()

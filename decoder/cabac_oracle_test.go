@@ -92,9 +92,9 @@ func TestCABAC_PCMRestartOracle(t *testing.T) {
 		w.WriteBits(1, 1)
 	}
 	// QP=26 的 I ctx3 为 state46/MPS0。range510 的 LPS=22；
-	// offset509 后读1110 -> range352/offset350，terminate=1 选择 PCM。
+	// offset509 后读1111 -> range352/offset351，停止位1，terminate=1 选择 PCM。
 	w.WriteBits(9, 509)
-	w.WriteBits(4, 14)
+	w.WriteBits(4, 15)
 	w.ByteAlign()
 	want := make([]byte, 384)
 	for i := range want {
