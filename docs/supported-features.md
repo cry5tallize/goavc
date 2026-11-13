@@ -132,8 +132,8 @@
 | GOP 结构 / IDR 间隔 | Partial | M5a IDRInterval 与强制 KeyFrame 已验证；暂要求 GOPSize=IDRInterval，无 B；完整 M5d |
 | 场景切换检测 | TODO | M5d |
 | Lookahead | TODO | M5d |
-| RD 模式决策（J = D + λR） | TODO | M5b |
-| 自适应 QP | TODO | M5b |
+| RD 模式决策（J = D + λR） | Conformant | M5b 定点 lambda、SSE/实际 CAVLC 比特、Skip/P/I4/I16/PCM 候选；整段质量门禁仍待执行 |
+| 自适应 QP | Conformant | M5b 活动度 QP 选项 0..6、QP 0..51 裁剪，默认关闭，显式回调/PCM 冲突拒绝 |
 | SSE2 / AVX2 / NEON | TODO | M8 |
 
 ## 10. 明确不支持（第一版）

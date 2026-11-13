@@ -79,11 +79,17 @@ func (s *frameState) probable(addr, r int) int {
 		left = int(s.info[addr].modes[r-1])
 	} else if addr%mw > 0 && s.available(addr, addr-1) {
 		left = int(s.info[addr-1].modes[by*4+3])
+		if s.info[addr-1].inter {
+			left = 2
+		}
 	}
 	if by > 0 {
 		top = int(s.info[addr].modes[r-4])
 	} else if s.available(addr, addr-mw) {
 		top = int(s.info[addr-mw].modes[12+bx])
+		if s.info[addr-mw].inter {
+			top = 2
+		}
 	}
 	return prediction.MostProbableIntra4x4(left, top)
 }

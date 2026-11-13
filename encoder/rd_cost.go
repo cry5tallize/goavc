@@ -32,3 +32,18 @@ func seBits(value int32) int {
 }
 
 func mvBits(x, y int32) int { return seBits(x) + seBits(y) }
+
+// motionLambdaQ8 为 SAD 阶段使用 sqrt(lambda)，通过整数平方根保持确定性。
+func motionLambdaQ8(qp int) uint64 {
+	n := lambdaQ8(qp) * 256
+	var result uint64
+	for bit := uint64(1) << 62; bit != 0; bit >>= 2 {
+		if n >= result+bit {
+			n -= result + bit
+			result = (result >> 1) + bit
+		} else {
+			result >>= 1
+		}
+	}
+	return result
+}

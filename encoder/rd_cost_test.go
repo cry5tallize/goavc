@@ -13,6 +13,11 @@ func TestRDCost_Monotonicity(t *testing.T) {
 			t.Fatal(qp, l, previous)
 		}
 		previous = l
+		root := motionLambdaQ8(qp)
+		n := l * 256
+		if root*root > n || (root+1)*(root+1) <= n {
+			t.Fatal("integer lambda root", qp, root, n)
+		}
 		if rdCost(qp, 101, 4) <= rdCost(qp, 100, 4) || rdCost(qp, 100, 5) <= rdCost(qp, 100, 4) {
 			t.Fatal(qp)
 		}

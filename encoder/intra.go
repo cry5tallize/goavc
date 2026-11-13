@@ -80,7 +80,14 @@ func (e *Encoder) encodeIntra(src *picture.Picture) ([]byte, *frameState, error)
 		e.sliceHeader(w, start, false)
 		for addr := start; addr < end; addr++ {
 			s.info[addr].start = start
-			res := s.analyze(addr)
+			res, err := s.analyzeIntraRD(addr, qp)
+			if err != nil {
+				return nil, nil, err
+			}
+			if s.info[addr].pcm {
+				s.writePCM(w, addr)
+				continue
+			}
 			trial := bitstream.NewWriter()
 			previousQP := qp
 			if err = s.writeMB(trial, addr, &qp, &res); err != nil {
@@ -150,32 +157,32 @@ func (s *frameState) writePCM(w *bitstream.Writer, addr int) {
 	}
 }
 
-// analyze 用重建邻块做 SAD 搜索；I4 候选按规范扫描边预测边重建。
-// I16 获胜时覆盖当前宏块，不影响已经重建的邻块或熵上下文。
-func (s *frameState) analyze(addr int) residual {
+// analyzeIntra 用重建邻块做 SATD 搜索；family=1/2 分别为 RD 候选 I4/I16。
+// I4 按规范扫描边预测边重建，不影响已经重建的邻宏块或熵上下文。
+func (s *frameState) analyzeIntra(addr, family int) residual {
 	info := &s.info[addr]
 	mw := s.pic.MBWidth
 	x, y := addr%mw*16, addr/mw*16
 	pl := &s.pic.Planes[0]
 	samples, top, left, tl := s.blockSamples(addr, 0)
 	var best16 [256]byte
-	mode16, cost16 := select16(&best16, &s.src.Planes[0], x, y, samples, top, left, tl)
+	mode16, _ := select16(&best16, &s.src.Planes[0], x, y, samples, top, left, tl)
 	var res residual
-	cost4 := 0
-	for n := 0; n < 16; n++ {
-		r := raster(n)
-		bx, by := r%4, r/4
-		a, t, l, corner := s.samples4(addr, bx, by)
-		var pred [16]byte
-		mode, cost := select4(&pred, &s.src.Planes[0], x+bx*4, y+by*4, a, t, l, corner)
-		info.modes[r] = int8(mode)
-		cost4 += cost
-		putBlock(pl, x+bx*4, y+by*4, 4, pred[:])
-		coeff := residualTransform(&s.src.Planes[0], pl, x+bx*4, y+by*4)
-		transform.Quant4x4(&res.luma[r], &coeff, info.qp)
-		reconstruct(pl, x+bx*4, y+by*4, &res.luma[r], info.qp, nil)
+	if family != 2 {
+		for n := 0; n < 16; n++ {
+			r := raster(n)
+			bx, by := r%4, r/4
+			a, t, l, corner := s.samples4(addr, bx, by)
+			var pred [16]byte
+			mode, _ := select4(&pred, &s.src.Planes[0], x+bx*4, y+by*4, a, t, l, corner)
+			info.modes[r] = int8(mode)
+			putBlock(pl, x+bx*4, y+by*4, 4, pred[:])
+			coeff := residualTransform(&s.src.Planes[0], pl, x+bx*4, y+by*4)
+			transform.Quant4x4(&res.luma[r], &coeff, info.qp)
+			reconstruct(pl, x+bx*4, y+by*4, &res.luma[r], info.qp, nil)
+		}
 	}
-	if cost16 <= cost4+40*max(1, info.qp/6) {
+	if family == 2 {
 		info.is16 = true
 		info.mode16 = mode16
 		putBlock(pl, x, y, 16, best16[:])
@@ -226,7 +233,7 @@ func (s *frameState) chroma(addr int, res *residual) {
 				available = false
 				break
 			}
-			cost += sad(&s.src.Planes[c+1], x, y, 8, pred[c][:])
+			cost += blockSATD(&s.src.Planes[c+1], x, y, 8, pred[c][:])
 		}
 		if available && cost < bestCost {
 			bestCost = cost
@@ -298,15 +305,8 @@ func putBlock(p *picture.Plane, x, y, n int, b []byte) {
 		copy(p.Row(y + j)[x:x+n], b[j*n:(j+1)*n])
 	}
 }
-func sad(p *picture.Plane, x, y, n int, pred []byte) int {
-	cost := 0
-	for j := 0; j < n; j++ {
-		for i := 0; i < n; i++ {
-			d := int(p.Pix(x+i, y+j)) - int(pred[j*n+i])
-			cost += max(d, -d)
-		}
-	}
-	return cost
+func blockSATD(p *picture.Plane, x, y, n int, pred []byte) int {
+	return transform.SATD(p.Data[p.Index(x, y):], p.Stride, pred, n, n, n)
 }
 
 func select4(dst *[16]byte, src *picture.Plane, x, y int, a prediction.Intra4x4Samples, top, left, tl bool) (int, int) {
@@ -317,7 +317,7 @@ func select4(dst *[16]byte, src *picture.Plane, x, y int, a prediction.Intra4x4S
 		}
 		var p [16]byte
 		prediction.Intra4x4(p[:], 4, m, a, top, left)
-		cost := sad(src, x, y, 4, p[:])
+		cost := blockSATD(src, x, y, 4, p[:])
 		if cost < best {
 			best = cost
 			mode = m
@@ -336,7 +336,7 @@ func select16(dst *[256]byte, src *picture.Plane, x, y int, a prediction.IntraBl
 		if prediction.Intra16x16(p[:], 16, m, a, top, left) != nil {
 			continue
 		}
-		cost := sad(src, x, y, 16, p[:])
+		cost := blockSATD(src, x, y, 16, p[:])
 		if cost < best {
 			best = cost
 			mode = m

@@ -6,7 +6,6 @@ import (
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/bitstream"
 	"github.com/goavc/h264/internal/motion"
-	"github.com/goavc/h264/internal/motion/search"
 	"github.com/goavc/h264/internal/picture"
 	"github.com/goavc/h264/internal/prediction"
 	"github.com/goavc/h264/internal/transform"
@@ -45,7 +44,10 @@ func (e *Encoder) encodeP(src *picture.Picture) ([]byte, *frameState, error) {
 		e.pSliceHeader(w, first)
 		for addr := first; addr < last; addr++ {
 			s.info[addr].start = first
-			res := s.analyzeInter(addr, e.searchRange, e.fullSearch)
+			res, err := s.analyzeRD(addr, qp, e.searchRange, e.fullSearch)
+			if err != nil {
+				return nil, nil, err
+			}
 			if s.info[addr].skip {
 				s.info[addr].qp = qp
 				skipRun++
@@ -53,9 +55,18 @@ func (e *Encoder) encodeP(src *picture.Picture) ([]byte, *frameState, error) {
 			}
 			w.WriteUE(skipRun)
 			skipRun = 0
+			if s.info[addr].pcm {
+				s.writePCM(w, addr)
+				continue
+			}
 			trial := bitstream.NewWriter()
 			previousQP := qp
-			if err = s.writeInter(trial, addr, &qp, &res); err != nil {
+			if s.info[addr].inter {
+				err = s.writeInter(trial, addr, &qp, &res)
+			} else {
+				err = s.writeMB(trial, addr, &qp, &res)
+			}
+			if err != nil {
 				return nil, nil, err
 			}
 			if trial.BitsWritten() > 3072 {
@@ -123,63 +134,6 @@ func (s *frameState) mc(addr int, p partition, mv motion.MV) {
 		pl = &s.pic.Planes[c]
 		prediction.MCBlockChroma(pl.Data[pl.Index(x/2, y/2):], pl.Stride, &s.reference.Planes[c], x/2, y/2, p.w/2, p.h/2, int(mv.X), int(mv.Y))
 	}
-}
-
-func (s *frameState) analyzeInter(addr, radius int, full bool) residual {
-	mw := s.pic.MBWidth
-	x, y := addr%mw*16, addr/mw*16
-	info := &s.info[addr]
-	for i := range info.modes {
-		info.modes[i] = -1
-	}
-	skipMV := motion.PredictSkip(s.mv, x/4, y/4, 0)
-	s.mc(addr, partitions[0][0], skipMV)
-	skipResidual := s.interResidual(addr)
-	if info.cbp == 0 {
-		info.inter = true
-		info.skip = true
-		s.mv.SetRect(x/4, y/4, 4, 4, skipMV, 0)
-		return skipResidual
-	}
-	info.cbp = 0
-	bestCost := int(^uint(0) >> 1)
-	var best [4]motion.MV
-	bestKind := 0
-	// 当前 MB 的候选试探只覆盖当前 4×4 网格；每个候选前清除，邻 MB 保持不变。
-	for kind, parts := range partitions {
-		s.clearMotion(addr)
-		cost := kind * 24
-		var vectors [4]motion.MV
-		for i, p := range parts {
-			pred := s.predictPartition(addr, kind, i)
-			mv, sad := search.Integer(&s.src.Planes[0], &s.reference.Planes[0], x+p.x, y+p.y, p.w, p.h, pred, radius, full)
-			vectors[i] = mv
-			cost += sad
-			s.mv.SetRect(x/4+p.x/4, y/4+p.y/4, p.w/4, p.h/4, mv, 0)
-		}
-		if cost < bestCost {
-			bestCost = cost
-			best = vectors
-			bestKind = kind
-		}
-	}
-	s.clearMotion(addr)
-	info.inter = true
-	info.partition = bestKind
-	for i, p := range partitions[bestKind] {
-		best[i], _ = search.Refine(&s.src.Planes[0], &s.reference.Planes[0], x+p.x, y+p.y, p.w, p.h, best[i], radius)
-		s.mc(addr, p, best[i])
-		s.mv.SetRect(x/4+p.x/4, y/4+p.y/4, p.w/4, p.h/4, best[i], 0)
-	}
-	for i := range info.modes {
-		info.modes[i] = -1
-	}
-	res := s.interResidual(addr)
-	if info.cbp == 0 && bestKind == 0 && best[0] == skipMV {
-		info.skip = true
-	}
-	s.reconstructInter(addr, &res)
-	return res
 }
 
 func (s *frameState) interResidual(addr int) residual {

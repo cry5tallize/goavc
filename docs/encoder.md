@@ -49,8 +49,12 @@ if err != nil {
 | WithMacroblockQP(fn) | fn(mbX,mbY) 返回 0..51；同步回调，不得重入实例；不与 WithPCM 共用 |
 | WithSearchRange(n) | 运动搜索半径 1..64 整数像素，默认16；按小图像自适应收缩 |
 | WithFullSearch() | 用穷举代替默认菱形；两者都通过共享 MC 细化半/四像素 |
+| WithAdaptiveQP(n) | 按亮度活动度对基准 QP 加减 0..6，裁剪到0..51；默认关闭，不与显式 QP 回调或 PCM 共用 |
 
 QP=0 仍为有损变换，不等同 PCM。无残差的 I4 不携带 mb_qp_delta，滤波沿用前一宏块 QP。
+M5b 用 SATD 搜索预测，再按三平面重建 SSE + 定点 lambda×实际 CAVLC 位数比较
+Skip、P 的四种分区、I4、I16 和 PCM。运动搜索同时计入 MVD 比特代价；合法零残差 Skip
+和语法位数下界允许安全提前终止。候选试探不会修改先前参考帧。
 QP 回调所有返回值先校验，失败不发布半帧、不递增 IDR；调用方可修正输入后重试。
 
 New 显式拒绝 Main/High、非 YUV420P、非 CQP、Threads>1、无法满足的 Level 和奇数

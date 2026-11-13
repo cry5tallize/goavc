@@ -141,8 +141,9 @@ M5a 已完成本地门禁（`v0.5.1`，远端 CI 待执行）：两种大尺寸�
 | P 早期 Skip / 搜索策略 | 编码分析 | 规范 Skip MV 的三平面量化残差全零时提前选择；整像素分区选择后做亚像素细化 | Conformant | 全部双解码器 Oracle、分区/静态 Skip 实际选择、搜索解析向量 | SAD 启发式可能选择不同分区，不宣称与旧搜索逐比特相同；质量待 M5 整体门禁 |
 | I/P 状态与参考更新 | 公共 API / POC type2 | IDRInterval、输入 KeyFrame 强制 IDR、无重排 PTS=DTS、失败不更新参考 | Conformant | 40 帧序列中 0/17/33 帧 IDR，NAL 实际类型、PTS、三方像素一致 | 暂要求 GOPSize=IDRInterval；完整 I/B/GOP 策略在 M5d；PCM 选项仍为全 IDR |
 | CQP AU 资源门禁 | Annex A / 事务边界 | Auto 几何/帧率校验，实际 AU 上限检查，1080p30 不再因最坏预算在 New 拒绝 | Conformant | `LevelBudgetIsTransactional` 注入超限、已有 Oracle 回归 | 超限返回 ErrResourceLimit 且不发布输出；仍非 HRD/VBV 保证；显式 Level 与 PCM 保留保守初始化检查 |
-| SATD | 编码分析 | 4×4 Hadamard、8×8/16×16 聚合、非对齐 stride | Conformant | 独立常量/脉冲解析解，正负极值 | RD 流水线接入待完成；不参与解码重建 |
-| RD 基础代价 | 编码分析 | Q8 lambda、SSE+lambda×bits、MV/UE/SE 精确位数 | Conformant | QP 0..51 单调性、位数与实际 writer 相等、零/极端 MVD | 模式候选比较尚待集成；没有用自往返宣称新的码流工具支持 |
+| SATD | 编码分析 | 4×4 Hadamard、8×8/16×16 聚合、非对齐 stride、帧内候选搜索 | Conformant | 独立常量/脉冲解析解，正负极值，17 模式实际选择与整帧 Oracle | 不参与解码重建 |
+| RD 代价与决策 | 编码分析 | Q8 lambda、三平面 SSE、实际 CAVLC 位数、MV 比特搜索代价、Skip/四种 P/I4/I16/PCM 全比较 | Conformant | QP 全范围单调性、位数精确、穷举候选最低 J 对照、参考只读、场景变化选择帧内块及完整 Oracle | skip_run 按独立宏块开销估计，不宣称全 slice 全局最优；x264 质量门禁待执行 |
+| RD 剪枝与状态回滚 | 候选事务 | 按 D>=0 与最小语法位数下界提前终止，恢复胜者像素/模式/NZ/MV | Conformant | 未剪枝全部候选对照；逐4×4实际 MV；参考 fuzz 和双解码器 | 非并行；没有以近似像素替代合法模式 |
 | 活动度 QP | 编码分析 / mb_qp_delta | AQ strength 0..6、方差分档、QP 0..51 裁剪 | Conformant | 平坦/棋盘解析活动度、实际 QP=23/29、0/26/51 的 36 帧双解码器 Oracle | 默认关闭；与显式宏块 QP 或 PCM 通道冲突时拒绝 |
 
 ## M6–M9

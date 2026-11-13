@@ -46,9 +46,34 @@ func TestEncoder_InterPartitionCoverageAndSkip(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.ReceivePacket()
+	var counts [4]int
 	for addr, info := range e.last.info {
-		if !info.inter || info.partition != addr%4 {
+		if !info.inter || info.pcm {
 			t.Fatalf("MB %d chose %+v", addr, info)
+		}
+		counts[info.partition]++
+		// RD 可以把同一运动场用更少 MVD 位的等价分区表示；仍严格核对每个
+		// 4×4 块的实际矢量，而不是要求 SAD 阶段的原始分区形状保持不变。
+		for r := 0; r < 16; r++ {
+			kind := addr % 4
+			want := motion.MV{X: 8, Y: 4}
+			switch kind {
+			case 1:
+				want = motion.MV{X: 8 - int32(r/8)*16}
+			case 2:
+				want = motion.MV{Y: 8 - int32(r%4/2)*16}
+			case 3:
+				want = motion.MV{X: 8 - int32(r%4/2)*16, Y: 8 - int32(r/8)*16}
+			}
+			got, ref, ok := e.last.mv.Get(addr%4*4+r%4, addr/4*4+r/4)
+			if !ok || ref != 0 || got != want {
+				t.Fatalf("MB%d block%d MV=%v want=%v ref=%d", addr, r, got, want, ref)
+			}
+		}
+	}
+	for kind, count := range counts {
+		if count == 0 {
+			t.Fatalf("partition %d never selected: %v", kind, counts)
 		}
 	}
 	static, _ := e.Reconstruction()
