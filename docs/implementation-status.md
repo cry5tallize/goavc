@@ -174,8 +174,8 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 
 ## M6：流式I/O（WIP）
 
-分支`feat/m6-streaming`。四个接口、8-bit原始YUV读写、增量Annex-B/AVCC NAL Reader、AU Reader与Annex-B Writer已实现；
-AVCC Writer、取消、背压、自动Flush与长时稳定性门禁尚未完成。接手记录见`docs/gates/m6.md`。
+分支`feat/m6-streaming`。四个接口、8-bit原始YUV读写、增量Annex-B/AVCC NAL Reader、AU Reader与两种AU Writer已实现；
+pipeline、取消、背压、自动Flush与长时稳定性门禁尚未完成。接手记录见`docs/gates/m6.md`。
 
 | Module | 职责 | Status | 证据 | 缺口 |
 |---|---|---|---|---|
@@ -186,6 +186,7 @@ AVCC Writer、取消、背压、自动Flush与长时稳定性门禁尚未完成�
 | AVCC NAL Reader | 复用长度解析器，1..4前缀及avcC取宽度，参数集快照先于样本交付、分配前NAL限额 | Conformant | 固定前缀×分块矩阵、逐处截断、零长度/坏header、超大长度不读载荷、配置拷贝/版本/类型/限额与I/O测试 | 仅NAL封装；不读取MP4 box、不推断时间戳、不组装AU；avcC/MP4整体兼容性仍Partial |
 | AU Reader | SPS/PPS按序解析、AUD/图像标识/可选first_mb规则、POC0/1/2、filler与EOS归属、独立Annex-B Packet | Conformant | 独立比特向量与字节期望、复用源缓冲、AVCC输入、错误/预算/EOF；5份登记语料×6种chunk及本轮ffprobe计数6/4/12/3/6 | 仅渐进8-bit420 I/P/B头部；字段/FMO/冗余/分区等显式Unsupported；不验证残差或恢复时间戳（PTS/DTS/Duration为0）；默认32MiB/4096 NAL，不代替pipeline预算 |
 | Annex-B AU Writer | 完整输入封装验证后复用NAL Writer，规范化四字节起始码、独立单NAL/AU/数量限额 | Conformant | 固定字节解析解、重扫与High CABAC多slice语料一致；坏尾部无输出、输入/输出预算、重试校验、每个写入位置短写/I/O失败粘性及所有权 | 仅接受Annex-B Packet；调用方保证单AU分组，未验证slice/RBSP；默认8MiB单NAL/32MiB输入和输出AU/4096 NAL，不序列化时间戳，不提供传输回滚或取消 |
+| AVCC AU Writer | Annex-B AU重封装为1..4字节大端长度前缀，写前共享封装验证、前缀容量限制及NAL/AU/数量预算 | Conformant | 独立固定字节解析解、1/2字节255/65535边界与多字节长度；坏尾部/后续NAL超限零写出、所有权/短写/I/O粘性；5份语料×2/3/4宽度×6种chunk逐AU一致 | 输入仅已分组Annex-B，默认4字节前缀/8MiB单NAL/32MiB输入和输出AU/4096 NAL；单NAL还受前缀容量限制，不生成avcC/MP4或时间戳，不验证slice，不提供取消 |
 
 ## M7–M9
 

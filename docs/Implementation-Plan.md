@@ -544,7 +544,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 6 | `feat[stream]: add incremental avcc reader with configurable length size` | avcC 自动识别 | 已完成；1..4前缀×分块矩阵、逐处截断/限额/I/O错误、从提供的avcC取宽度及参数集快照；不猜测MP4/流格式 |
 | 7 | `feat[stream]: add access unit assembler with configurable rules` | 边界规则参数化 | 已完成；图像标识/first_mb模式、跨filler保留VCL摘要、AU字节/数量限额；无AUD多slice、POC0/1/2、分块与5份语料ffprobe计数通过 |
 | 8 | `feat[stream]: add annexb writer` | 流式写 | 已完成；完整封装先验证、四字节起始码、NAL/AU/数量限额、短写/错误粘性；固定输出字节与High多slice语料重扫一致 |
-| 9 | `feat[stream]: add avcc writer with length prefix` | 长度前缀 | round-trip |
+| 9 | `feat[stream]: add avcc writer with length prefix` | 长度前缀 | 已完成；1..4大端前缀独立字节解析解、255/65535容量边界、写前封装/限额验证与短写粘性；5份语料×2/3/4宽度×6种chunk逐AU往返一致 |
 | 10 | `feat[stream]: add stream pipeline with bounded buffering` | 有界队列 | 内存上限断言 |
 | 11 | `feat[stream]: add context cancellation and backpressure` | `ctx.Done()` 检查点 | 取消延迟 ≤ 1 帧 |
 | 12 | `feat[stream]: add flush and eof handling in pipeline` | 自动 flush | `io.EOF` 语义 |
