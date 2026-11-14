@@ -63,7 +63,7 @@ func TestInterQuantization_ScalingAndInvalidQP(t *testing.T) {
 	if err := QuantInter4x4WithScaling(&dst, &src, 0, &matrix); err != nil || dst[0] != 0 {
 		t.Fatalf("自定义矩阵死区不符：%v %v", dst, err)
 	}
-	for _, qp := range []int{-1, 52} {
+	for _, qp := range []int{-1, 64} {
 		if err := QuantInter4x4WithScaling(&dst, &src, qp, nil); !errors.Is(err, h264.ErrInvalidData) {
 			t.Fatal("4×4未拒绝非法QP", err)
 		}

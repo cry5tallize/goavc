@@ -5,7 +5,7 @@ import (
 	h264 "github.com/goavc/h264"
 )
 
-// Forward4x4 是 8-bit 残差的可分离整数变换；输入须在 [-255,255]。
+// Forward4x4 是8/10-bit残差共用的可分离整数变换；输入须在[-1023,1023]。
 // 行列基底 C={1111;21-1-2;1-1-11;1-22-1}，缩放合并到量化中。
 // 解码语义见 Spec: 8.5.12；编码侧舍入策略不属于规范要求。
 func Forward4x4(dst, src *[16]int32) {
@@ -46,7 +46,7 @@ func ForwardChromaDC(dst, src *[4]int32) {
 
 var quantScale = [6][3]int64{{13107, 8066, 5243}, {11916, 7490, 4660}, {10082, 6554, 4194}, {9362, 5825, 3647}, {8192, 5243, 3355}, {7282, 4559, 2893}}
 
-// Quant4x4 使用平坦矩阵、intra 死区 1/3 的定点量化；QP 必须在 0..51。
+// Quant4x4 使用平坦矩阵、intra死区1/3的定点量化；QP'必须在0..MaxScaledQP。
 // DC 块需使用 QuantDC，不能把 Hadamard 系数当普通 4×4 处理。
 func Quant4x4(dst, src *[16]int32, qp int) error {
 	return Quant4x4WithScaling(dst, src, qp, nil)
@@ -65,7 +65,7 @@ func QuantInter4x4WithScaling(dst, src *[16]int32, qp int, scaling *[16]uint8) e
 }
 
 func quant4x4WithScaling(dst, src *[16]int32, qp int, scaling *[16]uint8, divisor int64) error {
-	if qp < 0 || qp > 51 {
+	if qp < 0 || qp > MaxScaledQP {
 		return fmt.Errorf("transform: quant qp %d: %w", qp, h264.ErrInvalidData)
 	}
 	if scaling != nil {
@@ -86,7 +86,7 @@ func quant4x4WithScaling(dst, src *[16]int32, qp int, scaling *[16]uint8, diviso
 	return nil
 }
 
-// QuantDC 量化已变换的 I16 或色度 DC，额外一位吸收 Hadamard 缩放。
+// QuantDC 量化已变换的I16或420色度DC，QP'在0..MaxScaledQP，额外一位吸收Hadamard缩放。
 func QuantDC(dst, src []int32, qp int) error {
 	return QuantDCWithScaling(dst, src, qp, 16)
 }
@@ -102,7 +102,7 @@ func QuantInterDCWithScaling(dst, src []int32, qp int, scale uint8) error {
 }
 
 func quantDCWithScaling(dst, src []int32, qp int, scale uint8, divisor int64) error {
-	if qp < 0 || qp > 51 || len(dst) < len(src) {
+	if qp < 0 || qp > MaxScaledQP || len(dst) < len(src) {
 		return fmt.Errorf("transform: invalid DC quantization: %w", h264.ErrInvalidData)
 	}
 	if scale == 0 {

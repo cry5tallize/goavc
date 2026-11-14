@@ -33,9 +33,9 @@
 > High 8×8/ScalingMatrix、Main 渐进帧 I/P/B、direct、加权预测和重排均已验证。
 > Profile 整体保留 Partial，范围外的字段/高位深工具仍明确拒绝；本地门禁证据见 gates/m3.md。
 
-> **M7 已开工：** 分支`feat/m7-high10`。已完成共享布局参数化与内部10-bit420存储，
-> 包括uint16采样、边缘复制、按位深裁剪和缓冲池隔离，规范极值测试与8-bit Oracle回归通过。
-> 高位深变换量化与编解码流水线逐项接入；High10/422/444 Profile仍未支持，不能据此传入10-bit码流。
+> **M7 已开工：** 分支`feat/m7-high10`。前3项共享基础已完成：显式布局参数化、
+> 内部uint16的10-bit420存储及共享变换量化QP'0..63；规范解析测试与8-bit FFmpeg Oracle回归通过。
+> High10解码/编码流水线尚未接入，High10/422/444 Profile仍未支持；不能据内核进度传入10-bit码流。
 
 ## 1. Profile
 
@@ -110,7 +110,7 @@
 | 8×8 逆/正变换 | Conformant | Conformant | 规范逆基定点分析、解析空间基；High Intra8/P 8×8候选/信令/共享逆变换/去块，320帧三方Oracle |
 | 量化 / 反量化 | Conformant | Conformant | M4 平坦矩阵 QP 0..51；编码重建共享反量化；非平坦正向 M5c |
 | ScalingMatrix 应用 | Conformant | Conformant | 编码High六个4×4列表/DC首项与intra/inter8×8列表，光栅配置、PPS扫描/delta与共享重建；320帧组合及126帧4×4/DC+B三方Oracle；限渐进8-bit4:2:0 |
-| 10 bit 变换路径 | TODO | TODO | M7 |
+| 10 bit 变换路径 | Partial | Partial | M7第3项共享内核已按规范解析解验证：QP'0..63、负QPY与色度映射、4×4/8×8/DC及正负极值；编解码流水线尚未接入，Profile不升级 |
 
 ## 7. 滤波
 

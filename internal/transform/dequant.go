@@ -17,7 +17,7 @@ var levelScale4x4 = [6][16]int32{
 	{18, 23, 18, 23, 23, 29, 23, 29, 18, 23, 18, 23, 23, 29, 23, 29},
 }
 
-// MaxQP 是 8-bit 4:2:0 的 QP 上限。
+// MaxQP 是8-bit语法QPY上限；10-bit语法上限仍为51，内核QP'上限见MaxScaledQP。
 const MaxQP = 51
 
 // dequantMul 返回 FFmpeg/libavcodec 使用的定点乘子。
@@ -40,7 +40,7 @@ func dequantMul(scale int32, qp int, matrix uint8) int64 {
 // Dequant4x4 对 16 个系数做 4×4 反量化。
 //
 // levels 与 dst 都按光栅顺序（row*4+col），可以指向同一数组。
-// qp 必须在 0..51 内；越界返回 ErrInvalidData 而不是静默截断。
+// qp 是已转换的有效QP'，必须在0..MaxScaledQP内；越界返回ErrInvalidData。
 // 系数乘积用 int64 计算并检查 int32 溢出，防止恶意 level 造成回绕。
 func Dequant4x4(dst *[16]int32, levels *[16]int32, qp int) error {
 	return Dequant4x4WithScaling(dst, levels, qp, nil)

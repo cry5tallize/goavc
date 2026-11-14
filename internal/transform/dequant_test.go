@@ -75,7 +75,7 @@ func TestDequant4x4_KnownValues(t *testing.T) {
 
 func TestDequant4x4_QPOutOfRange(t *testing.T) {
 	var levels, out [16]int32
-	for _, qp := range []int{-1, MaxQP + 1} {
+	for _, qp := range []int{-1, MaxScaledQP + 1} {
 		if err := Dequant4x4(&out, &levels, qp); !errors.Is(err, h264.ErrInvalidData) {
 			t.Fatalf("qp=%d err = %v, want ErrInvalidData", qp, err)
 		}

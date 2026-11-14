@@ -14,6 +14,8 @@ import (
 //
 //	qmul = levelScale[qP%6][0] * 16 << (qP/6+2)
 //	dc   = (hadamard(levels) * qmul + 128) >> 8
+//
+// qp是已转换的QP'，范围0..MaxScaledQP；Hadamard中间量使用int64。
 func DequantLumaDC(dst *[16]int32, levels *[16]int32, qp int) error {
 	return DequantLumaDCWithScaling(dst, levels, qp, 16)
 }
@@ -22,15 +24,15 @@ func DequantLumaDCWithScaling(dst *[16]int32, levels *[16]int32, qp int, scale u
 	if scale == 0 {
 		return fmt.Errorf("transform: zero luma DC scale: %w", h264.ErrInvalidData)
 	}
-	if qp < 0 || qp > MaxQP {
-		return fmt.Errorf("transform: qp %d out of range 0..%d: %w", qp, MaxQP, h264.ErrInvalidData)
+	if qp < 0 || qp > MaxScaledQP {
+		return fmt.Errorf("transform: qp %d out of range 0..%d: %w", qp, MaxScaledQP, h264.ErrInvalidData)
 	}
-	var tmp [16]int32
+	var tmp [16]int64
 	for i := 0; i < 4; i++ {
-		a := levels[i*4+0]
-		b := levels[i*4+1]
-		c := levels[i*4+2]
-		d := levels[i*4+3]
+		a := int64(levels[i*4+0])
+		b := int64(levels[i*4+1])
+		c := int64(levels[i*4+2])
+		d := int64(levels[i*4+3])
 		s01 := a + b
 		d01 := a - b
 		s23 := c + d
@@ -47,9 +49,9 @@ func DequantLumaDCWithScaling(dst *[16]int32, levels *[16]int32, qp int, scale u
 		d01 := tmp[0*4+i] - tmp[1*4+i]
 		s23 := tmp[2*4+i] + tmp[3*4+i]
 		d23 := tmp[2*4+i] - tmp[3*4+i]
-		out := [4]int32{s01 + s23, s01 - s23, d01 - d23, d01 + d23}
+		out := [4]int64{s01 + s23, s01 - s23, d01 - d23, d01 + d23}
 		for j := 0; j < 4; j++ {
-			v := (int64(out[j])*qmul + 128) >> 8
+			v := (out[j]*qmul + 128) >> 8
 			if v < -1<<31 || v > 1<<31-1 {
 				return fmt.Errorf("transform: luma dc coefficient overflows int32: %w", h264.ErrInvalidData)
 			}
@@ -71,6 +73,7 @@ func DequantLumaDCWithScaling(dst *[16]int32, levels *[16]int32, qp int, scale u
 //
 // 注意这里没有 +64；这是规范 8.5.11 与 8.5.10 的差异之一，
 // 多一个舍入常数就会让 P 帧逐像素对比出现系统性偏差。
+// qp是已转换的QP'，范围0..MaxScaledQP；Hadamard中间量使用int64。
 func DequantChromaDC(dst *[4]int32, levels *[4]int32, qp int) error {
 	return DequantChromaDCWithScaling(dst, levels, qp, 16)
 }
@@ -79,19 +82,19 @@ func DequantChromaDCWithScaling(dst *[4]int32, levels *[4]int32, qp int, scale u
 	if scale == 0 {
 		return fmt.Errorf("transform: zero chroma DC scale: %w", h264.ErrInvalidData)
 	}
-	if qp < 0 || qp > MaxQP {
-		return fmt.Errorf("transform: qp %d out of range 0..%d: %w", qp, MaxQP, h264.ErrInvalidData)
+	if qp < 0 || qp > MaxScaledQP {
+		return fmt.Errorf("transform: qp %d out of range 0..%d: %w", qp, MaxScaledQP, h264.ErrInvalidData)
 	}
-	a, b, c, d := levels[0], levels[1], levels[2], levels[3]
+	a, b, c, d := int64(levels[0]), int64(levels[1]), int64(levels[2]), int64(levels[3])
 	qmul := dequantMul(levelScale4x4[qp%6][0], qp, scale)
-	sums := [4]int32{
+	sums := [4]int64{
 		a + b + c + d,
 		a - b + c - d,
 		a + b - c - d,
 		a - b - c + d,
 	}
 	for i := range sums {
-		v := (int64(sums[i]) * qmul) >> 7
+		v := (sums[i] * qmul) >> 7
 		if v < -1<<31 || v > 1<<31-1 {
 			return fmt.Errorf("transform: chroma dc coefficient overflows int32: %w", h264.ErrInvalidData)
 		}

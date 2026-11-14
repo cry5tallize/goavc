@@ -31,7 +31,7 @@ var inverse8Basis64 = [8][8]int64{
 }
 var inverse8Norm = [8]int64{32768, 36992, 20480, 36992, 32768, 36992, 20480, 36992}
 
-// Forward8x8 将[-255,255]的8-bit残差投影到规范逆变换的正交基。
+// Forward8x8 将[-1023,1023]的8/10-bit残差投影到规范逆变换的正交基。
 // 输入输出按光栅顺序，可原地调用；不使用浮点近似或另一份逆变换。
 // IDCT输出为 A*C*Aᵀ/64，故 C=64*Aᵀ*src*A/(各轴平方范数)。
 // 基底放大64后分子系数为2^18；合法残差的全部中间量在int64范围内。
@@ -70,6 +70,7 @@ func absForward(value int64) int64 {
 // Quant8x8WithScaling 以解码器的逆量化矩阵为基准选择量化级。
 // 量化器不是码流规范的一部分；反推实际 inverse scale 保证矩阵应用和
 // QP 缩放与 Dequant8x8 完全配对。nil scaling 表示 4:2:0 flat=16。
+// qp是已转换的QP'，范围0..MaxScaledQP；帧内和帧间共用该边界。
 func Quant8x8WithScaling(dst, src *[64]int32, qp int, scaling *[64]uint8) error {
 	return quant8x8WithScaling(dst, src, qp, scaling, 3)
 }
@@ -80,7 +81,7 @@ func QuantInter8x8WithScaling(dst, src *[64]int32, qp int, scaling *[64]uint8) e
 }
 
 func quant8x8WithScaling(dst, src *[64]int32, qp int, scaling *[64]uint8, divisor int64) error {
-	if qp < 0 || qp > MaxQP {
+	if qp < 0 || qp > MaxScaledQP {
 		return fmt.Errorf("transform: 8x8 quant QP %d: %w", qp, h264.ErrInvalidData)
 	}
 	for i, value := range src {
@@ -109,8 +110,9 @@ func quant8x8WithScaling(dst, src *[64]int32, qp int, scaling *[64]uint8, diviso
 	return nil
 }
 
+// Dequant8x8 接受已转换的QP'（0..MaxScaledQP），输出检查int32溢出。
 func Dequant8x8(dst, levels *[64]int32, qp int, scaling *[64]uint8) error {
-	if qp < 0 || qp > 51 {
+	if qp < 0 || qp > MaxScaledQP {
 		return fmt.Errorf("transform: 8x8 QP %d: %w", qp, h264.ErrInvalidData)
 	}
 	for i := 0; i < 64; i++ {
@@ -176,8 +178,9 @@ func IDCT8x8(dst, src *[64]int32) error {
 	return nil
 }
 
+// Dequant4x4WithScaling 接受已转换的QP'（0..MaxScaledQP）；nil使用平坦矩阵。
 func Dequant4x4WithScaling(dst, levels *[16]int32, qp int, scaling *[16]uint8) error {
-	if qp < 0 || qp > 51 {
+	if qp < 0 || qp > MaxScaledQP {
 		return fmt.Errorf("transform: 4x4 QP %d: %w", qp, h264.ErrInvalidData)
 	}
 	for i := 0; i < 16; i++ {
