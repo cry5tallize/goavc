@@ -71,6 +71,15 @@ func absForward(value int64) int64 {
 // 量化器不是码流规范的一部分；反推实际 inverse scale 保证矩阵应用和
 // QP 缩放与 Dequant8x8 完全配对。nil scaling 表示 4:2:0 flat=16。
 func Quant8x8WithScaling(dst, src *[64]int32, qp int, scaling *[64]uint8) error {
+	return quant8x8WithScaling(dst, src, qp, scaling, 3)
+}
+
+// QuantInter8x8WithScaling 与4×4帧间路径采用相同的1/6死区。
+func QuantInter8x8WithScaling(dst, src *[64]int32, qp int, scaling *[64]uint8) error {
+	return quant8x8WithScaling(dst, src, qp, scaling, 6)
+}
+
+func quant8x8WithScaling(dst, src *[64]int32, qp int, scaling *[64]uint8, divisor int64) error {
 	if qp < 0 || qp > MaxQP {
 		return fmt.Errorf("transform: 8x8 quant QP %d: %w", qp, h264.ErrInvalidData)
 	}
@@ -88,7 +97,7 @@ func Quant8x8WithScaling(dst, src *[64]int32, qp int, scaling *[64]uint8) error 
 		if v < 0 {
 			v = -v
 		}
-		level := (v*64 + mul/3) / mul
+		level := (v*64 + mul/divisor) / mul
 		if src[i] < 0 {
 			level = -level
 		}

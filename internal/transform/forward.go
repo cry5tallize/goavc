@@ -55,6 +55,16 @@ func Quant4x4(dst, src *[16]int32, qp int) error {
 // Quant4x4WithScaling 在原量化乘子上施加16/matrix，nil保持flat逐比特一致。
 // 矩阵为光栅顺序；所有矩阵项先验证再写输出，非法输入不产生半块结果。
 func Quant4x4WithScaling(dst, src *[16]int32, qp int, scaling *[16]uint8) error {
+	return quant4x4WithScaling(dst, src, qp, scaling, 3)
+}
+
+// QuantInter4x4WithScaling 使用帧间死区1/6，抑制预测噪声的细小系数。
+// 帧内仍保留1/3舍入；只改变编码器的级选择，不改变共享逆量化语义。
+func QuantInter4x4WithScaling(dst, src *[16]int32, qp int, scaling *[16]uint8) error {
+	return quant4x4WithScaling(dst, src, qp, scaling, 6)
+}
+
+func quant4x4WithScaling(dst, src *[16]int32, qp int, scaling *[16]uint8, divisor int64) error {
 	if qp < 0 || qp > 51 {
 		return fmt.Errorf("transform: quant qp %d: %w", qp, h264.ErrInvalidData)
 	}
@@ -71,7 +81,7 @@ func Quant4x4WithScaling(dst, src *[16]int32, qp int, scaling *[16]uint8) error 
 		if scaling != nil {
 			mul = (mul*16 + int64(scaling[i])/2) / int64(scaling[i])
 		}
-		dst[i] = quantize(v, mul, 15+qp/6)
+		dst[i] = quantizeWithDeadZone(v, mul, 15+qp/6, divisor)
 	}
 	return nil
 }
@@ -83,6 +93,15 @@ func QuantDC(dst, src []int32, qp int) error {
 
 // QuantDCWithScaling 对Hadamard DC仅使用对应4×4矩阵的首项。
 func QuantDCWithScaling(dst, src []int32, qp int, scale uint8) error {
+	return quantDCWithScaling(dst, src, qp, scale, 3)
+}
+
+// QuantInterDCWithScaling 将同一帧间死区应用到色度Hadamard DC。
+func QuantInterDCWithScaling(dst, src []int32, qp int, scale uint8) error {
+	return quantDCWithScaling(dst, src, qp, scale, 6)
+}
+
+func quantDCWithScaling(dst, src []int32, qp int, scale uint8, divisor int64) error {
 	if qp < 0 || qp > 51 || len(dst) < len(src) {
 		return fmt.Errorf("transform: invalid DC quantization: %w", h264.ErrInvalidData)
 	}
@@ -90,17 +109,21 @@ func QuantDCWithScaling(dst, src []int32, qp int, scale uint8) error {
 		return fmt.Errorf("transform: zero DC quant scaling entry: %w", h264.ErrInvalidData)
 	}
 	for i, v := range src {
-		dst[i] = quantize(v, (quantScale[qp%6][0]*16+int64(scale)/2)/int64(scale), 16+qp/6)
+		dst[i] = quantizeWithDeadZone(v, (quantScale[qp%6][0]*16+int64(scale)/2)/int64(scale), 16+qp/6, divisor)
 	}
 	return nil
 }
 
 func quantize(v int32, mul int64, shift int) int32 {
+	return quantizeWithDeadZone(v, mul, shift, 3)
+}
+
+func quantizeWithDeadZone(v int32, mul int64, shift int, divisor int64) int32 {
 	a := int64(v)
 	if a < 0 {
 		a = -a
 	}
-	q := int32((a*mul + (int64(1)<<shift)/3) >> shift)
+	q := int32((a*mul + (int64(1)<<shift)/divisor) >> shift)
 	if v < 0 {
 		return -q
 	}
