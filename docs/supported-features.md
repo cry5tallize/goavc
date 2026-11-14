@@ -147,12 +147,13 @@
 
 | 能力 | 状态 | 证据与边界 |
 |---|---|---|
-| 四个流接口 | Partial | 帧读写与AU Reader已有具体实现；AU Writer与pipeline待实现 |
+| 四个流接口 | Conformant | 均有具体实现、编译断言和所有权/EOF/同步消费测试；仅接口与同步I/O，pipeline另行验收 |
 | 8-bit YUV Reader | Conformant | 420/422/444、奇数尺寸、独立帧所有权、序号PTS/Duration1、帧边界EOF和尾帧截断；已知字节布局验证。原始I/O不扩大编码器格式支持 |
 | 8-bit YUV Writer | Conformant | 跳过stride填充、最小末行缓冲、写前完整校验、短写及I/O失败后停止追加；已知字节与三格式多帧往返验证。无原始流元数据头 |
 | 增量Annex-B NAL Reader | Conformant | 跨1/2/3/7/4096/整文件chunk，独立EBSP、默认8MiB单NAL限额、严格前导与残缺尾起始码处理；只切分NAL，不提供AU/帧/时间戳 |
 | 增量AVCC NAL Reader | Conformant | 1..4长度前缀、从提供的avcC取宽度并先交付复制的参数集，默认8MiB单NAL、分配前限额、截断/错误粘性；仅NAL，不解析MP4或提供AU/时间戳 |
 | 增量AU Reader | Conformant | 解析SPS/PPS/slice header，默认图像标识或可选first_mb规则；AUD/POC/filler/末AU测试及5份语料×6种chunk、ffprobe计数通过。独立Annex-B输出，默认32MiB/4096 NAL；时间戳均0，不验证残差，字段/FMO/冗余/分区等显式拒绝 |
+| Annex-B AU Writer | Conformant | 完整封装/预算验证后写四字节起始码，坏尾部不提前写、短写/I/O错误后停止追加；固定字节及High多slice语料重扫一致。只接受调用方已分组的Annex-B AU，不验证slice或序列化时间戳；默认8MiB单NAL、32MiB输入及输出AU、4096 NAL |
 
 ## 11. 明确不支持（第一版）
 

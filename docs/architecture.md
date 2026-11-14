@@ -96,6 +96,7 @@ decoder              encoder
 | `stream.AnnexBReader.ReadNAL()` | 返回的EBSP独立归调用方，后续读取不覆盖；不组装AU或推断时间戳，底层Reader仍由调用方关闭 |
 | `stream.AVCCReader.ReadNAL()` | 独立EBSP；FromConfig先交付构造时复制的SPS/PPS/扩展再读样本，不保留原avcC引用；不组装AU或推断时间戳 |
 | `stream.AUReader.ReadAccessUnit()` | 独立Annex-B Packet；复制挂起NAL以允许源复用缓冲，后续读取不覆盖；裸流PTS/DTS/Duration均0，KeyFrame仅IDR |
+| `stream.AnnexBWriter.WriteAccessUnit()` | 同步消费Annex-B Packet，完整封装和预算验证后才写出；不保留Data，不写时间戳，不关闭底层Writer；传输失败粘性 |
 | `Frame.Clone()` | 独立内存，不参与池管理，调用方负责释放（GC 回收即可） |
 | `Frame.Release()` | 幂等；调用后帧失效，`Validate` 返回 `ErrInvalidData` |
 

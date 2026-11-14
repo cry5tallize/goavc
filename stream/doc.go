@@ -9,6 +9,6 @@
 //   - 不实现 MP4 demux/mux：这里只处理 Annex-B 与长度前缀码流，
 //     MP4/RTP/WebRTC 属于独立适配层。
 //
-// 当前已实现四个流接口、8-bit YUV读写、有界Annex-B/AVCC NAL Reader及AU Reader；
+// 当前已实现四个流接口、8-bit YUV读写、有界Annex-B/AVCC NAL Reader、AU Reader及Annex-B Writer；
 // pipeline、取消、背压和自动Flush尚未接入，不能据本包存在宣称M6完整门禁通过。
 package stream
