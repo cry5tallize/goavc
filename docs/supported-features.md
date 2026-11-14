@@ -27,13 +27,13 @@
 >
 > **M2 状态说明：** Baseline 的无重排、单参考 CAVLC I/P 解码已通过整帧 Oracle。
 > `Conformant` 仅针对表内注明的范围；Baseline Profile 整体保留 `Partial`，因为
-> FMO/ASO、冗余 slice 等高级工具仍未实现。编码流水线从 M4 开始。
+> FMO/ASO已由M7接入并通过规范像素向量；冗余slice及其余组合边界仍按各项记录。编码流水线从M4开始。
 >
 > **M3 进展：** CABAC/CAVLC 多参考 I/P/B、MMCO 与长期参考已验证；
 > High 8×8/ScalingMatrix、Main 渐进帧 I/P/B、direct、加权预测和重排均已验证。
 > Profile 整体保留 Partial，范围外的字段/高位深工具仍明确拒绝；本地门禁证据见 gates/m3.md。
 
-> **M7 进展：** 当前分支`feat/m7-high422`。第1–15项及共享预测/滤波/运动前置已完成；
+> **M7 进展：** 当前分支`feat/m7-high422`。第1–16项及共享预测/滤波/运动前置已完成；
 > High10渐进420双熵I/P/B解码、原生LE输出与压缩编码通过独立Oracle，编码32配置共384帧三方逐采样一致。
 > High422/High444渐进8/10-bit双熵编解码、原生LE与实际CLI已验收；六格式QP/矩阵/权重/B/码控三方Oracle通过。MBAFF解码见下，PAFF与transform bypass仍拒绝，不声明完整Profile支持。
 > 共享预测已提供byte/uint16类型实例：高位深帧内、六抽头/色度MC、权重以及422矩形色度预测。
@@ -76,7 +76,7 @@
 | 语法元素 | Spec | Decoder | Encoder | 备注 |
 |---|---|---|---|---|
 | SPS | 7.3.2.1 | Partial | Partial | M7扩展Profile及帧/场/MBAFF语法通过规范字节；真实隔行h264probe成功，像素流水线的场/MBAFF仍拒绝，组合级范围见台账 |
-| PPS | 7.3.2.2 | Partial | Partial | 核心与缩放扩展；M7 FMO 0–6读写、动态cycle与帧场地址映射通过独立规范字节/解析解及完整常规门禁；FMO像素流水线尚未接入 |
+| PPS | 7.3.2.2 | Partial | Partial | 核心与缩放扩展；M7 FMO 0–6读写、动态cycle与帧场地址映射通过独立规范字节/解析解；Baseline/Extended CAVLC像素遍历/ASO与实际CLI通过，组合限制见台账 |
 | VUI | E.1 | Partial | Partial | M1 结构往返；timing/HRD 语义待 Oracle |
 | ScalingList | 7.3.2.1.1.1 | Conformant | Partial | M3 4×4/8×8、SPS/PPS fallback、JVT 与实际应用 Oracle |
 | SEI（user_data / recovery point） | 7.3.2.3 | Partial | Partial | M1 框架与 user_data；其余语义消息 M2/M3 |
@@ -169,7 +169,7 @@
 | 8-bit YUV Writer | Conformant | 跳过stride填充、最小末行缓冲、写前完整校验、短写及I/O失败后停止追加；已知字节与三格式多帧往返验证。无原始流元数据头 |
 | 增量Annex-B NAL Reader | Conformant | 跨1/2/3/7/4096/整文件chunk，独立EBSP、默认8MiB单NAL限额、严格前导与残缺尾起始码处理；只切分NAL，不提供AU/帧/时间戳 |
 | 增量AVCC NAL Reader | Conformant | 1..4长度前缀、从提供的avcC取宽度并先交付复制的参数集，默认8MiB单NAL、分配前限额、截断/错误粘性；仅NAL，不解析MP4或提供AU/时间戳 |
-| 增量AU Reader | Conformant | 解析渐进8/10-bit及MBAFF SPS/PPS/slice头和宏块对首址；原分块/预算证据及MBAFF stream回归、实际CLI通过。独立Annex-B输出，默认32MiB/4096 NAL；时间戳均0，不验证残差，PAFF/FMO/冗余/分区仍拒绝 |
+| 增量AU Reader | Conformant | 解析渐进8/10-bit、MBAFF和FMO/ASO的SPS/PPS/slice头；默认按图片标识分组，不以first_mb=0切开乱序图片；FMO实际CLI通过。默认32MiB/4096 NAL，时间戳均0，不验证残差，PAFF/冗余/分区仍拒绝 |
 | Annex-B AU Writer | Conformant | 完整封装/预算验证后写四字节起始码，坏尾部不提前写、短写/I/O错误后停止追加；固定字节及High多slice语料重扫一致。只接受调用方已分组的Annex-B AU，不验证slice或序列化时间戳；默认8MiB单NAL、32MiB输入及输出AU、4096 NAL |
 | AVCC AU Writer | Conformant | 已分组Annex-B AU转1..4字节大端前缀（默认4），与Annex-B Writer共享完整封装/限额验证；长度容量在扫描分配前收紧，坏尾部/后续NAL超限零写出，短写/I/O错误粘性。独立字节解析解及5份语料分块往返通过；默认8MiB单NAL、32MiB输入及输出AU、4096 NAL，不生成avcC/MP4或时间戳，不验证slice |
 | EncodeStream / DecodeStream | Conformant | 自有codec、同步背压、源EOF自动Flush到io.EOF；全部26份支持语料×Annex-B/AVCC×四种chunk对独立FFmpeg哈希，PCM/B/Lookahead尾部与时钟已测。MaxInputBuffer默认16MiB限制单输入，不是RSS总上限 |

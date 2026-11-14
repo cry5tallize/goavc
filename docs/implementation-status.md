@@ -222,6 +222,7 @@ High10渐进420编解码及High422/High444渐进8/10-bit解码已接入，限定
 | 13：MBAFF宏块对解码 | 双熵宏块对遍历/Skip场标志推导，帧场混合物理邻域、原生场视图/扫描/MV与参考，B Direct、逐对去块及420对侧场色度相位 | Conformant | 六格式×双熵×TFF/BFF×四类I/P/B/8×8矩阵×全场/真实混合共192配置、1152帧外部x264/FFmpeg逐采样一致；混合PCM与对侧场规范码流；原Main隔行四帧固定YUV哈希及manifest状态迁移；独立完整CGO=0门禁（35包依赖/30条语料）与真实六帧CLI二进制比较通过 | 只接受MBAFF帧图片，PAFF及非MBAFF隔行序列仍ErrUnsupported；FMO/ASO/分区/SP/SI/冗余及transform bypass另项验收；未据此关闭M7总门禁 |
 | 14：顶/底场优先隔行编码 | WithInterlaced与CLI field-order，真实全field-coded MBAFF宏块对、原生场预测/扫描/重建/滤波及逐帧pic_timing | Conformant | 六格式/双熵/TFF-BFF/1与3slice、I/P/B/8×8矩阵/权重、负QP与显式PCM三方像素通过，独立平面按单色投影比较；跨pair-row无同slice邻pair的双Skip推导回归；完整CGO=0独立门禁及TFF/BFF实际CLI各六帧像素/逐帧场序通过 | 固定选择真实场宏块，不做自适应帧/场RDO，不生成PAFF；高度须能由2*SubHeightC裁剪单位表达，Baseline拒绝；B仍限既有非参考spatial-direct工具 |
 | 15：FMO 0–6语法与映射 | PPS参数读写、动态slice_group_change_cycle位宽、map-unit/帧场宏块映射及NextMBAddress | Conformant | 固定规范PPS字节、七类型手算映射、双方向/矩形覆盖/退化尺寸/动态cycle与payload边界、坏表及分配前资源限制；独立暂存区完整CGO=0门禁通过（35包依赖/30条语料） | 本项仅语法和地址映射；FMO/ASO像素解码仍由第16项接入，不宣称完整Baseline/Extended支持 |
+| 16：FMO/ASO宏块顺序解码 | 按组首址排序、NextMbAddress遍历、逐MB覆盖所有权、CAVLC上下文/MVP隔离与统一去块 | Conformant | 七种映射的非均匀PCM逐采样解析解、I4跨slice邻居不可用、普通逆序ASO、P非零MVD及跨组skip_run、cycle不一致/重叠/缺失/越界拒绝及IDR恢复；独立完整CGO=0门禁及真实h264dec 64×64三平面6144字节比较通过 | FMO限Baseline/Extended CAVLC，非法Main/High或CABAC组合返回ErrInvalidData；不生成FMO/ASO编码；PAFF仍拒绝，非PCM高级外部静态语料另验收 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。

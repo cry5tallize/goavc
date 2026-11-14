@@ -290,7 +290,7 @@ func usesHighProfileSyntax(profile uint8) bool {
 // validateSupported 限制已经接入共享内核与流水线的工具组合。
 func (s *SPS) validateSupported() error {
 	switch s.ProfileIDC {
-	case 66, 77, 100, 110, 122, 244:
+	case 66, 77, 88, 100, 110, 122, 244:
 	default:
 		return fmt.Errorf("syntax: profile_idc %d is not supported: %w",
 			s.ProfileIDC, h264.ErrUnsupported)

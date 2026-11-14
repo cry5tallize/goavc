@@ -78,7 +78,7 @@ func TestUnsupported_PAFFDoesNotPolluteRecovery(t *testing.T) {
 	}
 }
 
-func TestUnsupported_ArbitrarySliceOrder(t *testing.T) {
+func TestASO_InconsistentPayloadRejected(t *testing.T) {
 	d := mustDecoder(t, h264.DecoderConfig{})
 	var idr nal.Unit
 	for _, u := range baselineUnits(t) {
@@ -100,7 +100,7 @@ func TestUnsupported_ArbitrarySliceOrder(t *testing.T) {
 	ha.FirstMBInSlice = 1
 	hb.FirstMBInSlice = 0
 	a.hdr, b.hdr = &ha, &hb
-	if err := d.decodeFrame([]sliceEntry{a, b}, h264.Packet{}); !errors.Is(err, h264.ErrUnsupported) {
+	if err := d.decodeFrame([]sliceEntry{a, b}, h264.Packet{}); !errors.Is(err, h264.ErrInvalidData) {
 		t.Fatal(err)
 	}
 }

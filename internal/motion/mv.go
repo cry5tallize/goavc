@@ -48,6 +48,9 @@ type Grid struct {
 	Ref        []int8
 	valid      []bool
 	sliceStart int
+	// mappedOwners只借用于当前slice解码；BeginSlice/Reset解除引用。
+	mappedOwners []int
+	mappedSlice  int
 }
 
 // NewGrid 分配一张与图像尺寸匹配的网格。
@@ -73,12 +76,26 @@ func (g *Grid) Available(bx, by int) bool {
 	if g == nil || bx < 0 || by < 0 || bx >= g.BlockW || by >= g.BlockH {
 		return false
 	}
-	return (by/4)*g.MBWidth+bx/4 >= g.sliceStart && g.valid[g.index(bx, by)]
+	mb := (by/4)*g.MBWidth + bx/4
+	if g.mappedOwners != nil {
+		return mb < len(g.mappedOwners) && g.mappedOwners[mb] == g.mappedSlice && g.valid[g.index(bx, by)]
+	}
+	return mb >= g.sliceStart && g.valid[g.index(bx, by)]
 }
 
 // BeginSlice 限制预测邻块到当前 slice；调用 BeginSlice(0) 可恢复整帧
 // 视图供去块使用。M2 的 slice 按宏块地址递增且不重叠。
-func (g *Grid) BeginSlice(firstMB int) { g.sliceStart = firstMB }
+func (g *Grid) BeginSlice(firstMB int) {
+	g.sliceStart = firstMB
+	g.mappedOwners = nil
+}
+
+// BeginMappedSlice使用非连续MB的slice身份限制MVP；owners按帧光栅索引，
+// 长度须为MBWidth*MBHeight。只借用到下次BeginSlice或Reset，不复制数据。
+func (g *Grid) BeginMappedSlice(owners []int, sliceID int) {
+	g.sliceStart = 0
+	g.mappedOwners, g.mappedSlice = owners, sliceID
+}
 
 // Get 返回块的 MV 与参考索引；不可用时 ok=false。
 func (g *Grid) Get(bx, by int) (MV, int8, bool) {
@@ -109,7 +126,7 @@ func (g *Grid) SetRect(bx, by, w, h int, mv MV, ref int8) {
 
 // Reset 清空网格，供新帧复用。
 func (g *Grid) Reset() {
-	g.sliceStart = 0
+	g.BeginSlice(0)
 	for i := range g.MV {
 		g.MV[i] = MV{}
 		g.Ref[i] = -1

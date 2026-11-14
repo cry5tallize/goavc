@@ -15,16 +15,17 @@ import (
 
 // sliceEntry 是解析后的一个 slice：header 与定位好的 slice data reader。
 type sliceEntry struct {
-	unit      nal.Unit
-	hdr       *syntax.SliceHeader
-	sps       *syntax.SPS
-	pps       *syntax.PPS
-	rbsp      []byte
-	data      *bitstream.Reader
-	cabac     *cabacSyntax
-	refs      [2][]*dpb.Reference
-	frameRefs [2][]*dpb.Reference
-	fieldRefs [2][2][]*dpb.Reference
+	unit           nal.Unit
+	hdr            *syntax.SliceHeader
+	sps            *syntax.SPS
+	pps            *syntax.PPS
+	rbsp           []byte
+	data           *bitstream.Reader
+	cabac          *cabacSyntax
+	refs           [2][]*dpb.Reference
+	frameRefs      [2][]*dpb.Reference
+	fieldRefs      [2][2][]*dpb.Reference
+	firstMB, endMB int
 }
 
 // mbInfo 是去块滤波与后续 MB 预测需要的宏块元数据。
@@ -72,6 +73,8 @@ type frameState struct {
 	framePOC         int32
 	fieldPOC         [2]int32
 	decoded          []bool
+	groupMap         []uint8 // FMO按语法扫描地址索引；普通单组不分配。
+	sliceOwners      []int   // 物理MB的slice身份，供非连续组的运动邻域使用。
 	info             []mbInfo
 	lumaNZ           []uint8
 	chromaNZ         [2][]uint8
@@ -176,6 +179,7 @@ func newFrameStateForPicture(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFram
 		fs.mvd = make([]motion.MV, total*16)
 	}
 	for i := range fs.info {
+		fs.info[i].sliceID = -1
 		fs.info[i].intraModes = [16]int8{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
 		fs.info[i].chromaMode = -1
 	}
@@ -257,15 +261,11 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 	if len(slices) == 0 {
 		return nil
 	}
-	first := slices[0]
-	var previous [3]uint32
-	for i := range slices {
-		plane := int(slices[i].hdr.ColourPlaneID)
-		if slices[i].hdr.FirstMBInSlice < previous[plane] {
-			return fmt.Errorf("decoder: arbitrary slice order: %w", h264.ErrUnsupported)
-		}
-		previous[plane] = slices[i].hdr.FirstMBInSlice
+	groupMap, err := prepareSliceOrder(slices)
+	if err != nil {
+		return err
 	}
+	first := slices[0]
 	sps, pps := first.sps, first.pps
 	if err := d.checkSupported(sps, pps, first.hdr); err != nil {
 		return err
@@ -331,14 +331,16 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 			states[comp].framePOC, states[comp].fieldPOC = poc, [2]int32{top, bottom}
 		}
 	}
+	if err := assignSliceOwnership(slices, states, planeCount, groupMap); err != nil {
+		return err
+	}
 
 	if len(slices) > d.cfg.MaxSliceCount {
 		return fmt.Errorf("decoder: slice count %d exceeds limit %d: %w",
 			len(slices), d.cfg.MaxSliceCount, h264.ErrResourceLimit)
 	}
 
-	// 校验 slice 覆盖范围：first_mb 必须递增且首 slice 从 0 开始。
-	var lastEnd [3]int
+	// 每个slice沿本组地址遍历；所有权预检保证首址、组和覆盖完整。
 	for si := range slices {
 		s := &slices[si]
 		plane := int(s.hdr.ColourPlaneID)
@@ -361,41 +363,11 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 			}
 		}
 		s.frameRefs = s.refs
-		factor := 1
-		if fs.mbaff {
-			factor = 2
-		}
-		if uint64(s.hdr.FirstMBInSlice)*uint64(factor) >= uint64(fs.total) {
-			return fmt.Errorf("decoder: first_mb_in_slice %d exceeds picture: %w",
-				s.hdr.FirstMBInSlice, h264.ErrInvalidData)
-		}
-		firstMB := int(s.hdr.FirstMBInSlice) * factor
-		if firstMB < lastEnd[plane] {
-			return fmt.Errorf("decoder: overlapping slices at first_mb %d: %w",
-				s.hdr.FirstMBInSlice, h264.ErrInvalidData)
-		}
-		if lastEnd[plane] == 0 && s.hdr.FirstMBInSlice != 0 {
-			return fmt.Errorf("decoder: first slice starts at mb %d: %w",
-				s.hdr.FirstMBInSlice, h264.ErrInvalidData)
-		}
-		end := fs.total
-		for next := si + 1; next < len(slices); next++ {
-			if slices[next].hdr.ColourPlaneID == s.hdr.ColourPlaneID {
-				limit := uint64(slices[next].hdr.FirstMBInSlice) * uint64(factor)
-				if limit > uint64(fs.total) {
-					return fmt.Errorf("decoder: slice end exceeds picture: %w", h264.ErrInvalidData)
-				}
-				end = int(limit)
-				break
-			}
-		}
-		if end <= firstMB || end > fs.total {
-			return fmt.Errorf("decoder: invalid slice interval: %w", h264.ErrInvalidData)
-		}
+		firstMB, end := s.firstMB, s.endMB
 		if err := decodeSlice(fs, s, si, firstMB, end); err != nil {
 			return err
 		}
-		lastEnd[plane] = end
+		// 末端由同组下一个slice首址决定，不以其他组首址截断。
 	}
 	for comp := 0; comp < planeCount; comp++ {
 		state := states[comp]
@@ -463,8 +435,8 @@ func (d *Decoder) checkSupported(sps *syntax.SPS, pps *syntax.PPS, hdr *syntax.S
 	if hdr.FieldPicFlag || !sps.FrameMbsOnlyFlag && !sps.MbAdaptiveFrameFieldFlag {
 		return fmt.Errorf("decoder: PAFF field pictures: %w", h264.ErrUnsupported)
 	}
-	if pps.NumSliceGroupsMinus1 != 0 {
-		return fmt.Errorf("decoder: FMO slice groups: %w", h264.ErrUnsupported)
+	if pps.NumSliceGroupsMinus1 != 0 && (pps.EntropyCodingModeFlag || (sps.ProfileIDC != 66 && sps.ProfileIDC != 88)) {
+		return fmt.Errorf("decoder: FMO requires Baseline/Extended CAVLC: %w", h264.ErrInvalidData)
 	}
 	if sps.ChromaFormatIDC < 1 || sps.ChromaFormatIDC > 3 || sps.BitDepthLumaMinus8 != sps.BitDepthChromaMinus8 || (sps.BitDepthLumaMinus8 != 0 && sps.BitDepthLumaMinus8 != 2) {
 		return fmt.Errorf("decoder: only 8/10-bit 4:2:0/4:2:2/4:4:4: %w", h264.ErrUnsupported)
@@ -494,38 +466,8 @@ func decodeSlice(fs *frameState, s *sliceEntry, sliceID int, first, end int) err
 			return err
 		}
 	} else {
-		fs.mv.BeginSlice(first)
-		if fs.mv1 != nil {
-			fs.mv1.BeginSlice(first)
-		}
-		qscale := s.hdr.SliceQP
-		for addr := first; addr < end; addr++ {
-			if fs.decoded[addr] {
-				return fmt.Errorf("decoder: macroblock %d decoded twice: %w", addr, h264.ErrInvalidData)
-			}
-			if s.hdr.Type == syntax.SliceTypeP || s.hdr.Type == syntax.SliceTypeB {
-				run, err := s.data.ReadUE()
-				if err != nil {
-					return fmt.Errorf("decoder: mb_skip_run at mb %d: %w", addr, err)
-				}
-				if run > uint32(end-addr) {
-					return fmt.Errorf("decoder: mb_skip_run %d overruns slice: %w", run, h264.ErrInvalidData)
-				}
-				for i := uint32(0); i < run; i++ {
-					if err := decodeSkipMacroblock(fs, addr+int(i), s, qscale, sliceID); err != nil {
-						return err
-					}
-					fs.decoded[addr+int(i)] = true
-				}
-				addr += int(run)
-				if addr >= end {
-					break
-				}
-			}
-			if err := decodeMacroblock(fs, addr, s, sliceID, &qscale); err != nil {
-				return fmt.Errorf("decoder: mb %d: %w", addr, err)
-			}
-			fs.decoded[addr] = true
+		if err := decodeMappedCAVLC(fs, s, sliceID, first, end); err != nil {
+			return err
 		}
 	}
 	// CAVLC slice_data 后必须恰好是 rbsp_trailing_bits。

@@ -31,6 +31,9 @@ func decodeMBAFFCAVLC(fs *frameState, s *sliceEntry, sliceID, first, end int) er
 			}
 		}
 		for i := uint32(0); i < run; i++ {
+			if scan >= end {
+				return fmt.Errorf("decoder: MBAFF skip run exceeds slice group: %w", h264.ErrInvalidData)
+			}
 			if scan&1 == 0 {
 				addr := fs.rasterMB(scan)
 				fs.info[addr].sliceID = sliceID
@@ -45,7 +48,7 @@ func decodeMBAFFCAVLC(fs *frameState, s *sliceEntry, sliceID, first, end int) er
 			if err := fs.decodeMBAFFMB(s, scan, sliceID, &qp, true); err != nil {
 				return err
 			}
-			scan++
+			scan = fs.nextMB(scan)
 		}
 		if scan == end {
 			break
@@ -60,7 +63,7 @@ func decodeMBAFFCAVLC(fs *frameState, s *sliceEntry, sliceID, first, end int) er
 		if err := fs.decodeMBAFFMB(s, scan, sliceID, &qp, false); err != nil {
 			return err
 		}
-		scan++
+		scan = fs.nextMB(scan)
 	}
 	return nil
 }
