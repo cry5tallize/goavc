@@ -100,3 +100,37 @@ func BenchmarkEncoderPFlat_720p_Generic(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkEncoderABR_720p_Generic(b *testing.B) {
+	c := h264.DefaultEncoderConfig()
+	c.Width, c.Height, c.GOPSize = 1280, 720, 30
+	c.RateControl, c.Bitrate = h264.RateControlABR, 2_000_000
+	benchmarkRateControl(b, c)
+}
+
+func BenchmarkEncoderCBR_720p_Generic(b *testing.B) {
+	c := h264.DefaultEncoderConfig()
+	c.Width, c.Height, c.GOPSize = 1280, 720, 30
+	c.RateControl, c.Bitrate, c.VBVBufferSize = h264.RateControlCBR, 2_000_000, 2_000_000
+	benchmarkRateControl(b, c)
+}
+
+func benchmarkRateControl(b *testing.B, c h264.EncoderConfig) {
+	e, err := New(c)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer e.Close()
+	f := pattern.Frame(c.Width, c.Height, 1)
+	defer f.Release()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if err = e.SendFrame(f); err != nil {
+			b.Fatal(err)
+		}
+		if _, err = e.ReceivePacket(); err != nil {
+			b.Fatal(err)
+		}
+	}
+}

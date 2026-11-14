@@ -23,7 +23,7 @@ func flag(v bool) int {
 	return 0
 }
 
-func (e *Encoder) encodeCABAC(src *picture.Picture, idr bool) ([]byte, *frameState, error) {
+func (e *Encoder) encodeCABAC(src *picture.Picture, intra, idr bool) ([]byte, *frameState, error) {
 	s, err := e.newFrameState(src)
 	if err != nil {
 		return nil, nil, err
@@ -56,15 +56,15 @@ func (e *Encoder) encodeCABAC(src *picture.Picture, idr bool) ([]byte, *frameSta
 		first, last := len(s.info)*slice/e.slices, len(s.info)*(slice+1)/e.slices
 		s.mv.BeginSlice(first)
 		w := bitstream.NewWriter()
-		if idr {
-			e.sliceHeader(w, first, e.pcm)
+		if intra {
+			e.sliceHeader(w, first, e.pcm, idr)
 		} else {
 			e.pSliceHeader(w, first)
 		}
 		for w.BitsWritten()%8 != 0 {
 			w.WriteBit(1)
 		}
-		ctx, err := cabac.InitContexts(idr, 0, e.cfg.QP)
+		ctx, err := cabac.InitContexts(intra, 0, e.frameQP)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -73,13 +73,13 @@ func (e *Encoder) encodeCABAC(src *picture.Picture, idr bool) ([]byte, *frameSta
 			return nil, nil, err
 		}
 		c := cabacWriter{e: ce, ctx: ctx}
-		qp := e.cfg.QP
+		qp := e.frameQP
 		for addr := first; addr < last; addr++ {
 			s.info[addr].start = first
 			var res residual
 			if e.pcm {
 				s.info[addr].pcm = true
-			} else if idr {
+			} else if intra {
 				res, err = s.analyzeIntraRD(addr, qp)
 			} else {
 				res, err = s.analyzeRD(addr, qp, e.searchRange, e.fullSearch)
@@ -92,11 +92,11 @@ func (e *Encoder) encodeCABAC(src *picture.Picture, idr bool) ([]byte, *frameSta
 			for comp := range s.cnz {
 				clear(s.cnz[comp][addr*4 : addr*4+4])
 			}
-			if !idr {
+			if !intra {
 				c.skip(s, addr)
 			}
 			if !s.info[addr].skip {
-				c.mbType(s, addr, idr)
+				c.mbType(s, addr, intra)
 				if s.info[addr].pcm {
 					if err = c.e.Err(); err != nil {
 						return nil, nil, err

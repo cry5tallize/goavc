@@ -72,6 +72,7 @@ func TestEncoderConfigValidate(t *testing.T) {
 			c.Bitrate = 2_000_000
 		}, false, false},
 		{"negative bitrate", func(c *EncoderConfig) { c.Bitrate = -1 }, true, false},
+		{"negative VBV buffer", func(c *EncoderConfig) { c.VBVBufferSize = -1 }, true, false},
 		{"max bitrate below target", func(c *EncoderConfig) {
 			c.RateControl = RateControlCBR
 			c.Bitrate = 2_000_000

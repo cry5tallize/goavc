@@ -28,7 +28,7 @@ func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
 	}
 	// 所有回调值在写入之前校验；失败不得更新参考帧、帧号和输出槽。
 	for addr := range s.info {
-		qp := e.cfg.QP
+		qp := e.frameQP
 		if e.qpAt != nil {
 			qp = e.qpAt(addr%src.MBWidth, addr/src.MBWidth)
 		}

@@ -129,7 +129,6 @@ func TestEncoder_Configuration(t *testing.T) {
 		func(c *h264.EncoderConfig) { c.Profile = h264.ProfileHigh10; c.PixelFormat = h264.YUV420P10LE },
 		func(c *h264.EncoderConfig) { c.Threads = 2 },
 		func(c *h264.EncoderConfig) { c.Width = 65 },
-		func(c *h264.EncoderConfig) { c.RateControl = h264.RateControlABR; c.Bitrate = 100000 },
 		func(c *h264.EncoderConfig) { c.Level = 10 },
 	} {
 		c := base
@@ -137,6 +136,18 @@ func TestEncoder_Configuration(t *testing.T) {
 		if _, err := New(c, WithPCM()); !errors.Is(err, h264.ErrUnsupported) {
 			t.Fatal(c, err)
 		}
+	}
+	for _, rc := range []h264.RateControl{h264.RateControlABR, h264.RateControlCBR, h264.RateControlVBV} {
+		c := base
+		c.RateControl, c.Bitrate = rc, 100_000
+		if _, err := New(c); err != nil {
+			t.Fatalf("rate control %s was rejected: %v", rc, err)
+		}
+	}
+	c := base
+	c.MaxBFrames = 1
+	if _, err := New(c); !errors.Is(err, h264.ErrUnsupported) {
+		t.Fatalf("B frames must remain explicit unsupported: %v", err)
 	}
 	if _, err := New(base, WithSliceCount(65)); !errors.Is(err, h264.ErrInvalidData) {
 		t.Fatal(err)

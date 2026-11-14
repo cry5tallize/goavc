@@ -21,9 +21,15 @@ type Encoder struct {
 	maxAUBytes              int
 	adaptiveQP              int
 	cabac                   bool
+	sceneThreshold          int
+	frameQP, lastQP         int
+	vbvFullness             int64
+	lastFrameBits           int64
+	vbvBufferBits           int64
 	reference               *picture.Picture
 	frameNum                uint32
 	framesSinceIDR          int
+	framesInGOP             int
 	reconKeyFrame           bool
 	qpAt                    func(x, y int) int
 	last                    *frameState
@@ -54,18 +60,27 @@ func WithSliceCount(count int) Option {
 	}
 }
 
-// New 创建 Baseline、8-bit 4:2:0、CQP 串行编码器。首帧与 IDRInterval 边界
-// 输出 IDR，其余输出单参考 P 帧；GOPSize=1 保留全帧内通道。
+// WithSceneChangeThreshold 按所有 Y/U/V 采样的平均绝对变化触发 IDR。
+// threshold 为归一到 0..100 的样本幅值百分比；零值关闭检测。
+func WithSceneChangeThreshold(threshold int) Option {
+	return func(e *Encoder) error {
+		if threshold < 1 || threshold > 100 {
+			return fmt.Errorf("encoder: scene threshold %d: %w", threshold, h264.ErrInvalidData)
+		}
+		e.sceneThreshold = threshold
+		return nil
+	}
+}
+
+// New 创建 8-bit 4:2:0 串行编码器。首帧与 IDRInterval 边界输出 IDR，
+// 其余输出单参考 P 帧；目前 MaxBFrames 必须为 0。
 func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	cfg.SetDefaults()
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-	if (cfg.Profile != h264.ProfileBaseline && cfg.Profile != h264.ProfileMain && cfg.Profile != h264.ProfileHigh) || cfg.PixelFormat != h264.YUV420P || cfg.RateControl != h264.RateControlCQP || cfg.MaxBFrames != 0 || cfg.Threads > 1 {
-		return nil, fmt.Errorf("encoder: only serial baseline yuv420p CQP is supported: %w", h264.ErrUnsupported)
-	}
-	if cfg.IDRInterval != cfg.GOPSize {
-		return nil, fmt.Errorf("encoder: independent GOP/IDR intervals are pending: %w", h264.ErrUnsupported)
+	if (cfg.Profile != h264.ProfileBaseline && cfg.Profile != h264.ProfileMain && cfg.Profile != h264.ProfileHigh) || cfg.PixelFormat != h264.YUV420P || cfg.MaxBFrames != 0 || cfg.Threads > 1 {
+		return nil, fmt.Errorf("encoder: only serial baseline/main/high yuv420p without B frames is supported: %w", h264.ErrUnsupported)
 	}
 	// Spec: 7.4.2.1.1，4:2:0 渐进帧的 crop 单位为 2×2，不能无损表达奇数显示尺寸。
 	if cfg.Width%2 != 0 || cfg.Height%2 != 0 {
@@ -74,7 +89,18 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	if uint64(cfg.FPSNum) > uint64(^uint32(0))/2 || uint64(cfg.FPSDen) > uint64(^uint32(0)) {
 		return nil, fmt.Errorf("encoder: VUI timing overflows: %w", h264.ErrInvalidData)
 	}
-	e := &Encoder{cfg: cfg, slices: 1, searchRange: 16, cabac: cfg.Profile != h264.ProfileBaseline}
+	e := &Encoder{cfg: cfg, slices: 1, searchRange: 16, cabac: cfg.Profile != h264.ProfileBaseline, frameQP: cfg.QP, lastQP: cfg.QP}
+	if cfg.RateControl == h264.RateControlCBR || cfg.RateControl == h264.RateControlVBV {
+		e.vbvBufferBits = int64(cfg.VBVBufferSize)
+		if e.vbvBufferBits == 0 {
+			peak := cfg.MaxBitrate
+			if peak == 0 {
+				peak = cfg.Bitrate
+			}
+			e.vbvBufferBits = int64(peak)
+		}
+		e.vbvFullness = e.vbvBufferBits / 2
+	}
 	for _, option := range options {
 		if option == nil {
 			return nil, fmt.Errorf("encoder: nil option: %w", h264.ErrInvalidData)
@@ -83,8 +109,11 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 			return nil, err
 		}
 	}
-	if e.pcm && e.qpAt != nil {
+	if e.pcm && (e.qpAt != nil || cfg.RateControl != h264.RateControlCQP) {
 		return nil, fmt.Errorf("encoder: PCM has no QP override: %w", h264.ErrUnsupported)
+	}
+	if e.qpAt != nil && cfg.RateControl != h264.RateControlCQP {
+		return nil, fmt.Errorf("encoder: explicit macroblock QP conflicts with rate control: %w", h264.ErrUnsupported)
 	}
 	if e.adaptiveQP > 0 && (e.pcm || e.qpAt != nil) {
 		return nil, fmt.Errorf("encoder: AQ conflicts with PCM or explicit QP callback: %w", h264.ErrUnsupported)
@@ -144,34 +173,22 @@ func (e *Encoder) SendFrame(f *h264.Frame) error {
 			}
 		}
 	}
-	var data []byte
-	var state *frameState
-	isIDR := e.pcm || e.reference == nil || e.framesSinceIDR >= e.cfg.IDRInterval || f.KeyFrame
-	if e.cabac {
-		data, state, err = e.encodeCABAC(pic, isIDR)
-		if state != nil {
-			pic = state.pic
-		}
-	} else if e.pcm {
-		data, err = e.encodePCM(pic)
-	} else if !isIDR {
-		data, state, err = e.encodeP(pic)
-		if state != nil {
-			pic = state.pic
-		}
-	} else {
-		data, state, err = e.encodeIntra(pic)
-		if state != nil {
-			pic = state.pic
-		}
-	}
+	sceneChange := e.sceneChanged(pic)
+	isIDR := e.pcm || e.reference == nil || e.framesSinceIDR >= e.cfg.IDRInterval || f.KeyFrame || sceneChange
+	isIntra := isIDR || e.framesInGOP >= e.cfg.GOPSize
+	data, state, selectedQP, err := e.encodeRateControlled(pic, isIntra, isIDR)
 	if err != nil {
 		return err
+	}
+	if state != nil {
+		pic = state.pic
 	}
 	if len(data) > e.maxAUBytes {
 		return fmt.Errorf("encoder: access unit %d exceeds level budget %d: %w", len(data), e.maxAUBytes, h264.ErrResourceLimit)
 	}
 	e.recon = pic
+	e.frameQP, e.lastQP = selectedQP, selectedQP
+	e.commitRateControl(len(data))
 	e.reconPTS, e.reconDuration = f.PTS, f.Duration
 	e.last = state
 	e.reconKeyFrame = isIDR
@@ -183,6 +200,11 @@ func (e *Encoder) SendFrame(f *h264.Frame) error {
 	} else {
 		e.frameNum = (e.frameNum + 1) & 15
 		e.framesSinceIDR++
+	}
+	if isIntra {
+		e.framesInGOP = 1
+	} else {
+		e.framesInGOP++
 	}
 	if !e.pcm {
 		e.reference = pic
@@ -243,7 +265,13 @@ func (e *Encoder) Reset() error {
 	e.reference = nil
 	e.frameNum = 0
 	e.framesSinceIDR = 0
+	e.framesInGOP = 0
 	e.idr = 0
+	e.frameQP, e.lastQP = e.cfg.QP, e.cfg.QP
+	e.lastFrameBits = 0
+	if e.cfg.RateControl == h264.RateControlCBR || e.cfg.RateControl == h264.RateControlVBV {
+		e.vbvFullness = e.vbvBufferBits / 2
+	}
 	e.flushed = false
 	return nil
 }
@@ -282,7 +310,7 @@ func (e *Encoder) encodePCM(pic *picture.Picture) ([]byte, error) {
 	for slice := 0; slice < e.slices; slice++ {
 		start, end := total*slice/e.slices, total*(slice+1)/e.slices
 		w := bitstream.NewWriter()
-		e.sliceHeader(w, start, true)
+		e.sliceHeader(w, start, true, true)
 		for addr := start; addr < end; addr++ {
 			w.WriteUE(25)
 			w.ByteAlign()
@@ -307,14 +335,22 @@ func (e *Encoder) encodePCM(pic *picture.Picture) ([]byte, error) {
 }
 
 // 参数均已在 New 中限界；固定宽度和 ue/se 写入不会失败。
-func (e *Encoder) sliceHeader(w *bitstream.Writer, first int, disableFilter bool) {
+func (e *Encoder) sliceHeader(w *bitstream.Writer, first int, disableFilter, idr bool) {
 	w.WriteUE(uint32(first))
 	w.WriteUE(2)
 	w.WriteUE(0)
-	w.WriteBits(4, 0)
-	w.WriteUE(e.idr)
-	w.WriteBits(2, 0)
-	w.WriteSE(0)
+	frameNum := e.frameNum
+	if idr {
+		frameNum = 0
+	}
+	w.WriteBits(4, uint64(frameNum))
+	if idr {
+		w.WriteUE(e.idr)
+		w.WriteBits(2, 0)
+	} else {
+		w.WriteBit(0)
+	}
+	w.WriteSE(int32(e.sliceQPDelta()))
 	if disableFilter {
 		w.WriteUE(1)
 	} else {
@@ -322,4 +358,15 @@ func (e *Encoder) sliceHeader(w *bitstream.Writer, first int, disableFilter bool
 		w.WriteSE(0)
 		w.WriteSE(0)
 	}
+}
+
+func (e *Encoder) sliceQPDelta() int {
+	delta := e.frameQP - e.cfg.QP
+	if delta > 25 {
+		delta -= 52
+	}
+	if delta < -26 {
+		delta += 52
+	}
+	return delta
 }

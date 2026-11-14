@@ -52,7 +52,7 @@ func WithMacroblockQP(qp func(x, y int) int) Option {
 	}
 }
 
-func (e *Encoder) encodeIntra(src *picture.Picture) ([]byte, *frameState, error) {
+func (e *Encoder) encodeIntra(src *picture.Picture, idr bool) ([]byte, *frameState, error) {
 	s, err := e.newFrameState(src)
 	if err != nil {
 		return nil, nil, err
@@ -63,25 +63,27 @@ func (e *Encoder) encodeIntra(src *picture.Picture) ([]byte, *frameState, error)
 	emit := func(typ nal.UnitType, rb []byte) error {
 		return out.Write(nal.Unit{Header: nal.Header{Type: typ, RefIDC: 3}, Payload: bitstream.RBSPToEBSP(rb)})
 	}
-	sr, err := e.sps.MarshalRBSP()
-	if err != nil {
-		return nil, nil, err
-	}
-	pr, err := e.pps.MarshalRBSP(e.sps)
-	if err != nil {
-		return nil, nil, err
-	}
-	if err = emit(nal.TypeSPS, sr); err != nil {
-		return nil, nil, err
-	}
-	if err = emit(nal.TypePPS, pr); err != nil {
-		return nil, nil, err
+	if idr {
+		sr, err := e.sps.MarshalRBSP()
+		if err != nil {
+			return nil, nil, err
+		}
+		pr, err := e.pps.MarshalRBSP(e.sps)
+		if err != nil {
+			return nil, nil, err
+		}
+		if err = emit(nal.TypeSPS, sr); err != nil {
+			return nil, nil, err
+		}
+		if err = emit(nal.TypePPS, pr); err != nil {
+			return nil, nil, err
+		}
 	}
 	for slice := 0; slice < e.slices; slice++ {
 		start, end := total*slice/e.slices, total*(slice+1)/e.slices
-		qp := e.cfg.QP
+		qp := e.frameQP
 		w := bitstream.NewWriter()
-		e.sliceHeader(w, start, false)
+		e.sliceHeader(w, start, false, idr)
 		for addr := start; addr < end; addr++ {
 			s.info[addr].start = start
 			res, err := s.analyzeIntraRD(addr, qp)
@@ -107,7 +109,11 @@ func (e *Encoder) encodeIntra(src *picture.Picture) ([]byte, *frameState, error)
 			}
 		}
 		bitstream.WriteRBSPTrailingBits(w)
-		if err = emit(nal.TypeSliceIDR, w.Bytes()); err != nil {
+		typ := nal.TypeSlice
+		if idr {
+			typ = nal.TypeSliceIDR
+		}
+		if err = emit(typ, w.Bytes()); err != nil {
 			return nil, nil, err
 		}
 	}

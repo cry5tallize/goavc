@@ -177,6 +177,96 @@ func TestEncoder_InterPictureTypes(t *testing.T) {
 	}
 }
 
+func TestEncoder_IndependentGOPAndSceneChangeIDR(t *testing.T) {
+	c := h264.DefaultEncoderConfig()
+	c.Width, c.Height = 64, 48
+	c.GOPSize, c.IDRInterval = 4, 7
+	e, err := encoder.New(c, encoder.WithSceneChangeThreshold(20))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Close()
+	d, err := decoder.New(h264.DefaultDecoderConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	var got []int
+	var stream, wantPixels []byte
+	for i := 0; i < 12; i++ {
+		f := pattern(c.Width, c.Height)
+		if i >= 3 {
+			for comp := range f.Planes {
+				for n, value := range f.Planes[comp].Data {
+					f.Planes[comp].Data[n] = 255 - value
+				}
+			}
+		}
+		if err = e.SendFrame(f); err != nil {
+			t.Fatalf("frame %d: %v", i, err)
+		}
+		f.Release()
+		p, err := e.ReceivePacket()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if p.KeyFrame {
+			got = append(got, i)
+		}
+		stream = append(stream, p.Data...)
+		recon, err := e.Reconstruction()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = d.SendPacket(p); err != nil {
+			t.Fatalf("frame %d decoder input: %v", i, err)
+		}
+		decoded, err := d.ReceiveFrame()
+		if err != nil {
+			t.Fatalf("frame %d decoder output: %v", i, err)
+		}
+		if !bytes.Equal(packed(decoded), packed(recon)) {
+			t.Fatalf("frame %d non-IDR GOP reconstruction mismatch", i)
+		}
+		wantPixels = append(wantPixels, packed(recon)...)
+		decoded.Release()
+		recon.Release()
+	}
+	wantIDR := []int{0, 3, 10}
+	if len(got) != len(wantIDR) {
+		t.Fatalf("IDR frames %v want %v", got, wantIDR)
+	}
+	for i := range wantIDR {
+		if got[i] != wantIDR[i] {
+			t.Fatalf("IDR frames %v want %v", got, wantIDR)
+		}
+	}
+	if _, err := exec.LookPath("ffprobe"); err != nil {
+		t.Skip("ffprobe absent; non-IDR I picture type oracle skipped")
+	}
+	path := filepath.Join(t.TempDir(), "gop.264")
+	if err := os.WriteFile(path, stream, 0600); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := exec.Command("ffprobe", "-v", "error", "-show_frames", "-show_entries", "frame=key_frame,pict_type", "-of", "json", path).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var probe struct {
+		Frames []struct {
+			Type string `json:"pict_type"`
+			Key  int    `json:"key_frame"`
+		} `json:"frames"`
+	}
+	if err := json.Unmarshal(raw, &probe); err != nil {
+		t.Fatal(err)
+	}
+	if len(probe.Frames) != 12 || probe.Frames[7].Type != "I" || probe.Frames[7].Key != 0 {
+		t.Fatalf("GOPSize must emit a non-IDR I picture at frame 7: %s", raw)
+	}
+	ffmpegCheck(t, stream, wantPixels)
+}
+
 func TestEncoder_AdaptiveQPOracle(t *testing.T) {
 	for _, base := range []int{0, 26, 51} {
 		c := h264.DefaultEncoderConfig()

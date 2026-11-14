@@ -94,7 +94,7 @@ type EncoderConfig struct {
 	FPSNum int
 	FPSDen int
 
-	// GOPSize 是 IDR 间隔（以帧计）。
+	// GOPSize 是计划 GOP 的长度（以帧计）；当前无 B 帧时只用于 GOP 周期边界。
 	GOPSize int
 
 	// IDRInterval 是可选的独立 IDR 间隔；0 表示与 GOPSize 相同。
@@ -106,6 +106,9 @@ type EncoderConfig struct {
 	// Bitrate 与 MaxBitrate 单位是 bit/s。CQP 模式下可为 0。
 	Bitrate    int
 	MaxBitrate int
+	// VBVBufferSize 是 CBR/VBV 反馈缓冲上限，单位 bit；为 0 时使用 MaxBitrate 的一秒容量，
+	// 若 MaxBitrate 也为 0 则使用 Bitrate 的一秒容量。
+	VBVBufferSize int
 
 	// QP 是基准量化参数，范围 0..51。
 	QP int

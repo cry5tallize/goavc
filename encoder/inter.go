@@ -38,7 +38,7 @@ func (e *Encoder) encodeP(src *picture.Picture) ([]byte, *frameState, error) {
 	for slice := 0; slice < e.slices; slice++ {
 		first, last := total*slice/e.slices, total*(slice+1)/e.slices
 		s.mv.BeginSlice(first)
-		qp := e.cfg.QP
+		qp := e.frameQP
 		skipRun := uint32(0)
 		w := bitstream.NewWriter()
 		e.pSliceHeader(w, first)
@@ -105,7 +105,7 @@ func (e *Encoder) pSliceHeader(w *bitstream.Writer, first int) {
 	if e.cabac {
 		w.WriteUE(0)
 	} // cabac_init_idc
-	w.WriteSE(0)
+	w.WriteSE(int32(e.sliceQPDelta()))
 	w.WriteUE(0)
 	w.WriteSE(0)
 	w.WriteSE(0)

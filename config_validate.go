@@ -83,6 +83,9 @@ func (c EncoderConfig) Validate() error {
 	if c.MaxBitrate < 0 {
 		return fmt.Errorf("%w: max bitrate %d must not be negative", ErrInvalidData, c.MaxBitrate)
 	}
+	if c.VBVBufferSize < 0 {
+		return fmt.Errorf("%w: vbv buffer size %d must not be negative", ErrInvalidData, c.VBVBufferSize)
+	}
 	if c.RateControl != RateControlCQP && c.Bitrate <= 0 {
 		return fmt.Errorf("%w: %s rate control requires a positive bitrate", ErrInvalidData, c.RateControl)
 	}
