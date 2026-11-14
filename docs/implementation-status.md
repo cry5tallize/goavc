@@ -229,6 +229,7 @@ High10渐进420编解码及High422/High444渐进8/10-bit解码已接入，限定
 | 20：冗余slice解码 | 独立redundant_pic_cnt表示重建，优先primary/最小完整备用；失败归还图像，成功后仅一次DPB提交与输出 | Conformant | primary/backup重叠、备用独立ASO、低计数不完整回退、不同计数不拼图、非零MVD压缩备用、错误/下降cnt/覆盖恢复及多图片身份规范像素；独立完整CGO=0门禁通过 | 不输出多份冗余图；较低表示完整后丢弃其余残差，仅保留已解析头部的语法/资源检查；不执行丢失宏块的像素错误隐藏 |
 | 21：VUI/HRD参数解析生成及校验 | 安全派生bitrate/CPB、替代调度、延迟位宽、完整SPS写前/解析后Annex A/E校验和资源错误分类 | Conformant | 独立固定字节、双HRD/多CPB/非零尺度、全部已支持profile/level边界与原子拒绝；隔行Auto排除非法level；旧weighted-b VUI声明16→15由生成器重建，FFmpeg输出哈希仍41e461eb…f864236；独立完整CGO=0门禁通过 | 不把VUI/HRD声明等同实际码流HRD时序合规；编码流水线仍未自动生成buffering_period/完整HRD调度，API可读写并严格校验参数 |
 | ScalingMatrix与组合级约束 | 列表全范围预检、解析缓存与真实矩阵一致；已知Profile的SPS/PPS/slice/分区组合限制 | Conformant | 十二列表/既有4096 fallback组合、解析矩阵到反量化固定数值、写前无污染、Profile工具矩阵与错误分类；旧Baseline B/场/CABAC及High冗余等非法夹具迁为合法上下文，完整独立CGO=0门禁通过 | 规范禁止组合返回ErrInvalidData；合法但未实现的9/12/14-bit、单色、PAFF或transform bypass仍ErrUnsupported，不以拒绝路径宣称完整Profile支持 |
+| 22：高级Profile Oracle语料套件 | 25份新增高级码流/76帧、原生位深/显示顺序哈希、Oracle来源与帧数清单、跨里程碑High10投影 | Conformant | 55条清单；八份422/444外部x264与一份真实HRD、十六份规范工具向量全部实际CLI匹配；11份新增可用FFmpeg像素证据，14份明确解析解；原M2/M3全部27份保留预测/残差/参考工具投影至High10（PCM扩至10位）与严格FFmpeg逐采样一致；完整独立CGO=0门禁通过，详见gates/m7_corpus.json | FFmpeg对FMO/ASO/分区/secondary SP/SI存在拒绝或差异；不篡改期望，不计作外部Oracle通过；独立平面互操作仍按单色投影与规范证据限定 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。

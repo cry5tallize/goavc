@@ -30,7 +30,16 @@ func TestSyntax_FFprobeOracle(t *testing.T) {
 	}
 	seen := make(map[string]bool)
 	for _, entry := range m.Entries {
-		if entry.Status == manifest.StatusUnsupported || seen[entry.Profile] {
+		if entry.Status == manifest.StatusUnsupported {
+			continue
+		}
+		if entry.Oracle == manifest.OracleAnalytic {
+			t.Run(entry.Name, func(t *testing.T) {
+				t.Skip("analytic Oracle：规范解析解由 decoder 的 TestCorpus_ManifestOutputDigests 校验；不声称 ffprobe/FFmpeg 可解")
+			})
+			continue
+		}
+		if seen[entry.Profile] {
 			continue
 		}
 		seen[entry.Profile] = true
@@ -82,13 +91,16 @@ func TestSyntax_FFprobeOracle(t *testing.T) {
 			if ew != nil || eh != nil || int(width) != o.Width || int(height) != o.Height || int(sps.LevelIDC) != o.Level || o.PixFmt != entry.PixFmt {
 				t.Fatalf("CLI与ffprobe元数据不一致: SPS=%+v ffprobe=%+v", sps, o)
 			}
-			profile := map[uint8]string{66: "baseline", 77: "main", 100: "high", 110: "high 10", 122: "high 4:2:2", 244: "high 4:4:4 predictive"}[sps.ProfileIDC]
+			profile := map[uint8]string{66: "baseline", 77: "main", 88: "extended", 100: "high", 110: "high 10", 122: "high 4:2:2", 244: "high 4:4:4 predictive"}[sps.ProfileIDC]
 			if profile == "" || !strings.Contains(strings.ToLower(o.Profile), profile) {
 				t.Fatalf("CLI profile=%d，ffprobe=%q", sps.ProfileIDC, o.Profile)
 			}
 			frames, err := strconv.Atoi(o.Frames)
 			if err != nil || pictures != frames {
 				t.Fatalf("CLI图片数=%d，ffprobe=%q: %v", pictures, o.Frames, err)
+			}
+			if entry.FrameCount > 0 && frames != entry.FrameCount {
+				t.Fatalf("ffprobe实际解码图片数=%d，manifest frameCount=%d", frames, entry.FrameCount)
 			}
 		})
 	}

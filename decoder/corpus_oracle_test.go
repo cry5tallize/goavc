@@ -29,6 +29,13 @@ func ffmpegPath(t *testing.T) string {
 
 func decodeFile(t *testing.T, path string) []byte {
 	t.Helper()
+	return decodeCorpusFile(t, path, nil)
+}
+
+// decodeCorpusFile 按原生采样布局打包有效行，不做位深或色度转换。
+// entry 非空时同时核对输出元数据和实际 ReceiveFrame 次数。
+func decodeCorpusFile(t *testing.T, path string, entry *manifest.Entry) []byte {
+	t.Helper()
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
@@ -45,6 +52,7 @@ func decodeFile(t *testing.T, path string) []byte {
 		t.Fatalf("Flush: %v", err)
 	}
 	var out []byte
+	frames := 0
 	for {
 		f, err := d.ReceiveFrame()
 		if errors.Is(err, h264.ErrEOF) {
@@ -52,6 +60,12 @@ func decodeFile(t *testing.T, path string) []byte {
 		}
 		if err != nil {
 			t.Fatalf("ReceiveFrame: %v", err)
+		}
+		frames++
+		if entry != nil && (f.Width != entry.Width || f.Height != entry.Height || f.Format.String() != entry.PixFmt || f.Format.BitDepth() != entry.BitDepth) {
+			width, height, format := f.Width, f.Height, f.Format
+			f.Release()
+			t.Fatalf("frame %d native output %dx%d %s, want %dx%d %s (%d-bit)", frames, width, height, format, entry.Width, entry.Height, entry.PixFmt, entry.BitDepth)
 		}
 		for pi := 0; pi < 3; pi++ {
 			pl := f.Planes[pi]
@@ -62,6 +76,9 @@ func decodeFile(t *testing.T, path string) []byte {
 			}
 		}
 		f.Release()
+	}
+	if entry != nil && entry.FrameCount > 0 && frames != entry.FrameCount {
+		t.Fatalf("decoded %d frames, manifest wants %d", frames, entry.FrameCount)
 	}
 	return out
 }
@@ -120,8 +137,8 @@ func TestCorpus_BaselinePixelExact(t *testing.T) {
 	}
 }
 
-// 固化独立 Oracle 的原始 YUV 哈希，使无 FFmpeg 的 CI 也能检查真实解码
-// 像素与显示顺序；实时 Oracle 测试继续逐字节比较并给出首个差异坐标。
+// 固化 FFmpeg 或规范解析解的独立原始 YUV 哈希，使无 FFmpeg 的 CI 也能检查
+// 所有 conformant 语料的原生像素与显示顺序；不将 analytic 冒充外部解码证据。
 func TestCorpus_ManifestOutputDigests(t *testing.T) {
 	m, err := manifest.Load("../testdata/manifest.json")
 	if err != nil {
@@ -149,7 +166,7 @@ func TestCorpus_ManifestOutputDigests(t *testing.T) {
 				if e.ExpectedYUVSHA256 == "" {
 					t.Fatal("missing independent Oracle digest")
 				}
-				got := decodeFile(t, path)
+				got := decodeCorpusFile(t, path, &e)
 				sum := sha256.Sum256(got)
 				if hex.EncodeToString(sum[:]) != e.ExpectedYUVSHA256 {
 					t.Fatalf("decoded YUV hash %x, want %s", sum, e.ExpectedYUVSHA256)

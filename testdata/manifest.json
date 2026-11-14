@@ -774,6 +774,766 @@
       "expectedYUVSha256": "01420a403221f7b6973071aadf011b475b84f31568719f946bb55b3ff973f44c",
       "status": "conformant",
       "notes": "4帧；FFmpeg 8.0 libx264 medium/high10，QP1、CABAC、B0、ref1、weightp0、8x8dct1、threads1、aud1；覆盖负语法QPY与低两位纹理；自研解码与独立FFmpeg原始LE输出逐采样一致。"
+    },
+    {
+      "name": "high422_64x64_yuv422p_cavlc_ipb_progressive_001",
+      "path": "testdata/advanced/high422_64x64_yuv422p_cavlc_ipb_progressive_001.264",
+      "source": "x264",
+      "profile": "high422",
+      "level": "1.0",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv422p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 2,
+      "refFrames": 3,
+      "tags": [
+        "m7_advanced",
+        "progressive",
+        "external_oracle"
+      ],
+      "sha256": "b7a888a0d7483dbff35ff6d0db484f48564d84cdfbe71dc38756b5ba350b4029",
+      "expectedYUVSha256": "e1a5bb5e3405185d77930adbbf1ab521065b00e02c7168b269081f77f68398d6",
+      "oracle": "ffmpeg",
+      "frameCount": 6,
+      "status": "conformant",
+      "notes": "FFmpeg8 native yuv422p; 6 frames; progressive; QP26 B2 ref3 threads1 slices2. Source: nullsrc=size=64x64:rate=6,format=yuv422p,geq=lum='20+mod((X+2*N)*5+Y*3+N*11+0,190)':cb='20+mod((X+2*N)*5+Y*3+N*11+47,190)':cr='20+mod((X+2*N)*5+Y*3+N*11+94,190)'; x264-params=threads=1:lookahead-threads=1:sync-lookahead=0:scenecut=0:aud=1:repeat-headers=1:keyint=20:bframes=2:b-adapt=0:b-pyramid=none:ref=3:weightp=0:weightb=1:8x8dct=1:slices=2:cabac=0:interlaced=0"
+    },
+    {
+      "name": "high422_64x64_yuv422p_cabac_ipb_tt_002",
+      "path": "testdata/advanced/high422_64x64_yuv422p_cabac_ipb_tt_002.264",
+      "source": "x264",
+      "profile": "high422",
+      "level": "2.1",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv422p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 2,
+      "refFrames": 3,
+      "tags": [
+        "m7_advanced",
+        "tt",
+        "external_oracle"
+      ],
+      "sha256": "73d398ccbf327e690339eb9211eb9c17adcc4176521a4b33ee9b7137a88c0b8c",
+      "expectedYUVSha256": "791a816d95a4ea2f94e396578788282633cfa265a1bb65968648d27814ea75eb",
+      "oracle": "ffmpeg",
+      "frameCount": 6,
+      "status": "conformant",
+      "notes": "FFmpeg8 native yuv422p; 6 frames; tt; QP26 B2 ref3 threads1 slices2. Source: nullsrc=size=64x64:rate=6,format=yuv422p,geq=lum='20+mod((X+2*N)*5+Y*3+N*11+0,190)':cb='20+mod((X+2*N)*5+Y*3+N*11+47,190)':cr='20+mod((X+2*N)*5+Y*3+N*11+94,190)'; x264-params=threads=1:lookahead-threads=1:sync-lookahead=0:scenecut=0:aud=1:repeat-headers=1:keyint=20:bframes=2:b-adapt=0:b-pyramid=none:ref=3:weightp=0:weightb=1:8x8dct=1:slices=2:cabac=1:interlaced=1:tff=1"
+    },
+    {
+      "name": "high422_64x64_yuv422p10le_cabac_ipb_progressive_003",
+      "path": "testdata/advanced/high422_64x64_yuv422p10le_cabac_ipb_progressive_003.264",
+      "source": "x264",
+      "profile": "high422",
+      "level": "1.0",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv422p10le",
+      "bitDepth": 10,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 2,
+      "refFrames": 3,
+      "tags": [
+        "m7_advanced",
+        "progressive",
+        "external_oracle"
+      ],
+      "sha256": "202ee66aeb29e41cac088b58f698bc17ec29065cd7906a72b6a0ad9d1604d08c",
+      "expectedYUVSha256": "7f1e342189917269369deea5c3149799685da2e89beee517269e3c0a869633e3",
+      "oracle": "ffmpeg",
+      "frameCount": 6,
+      "status": "conformant",
+      "notes": "FFmpeg8 native yuv422p10le; 6 frames; progressive; QP26 B2 ref3 threads1 slices2. Source: nullsrc=size=64x64:rate=6,format=yuv422p10le,geq=lum='(20+mod((X+2*N)*5+Y*3+N*11+0,190))*4+mod(X+Y+N+0,4)':cb='(20+mod((X+2*N)*5+Y*3+N*11+47,190))*4+mod(X+Y+N+1,4)':cr='(20+mod((X+2*N)*5+Y*3+N*11+94,190))*4+mod(X+Y+N+2,4)'; x264-params=threads=1:lookahead-threads=1:sync-lookahead=0:scenecut=0:aud=1:repeat-headers=1:keyint=20:bframes=2:b-adapt=0:b-pyramid=none:ref=3:weightp=0:weightb=1:8x8dct=1:slices=2:cabac=1:interlaced=0"
+    },
+    {
+      "name": "high422_64x64_yuv422p10le_cabac_ipb_tt_004",
+      "path": "testdata/advanced/high422_64x64_yuv422p10le_cabac_ipb_tt_004.264",
+      "source": "x264",
+      "profile": "high422",
+      "level": "2.1",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv422p10le",
+      "bitDepth": 10,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 2,
+      "refFrames": 3,
+      "tags": [
+        "m7_advanced",
+        "tt",
+        "external_oracle"
+      ],
+      "sha256": "6ce50059f31338f6a309ba59ef5eeecd972d42c25d5c6fafece877d2e5fcc861",
+      "expectedYUVSha256": "6773ec660c8f509547c3adc046db48aedb3b23da560d22b21688a61e74c2b80b",
+      "oracle": "ffmpeg",
+      "frameCount": 6,
+      "status": "conformant",
+      "notes": "FFmpeg8 native yuv422p10le; 6 frames; tt; QP26 B2 ref3 threads1 slices2. Source: nullsrc=size=64x64:rate=6,format=yuv422p10le,geq=lum='(20+mod((X+2*N)*5+Y*3+N*11+0,190))*4+mod(X+Y+N+0,4)':cb='(20+mod((X+2*N)*5+Y*3+N*11+47,190))*4+mod(X+Y+N+1,4)':cr='(20+mod((X+2*N)*5+Y*3+N*11+94,190))*4+mod(X+Y+N+2,4)'; x264-params=threads=1:lookahead-threads=1:sync-lookahead=0:scenecut=0:aud=1:repeat-headers=1:keyint=20:bframes=2:b-adapt=0:b-pyramid=none:ref=3:weightp=0:weightb=1:8x8dct=1:slices=2:cabac=1:interlaced=1:tff=1"
+    },
+    {
+      "name": "high444_64x64_yuv444p_cavlc_ipb_progressive_005",
+      "path": "testdata/advanced/high444_64x64_yuv444p_cavlc_ipb_progressive_005.264",
+      "source": "x264",
+      "profile": "high444",
+      "level": "1.0",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv444p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 2,
+      "refFrames": 3,
+      "tags": [
+        "m7_advanced",
+        "progressive",
+        "external_oracle"
+      ],
+      "sha256": "2594fb39e90415f9cda400d750441db1b1ee85ab4c3bedfd77647a5b4266471e",
+      "expectedYUVSha256": "b99bcb22ff4f026a927ab5ad47164221d69bd5a1b99a0571e16769cbae4f4863",
+      "oracle": "ffmpeg",
+      "frameCount": 6,
+      "status": "conformant",
+      "notes": "FFmpeg8 native yuv444p; 6 frames; progressive; QP26 B2 ref3 threads1 slices2. Source: nullsrc=size=64x64:rate=6,format=yuv444p,geq=lum='20+mod((X+2*N)*5+Y*3+N*11+0,190)':cb='20+mod((X+2*N)*5+Y*3+N*11+47,190)':cr='20+mod((X+2*N)*5+Y*3+N*11+94,190)'; x264-params=threads=1:lookahead-threads=1:sync-lookahead=0:scenecut=0:aud=1:repeat-headers=1:keyint=20:bframes=2:b-adapt=0:b-pyramid=none:ref=3:weightp=0:weightb=1:8x8dct=1:slices=2:cabac=0:interlaced=0"
+    },
+    {
+      "name": "high444_64x64_yuv444p_cabac_ipb_bb_006",
+      "path": "testdata/advanced/high444_64x64_yuv444p_cabac_ipb_bb_006.264",
+      "source": "x264",
+      "profile": "high444",
+      "level": "2.1",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv444p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 2,
+      "refFrames": 3,
+      "tags": [
+        "m7_advanced",
+        "bb",
+        "external_oracle"
+      ],
+      "sha256": "01c182062062c372a41d86c9d8941f424f23fc6c23869c664e811cbfdb547546",
+      "expectedYUVSha256": "99a25ab0818ac6ef3a25f8060d6d6d4efcc770c12ad83ffe862f4efb09e8e8b6",
+      "oracle": "ffmpeg",
+      "frameCount": 6,
+      "status": "conformant",
+      "notes": "FFmpeg8 native yuv444p; 6 frames; bb; QP26 B2 ref3 threads1 slices2. Source: nullsrc=size=64x64:rate=6,format=yuv444p,geq=lum='20+mod((X+2*N)*5+Y*3+N*11+0,190)':cb='20+mod((X+2*N)*5+Y*3+N*11+47,190)':cr='20+mod((X+2*N)*5+Y*3+N*11+94,190)'; x264-params=threads=1:lookahead-threads=1:sync-lookahead=0:scenecut=0:aud=1:repeat-headers=1:keyint=20:bframes=2:b-adapt=0:b-pyramid=none:ref=3:weightp=0:weightb=1:8x8dct=1:slices=2:cabac=1:interlaced=1:bff=1"
+    },
+    {
+      "name": "high444_64x64_yuv444p10le_cabac_ipb_progressive_007",
+      "path": "testdata/advanced/high444_64x64_yuv444p10le_cabac_ipb_progressive_007.264",
+      "source": "x264",
+      "profile": "high444",
+      "level": "1.0",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv444p10le",
+      "bitDepth": 10,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 2,
+      "refFrames": 3,
+      "tags": [
+        "m7_advanced",
+        "progressive",
+        "external_oracle"
+      ],
+      "sha256": "c5b7bd147042732707d032b64d9b82e8323743e792ca5f9cca490e4540b31034",
+      "expectedYUVSha256": "3b8bb30f6c94d8a76d62e9084c63f77bc26928b9e65adab087664c439f3bd0ce",
+      "oracle": "ffmpeg",
+      "frameCount": 6,
+      "status": "conformant",
+      "notes": "FFmpeg8 native yuv444p10le; 6 frames; progressive; QP26 B2 ref3 threads1 slices2. Source: nullsrc=size=64x64:rate=6,format=yuv444p10le,geq=lum='(20+mod((X+2*N)*5+Y*3+N*11+0,190))*4+mod(X+Y+N+0,4)':cb='(20+mod((X+2*N)*5+Y*3+N*11+47,190))*4+mod(X+Y+N+1,4)':cr='(20+mod((X+2*N)*5+Y*3+N*11+94,190))*4+mod(X+Y+N+2,4)'; x264-params=threads=1:lookahead-threads=1:sync-lookahead=0:scenecut=0:aud=1:repeat-headers=1:keyint=20:bframes=2:b-adapt=0:b-pyramid=none:ref=3:weightp=0:weightb=1:8x8dct=1:slices=2:cabac=1:interlaced=0"
+    },
+    {
+      "name": "high444_64x64_yuv444p10le_cabac_ipb_bb_008",
+      "path": "testdata/advanced/high444_64x64_yuv444p10le_cabac_ipb_bb_008.264",
+      "source": "x264",
+      "profile": "high444",
+      "level": "2.1",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv444p10le",
+      "bitDepth": 10,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 2,
+      "refFrames": 3,
+      "tags": [
+        "m7_advanced",
+        "bb",
+        "external_oracle"
+      ],
+      "sha256": "f15d9f6c6ef0bc2f866f6e004cb9ad4ea0f8e81c9015247f41b7d219683f91f5",
+      "expectedYUVSha256": "db3979d62ad689f9d9051d2ae3241a0a9563ec3c5702ed362d4be0b8f1457d7d",
+      "oracle": "ffmpeg",
+      "frameCount": 6,
+      "status": "conformant",
+      "notes": "FFmpeg8 native yuv444p10le; 6 frames; bb; QP26 B2 ref3 threads1 slices2. Source: nullsrc=size=64x64:rate=6,format=yuv444p10le,geq=lum='(20+mod((X+2*N)*5+Y*3+N*11+0,190))*4+mod(X+Y+N+0,4)':cb='(20+mod((X+2*N)*5+Y*3+N*11+47,190))*4+mod(X+Y+N+1,4)':cr='(20+mod((X+2*N)*5+Y*3+N*11+94,190))*4+mod(X+Y+N+2,4)'; x264-params=threads=1:lookahead-threads=1:sync-lookahead=0:scenecut=0:aud=1:repeat-headers=1:keyint=20:bframes=2:b-adapt=0:b-pyramid=none:ref=3:weightp=0:weightb=1:8x8dct=1:slices=2:cabac=1:interlaced=1:bff=1"
+    },
+    {
+      "name": "extended_64x64_yuv420p_cavlc_fmo0_001",
+      "profile": "extended",
+      "level": "2.0",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I"
+      ],
+      "sliceCount": 2,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "fmo",
+        "map0",
+        "pcm",
+        "aso"
+      ],
+      "sha256": "bfa7c3fb7b7d57d093744a3feab8fb8ac678c164f7d2de7c7f36fdc665220806",
+      "expectedYUVSha256": "b86447fe745625856cf593d8235bbf562fa419cf773198d6284cd4f4c449d3a5",
+      "frameCount": 1,
+      "path": "testdata/advanced/extended_64x64_yuv420p_cavlc_fmo0_001.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "analytic",
+      "notes": "Nonuniform PCM; hand-listed map addresses; reverse slice-group arrival; deblocking disabled. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: not accepted as Oracle (exit=69, bytes=0, SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855); analytic expectation retained, mismatch/rejection documented."
+    },
+    {
+      "name": "extended_64x64_yuv420p_cavlc_fmo1_002",
+      "profile": "extended",
+      "level": "2.0",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I"
+      ],
+      "sliceCount": 2,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "fmo",
+        "map1",
+        "pcm",
+        "aso"
+      ],
+      "sha256": "1910eddbba1d61703e3aea883b756483d44fef54cd08c4f826b17e999893f002",
+      "expectedYUVSha256": "b86447fe745625856cf593d8235bbf562fa419cf773198d6284cd4f4c449d3a5",
+      "frameCount": 1,
+      "path": "testdata/advanced/extended_64x64_yuv420p_cavlc_fmo1_002.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "analytic",
+      "notes": "Nonuniform PCM; hand-listed map addresses; reverse slice-group arrival; deblocking disabled. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: not accepted as Oracle (exit=69, bytes=0, SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855); analytic expectation retained, mismatch/rejection documented."
+    },
+    {
+      "name": "extended_64x64_yuv420p_cavlc_fmo2_003",
+      "profile": "extended",
+      "level": "2.0",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I"
+      ],
+      "sliceCount": 2,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "fmo",
+        "map2",
+        "pcm",
+        "aso"
+      ],
+      "sha256": "43be22f56a9670aac4fbb64b75a2adf999d27a8e8d778aefa46f163131c10ceb",
+      "expectedYUVSha256": "b86447fe745625856cf593d8235bbf562fa419cf773198d6284cd4f4c449d3a5",
+      "frameCount": 1,
+      "path": "testdata/advanced/extended_64x64_yuv420p_cavlc_fmo2_003.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "analytic",
+      "notes": "Nonuniform PCM; hand-listed map addresses; reverse slice-group arrival; deblocking disabled. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: not accepted as Oracle (exit=69, bytes=0, SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855); analytic expectation retained, mismatch/rejection documented."
+    },
+    {
+      "name": "extended_64x64_yuv420p_cavlc_fmo3_004",
+      "profile": "extended",
+      "level": "2.0",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I"
+      ],
+      "sliceCount": 2,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "fmo",
+        "map3",
+        "pcm",
+        "aso"
+      ],
+      "sha256": "a37ecae1a58be4b9bfffcba32b4ab271b33d0bcefc11a50ac075c273b13179e9",
+      "expectedYUVSha256": "b86447fe745625856cf593d8235bbf562fa419cf773198d6284cd4f4c449d3a5",
+      "frameCount": 1,
+      "path": "testdata/advanced/extended_64x64_yuv420p_cavlc_fmo3_004.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "analytic",
+      "notes": "Nonuniform PCM; hand-listed map addresses; reverse slice-group arrival; deblocking disabled. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: not accepted as Oracle (exit=69, bytes=0, SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855); analytic expectation retained, mismatch/rejection documented."
+    },
+    {
+      "name": "extended_64x64_yuv420p_cavlc_fmo4_005",
+      "profile": "extended",
+      "level": "2.0",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I"
+      ],
+      "sliceCount": 2,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "fmo",
+        "map4",
+        "pcm",
+        "aso"
+      ],
+      "sha256": "830671cc56dc9bb0cdb569b883e775150034ac79b8675bfa1d66606d16411cd0",
+      "expectedYUVSha256": "b86447fe745625856cf593d8235bbf562fa419cf773198d6284cd4f4c449d3a5",
+      "frameCount": 1,
+      "path": "testdata/advanced/extended_64x64_yuv420p_cavlc_fmo4_005.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "analytic",
+      "notes": "Nonuniform PCM; hand-listed map addresses; reverse slice-group arrival; deblocking disabled. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: not accepted as Oracle (exit=69, bytes=0, SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855); analytic expectation retained, mismatch/rejection documented."
+    },
+    {
+      "name": "extended_64x64_yuv420p_cavlc_fmo5_006",
+      "profile": "extended",
+      "level": "2.0",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I"
+      ],
+      "sliceCount": 2,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "fmo",
+        "map5",
+        "pcm",
+        "aso"
+      ],
+      "sha256": "34ca2c790da6016b659f11574ce99ab512f1bb39888106b7e61fa7e5618f3f22",
+      "expectedYUVSha256": "b86447fe745625856cf593d8235bbf562fa419cf773198d6284cd4f4c449d3a5",
+      "frameCount": 1,
+      "path": "testdata/advanced/extended_64x64_yuv420p_cavlc_fmo5_006.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "analytic",
+      "notes": "Nonuniform PCM; hand-listed map addresses; reverse slice-group arrival; deblocking disabled. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: not accepted as Oracle (exit=69, bytes=0, SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855); analytic expectation retained, mismatch/rejection documented."
+    },
+    {
+      "name": "extended_64x64_yuv420p_cavlc_fmo6_007",
+      "profile": "extended",
+      "level": "2.0",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I"
+      ],
+      "sliceCount": 3,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "fmo",
+        "map6",
+        "pcm",
+        "aso"
+      ],
+      "sha256": "a271ea16db8757962a09ebc3df3998a9362ce56227454ec994af78f07805a536",
+      "expectedYUVSha256": "b86447fe745625856cf593d8235bbf562fa419cf773198d6284cd4f4c449d3a5",
+      "frameCount": 1,
+      "path": "testdata/advanced/extended_64x64_yuv420p_cavlc_fmo6_007.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "analytic",
+      "notes": "Nonuniform PCM; hand-listed map addresses; reverse slice-group arrival; deblocking disabled. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: not accepted as Oracle (exit=69, bytes=0, SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855); analytic expectation retained, mismatch/rejection documented."
+    },
+    {
+      "name": "extended_64x64_yuv420p_cavlc_aso_008",
+      "profile": "extended",
+      "level": "2.0",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I"
+      ],
+      "sliceCount": 16,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "aso",
+        "pcm"
+      ],
+      "sha256": "2721127eecfb76c83dac33e3db47f1bde088e7f1317dc7605b07f0a0bfdfa36c",
+      "expectedYUVSha256": "b86447fe745625856cf593d8235bbf562fa419cf773198d6284cd4f4c449d3a5",
+      "frameCount": 1,
+      "path": "testdata/advanced/extended_64x64_yuv420p_cavlc_aso_008.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "analytic",
+      "notes": "Sixteen one-MB slices in descending raster order; no FMO; nonuniform PCM; deblocking disabled. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: not accepted as Oracle (exit=0, bytes=98304, SHA256=8a504156d556bc12fe6d808c5b815d3c362ed573aa8477a19e473aaa53a54ad7); analytic expectation retained, mismatch/rejection documented."
+    },
+    {
+      "name": "extended_64x64_yuv420p_cavlc_partitionabc_009",
+      "profile": "extended",
+      "level": "2.0",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "P"
+      ],
+      "sliceCount": 1,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "data_partitioning",
+        "partition_a",
+        "partition_b",
+        "partition_c",
+        "nonzero_dc"
+      ],
+      "sha256": "7e330a25d55ea95039e95e5baa2127e50d106bd1754fcf55b6d43cf37f2bde6b",
+      "expectedYUVSha256": "9946131d144e4e4551cc05a093c55a83ab0987974e81f7ce482c1e3e5ae877b3",
+      "frameCount": 2,
+      "path": "testdata/advanced/extended_64x64_yuv420p_cavlc_partitionabc_009.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "analytic",
+      "notes": "PCM IDR then mixed intra/inter P partition A+B+C; both residual partitions have DC=+1; integer motion +2/+1 samples; QP26; deblocking disabled. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: not accepted as Oracle (exit=0, bytes=6144, SHA256=b86447fe745625856cf593d8235bbf562fa419cf773198d6284cd4f4c449d3a5); analytic expectation retained, mismatch/rejection documented."
+    },
+    {
+      "name": "extended_16x16_yuv420p_cavlc_sp_primary_positive_010",
+      "profile": "extended",
+      "level": "1.0",
+      "width": 16,
+      "height": 16,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "SP"
+      ],
+      "sliceCount": 1,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "switching",
+        "sp_primary",
+        "nonzero_dc",
+        "qs_ne_qp",
+        "positive"
+      ],
+      "sha256": "7fb00a6f41178c5a067c44a3e707c90a2192ae208c4a0b6b736ff91fb2e01166",
+      "expectedYUVSha256": "1e184d507a230f93a0ccf328c6fe5c2d10161e55a46a75d963975c11391be255",
+      "frameCount": 2,
+      "path": "testdata/advanced/extended_16x16_yuv420p_cavlc_sp_primary_positive_010.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "ffmpeg",
+      "notes": "Signed luma DC level +/-64, chroma DC +64; QPY0/QSY12; closed-form constant DC spatial basis; deblocking disabled. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: independent output matches analytic pixels."
+    },
+    {
+      "name": "extended_16x16_yuv420p_cavlc_sp_primary_negative_011",
+      "profile": "extended",
+      "level": "1.0",
+      "width": 16,
+      "height": 16,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "SP"
+      ],
+      "sliceCount": 1,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "switching",
+        "sp_primary",
+        "nonzero_dc",
+        "qs_ne_qp",
+        "negative"
+      ],
+      "sha256": "b5da64a2170d08f48e8ff8808251f0cedff168157e0578ca39fc4cca3a62d507",
+      "expectedYUVSha256": "cd14efc0ee7370e944a83882153241c04edca8107b88bcbe9bf0e3ad8a7e3360",
+      "frameCount": 2,
+      "path": "testdata/advanced/extended_16x16_yuv420p_cavlc_sp_primary_negative_011.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "ffmpeg",
+      "notes": "Signed luma DC level +/-64, chroma DC +64; QPY0/QSY12; closed-form constant DC spatial basis; deblocking disabled. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: independent output matches analytic pixels."
+    },
+    {
+      "name": "extended_16x16_yuv420p_cavlc_sp_secondary_positive_012",
+      "profile": "extended",
+      "level": "1.0",
+      "width": 16,
+      "height": 16,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "SP"
+      ],
+      "sliceCount": 1,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "switching",
+        "sp_secondary",
+        "nonzero_dc",
+        "qs_ne_qp",
+        "positive"
+      ],
+      "sha256": "d02590cf0043339ea80a31f7597f5a7f33e26a7f5a507b778d23daa9b809c791",
+      "expectedYUVSha256": "8c79bc43a930644569b94c103565d3b8aa93c1c033775a910975952a59edf796",
+      "frameCount": 2,
+      "path": "testdata/advanced/extended_16x16_yuv420p_cavlc_sp_secondary_positive_012.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "analytic",
+      "notes": "Signed luma DC level +/-64, chroma DC +64; QPY0/QSY12; closed-form constant DC spatial basis; deblocking disabled. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: not accepted as Oracle (exit=0, bytes=768, SHA256=1e184d507a230f93a0ccf328c6fe5c2d10161e55a46a75d963975c11391be255); analytic expectation retained, mismatch/rejection documented."
+    },
+    {
+      "name": "extended_16x16_yuv420p_cavlc_sp_secondary_negative_013",
+      "profile": "extended",
+      "level": "1.0",
+      "width": 16,
+      "height": 16,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I",
+        "SP"
+      ],
+      "sliceCount": 1,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "switching",
+        "sp_secondary",
+        "nonzero_dc",
+        "qs_ne_qp",
+        "negative"
+      ],
+      "sha256": "dbf1acb1d67c6df7bc4a840d076d0254e1417151ed1bcc4a15c6d55482a2b894",
+      "expectedYUVSha256": "5a083c0499ef39df3b5b3a1e7b012118e883878421e305ca234d17b01373abf8",
+      "frameCount": 2,
+      "path": "testdata/advanced/extended_16x16_yuv420p_cavlc_sp_secondary_negative_013.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "analytic",
+      "notes": "Signed luma DC level +/-64, chroma DC +64; QPY0/QSY12; closed-form constant DC spatial basis; deblocking disabled. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: not accepted as Oracle (exit=0, bytes=768, SHA256=cd14efc0ee7370e944a83882153241c04edca8107b88bcbe9bf0e3ad8a7e3360); analytic expectation retained, mismatch/rejection documented."
+    },
+    {
+      "name": "extended_16x16_yuv420p_cavlc_si_positive_014",
+      "profile": "extended",
+      "level": "1.0",
+      "width": 16,
+      "height": 16,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "SI"
+      ],
+      "sliceCount": 1,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "switching",
+        "si",
+        "nonzero_dc",
+        "qs_ne_qp",
+        "positive"
+      ],
+      "sha256": "308dc180b1034e068545c15f780d32d92a4c17d1a5bd66eac1e41d8eb3ca89d6",
+      "expectedYUVSha256": "c9a40e48eee7fa6de253c0099513df73bf0c3b6727412c9bd8987f21f7e4185d",
+      "frameCount": 1,
+      "path": "testdata/advanced/extended_16x16_yuv420p_cavlc_si_positive_014.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "analytic",
+      "notes": "Signed luma DC level +/-64, chroma DC +64; QPY0/QSY12; closed-form constant DC spatial basis; deblocking disabled. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: not accepted as Oracle (exit=0, bytes=384, SHA256=233ca6121d2fa5d176fbf47d275317da9bde43765393cbcd1ab54f8f5f82e5e8); analytic expectation retained, mismatch/rejection documented."
+    },
+    {
+      "name": "extended_16x16_yuv420p_cavlc_si_negative_015",
+      "profile": "extended",
+      "level": "1.0",
+      "width": 16,
+      "height": 16,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "SI"
+      ],
+      "sliceCount": 1,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "switching",
+        "si",
+        "nonzero_dc",
+        "qs_ne_qp",
+        "negative"
+      ],
+      "sha256": "329f3df01227100db2d43cffb7b6f02660361436e71c0c6bf4c24cea5c1952a9",
+      "expectedYUVSha256": "1614748805292195782267d3fe3a304b9c104586ec18f065de8c755633d0bc08",
+      "frameCount": 1,
+      "path": "testdata/advanced/extended_16x16_yuv420p_cavlc_si_negative_015.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "analytic",
+      "notes": "Signed luma DC level +/-64, chroma DC +64; QPY0/QSY12; closed-form constant DC spatial basis; deblocking disabled. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: not accepted as Oracle (exit=0, bytes=384, SHA256=3c3d5f22b204a4d0b8975840874702ac99d519bc8b0acd741ab33c6a06c3d388); analytic expectation retained, mismatch/rejection documented."
+    },
+    {
+      "name": "extended_64x64_yuv420p_cavlc_redundant_016",
+      "profile": "extended",
+      "level": "2.0",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cavlc",
+      "sliceTypes": [
+        "I"
+      ],
+      "sliceCount": 2,
+      "refFrames": 1,
+      "tags": [
+        "m7_advanced",
+        "redundant",
+        "primary",
+        "backup",
+        "pcm"
+      ],
+      "sha256": "cae898aa2019775656c8489c1e2f9630b778f21f6671e694ed3d596ac2e902c7",
+      "expectedYUVSha256": "d3d653b3ff2dec5d4ced0691340eddafe548f00e164efbe14f11f58b74934dc0",
+      "frameCount": 2,
+      "path": "testdata/advanced/extended_64x64_yuv420p_cavlc_redundant_016.264",
+      "source": "synthetic",
+      "status": "conformant",
+      "oracle": "analytic",
+      "notes": "PCM IDR followed by two primary slices (count0/bias31) and complete different backup (count1/bias77); only the primary contributes the second output frame. Independent PCM/closed-form expectation; not an FFmpeg Oracle result. FFmpeg8 observation: not accepted as Oracle (exit=0, bytes=12288, SHA256=d3d653b3ff2dec5d4ced0691340eddafe548f00e164efbe14f11f58b74934dc0); analytic expectation retained, mismatch/rejection documented."
+    },
+    {
+      "name": "high_64x64_yuv420p_cabac_ipb_hrd_001",
+      "path": "testdata/advanced/high_64x64_yuv420p_cabac_ipb_hrd_001.264",
+      "source": "x264",
+      "profile": "high",
+      "level": "1.0",
+      "width": 64,
+      "height": 64,
+      "pixFmt": "yuv420p",
+      "bitDepth": 8,
+      "entropy": "cabac",
+      "sliceTypes": [
+        "I",
+        "P",
+        "B"
+      ],
+      "sliceCount": 1,
+      "refFrames": 4,
+      "tags": [
+        "m7_advanced",
+        "hrd",
+        "external_oracle"
+      ],
+      "sha256": "d29f108c78df39ca473748daf143ffa05b10f0a07e545676feed183d29d614f6",
+      "expectedYUVSha256": "cbe120f050e7ccaa2c44d78a78f31a5715f5c9a576d42b3909d68e09ae4bf312",
+      "oracle": "ffmpeg",
+      "frameCount": 6,
+      "status": "conformant",
+      "notes": "FFmpeg8 testsrc2 64x64 rate6 / 6 frames; libx264 High 64000bit/s maxrate64000 bufsize128000; nal-hrd=cbr:force-cfr=1:threads=1:scenecut=0:aud=1:bframes=2:ref=2; native 36864-byte output matches Go CLI; trace_headers and syntax HRD values verified separately."
     }
   ]
 }

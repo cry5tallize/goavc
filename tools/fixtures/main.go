@@ -20,8 +20,13 @@ func must(err error) {
 func main() {
 	output := flag.String("output", "testdata/main/main_16x16_yuv420p_cavlc_mmco_006.264", "输出 Annex-B 路径")
 	pocType := flag.Uint("poc-type", 0, "POC 类型 0/1/2")
-	kind := flag.String("kind", "mmco", "mmco 或 weighted-b")
+	kind := flag.String("kind", "mmco", "mmco、weighted-b 或 advanced")
+	outputDir := flag.String("output-dir", "testdata/advanced", "advanced 套件输出目录（含独立解析期望与元数据 JSON）")
 	flag.Parse()
+	if *kind == "advanced" {
+		generateAdvanced(*outputDir)
+		return
+	}
 	if *kind == "weighted-b" {
 		path := *output
 		if path == "testdata/main/main_16x16_yuv420p_cavlc_mmco_006.264" {

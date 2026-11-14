@@ -22,9 +22,15 @@ import (
 
 // Status 是语料的验证状态。
 const (
-	StatusConformant  = "conformant"  // 已通过逐像素 Oracle 对比
+	StatusConformant  = "conformant"  // 已通过外部像素 Oracle 或规范解析解校验
 	StatusUnsupported = "unsupported" // 已知不支持，必须返回 ErrUnsupported
 	StatusWIP         = "wip"         // 已入库但尚未验证
+)
+
+// Oracle 标识参考输出的独立证据来源；空值保留历史 FFmpeg 约定。
+const (
+	OracleFFmpeg   = "ffmpeg"
+	OracleAnalytic = "analytic"
 )
 
 // Entry 描述一条测试语料。
@@ -53,12 +59,19 @@ type Entry struct {
 	RefFrames  int      `json:"refFrames"`
 	Tags       []string `json:"tags,omitempty"`
 
+	// FrameCount 为实际解码输出图片数；0 表示历史条目未列明。
+	FrameCount int `json:"frameCount,omitempty"`
+
 	// SHA256 是输入码流的哈希（小写十六进制）。
 	SHA256 string `json:"sha256"`
 
 	// ExpectedYUV 是参考解码输出的路径，ExpectedYUVSHA256 是其哈希。
 	ExpectedYUV       string `json:"expectedYUV,omitempty"`
 	ExpectedYUVSHA256 string `json:"expectedYUVSha256,omitempty"`
+
+	// Oracle 为空或 ffmpeg 时参考来自 FFmpeg；analytic 时来自规范解析解，
+	// 不表示该语料可被 FFmpeg 解码。
+	Oracle string `json:"oracle,omitempty"`
 
 	Status string `json:"status"`
 	Notes  string `json:"notes,omitempty"`
@@ -82,7 +95,7 @@ var (
 // 让差分脚本可以对同一份清单直接调用 ffmpeg。
 var (
 	validProfiles = map[string]bool{
-		"baseline": true, "main": true, "high": true,
+		"baseline": true, "main": true, "extended": true, "high": true,
 		"high10": true, "high422": true, "high444": true,
 	}
 	validPixFmts = map[string]bool{
@@ -91,6 +104,7 @@ var (
 	}
 	validEntropy = map[string]bool{"cavlc": true, "cabac": true}
 	validStatus  = map[string]bool{StatusConformant: true, StatusUnsupported: true, StatusWIP: true}
+	validOracle  = map[string]bool{OracleFFmpeg: true, OracleAnalytic: true}
 )
 
 // Load 读取并解析清单文件。只做 JSON 结构解析，不做语义校验。
@@ -150,6 +164,15 @@ func (f *File) Validate(root string) []error {
 		}
 		if e.Entropy != "" && !validEntropy[e.Entropy] {
 			report("%s: unknown entropy mode %q", label, e.Entropy)
+		}
+		if e.Profile == "extended" && (e.BitDepth != 8 || e.PixFmt != "yuv420p" || e.Entropy != "cavlc") {
+			report("%s: extended requires 8-bit yuv420p and cavlc", label)
+		}
+		if e.Oracle != "" && !validOracle[e.Oracle] {
+			report("%s: unknown oracle %q", label, e.Oracle)
+		}
+		if e.FrameCount < 0 {
+			report("%s: frame count %d must be non-negative", label, e.FrameCount)
 		}
 		if e.Width <= 0 || e.Height <= 0 {
 			report("%s: invalid dimensions %dx%d", label, e.Width, e.Height)

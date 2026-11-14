@@ -56,6 +56,89 @@ func TestValidateAcceptsCompleteEntry(t *testing.T) {
 	}
 }
 
+func TestValidate_OracleAndFrameCount(t *testing.T) {
+	root, sha := setupCorpus(t, "a.264", []byte{1})
+	for _, oracle := range []string{"", "ffmpeg", "analytic"} {
+		t.Run("oracle_"+oracle, func(t *testing.T) {
+			for _, frames := range []int{0, 3} {
+				e := baseEntry("a.264", sha)
+				e.Oracle, e.FrameCount = oracle, frames
+				if errs := f2errs(root, e); len(errs) != 0 {
+					t.Fatalf("合法 Oracle/frameCount 被拒绝: %v", errs)
+				}
+			}
+		})
+	}
+	e := baseEntry("a.264", sha)
+	e.Oracle, e.FrameCount = "self-roundtrip", -1
+	errs := f2errs(root, e)
+	for _, want := range []string{"oracle", "frame count"} {
+		if !containsAll(errs, want) {
+			t.Fatalf("错误集缺少 %q: %v", want, errs)
+		}
+	}
+}
+
+func TestValidate_ExtendedRequires8Bit420CAVLC(t *testing.T) {
+	root, sha := setupCorpus(t, "a.264", []byte{1})
+	e := baseEntry("a.264", sha)
+	e.Profile, e.Oracle = "extended", "analytic"
+	if errs := f2errs(root, e); len(errs) != 0 {
+		t.Fatalf("合法 Extended 条目被拒绝: %v", errs)
+	}
+	for _, tc := range []struct {
+		name   string
+		mutate func(*Entry)
+	}{
+		{"10bit", func(e *Entry) { e.BitDepth, e.PixFmt = 10, "yuv420p10le" }},
+		{"422", func(e *Entry) { e.PixFmt = "yuv422p" }},
+		{"444", func(e *Entry) { e.PixFmt = "yuv444p" }},
+		{"cabac", func(e *Entry) { e.Entropy = "cabac" }},
+		{"unspecified_entropy", func(e *Entry) { e.Entropy = "" }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			bad := e
+			tc.mutate(&bad)
+			if errs := f2errs(root, bad); !containsAll(errs, "extended") {
+				t.Fatalf("不合法 Extended 条目未被明确拒绝: %v", errs)
+			}
+		})
+	}
+}
+
+func TestEntry_OptionalOracleMetadataJSON(t *testing.T) {
+	if CurrentVersion != 1 {
+		t.Fatalf("可选字段不得改变旧 schema 版本: %d", CurrentVersion)
+	}
+	data, err := json.Marshal(Entry{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{`"oracle"`, `"frameCount"`} {
+		if strings.Contains(string(data), key) {
+			t.Fatalf("未设置的可选字段必须省略: %s", data)
+		}
+	}
+	var e Entry
+	if err := json.Unmarshal([]byte(`{"oracle":"analytic","frameCount":3}`), &e); err != nil {
+		t.Fatal(err)
+	}
+	if e.Oracle != "analytic" || e.FrameCount != 3 {
+		t.Fatalf("可选字段未保留: %+v", e)
+	}
+	data, err = json.Marshal(e)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		t.Fatal(err)
+	}
+	if string(fields["oracle"]) != `"analytic"` || string(fields["frameCount"]) != "3" {
+		t.Fatalf("可选字段 JSON 名称或值不符: %s", data)
+	}
+}
+
 // 哈希不一致是"语料被替换"的唯一可靠信号，必须报错。
 func TestValidateRejectsHashMismatch(t *testing.T) {
 	root, sha := setupCorpus(t, "testdata/baseline/clip.264", []byte{1, 2, 3})

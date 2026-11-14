@@ -1,5 +1,31 @@
 # testdata
 
+## M7 高级语料套件
+
+`advanced/`新增25份、76个实际输出帧，清单总计55条。每份均登记原始位深的输入/输出SHA-256、帧数和Oracle来源。
+`oracle=ffmpeg`表示真实FFmpeg原生输出比较，`oracle=analytic`表示规范解析像素；空值保留历史FFmpeg约定。
+不能因FFmpeg退出0就宣称通过：还要核对完整字节数、帧数与像素。`sliceCount`是同一图片单个冗余表示的最大slice数，B/C不是额外slice。
+
+- 八份x264：422/444 × 8/10-bit × 逐行/MBAFF，各6帧、64×64、双slice、QP26、B2、ref3。422隔行TFF，444隔行BFF，低两位含真实信息；另有6帧High NAL-HRD CBR声明语料。
+- 十六份规范向量：七种FMO、独立ASO、A/B/C混合非零残差、primary/secondary SP和SI正负系数、冗余表示。期望由PCM源采样或8.6手算DC基生成，不调用编解码器或内部变换计算期望。
+- SP primary两向量还与FFmpeg像素相等；其余十四份明确使用解析解。FFmpeg对FMO拒绝、ASO/分区输出不完整、secondary/SI输出不同，记录于[完整证据](../docs/gates/m7_corpus.json)，不计作FFmpeg通过。
+
+FFmpeg8的[切片头实现](https://ffmpeg.org/doxygen/8.0/h264__slice_8c_source.html#l01872)仅消费而不保存`sp_for_switch_flag/slice_qs_delta`；不能以它覆盖规范8.6.2切换过程。
+规范生成器复现（先设置`CGO_ENABLED=0`）：
+
+```text
+go run ./tools/fixtures -kind advanced -output-dir <temporary-directory>
+```
+
+生成器同时输出临时原始YUV与metadata，入库只保存小码流；外部x264的精确滤镜、参数与观察见证据JSON。
+真实HRD语料使用testsrc2/64×64/6FPS/6帧、High、bitrate=maxrate=64000、bufsize128000，
+`nal-hrd=cbr:force-cfr=1:threads=1:scenecut=0:aud=1:bframes=2:ref=2`；trace_headers与共享语法核对参数，
+原始输出必须使用`-fps_mode passthrough`，不能依赖裸流猜测帧率复制帧。
+
+执行`go test ./decoder -run 'TestCorpus_(AdvancedFFmpegPixelExact|ManifestOutputDigests)'`。
+前者显式区分外部与解析解，后者不依赖FFmpeg且对所有Conformant条目核对原生像素和已登记帧数。
+
+
 ## M7 High10
 
 `high10/`新增三份32×32/48×32、共18帧的真实10-bit420码流，包含CAVLC I/P、
@@ -28,9 +54,9 @@ JVT+双 slice（192×128/12 帧）。都使用 testsrc2 rate=5、x264 medium/Hig
 High 共 74 帧，输入与 FFmpeg 原始 YUV SHA-256 均登记为 conformant。
 
 合法隔行 Main 样本为 64×64/4 帧，medium/Main/yuv420p、flags=+ildct+ilme、
-x264-params=interlaced=1:tff=1:threads=1:aud=1。它标为 unsupported，测试验证
-返回 ErrUnsupported 后还能在正确 IDR 恢复，不污染后续渐进帧。
-总计 27 条语料：26 条已支持、217 帧 Oracle 回归，1 条已知不支持。
+x264-params=interlaced=1:tff=1:threads=1:aud=1。M7已接入MBAFF并将该条迁为conformant，
+四帧与FFmpeg逐像素及固定YUV哈希一致。PAFF序列仍显式拒绝，恢复契约使用独立构造的PAFF边界。
+本节记录原M3语料；当前总量和新增高级证据见上面的M7套件。
 
 ## M3 B 帧、加权与显示重排
 

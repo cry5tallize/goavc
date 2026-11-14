@@ -52,6 +52,9 @@ func TestFFprobe_SPSMatchesStreamMetadata(t *testing.T) {
 			continue
 		}
 		t.Run(entry.Name, func(t *testing.T) {
+			if entry.Oracle == manifest.OracleAnalytic {
+				t.Skip("analytic Oracle：规范解析解由 decoder 的 TestCorpus_ManifestOutputDigests 校验；不声称 ffprobe/FFmpeg 可解")
+			}
 			path := filepath.Join(root, filepath.FromSlash(entry.Path))
 			data, err := os.ReadFile(path)
 			if err != nil {
@@ -176,6 +179,8 @@ func ffprobeProfile(name string) string {
 		return "baseline"
 	case "Main":
 		return "main"
+	case "Extended":
+		return "extended"
 	case "High":
 		return "high"
 	case "High 10":
@@ -195,6 +200,8 @@ func profileName(profileIDC uint8) string {
 		return "baseline"
 	case 77:
 		return "main"
+	case 88:
+		return "extended"
 	case 100:
 		return "high"
 	case 110:
