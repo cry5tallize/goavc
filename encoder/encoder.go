@@ -20,6 +20,7 @@ type Encoder struct {
 	fullSearch              bool
 	maxAUBytes              int
 	adaptiveQP              int
+	cabac                   bool
 	reference               *picture.Picture
 	frameNum                uint32
 	framesSinceIDR          int
@@ -60,7 +61,7 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-	if cfg.Profile != h264.ProfileBaseline || cfg.PixelFormat != h264.YUV420P || cfg.RateControl != h264.RateControlCQP || cfg.MaxBFrames != 0 || cfg.Threads > 1 {
+	if (cfg.Profile != h264.ProfileBaseline && cfg.Profile != h264.ProfileMain && cfg.Profile != h264.ProfileHigh) || cfg.PixelFormat != h264.YUV420P || cfg.RateControl != h264.RateControlCQP || cfg.MaxBFrames != 0 || cfg.Threads > 1 {
 		return nil, fmt.Errorf("encoder: only serial baseline yuv420p CQP is supported: %w", h264.ErrUnsupported)
 	}
 	if cfg.IDRInterval != cfg.GOPSize {
@@ -73,7 +74,7 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	if uint64(cfg.FPSNum) > uint64(^uint32(0))/2 || uint64(cfg.FPSDen) > uint64(^uint32(0)) {
 		return nil, fmt.Errorf("encoder: VUI timing overflows: %w", h264.ErrInvalidData)
 	}
-	e := &Encoder{cfg: cfg, slices: 1, searchRange: 16}
+	e := &Encoder{cfg: cfg, slices: 1, searchRange: 16, cabac: cfg.Profile != h264.ProfileBaseline}
 	for _, option := range options {
 		if option == nil {
 			return nil, fmt.Errorf("encoder: nil option: %w", h264.ErrInvalidData)
@@ -87,6 +88,9 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	}
 	if e.adaptiveQP > 0 && (e.pcm || e.qpAt != nil) {
 		return nil, fmt.Errorf("encoder: AQ conflicts with PCM or explicit QP callback: %w", h264.ErrUnsupported)
+	}
+	if e.cabac && cfg.Profile == h264.ProfileBaseline {
+		return nil, fmt.Errorf("encoder: baseline forbids CABAC: %w", h264.ErrUnsupported)
 	}
 	if err := e.parameters(); err != nil {
 		return nil, err
@@ -143,7 +147,12 @@ func (e *Encoder) SendFrame(f *h264.Frame) error {
 	var data []byte
 	var state *frameState
 	isIDR := e.pcm || e.reference == nil || e.framesSinceIDR >= e.cfg.IDRInterval || f.KeyFrame
-	if e.pcm {
+	if e.cabac {
+		data, state, err = e.encodeCABAC(pic, isIDR)
+		if state != nil {
+			pic = state.pic
+		}
+	} else if e.pcm {
 		data, err = e.encodePCM(pic)
 	} else if !isIDR {
 		data, state, err = e.encodeP(pic)

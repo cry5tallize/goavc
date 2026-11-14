@@ -36,6 +36,8 @@ type frameState struct {
 	mv             *motion.Grid
 	allowZeroPCM   bool
 	maxLevelPrefix int
+	dcCoded        [3][]bool
+	mvd            []motion.MV
 }
 
 // WithMacroblockQP 使用坐标回调覆盖 CQP；返回值必须为 0..51。
@@ -124,6 +126,15 @@ func appendBits(dst, src *bitstream.Writer) {
 }
 
 func (s *frameState) writePCM(w *bitstream.Writer, addr int) {
+	typ := uint32(25)
+	if s.reference != nil {
+		typ += 5
+	}
+	w.WriteUE(typ)
+	s.writePCMSamples(w, addr)
+}
+
+func (s *frameState) writePCMSamples(w *bitstream.Writer, addr int) {
 	info := &s.info[addr]
 	info.pcm = true
 	info.qp = 0
@@ -137,11 +148,6 @@ func (s *frameState) writePCM(w *bitstream.Writer, addr int) {
 			s.cnz[c][addr*4+i] = 16
 		}
 	}
-	typ := uint32(25)
-	if s.reference != nil {
-		typ += 5
-	}
-	w.WriteUE(typ)
 	w.ByteAlign()
 	for c := 0; c < 3; c++ {
 		n := 16

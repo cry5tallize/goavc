@@ -102,6 +102,9 @@ func (e *Encoder) pSliceHeader(w *bitstream.Writer, first int) {
 	w.WriteBit(0) // num_ref_idx_active_override_flag，单参考来自 PPS
 	w.WriteBit(0) // ref_pic_list_modification_flag_l0
 	w.WriteBit(0) // adaptive_ref_pic_marking_mode_flag，滑窗保留最近一个参考
+	if e.cabac {
+		w.WriteUE(0)
+	} // cabac_init_idc
 	w.WriteSE(0)
 	w.WriteUE(0)
 	w.WriteSE(0)

@@ -16,6 +16,13 @@ func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
 	s := &frameState{src: src, pic: pic, info: make([]mbInfo, total), nz: make([]uint8, total*16), mv: motion.NewGrid(src.MBWidth, src.MBHeight)}
 	s.allowZeroPCM = e.cfg.Profile == h264.ProfileHigh
 	s.maxLevelPrefix = 15
+	if e.cabac || e.cfg.Profile == h264.ProfileHigh {
+		s.maxLevelPrefix = 28
+	}
+	for c := range s.dcCoded {
+		s.dcCoded[c] = make([]bool, total)
+	}
+	s.mvd = make([]motion.MV, total*16)
 	for c := range s.cnz {
 		s.cnz[c] = make([]uint8, total*4)
 	}

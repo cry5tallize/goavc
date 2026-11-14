@@ -52,6 +52,15 @@ func (e *Encoder) parameters() error {
 	}
 	e.sps = &syntax.SPS{ProfileIDC: 66, ConstraintSetFlags: [6]bool{true, true}, LevelIDC: uint8(selected), ChromaFormatIDC: 1, PicOrderCntType: 2, MaxNumRefFrames: 1, PicWidthInMbsMinus1: uint32(mw - 1), PicHeightInMapUnitsMinus1: uint32(mh - 1), FrameMbsOnlyFlag: true, Direct8x8InferenceFlag: true, FrameCroppingFlag: c.Width != mw*16 || c.Height != mh*16, FrameCropRightOffset: uint32((mw*16 - c.Width) / 2), FrameCropBottomOffset: uint32((mh*16 - c.Height) / 2), VUIParametersPresentFlag: true, VUI: &syntax.VUI{TimingInfoPresentFlag: true, NumUnitsInTick: uint32(c.FPSDen), TimeScale: uint32(c.FPSNum * 2), FixedFrameRateFlag: true, BitstreamRestrictionFlag: true, MotionVectorsOverPicBoundariesFlag: true, MaxDecFrameBuffering: 1}}
 	e.pps = &syntax.PPS{PicInitQPMinus26: int32(c.QP - 26), DeblockingFilterControlPresentFlag: true}
+	if c.Profile == h264.ProfileMain {
+		e.sps.ProfileIDC = 77
+		e.sps.ConstraintSetFlags = [6]bool{false, true}
+	}
+	if c.Profile == h264.ProfileHigh {
+		e.sps.ProfileIDC = 100
+		e.sps.ConstraintSetFlags = [6]bool{}
+	}
+	e.pps.EntropyCodingModeFlag = e.cabac
 	for _, l := range levels {
 		if l.id == selected {
 			e.maxAUBytes = int(int64(l.br) * 1000 * int64(c.FPSDen) / (8 * int64(c.FPSNum)))
