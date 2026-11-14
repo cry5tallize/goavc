@@ -132,7 +132,14 @@ func (d *Decoder) parseSlice(u nal.Unit) (sliceEntry, error) {
 	if u.Header.IsIDR() && u.Header.RefIDC == 0 {
 		return sliceEntry{}, fmt.Errorf("decoder: non-reference IDR: %w", h264.ErrInvalidData)
 	}
-	rbsp, err := bitstream.EBSPToRBSP(u.Payload)
+	payload := u.Payload
+	// Spec: 7.4.1 / 9.3.4.6。封装后的 cabac_zero_word 为 00 00 03，
+	// 末尾 03 是合法的防竞争字节；仅在确认 PPS 为 CABAC 后接受此形式。
+	terminalWord := len(payload) >= 3 && payload[len(payload)-3] == 0 && payload[len(payload)-2] == 0 && payload[len(payload)-1] == 3
+	if terminalWord {
+		payload = payload[:len(payload)-1]
+	}
+	rbsp, err := bitstream.EBSPToRBSP(payload)
 	if err != nil {
 		return sliceEntry{}, err
 	}
@@ -143,6 +150,9 @@ func (d *Decoder) parseSlice(u nal.Unit) (sliceEntry, error) {
 	pps := d.pps[id]
 	if pps == nil {
 		return sliceEntry{}, fmt.Errorf("decoder: unknown pps %d: %w", id, h264.ErrInvalidData)
+	}
+	if terminalWord && !pps.EntropyCodingModeFlag {
+		return sliceEntry{}, fmt.Errorf("decoder: terminal CABAC escape in CAVLC slice: %w", h264.ErrInvalidData)
 	}
 	sps := d.sps[pps.SeqParameterSetID]
 	if sps == nil {

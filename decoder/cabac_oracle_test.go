@@ -147,3 +147,60 @@ func TestCABAC_ZeroWordPadding(t *testing.T) {
 		t.Fatal("zero-word stream differs from FFmpeg")
 	}
 }
+
+func TestCABAC_EncapsulatedZeroWordPadding(t *testing.T) {
+	original := "../testdata/main/main_96x64_yuv420p_cabac_default_008.264"
+	data, err := os.ReadFile(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	units, err := nal.SplitAnnexB(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var padded []byte
+	for _, unit := range units {
+		if unit.Header.IsVCL() {
+			unit.Payload = append(unit.Payload, 0, 0, 3, 0, 0, 3)
+		}
+		padded = append(padded, annex(unit)...)
+	}
+	path := filepath.Join(t.TempDir(), "encapsulated_zero_words.264")
+	if err = os.WriteFile(path, padded, 0600); err != nil {
+		t.Fatal(err)
+	}
+	got := decodeFile(t, path)
+	base := decodeFile(t, original)
+	if !bytes.Equal(got, base) {
+		t.Fatal("encapsulated CABAC padding changed pixels")
+	}
+	if want := ffmpegRaw(t, ffmpegPath(t), path); !bytes.Equal(got, want) {
+		t.Fatal("encapsulated padding differs from FFmpeg")
+	}
+}
+
+func TestCABAC_TerminalEscapeRejectedForCAVLC(t *testing.T) {
+	data, err := os.ReadFile("../testdata/baseline/baseline_64x48_yuv420p_cavlc_ipp_001.264")
+	if err != nil {
+		t.Fatal(err)
+	}
+	units, err := nal.SplitAnnexB(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var malformed []byte
+	for _, unit := range units {
+		if unit.Header.IsVCL() {
+			unit.Payload = append(unit.Payload, 0, 0, 3)
+		}
+		malformed = append(malformed, annex(unit)...)
+	}
+	d, err := New(h264.DecoderConfig{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	if err = d.SendPacket(h264.Packet{Data: malformed}); !errors.Is(err, h264.ErrInvalidData) {
+		t.Fatal(err)
+	}
+}
