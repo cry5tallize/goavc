@@ -271,7 +271,7 @@ M6/M7/M8 ───────────► M9 生产化与发布
 | M3 | Decoder Main/High | CABAC、B Slice、POC、RefList、MMCO、8×8、ScalingMatrix、延迟输出 | L | WIP（本地门禁通过，待 CI；见 gates/m3.md） |
 | M4 | Encoder Baseline | SPS/PPS Writer、IDR、I_PCM、I4×4/I16×16、CAVLC、CQP、本地重建、Annex-B | L | WIP（本地门禁通过，待 CI；见 gates/m4.md） |
 | M5 | Encoder Main/High | P Slice、ME/MC、亚像素、模式决策、RD、B Frame、CABAC、8×8、GOP、RC | XL | WIP（M5a/b/c/d本地门禁已关闭，待远端CI；见gates/m5c.md、gates/m5d.md） |
-| M6 | 完整流式处理 | 增量 Reader、AU 组装、YUV I/O、Pipeline、背压、取消、Flush | M | WIP（接口、8-bit YUV读写、增量Annex-B/AVCC NAL Reader、有界AU Reader与Annex-B/AVCC AU Writer完成；pipeline门禁未关闭，见gates/m6.md） |
+| M6 | 完整流式处理 | 增量Reader/AU/YUV、同步有界pipeline、取消/背压/Flush、三个CLI | M | WIP（功能、常规门禁/全库race/六目标构建通过；一小时长测按用户要求停止，正式长稳门禁未关闭；见gates/m6.md） |
 | M7 | 高级 AVC 特性 | High10/422/444、Interlaced、MBAFF/PAFF、FMO、Data Partitioning 等 | XL | TODO |
 | M8 | SIMD 与并行 | SSE2/AVX2/NEON、dispatch、pool、slice 并行、pipeline、profile | L | TODO |
 | M9 | 生产化与发布 | 全量测试、Fuzz、race、多平台、稳定性、文档、v1.0 | M | TODO |
@@ -502,12 +502,12 @@ M6/M7/M8 ───────────► M9 生产化与发布
 **范围外：** MP4 / RTP / WebRTC 适配；网络传输层。
 
 **退出标准：**
-- [ ] 对同一码流，任意 chunk 大小（1 byte / 7 / 4096 / 整文件）解码输出完全一致（含最坏跨边界样本）。
-- [ ] 内存有界：`MaxInputBuffer` 生效，超限返回 `ErrResourceLimit`；1 小时测试 RSS 增长率 < 预设阈值。
-- [ ] 取消：`ctx` 取消后 ≤ 1 帧内返回 `context.Canceled`，无 goroutine 泄漏（`goleak` 风格检查）。
-- [ ] EOF：输入结束后自动 flush，输出完整，最终返回 `io.EOF`（而非错误）。
-- [ ] 不完整尾数据：不 panic、不误报为合法帧，返回明确错误或按策略丢弃并记录。
-- [ ] `EncodeStream`/`DecodeStream` 的背压测试：消费者慢于生产者时不发生无界内存增长。
+- [x] 对同一码流，任意 chunk 大小（1 byte / 7 / 4096 / 整文件）解码输出完全一致（含最坏跨边界样本）。26份支持语料、217帧，Annex-B/AVCC对独立FFmpeg输出哈希通过。
+- [ ] 内存有界：`MaxInputBuffer` 生效，超限返回 `ErrResourceLimit`；1 小时测试 RSS 增长率 < 预设阈值。载荷限额与30秒smoke通过；一小时运行按用户要求停止，不计作本项通过。
+- [x] 取消：`ctx` 取消后 ≤ 1 帧内返回 `context.Canceled`，无 goroutine 泄漏（`goleak` 风格检查）。Context阻塞输入/输出、200次循环与显式join通过；普通永久阻塞I/O须所有者中断或实现Context*接口，不遗留后台Read。
+- [x] EOF：输入结束后自动 flush，输出完整，最终返回 `io.EOF`（而非错误）。PCM、B/Lookahead不足尾组、时间戳和显示顺序Oracle通过。
+- [x] 不完整尾数据：不 panic、不误报为合法帧，返回明确错误或按策略丢弃并记录。YUV/Annex-B/AVCC/PCM截断和InvalidData+EOF误吞回归通过。
+- [x] `EncodeStream`/`DecodeStream` 的背压测试：消费者慢于生产者时不发生无界内存增长。同步单输入无预取队列，阻塞Writer时下个输入不被消费。
 
 **风险：** AU 边界误判导致帧合并/拆分 → 用 manifest 中多 slice + 多帧无 AUD 的语料做定向回归。
 

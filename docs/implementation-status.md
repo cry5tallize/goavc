@@ -174,8 +174,8 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 
 ## M6：流式I/O（WIP）
 
-分支`feat/m6-streaming`。四个接口、8-bit原始YUV读写、增量Annex-B/AVCC NAL Reader、AU Reader与两种AU Writer已实现；
-pipeline、取消、背压、自动Flush与长时稳定性门禁尚未完成。接手记录见`docs/gates/m6.md`。
+分支`feat/m6-streaming`。原始I/O、NAL/AU适配器、同步有界pipeline、自动Flush、取消/背压与三个CLI已接入；
+完整常规门禁、非缓存全库race和六目标构建通过。30秒稳定性smoke通过；一小时长测按用户要求停止，不计为通过，正式长稳门禁仍未关闭。证据与分项提交见`docs/gates/m6.md`，API见`docs/stream.md`。
 
 | Module | 职责 | Status | 证据 | 缺口 |
 |---|---|---|---|---|
@@ -187,6 +187,11 @@ pipeline、取消、背压、自动Flush与长时稳定性门禁尚未完成。�
 | AU Reader | SPS/PPS按序解析、AUD/图像标识/可选first_mb规则、POC0/1/2、filler与EOS归属、独立Annex-B Packet | Conformant | 独立比特向量与字节期望、复用源缓冲、AVCC输入、错误/预算/EOF；5份登记语料×6种chunk及本轮ffprobe计数6/4/12/3/6 | 仅渐进8-bit420 I/P/B头部；字段/FMO/冗余/分区等显式Unsupported；不验证残差或恢复时间戳（PTS/DTS/Duration为0）；默认32MiB/4096 NAL，不代替pipeline预算 |
 | Annex-B AU Writer | 完整输入封装验证后复用NAL Writer，规范化四字节起始码、独立单NAL/AU/数量限额 | Conformant | 固定字节解析解、重扫与High CABAC多slice语料一致；坏尾部无输出、输入/输出预算、重试校验、每个写入位置短写/I/O失败粘性及所有权 | 仅接受Annex-B Packet；调用方保证单AU分组，未验证slice/RBSP；默认8MiB单NAL/32MiB输入和输出AU/4096 NAL，不序列化时间戳，不提供传输回滚或取消 |
 | AVCC AU Writer | Annex-B AU重封装为1..4字节大端长度前缀，写前共享封装验证、前缀容量限制及NAL/AU/数量预算 | Conformant | 独立固定字节解析解、1/2字节255/65535边界与多字节长度；坏尾部/后续NAL超限零写出、所有权/短写/I/O粘性；5份语料×2/3/4宽度×6种chunk逐AU一致 | 输入仅已分组Annex-B，默认4字节前缀/8MiB单NAL/32MiB输入和输出AU/4096 NAL；单NAL还受前缀容量限制，不生成avcC/MP4或时间戳，不验证slice，不提供取消 |
+| EncodeStream / DecodeStream | 同步单输入、有界载荷、排空后继续生产、EOF自动Flush、内部codec清理 | Conformant | 全部26份受支持语料×Annex-B/AVCC×1/7/4096/整文件chunk核对独立FFmpeg输出哈希；PCM解析值、B/Lookahead尾组与时钟、限额/截断/错误释放测试 | MaxInputBuffer默认16MiB，仅单个输入；NAL源/codec/Writer内存各自限额，不是RSS总上限 |
+| pipeline取消与背压 | Context端点优先，操作前后检查ctx，取消释放帧；同步Writer阻止下个输入 | Conformant | 阻塞输入/输出确定性取消、200次读端取消循环与goroutine计数、慢消费者停产测试 | 非可中断I/O不能被context凭空中断；需Context*接口或由所有者设置deadline/关闭，无后台代读goroutine |
+| h264enc / h264dec | 参数预检、文件与二进制管道、Annex-B/AVCC、stderr进度、信号取消、文件别名保护 | Conformant | 实际子进程二进制管道与PCM像素解析值、High/B/Lookahead、码控参数、坏尾/资源/短写/取消/关闭测试；完整常规门禁通过 | 当前codec仅渐进8-bit420；CLI拥有进程标准流，库式CLI入口仍借用传入流；传输失败不回滚文件 |
+| h264probe语法树 | JSONL逐NAL展示共享SPS/PPS/VUI/ScalingList/SEI/slice结构，保留默认GOP JSON | Conformant | Baseline/Main/High与ffprobe尺寸/Profile/Level/图片数对照；参数集引用、多slice、严格尾部、限额、AVCC各前缀与输出失败测试 | 不解析宏块/残差，不把头部成功当作像素正确；输出错误前的行只代表局部已解析内容 |
+| 长时稳定性 | 同一对pipeline、io.Pipe、10FPS PCM持续传输；RSS/GC后堆/帧积压/退出goroutine | WIP | tools/streamcheck已实现，30秒smoke退出0、取消后goroutine从3回到1；样本见gates/m6_smoke.json | 一小时运行按用户要求取消且无完整报告；短测不替代一小时退出标准或M9八小时混合输入 |
 
 ## M7–M9
 

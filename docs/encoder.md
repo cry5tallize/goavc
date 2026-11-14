@@ -79,4 +79,4 @@ M5a 对最坏预算超出最高 Level 的 Auto 配置，改为选择满足几何
 这不是 HRD/VBV 码控保证；显式 Level 与 PCM 通道仍执行保守初始化预算。
 
 运行时不依赖 FFmpeg；独立 Oracle、质量与分配记录见 [M4 门禁](gates/m4.md) 和
-[性能基线](performance.md#6-m4-帧内编码基线)。AVCC 与增量流式 I/O 在 M6 接入。
+[性能基线](performance.md#6-m4-帧内编码基线)。AVCC重封装、增量I/O、pipeline与CLI用法见[M6流式文档](stream.md)。

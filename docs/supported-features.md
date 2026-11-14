@@ -147,7 +147,7 @@
 
 | 能力 | 状态 | 证据与边界 |
 |---|---|---|
-| 四个流接口 | Conformant | 均有具体实现、编译断言和所有权/EOF/同步消费测试；仅接口与同步I/O，pipeline另行验收 |
+| 四个流接口 | Conformant | 具体适配器及同步pipeline均已实现；输出所有权、同步消费、EOF与错误释放测试通过 |
 | 8-bit YUV Reader | Conformant | 420/422/444、奇数尺寸、独立帧所有权、序号PTS/Duration1、帧边界EOF和尾帧截断；已知字节布局验证。原始I/O不扩大编码器格式支持 |
 | 8-bit YUV Writer | Conformant | 跳过stride填充、最小末行缓冲、写前完整校验、短写及I/O失败后停止追加；已知字节与三格式多帧往返验证。无原始流元数据头 |
 | 增量Annex-B NAL Reader | Conformant | 跨1/2/3/7/4096/整文件chunk，独立EBSP、默认8MiB单NAL限额、严格前导与残缺尾起始码处理；只切分NAL，不提供AU/帧/时间戳 |
@@ -155,6 +155,11 @@
 | 增量AU Reader | Conformant | 解析SPS/PPS/slice header，默认图像标识或可选first_mb规则；AUD/POC/filler/末AU测试及5份语料×6种chunk、ffprobe计数通过。独立Annex-B输出，默认32MiB/4096 NAL；时间戳均0，不验证残差，字段/FMO/冗余/分区等显式拒绝 |
 | Annex-B AU Writer | Conformant | 完整封装/预算验证后写四字节起始码，坏尾部不提前写、短写/I/O错误后停止追加；固定字节及High多slice语料重扫一致。只接受调用方已分组的Annex-B AU，不验证slice或序列化时间戳；默认8MiB单NAL、32MiB输入及输出AU、4096 NAL |
 | AVCC AU Writer | Conformant | 已分组Annex-B AU转1..4字节大端前缀（默认4），与Annex-B Writer共享完整封装/限额验证；长度容量在扫描分配前收紧，坏尾部/后续NAL超限零写出，短写/I/O错误粘性。独立字节解析解及5份语料分块往返通过；默认8MiB单NAL、32MiB输入及输出AU、4096 NAL，不生成avcC/MP4或时间戳，不验证slice |
+| EncodeStream / DecodeStream | Conformant | 自有codec、同步背压、源EOF自动Flush到io.EOF；全部26份支持语料×Annex-B/AVCC×四种chunk对独立FFmpeg哈希，PCM/B/Lookahead尾部与时钟已测。MaxInputBuffer默认16MiB限制单输入，不是RSS总上限 |
+| 取消与背压 | Conformant | 无worker/预取队列；Context端点与单帧操作边界检查，输入/输出阻塞取消及重复取消无泄漏测试。永久阻塞普通I/O须所有者中断或实现Context*接口，不能宣称任意io.Reader自动可取消 |
+| h264enc / h264dec | Conformant | 文件/二进制管道、显式Annex-B/AVCC、参数与资源预检、stderr进度、信号取消、文件别名保护；实际子进程PCM像素测试。仍只生成/解码当前支持工具，无MP4/时间戳容器 |
+| h264probe语法树 | Conformant | -syntax逐NAL JSONL，SPS/PPS/VUI/ScalingList/SEI/slice头部，Baseline/Main/High与ffprobe元数据和帧数对照；保留默认GOP断言，不解析残差 |
+| 一小时内存稳定性 | WIP | tools/streamcheck已实现，30秒smoke通过、取消后goroutine回到1；一小时长测按用户要求停止，正式门禁未关闭，不冒充长时通过 |
 
 ## 11. 明确不支持（第一版）
 

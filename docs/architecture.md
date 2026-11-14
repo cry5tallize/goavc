@@ -98,6 +98,8 @@ decoder              encoder
 | `stream.AUReader.ReadAccessUnit()` | 独立Annex-B Packet；复制挂起NAL以允许源复用缓冲，后续读取不覆盖；裸流PTS/DTS/Duration均0，KeyFrame仅IDR |
 | `stream.AnnexBWriter.WriteAccessUnit()` | 同步消费Annex-B Packet，完整封装和预算验证后才写出；不保留Data，不写时间戳，不关闭底层Writer；传输失败粘性 |
 | `stream.AVCCWriter.WriteAccessUnit()` | 同步消费Annex-B Packet并写AVCC长度前缀；全部NAL的长度容量/封装/预算验证后才写出，不保留Data，不写avcC或时间戳，不关闭底层Writer；传输失败粘性 |
+| `stream.EncodeStream()` | 拥有内部Encoder；读到的输入帧总会Release；逐次同步消费输出，正常EOF自动Flush；不关闭调用方I/O |
+| `stream.DecodeStream()` | 拥有内部Decoder；输出Writer返回后Release帧，错误/取消也释放；正常EOF排空显示队列；不关闭调用方I/O |
 | `Frame.Clone()` | 独立内存，不参与池管理，调用方负责释放（GC 回收即可） |
 | `Frame.Release()` | 幂等；调用后帧失效，`Validate` 返回 `ErrInvalidData` |
 
@@ -129,6 +131,9 @@ ErrResourceLimit  超出配置上限，致命
   宏块预测依赖、slice 边界滤波强度、DPB 访问都存在数据依赖，
   未经分析直接并行会产生难复现的错误。
 - 并行版本的输出必须与串行版本逐比特一致，并跑 `-race`。
+- M6同步pipeline不创建worker或预取队列；慢消费者直接背压。取消在单帧操作边界检查；
+  阻塞端点须实现Context*方法，或由I/O所有者关闭/设置deadline以中断，不能用遗留后台Read伪取消。
+  MaxInputBuffer是单个输入载荷预算，NAL/AU源、codec DPB/Lookahead和Writer缓存另有各自限额，见`docs/stream.md`。
 
 ## 8. 平台抽象
 

@@ -536,7 +536,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 
 | # | Commit | 内容 | 验证 |
 |---|---|---|---|
-| 1 | `feat[stream]: add frame reader and writer interfaces` | 四个接口 | 已完成接口、所有权/EOF契约并编译；具体AU适配器及pipeline尚待实现 |
+| 1 | `feat[stream]: add frame reader and writer interfaces` | 四个接口 | 已有具体适配器与pipeline；所有权/EOF/同步消费及错误释放测试通过 |
 | 2 | `feat[stream]: add yuv reader for 420 422 and 444` | 8-bit 读帧 | 已完成；已知字节布局、奇数尺寸、所有截断位置、EOF/所有权/资源/I/O错误测试通过 |
 | 3 | `feat[stream]: add yuv writer with stride handling` | 写出对齐/非对齐 | 已完成；已知字节、非对齐stride/最小末行、三格式多帧往返、短写/失败事务测试通过 |
 | 4 | `feat[stream]: add incremental annexb reader with chunk buffering` | 跨 chunk 起始码/NAL | 已完成；复用有界Scanner，严格前导/尾部策略、独立NAL输出、EOF与I/O错误状态测试通过；AU组装待第7项 |
@@ -545,16 +545,16 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 7 | `feat[stream]: add access unit assembler with configurable rules` | 边界规则参数化 | 已完成；图像标识/first_mb模式、跨filler保留VCL摘要、AU字节/数量限额；无AUD多slice、POC0/1/2、分块与5份语料ffprobe计数通过 |
 | 8 | `feat[stream]: add annexb writer` | 流式写 | 已完成；完整封装先验证、四字节起始码、NAL/AU/数量限额、短写/错误粘性；固定输出字节与High多slice语料重扫一致 |
 | 9 | `feat[stream]: add avcc writer with length prefix` | 长度前缀 | 已完成；1..4大端前缀独立字节解析解、255/65535容量边界、写前封装/限额验证与短写粘性；5份语料×2/3/4宽度×6种chunk逐AU往返一致 |
-| 10 | `feat[stream]: add stream pipeline with bounded buffering` | 有界队列 | 内存上限断言 |
-| 11 | `feat[stream]: add context cancellation and backpressure` | `ctx.Done()` 检查点 | 取消延迟 ≤ 1 帧 |
-| 12 | `feat[stream]: add flush and eof handling in pipeline` | 自动 flush | `io.EOF` 语义 |
-| 13 | `feat[stream]: add encode stream and decode stream helpers` | `EncodeStream`/`DecodeStream` | 端到端 |
-| 14 | `test[stream]: add long running memory stability test` | 1 小时循环 | RSS 曲线 |
-| 15 | `test[stream]: add goroutine leak checks for cancellation` | 泄漏检测 | 全绿 |
-| 16 | `feat[cmd]: add h264dec command line tool` | flags + 进度 | 手工验证 |
-| 17 | `feat[cmd]: add h264enc command line tool` | flags + 进度 | 手工验证 |
-| 18 | `feat[cmd]: add h264probe command line tool` | 语法树打印 | 与 ffprobe 对照 |
-| 19 | `chore[release]: close milestone m6 gate and tag v0.7.0` | 证据 | 勾选 |
+| 10 | `feat[stream]: add stream pipeline with bounded buffering` | 同步单输入，无额外队列 | 默认16MiB载荷预算、内置YUV读前限界/AU组装前限界，自定义源Send前复核；超限和失败释放测试通过 |
+| 11 | `feat[stream]: add context cancellation and backpressure` | Context端点与单帧边界检查 | 阻塞输入/输出取消、慢消费者停产测试通过；普通永久阻塞I/O必须由所有者中断，不遗留后台Read |
+| 12 | `feat[stream]: add flush and eof handling in pipeline` | 自动Flush至排空EOF | PCM末帧、B/Lookahead不足尾组和时间戳测试通过；损坏尾部不误报EOF |
+| 13 | `feat[stream]: add encode stream and decode stream helpers` | EncodeStream/DecodeStream | 26份语料×Annex-B/AVCC×1/7/4096/整文件chunk对独立Oracle哈希；真实CLI与FFmpeg像素烟测通过 |
+| 14 | `test[stream]: add long running memory stability test` | tools/streamcheck长稳工具已实现 | 预先固定RSS/堆/增长率阈值；30秒smoke通过，一小时运行按用户要求停止，不计正式长稳通过；提交fedb1d9，见gates/m6.md |
+| 15 | `test[stream]: add goroutine leak checks for cancellation` | 确定性阻塞与显式join | 200次输入取消、输出取消释放、goroutine计数与owned管道中断测试通过；CGO=1非缓存全库race通过 |
+| 16 | `feat[cmd]: add h264dec command line tool` | 参数/资源预检、文件/标准流、stderr进度 | 真实进程Annex-B/AVCC二进制管道、独立FFmpeg像素对照；同文件/截断/写错/取消测试通过 |
+| 17 | `feat[cmd]: add h264enc command line tool` | Profile/QP/GOP/B/码控/FPS/工具选项 | PCM原始字节、High/B/Lookahead、合法码控、错误配置保留输出、文件别名保护与进度测试通过 |
+| 18 | `feat[cmd]: add h264probe command line tool` | -syntax逐NAL JSONL，保留默认GOP模式 | 共享语法结构、嵌套VUI/矩阵/SEI、严格封装、限额；Baseline/Main/High与ffprobe元数据/帧数对照通过 |
+| 19 | `chore[release]: close milestone m6 gate and tag v0.7.0` | 证据与发布 | 正式一小时长稳门禁未关闭，不创建发布标签；已完成能力按逻辑分项提交，远端CI未执行 |
 
 ---
 

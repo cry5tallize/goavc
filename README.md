@@ -14,13 +14,18 @@
 > 决策、CAVLC、共享本地重建与去块、独立 IDR Annex-B AU、I_PCM 和 1..64 slice 选项。
 > 187 帧通过本地重建/自研解码/FFmpeg 逐像素比较；完整测试、race、fuzz 与六目标构建通过。
 > 仅支持渐进式 8-bit YUV420 偶数显示尺寸。M5a 现已接入单参考 P 帧、四种分区与 Skip，
-> LevelAuto 支持按实际 AU 预算校验 1080p@30；M5 总门禁尚未通过，B 与其他码控仍待开发。
+> LevelAuto 支持按实际 AU 预算校验 1080p@30；后续 M5 已完成限定工具与配置的本地验收，完整 Profile 仍为 Partial。
 > 见[编码用法](docs/encoder.md)、[M4 门禁](docs/gates/m4.md)和
 > [性能基线](docs/performance.md#6-m4-帧内编码基线)。本地标签 `v0.5.0`，远端 CI 待执行。
 
 > **M5a/b 已通过本地子阶段门禁**：连续 P 帧、SATD/RD、活动度 QP、Profile 约束，
 > 720p/1080p 各300帧 Oracle，第一项同QP x264对比达到1.5dB阈值。
-> 见 [M5b 证据](docs/gates/m5b.md)，本地标签 `v0.5.2`。M5c/d 与其余总门禁尚未完成。
+> 见 [M5b 证据](docs/gates/m5b.md)；后续 M5c/d 本地门禁及标签 `v0.5.3`/`v0.6.0` 见对应门禁页，远端 CI 未执行。
+
+> **M6 流式处理**：YUV、Annex-B/AVCC、AU适配器与同步有界pipeline已接入，
+> `EncodeStream`/`DecodeStream`提供背压、取消检查与EOF自动Flush；可能阻塞的端点须支持取消或由所有者中断I/O。
+> `cmd/h264enc`、`cmd/h264dec`支持文件/二进制管道，`h264probe -syntax`逐NAL打印语法树。
+> 用法与资源/所有权边界见[流式文档](docs/stream.md)，验收结果见[M6门禁](docs/gates/m6.md)。
 
 ## 硬约束
 
@@ -93,6 +98,7 @@ go run ./tools/manifest -file testdata/manifest.json
 | [docs/architecture.md](docs/architecture.md) | 分层、依赖规则、内存所有权 |
 | [docs/supported-features.md](docs/supported-features.md) | 支持矩阵与 M2 已验证范围 |
 | [docs/implementation-status.md](docs/implementation-status.md) | 逐模块实现状态（Translation Ledger） |
+| [docs/stream.md](docs/stream.md) | M6流式API、取消/背压、资源预算、三个CLI与长稳入口 |
 | [docs/performance.md](docs/performance.md) | 基准口径与结果 |
 | [docs/licensing.md](docs/licensing.md) | 代码许可与专利许可（两件独立的事） |
 
