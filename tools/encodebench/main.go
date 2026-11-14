@@ -138,6 +138,7 @@ func measureInput(c h264.EncoderConfig, count, slices int, pcm bool, reader io.R
 }
 
 func measureConfigured(c h264.EncoderConfig, count, slices int, pcm bool, reader io.Reader, extra []encoder.Option, reconWriter io.Writer, verify bool) (report, []byte, error) {
+	c.SetDefaults()
 	if count < 1 || count > 600 {
 		return report{}, nil, fmt.Errorf("frames must be 1..600")
 	}
@@ -230,7 +231,7 @@ func measureConfigured(c h264.EncoderConfig, count, slices int, pcm bool, reader
 				for comp := range f.Planes {
 					w, h := f.Format.PlaneDimensions(comp, f.Width, f.Height)
 					for y := 0; y < h; y++ {
-						if _, err := reconWriter.Write(f.Planes[comp].Data[y*f.Planes[comp].Stride : y*f.Planes[comp].Stride+w]); err != nil {
+						if err := writeReconstructionRow(reconWriter, f.Planes[comp].Data[y*f.Planes[comp].Stride:y*f.Planes[comp].Stride+w]); err != nil {
 							return err
 						}
 					}
@@ -363,7 +364,7 @@ func measureConfigured(c h264.EncoderConfig, count, slices int, pcm bool, reader
 	r.StreamSHA256 = hex.EncodeToString(output.Sum(nil))
 	r.ReconstructionSHA256 = hex.EncodeToString(recon.Sum(nil))
 	r.Bytes = len(stream)
-	r.BitrateKbps = float64(len(stream)*8) * float64(c.FPSNum) / float64(count) / 1000
+	r.BitrateKbps = float64(len(stream)*8) * float64(c.FPSNum) / (float64(count) * float64(c.FPSDen)) / 1000
 	r.EncodeFPS = float64(count) / elapsed.Seconds()
 	r.MeanMillis = float64(elapsed) / float64(count) / 1e6
 	r.P95Millis = float64(durations[(count*95+99)/100-1]) / 1e6
@@ -371,6 +372,17 @@ func measureConfigured(c h264.EncoderConfig, count, slices int, pcm bool, reader
 		r.PSNR[comp] = psnr(sums[comp], samples[comp])
 	}
 	return r, stream, nil
+}
+
+func writeReconstructionRow(w io.Writer, row []byte) error {
+	n, err := w.Write(row)
+	if err != nil {
+		return err
+	}
+	if n != len(row) {
+		return io.ErrShortWrite
+	}
+	return nil
 }
 
 // 只读取不受CABAC尾部填充影响的first_mb/slice_type前缀；每AU的首slice计一次。

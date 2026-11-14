@@ -156,33 +156,41 @@ func BenchmarkEncoderB_720p_Generic(b *testing.B) {
 	f := pattern.Frame(1280, 720, 1)
 	defer f.Release()
 	b.ReportAllocs()
+	b.SetBytes(int64(4 * 1280 * 720 * 3 / 2))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		f.PTS = int64(i)
-		f.Duration = 1
-		if err = e.SendFrame(f); err != nil {
+		if err = e.Reset(); err != nil {
+			b.Fatal(err)
+		}
+		// 一个op必须实际包含IDR/P/B/B与尾部排空，不能用仅首帧的1x结果
+		// 冒充B编码基准。每帧时间由ns/op除4得到。
+		for frame := 0; frame < 4; frame++ {
+			f.PTS = int64(frame)
+			f.Duration = 1
+			if err = e.SendFrame(f); err != nil {
+				b.Fatal(err)
+			}
+			for {
+				_, err = e.ReceivePacket()
+				if errors.Is(err, h264.ErrAgain) {
+					break
+				}
+				if err != nil {
+					b.Fatal(err)
+				}
+			}
+		}
+		if err = e.Flush(); err != nil {
 			b.Fatal(err)
 		}
 		for {
 			_, err = e.ReceivePacket()
-			if errors.Is(err, h264.ErrAgain) {
+			if errors.Is(err, h264.ErrEOF) {
 				break
 			}
 			if err != nil {
 				b.Fatal(err)
 			}
-		}
-	}
-	if err = e.Flush(); err != nil {
-		b.Fatal(err)
-	}
-	for {
-		_, err = e.ReceivePacket()
-		if errors.Is(err, h264.ErrEOF) {
-			break
-		}
-		if err != nil {
-			b.Fatal(err)
 		}
 	}
 }
