@@ -16,6 +16,15 @@ import (
 // qp、alphaDiv2、betaDiv2 由调用方按宏块/切片给出；索引计算遵循
 // FFmpeg 的 qp + 52 + 2*div2 约定。
 func LumaEdge(data []byte, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2 int) {
+	lumaEdge(data, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2, 8)
+}
+
+// LumaEdgeHigh 接收去掉 QpBdOffset 的语法域 QP；所有步长以采样计。
+func LumaEdgeHigh(data []uint16, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2, bitDepth int) {
+	lumaEdge(data, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2, bitDepth)
+}
+
+func lumaEdge[T sample](data []T, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2, bitDepth int) {
 	if bS <= 0 {
 		return
 	}
@@ -24,8 +33,9 @@ func LumaEdge(data []byte, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2
 	if indexA < 0 || indexA >= len(alphaTable) || indexB < 0 || indexB >= len(betaTable) {
 		return
 	}
-	alpha := int(alphaTable[indexA])
-	beta := int(betaTable[indexB])
+	scale := 1 << (bitDepth - 8)
+	alpha := int(alphaTable[indexA]) * scale
+	beta := int(betaTable[indexB]) * scale
 
 	for line := 0; line < 4; line++ {
 		q0i := q0 + line*lineStep
@@ -46,7 +56,7 @@ func LumaEdge(data []byte, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2
 			strongLumaLine(data, p0, p1, p2, q0i, q1, q2, acrossStep, alpha, beta)
 			continue
 		}
-		weakLumaLine(data, p0, p1, p2, q0i, q1, q2, tc0(bS, indexA), beta)
+		weakLumaLine(data, p0, p1, p2, q0i, q1, q2, tc0(bS, indexA)*scale, beta, bitDepth)
 	}
 }
 
@@ -54,7 +64,7 @@ func LumaEdge(data []byte, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2
 //
 // p1/q1 的修正只在 |p2-p0|<beta（或 |q2-q0|<beta）时进行，并且
 // 使用 tc_orig 作为裁剪范围；p0/q0 使用 tc（可能因 p1/q1 修正而 +1/+2）。
-func weakLumaLine(data []byte, p0, p1, p2, q0, q1, q2, tcOrig, beta int) {
+func weakLumaLine[T sample](data []T, p0, p1, p2, q0, q1, q2, tcOrig, beta, bitDepth int) {
 	if tcOrig < 0 {
 		return
 	}
@@ -66,29 +76,30 @@ func weakLumaLine(data []byte, p0, p1, p2, q0, q1, q2, tcOrig, beta int) {
 	if abs(p2v-p0v) < beta {
 		if tcOrig != 0 {
 			avg := (p2v + ((p0v + q0v + 1) >> 1)) >> 1
-			data[p1] = clipPixel(p1v + clipInt(avg-p1v, -tcOrig, tcOrig))
+			data[p1] = clipPixel[T](p1v+clipInt(avg-p1v, -tcOrig, tcOrig), bitDepth)
 		}
 		tc++
 	}
 	if abs(q2v-q0v) < beta {
 		if tcOrig != 0 {
 			avg := (q2v + ((p0v + q0v + 1) >> 1)) >> 1
-			data[q1] = clipPixel(q1v + clipInt(avg-q1v, -tcOrig, tcOrig))
+			data[q1] = clipPixel[T](q1v+clipInt(avg-q1v, -tcOrig, tcOrig), bitDepth)
 		}
 		tc++
 	}
 	delta := clipInt((((q0v-p0v)*4)+p1v-q1v+4)>>3, -tc, tc)
-	data[p0] = clipPixel(p0v + delta)
-	data[q0] = clipPixel(q0v - delta)
+	data[p0] = clipPixel[T](p0v+delta, bitDepth)
+	data[q0] = clipPixel[T](q0v-delta, bitDepth)
 }
 
 // strongLumaLine 实现 bS==4 的亮度强滤波。
 //
 // 当 |p0-q0| 较小时使用三抽头/四抽头组合，否则只修正 p0/q0。
 // p3/q3 只在对应的 p2/q2 条件成立时读取，因此不会越过图像边界。
-func strongLumaLine(data []byte, p0, p1, p2, q0, q1, q2, acrossStep, alpha, beta int) {
+func strongLumaLine[T sample](data []T, p0, p1, p2, q0, q1, q2, acrossStep, alpha, beta int) {
 	p0v, p1v, p2v := int(data[p0]), int(data[p1]), int(data[p2])
 	q0v, q1v, q2v := int(data[q0]), int(data[q1]), int(data[q2])
+	// alpha 已按位深缩放；规范的 +2 与各平均式的舍入常量不缩放。
 	if abs(p0v-q0v) < (alpha>>2)+2 {
 		if abs(p2v-p0v) < beta {
 			p3 := p2 - acrossStep
@@ -96,13 +107,13 @@ func strongLumaLine(data []byte, p0, p1, p2, q0, q1, q2, acrossStep, alpha, beta
 			if p3 >= 0 {
 				p3v = int(data[p3])
 			}
-			data[p0] = byte((p2v + 2*p1v + 2*p0v + 2*q0v + q1v + 4) >> 3)
-			data[p1] = byte((p2v + p1v + p0v + q0v + 2) >> 2)
+			data[p0] = T((p2v + 2*p1v + 2*p0v + 2*q0v + q1v + 4) >> 3)
+			data[p1] = T((p2v + p1v + p0v + q0v + 2) >> 2)
 			if p3 >= 0 {
-				data[p2] = byte((2*p3v + 3*p2v + p1v + p0v + q0v + 4) >> 3)
+				data[p2] = T((2*p3v + 3*p2v + p1v + p0v + q0v + 4) >> 3)
 			}
 		} else {
-			data[p0] = byte((2*p1v + p0v + q1v + 2) >> 2)
+			data[p0] = T((2*p1v + p0v + q1v + 2) >> 2)
 		}
 		if abs(q2v-q0v) < beta {
 			q3 := q2 + acrossStep
@@ -110,18 +121,18 @@ func strongLumaLine(data []byte, p0, p1, p2, q0, q1, q2, acrossStep, alpha, beta
 			if q3 < len(data) {
 				q3v = int(data[q3])
 			}
-			data[q0] = byte((p1v + 2*p0v + 2*q0v + 2*q1v + q2v + 4) >> 3)
-			data[q1] = byte((p0v + q0v + q1v + q2v + 2) >> 2)
+			data[q0] = T((p1v + 2*p0v + 2*q0v + 2*q1v + q2v + 4) >> 3)
+			data[q1] = T((p0v + q0v + q1v + q2v + 2) >> 2)
 			if q3 < len(data) {
-				data[q2] = byte((2*q3v + 3*q2v + q1v + q0v + p0v + 4) >> 3)
+				data[q2] = T((2*q3v + 3*q2v + q1v + q0v + p0v + 4) >> 3)
 			}
 		} else {
-			data[q0] = byte((2*q1v + q0v + p1v + 2) >> 2)
+			data[q0] = T((2*q1v + q0v + p1v + 2) >> 2)
 		}
 		return
 	}
-	data[p0] = byte((2*p1v + p0v + q1v + 2) >> 2)
-	data[q0] = byte((2*q1v + q0v + p1v + 2) >> 2)
+	data[p0] = T((2*p1v + p0v + q1v + 2) >> 2)
+	data[q0] = T((2*q1v + q0v + p1v + 2) >> 2)
 }
 
 func tc0(bS, indexA int) int {
@@ -148,14 +159,19 @@ func clipInt(v, lo, hi int) int {
 	return v
 }
 
-func clipPixel(v int) byte {
+type sample interface {
+	~uint8 | ~uint16
+}
+
+func clipPixel[T sample](v, bitDepth int) T {
 	if v < 0 {
 		return 0
 	}
-	if v > 255 {
-		return 255
+	max := (1 << bitDepth) - 1
+	if v > max {
+		return T(max)
 	}
-	return byte(v)
+	return T(v)
 }
 
 // ErrInvalidEdge 用于调用方报告越界的边界参数（保留给后续 slice 并行
