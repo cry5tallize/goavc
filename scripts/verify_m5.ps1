@@ -145,6 +145,18 @@ foreach ($size in @(@(1280,720),@(1920,1080))) {
             if ($rc -eq 'abr' -and [math]::Abs($metrics.BitrateKbps*1000-$rate) -gt $rate*0.1) {
                 throw "$prefix ABR超过±10%：$($metrics.BitrateKbps) kbit/s"
             }
+            if ($rc -eq 'vbv' -and ($metrics.MinVBVFullness -lt 0 -or $metrics.MaxVBVFullness -gt $rate)) {
+                throw "$prefix VBV缓冲越界"
+            }
+            if ($metrics.FrameBits.Count -ne $Frames) { throw "$prefix $rc 缺少逐AU比特记录" }
+            $windows = @()
+            for ($start = 0; $start -lt $Frames; $start += 30) {
+                $end = [math]::Min($Frames,$start+30)
+                [int64]$bits = 0
+                for ($frame = $start; $frame -lt $end; $frame++) { $bits += $metrics.FrameBits[$frame] }
+                $windows += @{ FirstPacket=$start; Packets=($end-$start); BitsPerSecond=($bits*30/($end-$start)) }
+            }
+            $windows | ConvertTo-Json | Out-File (Join-Path $dir "$prefix-$rc-windows.json") -Encoding utf8
             Write-Output "$prefix $rc $($metrics.BitrateKbps) kbit/s fullness=$($metrics.MinVBVFullness)..$($metrics.MaxVBVFullness)"
         }
     }
