@@ -1,5 +1,33 @@
 package encoder
 
+import (
+	"github.com/goavc/h264/internal/motion"
+	"github.com/goavc/h264/internal/picture"
+	"github.com/goavc/h264/internal/prediction"
+)
+
+func (s *frameState) analyzeB(addr, qp int, past, future *picture.Picture) (residual, error) {
+	i := &s.info[addr]
+	i.inter = true
+	for n := range i.modes {
+		i.modes[n] = -1
+	}
+	x, y := addr%s.pic.MBWidth*4, addr/s.pic.MBWidth*4
+	s.mv.SetRect(x, y, 4, 4, motion.MV{}, 0)
+	for comp := range s.planeCount() {
+		mw, mh := s.planeMBSize(comp)
+		px, py := addr%s.pic.MBWidth*mw, addr/s.pic.MBWidth*mh
+		pl := &s.pic.Planes[comp]
+		for yy := range mh {
+			for xx := range mw {
+				v := prediction.BiWeightSampleHigh(past.Planes[comp].Sample(px+xx, py+yy), future.Planes[comp].Sample(px+xx, py+yy), 1, 1, 0, 0, 0, pl.BitDepth)
+				pl.SetSample(px+xx, py+yy, v)
+			}
+		}
+	}
+	return s.bResidualRD(addr, qp)
+}
+
 // bResidualRD 保留同一direct预测的1/3和1/6死区候选，使用共享SSE+lambda*R
 // 选择。R仍是现有CAVLC代理；不声称已实现CABAC精确率估算或B运动搜索。
 func (s *frameState) bResidualRD(addr, previousQP int) (residual, error) {

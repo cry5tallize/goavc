@@ -33,7 +33,7 @@
 > High 8×8/ScalingMatrix、Main 渐进帧 I/P/B、direct、加权预测和重排均已验证。
 > Profile 整体保留 Partial，范围外的字段/高位深工具仍明确拒绝；本地门禁证据见 gates/m3.md。
 
-> **M7 进展：** 当前分支`feat/m7-high422`。第1–13项及共享预测/滤波/运动前置已完成；
+> **M7 进展：** 当前分支`feat/m7-high422`。第1–14项及共享预测/滤波/运动前置已完成；
 > High10渐进420双熵I/P/B解码、原生LE输出与压缩编码通过独立Oracle，编码32配置共384帧三方逐采样一致。
 > High422/High444渐进8/10-bit双熵编解码、原生LE与实际CLI已验收；六格式QP/矩阵/权重/B/码控三方Oracle通过。MBAFF解码见下，PAFF与transform bypass仍拒绝，不声明完整Profile支持。
 > 共享预测已提供byte/uint16类型实例：高位深帧内、六抽头/色度MC、权重以及422矩形色度预测。
@@ -47,18 +47,18 @@
 > PPS的六/八/十二个缩放列表由transform_8x8_mode_flag和色度共同确定；未开启8×8时不再误读写两个额外标志，固定规范RBSP及独立完整门禁通过。
 > High444共同编码双熵I/P/B两格式×九配置各八帧与FFmpeg一致；十四类CABAC、逐分量矩阵与QP、亮度插值及共享亮度bS已接入。独立平面PCM规范向量与单色投影通过；FFmpeg8不支持原始独立平面封装，投影不替代该工具能力声明。
 > MBAFF解码已接入宏块对、帧场混合邻域、场参考/扫描与逐对滤波；六格式×双熵×两场顺序×I/P/B/矩阵×全场/真实混合192配置共1152帧与FFmpeg一致，独立完整门禁及实际六帧CLI通过。
-> 420对侧场色度MV的±2相位已由规范码流和FFmpeg锁定；已登记Main隔行语料改为conformant。PAFF场图片仍明确拒绝，隔行编码另由第14项验收。
+> 420对侧场色度MV的±2相位已由规范码流和FFmpeg锁定；Main隔行语料为conformant。隔行编码已支持真实全field-coded MBAFF及TFF/BFF，六格式双熵三方Oracle和实际CLI场序通过；不做自适应帧/场RDO，PAFF仍拒绝。
 
 ## 1. Profile
 
 | Profile | profile_idc | 关键工具 | Decoder | Encoder | 目标里程碑 |
 |---|---|---|---|---|---|
 | Baseline | 66 | CAVLC、I/P | Partial | Partial | M4 I_PCM/I4/I16、M5 I/P/CAVLC及码控已验证；高级工具M7，禁止Baseline B |
-| Main | 77 | CABAC、B、隔行 | Partial | Partial | 渐进I/P/B及M7 MBAFF解码通过Oracle；编码仍限既有spatial B工具，PAFF拒绝，隔行编码第14项另验收 |
-| High | 100 | 8×8 变换、ScalingMatrix | Partial | Partial | CABAC I4/I8/I16/P 4×4/8×8、矩阵与M7 MBAFF解码通过Oracle；PAFF拒绝，隔行编码第14项另验收 |
-| High 10 | 110 | 10 bit | Partial | Partial | 渐进420双熵编解码与MBAFF解码已通过Oracle；PAFF与transform bypass拒绝，编码B限既有spatial-direct，隔行编码另验收 |
-| High 4:2:2 | 122 | 4:2:2、10 bit | Partial | Partial | 渐进422双熵编解码与MBAFF解码通过Oracle；PAFF与transform bypass拒绝，编码B限既有spatial-direct，隔行编码另验收 |
-| High 4:4:4 Predictive | 244 | 4:4:4、独立色平面 | Partial | Partial | 共同444编解码与MBAFF解码外部Oracle通过；独立平面原始封装按规范与单色投影验证，PAFF/transform bypass拒绝，隔行编码另验收 |
+| Main | 77 | CABAC、B、隔行 | Partial | Partial | 渐进I/P/B、MBAFF解码及真实场宏块TFF/BFF编码通过Oracle；编码限既有spatial B工具，PAFF拒绝 |
+| High | 100 | 8×8 变换、ScalingMatrix | Partial | Partial | 4/8×8、矩阵、MBAFF解码和全场宏块TFF/BFF编码通过Oracle；PAFF拒绝，B编码限既有spatial-direct |
+| High 10 | 110 | 10 bit | Partial | Partial | 渐进420双熵、MBAFF解码与真实场宏块编码通过Oracle；PAFF/transform bypass拒绝，编码B限既有spatial-direct |
+| High 4:2:2 | 122 | 4:2:2、10 bit | Partial | Partial | 渐进422双熵、MBAFF解码与真实场宏块编码通过Oracle；PAFF/transform bypass拒绝，编码B限既有spatial-direct |
+| High 4:4:4 Predictive | 244 | 4:4:4、独立色平面 | Partial | Partial | 共同444编解码、MBAFF解码与真实场宏块编码通过Oracle；独立平面按规范与单色投影验证，PAFF/transform bypass拒绝 |
 
 ## 2. 容器与封装
 
@@ -110,7 +110,7 @@
 | 亚像素插值（1/2、1/4） | Conformant | Conformant | M5a 共享 MC、解析亚像素平移与完整 P 帧 Oracle |
 | Weighted Prediction（explicit / implicit） | Conformant | Partial | 编码 Main/High 单参考 P 显式权重已验证：自动分析/固定三平面权重、负权重、裁剪、隐含默认值、多 slice 与160帧三方 Oracle；B/implicit 编码待实现 |
 | B Direct（temporal / spatial） | Conformant | Partial | 编码spatial-direct零MV双参考、B_Skip/B_Direct残差实际选中，1120帧三方Oracle；temporal与非Direct运动搜索未生成 |
-| MBAFF 宏块对 | Conformant | TODO | M7第13项六格式8/10-bit双熵、帧/场混合、实际B spatial/temporal及矩阵192配置共1152帧Oracle通过；编码第14项另验收 |
+| MBAFF 宏块对 | Conformant | Conformant | 解码帧/场混合192配置共1152帧Oracle；编码固定真实场宏块，六格式双熵、TFF/BFF、多slice/B/矩阵/显式PCM三方Oracle和实际CLI场序通过，不做自适应帧/场RDO |
 | PAFF 场图像 | Unsupported | Unsupported | 场图片/非MBAFF隔行序列的参考管理和场对输出尚未接入，明确ErrUnsupported，不以MBAFF支持代替 |
 
 ## 6. 变换与量化

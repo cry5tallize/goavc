@@ -75,7 +75,11 @@ func (s *frameState) cbf(addr, bx, by, comp int, dc, eight bool) (bool, bool) {
 // writeResidual 保留 420/422 的 460 模型域，非独立 444 才访问扩展上下文。
 func (c *cabacWriter) writeResidual(cat int, coeff []int32, scan []int) int {
 	if c.ctx444 != nil {
-		count, _ := c.e.Residual444(c.ctx444, cat, coeff, scan, false)
+		count, _ := c.e.Residual444(c.ctx444, cat, coeff, scan, c.field)
+		return count
+	}
+	if c.field {
+		count, _ := c.e.ResidualField(&c.ctx, cat, coeff, scan)
 		return count
 	}
 	count, _ := c.e.Residual(&c.ctx, cat, coeff, scan)
@@ -114,7 +118,7 @@ func (c *cabacWriter) residualPlane(s *frameState, addr int, res *residual, comp
 	}
 	i := &s.info[addr]
 	if i.is16 {
-		s.dcCoded[comp+1][addr] = c.residualBlock(s, addr, cat[0], 0, 0, comp, true, dc, transform.LumaDCScan[:]) != 0
+		s.dcCoded[comp+1][addr] = c.residualBlock(s, addr, cat[0], 0, 0, comp, true, dc, s.scanDC()) != 0
 	}
 	if i.transform8 {
 		for b := range 4 {
@@ -123,10 +127,10 @@ func (c *cabacWriter) residualPlane(s *frameState, addr int, res *residual, comp
 			}
 			count := uint8(0)
 			if s.chromaArrayType() == 3 {
-				count = c.residualBlock(s, addr, cat[3], (b%2)*2, (b/2)*2, comp, false, coeff8[b][:], transform.Zigzag8x8[:])
+				count = c.residualBlock(s, addr, cat[3], (b%2)*2, (b/2)*2, comp, false, coeff8[b][:], s.scan8())
 			} else {
 				// 420/422 及独立色平面的亮度 8x8 不发送 coded_block_flag。
-				count = uint8(c.writeResidual(cat[3], coeff8[b][:], transform.Zigzag8x8[:]))
+				count = uint8(c.writeResidual(cat[3], coeff8[b][:], s.scan8()))
 			}
 			for k := range 4 {
 				nz[addr*16+raster(b*4+k)] = count
@@ -139,7 +143,7 @@ func (c *cabacWriter) residualPlane(s *frameState, addr int, res *residual, comp
 			continue
 		}
 		r := raster(n)
-		category, scan := cat[2], transform.Zigzag4x4[:]
+		category, scan := cat[2], s.scan4()
 		if i.is16 {
 			category, scan = cat[1], scan[1:]
 		}
@@ -172,7 +176,7 @@ func (c *cabacWriter) residual(s *frameState, addr int, res *residual) {
 	if i.cbp>>4 == 2 {
 		for comp := range 2 {
 			for r := range blocks {
-				s.cnz[comp][addr*16+r] = c.residualBlock(s, addr, cabac.ChromaAC, r%2, r/2, comp, false, res.chroma[comp][r][:], transform.Zigzag4x4[1:])
+				s.cnz[comp][addr*16+r] = c.residualBlock(s, addr, cabac.ChromaAC, r%2, r/2, comp, false, res.chroma[comp][r][:], s.scan4()[1:])
 			}
 		}
 	}

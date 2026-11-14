@@ -3,6 +3,7 @@ package encoder
 import (
 	"github.com/goavc/h264/bitstream"
 	"github.com/goavc/h264/internal/entropy/cavlc"
+	"github.com/goavc/h264/internal/transform"
 )
 
 func (s *frameState) pcmAllowed(addr int) bool {
@@ -29,6 +30,20 @@ func (s *frameState) encodeResidualBlock(w *bitstream.Writer, src *[16]int32, ki
 	limit := s.maxLevelPrefix
 	if limit == 0 {
 		limit = 28
+	}
+	if s.field {
+		scan := s.scan4()
+		switch kind {
+		case cavlc.LumaDC:
+			scan = s.scanDC()
+		case cavlc.LumaAC:
+			scan = scan[1:]
+		case cavlc.ChromaDC:
+			scan = transform.DC2x2Scan[:]
+		case cavlc.ChromaDC422:
+			scan = transform.DC2x4Scan[:]
+		}
+		return cavlc.EncodeBlockLimitedScan(w, src, kind, nc, limit, scan)
 	}
 	return cavlc.EncodeBlockLimited(w, src, kind, nc, limit)
 }

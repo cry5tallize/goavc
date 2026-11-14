@@ -19,6 +19,9 @@ var levels = [...]struct{ id, mbps, fs, br int }{
 func (e *Encoder) parameters() error {
 	c := e.cfg
 	mw, mh := (c.Width+15)/16, (c.Height+15)/16
+	if e.interlaced {
+		mh = (c.Height + 31) / 32 * 2
+	}
 	fs := int64(mw * mh)
 	subW, subH := c.PixelFormat.ChromaSubsampling()
 	chromaIDC := uint32(3)
@@ -72,6 +75,13 @@ func (e *Encoder) parameters() error {
 		cropW, cropH = 1, 1
 	}
 	e.sps = &syntax.SPS{ProfileIDC: 66, ConstraintSetFlags: [6]bool{true, true}, LevelIDC: uint8(selected), ChromaFormatIDC: chromaIDC, SeparateColourPlaneFlag: e.separateColourPlane, PicOrderCntType: 2, MaxNumRefFrames: 1, PicWidthInMbsMinus1: uint32(mw - 1), PicHeightInMapUnitsMinus1: uint32(mh - 1), FrameMbsOnlyFlag: true, Direct8x8InferenceFlag: true, FrameCroppingFlag: c.Width != mw*16 || c.Height != mh*16, FrameCropRightOffset: uint32((mw*16 - c.Width) / cropW), FrameCropBottomOffset: uint32((mh*16 - c.Height) / cropH), VUIParametersPresentFlag: true, VUI: &syntax.VUI{TimingInfoPresentFlag: true, NumUnitsInTick: uint32(c.FPSDen), TimeScale: uint32(c.FPSNum * 2), FixedFrameRateFlag: true, BitstreamRestrictionFlag: true, MotionVectorsOverPicBoundariesFlag: true, MaxDecFrameBuffering: 1}}
+	if e.interlaced {
+		e.sps.FrameMbsOnlyFlag = false
+		e.sps.MbAdaptiveFrameFieldFlag = true
+		e.sps.PicHeightInMapUnitsMinus1 = uint32(mh/2 - 1)
+		e.sps.FrameCropBottomOffset = uint32((mh*16 - c.Height) / (cropH * 2))
+		e.sps.VUI.PicStructPresentFlag = true
+	}
 	// E.2.1：显式声明保守MV范围，不以结构零值错误地承诺仅零运动。
 	e.sps.VUI.Log2MaxMVLengthHorizontal, e.sps.VUI.Log2MaxMVLengthVertical = 15, 15
 	e.pps = &syntax.PPS{PicInitQPMinus26: int32(c.QP - 26), DeblockingFilterControlPresentFlag: true}

@@ -10,6 +10,12 @@ func (c *cabacWriter) motion(s *frameState, addr int) {
 			c.bin(21, 1)
 		}
 	}
+	if s.field {
+		// 本通道只选择同奇偶的ref_idx=0；邻块ref_idx同样为0，ctxIdxInc=0。
+		for range partitions[i.partition] {
+			c.bin(54, 0)
+		}
+	}
 	x, y := addr%s.pic.MBWidth*4, addr/s.pic.MBWidth*4
 	var actual [4]motion.MV
 	for k, p := range partitions[i.partition] {

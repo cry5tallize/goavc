@@ -42,6 +42,7 @@ func Encode(ctx context.Context, args []string, stdin io.Reader, stdout, stderr 
 	weighted := f.Bool("weighted", false, "启用 Main/High 自动加权 P 预测")
 	pcm := f.Bool("pcm", false, "使用无损 I_PCM 互操作通道")
 	entropy := f.String("entropy", "auto", "熵编码：auto、cavlc或cabac；Baseline不允许CABAC")
+	fieldOrder := f.String("field-order", "progressive", "扫描顺序：progressive、tff或bff；隔行输入为逐行交织的完整帧")
 	if err = f.Parse(args); err != nil {
 		return err
 	}
@@ -73,6 +74,13 @@ func Encode(ctx context.Context, args []string, stdin io.Reader, stdout, stderr 
 		return fmt.Errorf("前瞻窗口必须为0..16: %w", h264.ErrInvalidData)
 	}
 	options := []encoder.Option{encoder.WithSliceCount(*slices)}
+	switch *fieldOrder {
+	case "progressive":
+	case "tff", "bff":
+		options = append(options, encoder.WithInterlaced(*fieldOrder == "tff"))
+	default:
+		return fmt.Errorf("无效场顺序 %q: %w", *fieldOrder, h264.ErrInvalidData)
+	}
 	switch *entropy {
 	case "auto":
 	case "cavlc":

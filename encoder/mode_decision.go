@@ -64,10 +64,13 @@ func (s *frameState) decideRD(addr, previousQP, radius int, full, early bool) (r
 	}
 	reset()
 	skip := motion.PredictSkip(s.mv, x, y, 0)
+	if s.field {
+		skip = motion.PredictFieldSkip(motion.TopFieldMotion, s.fieldNeighbors(x, y, 4))
+	}
 	s.mc(addr, partitions[0][0], skip)
 	skipRes := s.interResidual(addr)
 	uniform := false
-	if s.info[addr].cbp == 0 {
+	if s.info[addr].cbp == 0 && !s.forceNoSkip {
 		s.info[addr].inter = true
 		s.info[addr].skip = true
 		for i := range s.info[addr].modes {

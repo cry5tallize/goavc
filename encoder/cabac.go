@@ -15,6 +15,7 @@ type cabacWriter struct {
 	ctx444        *[cabac.ContextCount444]cabac.Context
 	lastDelta     bool
 	completedBins uint64
+	field         bool
 }
 
 func newCABACWriter(e *cabac.Encoder, intra bool, qp int, chroma444 bool) (*cabacWriter, error) {

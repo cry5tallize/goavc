@@ -21,6 +21,9 @@ func (e *Encoder) encodePlaneAtQP(src *picture.Picture, intra, idr bool, qp int)
 	old := e.frameQP
 	e.frameQP = qp
 	defer func() { e.frameQP = old }()
+	if e.interlaced {
+		return e.encodeInterlaced(src, intra, idr)
+	}
 	if e.encodingB {
 		return e.encodeB(src)
 	}

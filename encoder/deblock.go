@@ -94,7 +94,7 @@ func (s *frameState) strength(px, py, qx, qy int, boundary bool) int {
 	mw := s.pic.MBWidth
 	pa, qa := py/4*mw+px/4, qy/4*mw+qx/4
 	if !s.info[pa].inter || !s.info[qa].inter {
-		if boundary {
+		if boundary && (!s.field || px != qx) {
 			return 4
 		}
 		return 3
@@ -105,7 +105,11 @@ func (s *frameState) strength(px, py, qx, qy int, boundary bool) int {
 	pm, _, _ := s.mv.Get(px, py)
 	qm, _, _ := s.mv.Get(qx, qy)
 	dx, dy := int(pm.X-qm.X), int(pm.Y-qm.Y)
-	if max(dx, -dx) >= 4 || max(dy, -dy) >= 4 {
+	verticalLimit := 4
+	if s.field {
+		verticalLimit = 2
+	}
+	if max(dx, -dx) >= 4 || max(dy, -dy) >= verticalLimit {
 		return 1
 	}
 	return 0

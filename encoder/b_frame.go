@@ -5,9 +5,7 @@ import (
 
 	"github.com/goavc/h264/bitstream"
 	"github.com/goavc/h264/internal/entropy/cabac"
-	"github.com/goavc/h264/internal/motion"
 	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/internal/prediction"
 	"github.com/goavc/h264/nal"
 )
 
@@ -49,24 +47,7 @@ func (e *Encoder) encodeB(src *picture.Picture) ([]byte, *frameState, error) {
 		for addr := first; addr < last; addr++ {
 			i := &s.info[addr]
 			i.start = first
-			i.inter = true
-			for n := range i.modes {
-				i.modes[n] = -1
-			}
-			x, y := addr%src.MBWidth*16, addr/src.MBWidth*16
-			s.mv.SetRect(x/4, y/4, 4, 4, motion.MV{}, 0)
-			for comp := range s.planeCount() {
-				mw, mh := s.pic.Format.PlaneDimensions(comp, 16, 16)
-				px, py := addr%src.MBWidth*mw, addr/src.MBWidth*mh
-				pl := &s.pic.Planes[comp]
-				for yy := range mh {
-					for xx := range mw {
-						v := prediction.BiWeightSampleHigh(e.bPast.Planes[comp].Sample(px+xx, py+yy), e.bFuture.Planes[comp].Sample(px+xx, py+yy), 1, 1, 0, 0, 0, pl.BitDepth)
-						pl.SetSample(px+xx, py+yy, v)
-					}
-				}
-			}
-			res, err := s.bResidualRD(addr, qp)
+			res, err := s.analyzeB(addr, qp, e.bPast, e.bFuture)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -132,6 +113,9 @@ func (e *Encoder) bSliceHeader(w *bitstream.Writer, first int) {
 		w.WriteBits(2, uint64(e.colourPlaneID))
 	}
 	w.WriteBits(4, uint64(e.frameNum))
+	if e.interlaced {
+		w.WriteBit(0)
+	}
 	w.WriteBits(16, uint64(e.currentPOC))
 	w.WriteBit(1) // direct_spatial_mv_pred_flag
 	w.WriteBit(0) // num_ref_idx_active_override_flag: L0/L1各一个

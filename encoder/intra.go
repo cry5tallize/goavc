@@ -51,6 +51,9 @@ type frameState struct {
 	independent     bool // 真正的独立色平面；separate也用于共同444的临时亮度视图。
 	plane           int
 	reuseModes      bool
+	field           bool
+	forceNoSkip     bool
+	fields          [2]*frameState // MBAFF保留两套同奇偶元数据，pic仍指向完整帧。
 }
 
 // WithMacroblockQP 使用坐标回调覆盖 CQP；8位为0..51，10位为-12..51。

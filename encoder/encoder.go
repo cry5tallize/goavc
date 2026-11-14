@@ -17,6 +17,8 @@ import (
 type Encoder struct {
 	cfg                       h264.EncoderConfig
 	pcm                       bool
+	interlaced                bool
+	topFieldFirst             bool
 	searchRange               int
 	fullSearch                bool
 	maxAUBytes                int
@@ -100,7 +102,7 @@ func WithCABAC(enabled bool) Option {
 // WithSliceCount 将宏块光栅序列等分为 count 个连续 slice（1..64）。
 func WithSliceCount(count int) Option {
 	return func(e *Encoder) error {
-		if count < 1 || count > 64 || count > ((e.cfg.Width+15)/16)*((e.cfg.Height+15)/16) {
+		if count < 1 || count > 64 {
 			return fmt.Errorf("encoder: slice count %d: %w", count, h264.ErrInvalidData)
 		}
 		e.slices = count
@@ -170,6 +172,18 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 			return nil, err
 		}
 	}
+	if e.interlaced {
+		// Annex A：Baseline不允许场编码；帧裁剪的垂直单位为2*SubHeightC。
+		if cfg.Profile == h264.ProfileBaseline || cfg.Height%(2*subH) != 0 {
+			return nil, fmt.Errorf("encoder: interlaced profile/crop units: %w", h264.ErrUnsupported)
+		}
+		if e.slices > ((cfg.Width+15)/16)*((cfg.Height+31)/32) {
+			return nil, fmt.Errorf("encoder: slice count exceeds macroblock pairs: %w", h264.ErrInvalidData)
+		}
+	}
+	if !e.interlaced && e.slices > ((cfg.Width+15)/16)*((cfg.Height+15)/16) {
+		return nil, fmt.Errorf("encoder: slice count %d exceeds macroblocks: %w", e.slices, h264.ErrInvalidData)
+	}
 	if e.pcm && (e.qpAt != nil || cfg.RateControl != h264.RateControlCQP) {
 		return nil, fmt.Errorf("encoder: PCM has no QP override: %w", h264.ErrUnsupported)
 	}
@@ -237,7 +251,11 @@ func (e *Encoder) encodeFrameNow(f *h264.Frame, lookaheadScene bool) error {
 			}
 		}
 	}
-	pic, err := picture.New((f.Width+15)/16, (f.Height+15)/16, f.Format)
+	mbHeight := (f.Height + 15) / 16
+	if e.interlaced {
+		mbHeight = (f.Height + 31) / 32 * 2
+	}
+	pic, err := picture.New((f.Width+15)/16, mbHeight, f.Format)
 	if err != nil {
 		return err
 	}
@@ -245,7 +263,11 @@ func (e *Encoder) encodeFrameNow(f *h264.Frame, lookaheadScene bool) error {
 		p := &pic.Planes[c]
 		w, h := f.Format.PlaneDimensions(c, f.Width, f.Height)
 		for y := 0; y < p.Height; y++ {
-			src := f.Planes[c].Data[min(y, h-1)*f.Planes[c].Stride:]
+			sourceY := min(y, h-1)
+			if e.interlaced && y >= h {
+				sourceY = h - 2 + y%2
+			}
+			src := f.Planes[c].Data[sourceY*f.Planes[c].Stride:]
 			if p.BitDepth > 8 {
 				row := p.Row16(y)
 				for x := range w {
@@ -497,6 +519,9 @@ func (e *Encoder) sliceHeader(w *bitstream.Writer, first int, disableFilter, idr
 		frameNum = 0
 	}
 	w.WriteBits(4, uint64(frameNum))
+	if e.interlaced {
+		w.WriteBit(0) // field_pic_flag=0：MBAFF帧，而不是PAFF场图像。
+	}
 	if idr {
 		w.WriteUE(e.idr)
 	}

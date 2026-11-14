@@ -1,7 +1,7 @@
 # 编码 API
 
-`encoder.New(cfg, options...)`创建非并发安全、串行渐进编码器。M7已支持8/10-bit
-YUV420/422/444真实压缩；420显示宽高须为偶数，422仅宽须为偶数，444宽高可为奇数。
+`encoder.New(cfg, options...)`创建非并发安全的串行编码器，默认渐进。M7支持8/10-bit
+YUV420/422/444真实压缩与可选MBAFF场编码。渐进420显示宽高须为偶数，422仅宽须为偶数，444宽高可为奇数；隔行另受下述裁剪单位限制。
 支持CQP/ABR/CBR/VBV与双锚点B重排，默认Baseline用CAVLC，其余已接入Profile用CABAC；Profile整体仍按支持矩阵限定。
 
 ```go
@@ -112,5 +112,21 @@ CLI示例：`h264enc -width 32 -height 32 -profile high10 -pixel-format yuv420p1
 失败不发布部分AU。FFmpeg8明确不支持该原始封装：测试采用固定PCM规范向量及不重编码
 slice_data的单色投影Oracle，不据此承诺外部播放器可解独立平面。普通共同444已直接通过FFmpeg。
 
-422/444延续既有B工具边界：只生成非参考spatial-direct B，不生成隔行或transform bypass。
+422/444延续既有B工具边界：只生成非参考spatial-direct B，不生成transform bypass。隔行能力见下节。
 四种格式实际`h264enc`/`h264dec`文件路径均已按原生格式与FFmpeg逐采样核对。
+
+## MBAFF 顶/底场优先
+
+`encoder.WithInterlaced(true)`选择顶场优先，`false`选择底场优先；不传选项仍为渐进。
+输入仍是完整帧的逐行交织YUV，不是把两个场前后串接。编码器使用原生奇偶场视图和
+真实field-coded宏块对，SPS声明MBAFF，每帧`pic_timing`的`pic_struct=3/4`表达场显示顺序。
+宏块地址始终按顶/底成对编码，BFF不交换输入行。
+
+该策略固定选择场宏块，不做自适应帧/场RDO，也不生成PAFF。Baseline显式拒绝；
+高度必须是`2*SubHeightC`的倍数（420为4，422/444为2），编码高度按32对齐。
+slice不拆宏块对；QP回调坐标的`y=2*场MB行+奇偶`，量化参数仍使用原位深语法QPY。
+双熵、既有B/8×8/矩阵/权重、显式PCM与独立色平面沿用各自已登记边界。
+
+CLI使用`-field-order progressive|tff|bff`，例如：
+`h264enc -width 64 -height 64 -profile high -field-order bff -entropy cabac -gop 4 -bframes 2 -slices 3 -input in.yuv -output out.264`。
+TFF/BFF实际CLI均已与FFmpeg逐采样比较，并由ffprobe逐帧核验`interlaced_frame/top_field_first`。

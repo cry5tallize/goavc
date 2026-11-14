@@ -577,7 +577,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 11 | `feat[syntax]: add field picture and mbaff syntax parsing` | 帧/场/MBAFF SPS组合、map unit几何/裁剪，slice场奇偶与POC条件字段 | 固定规范字节/写前拒绝、真实Main隔行h264probe、独立完整常规门禁通过；像素流水线保持显式拒绝 |
 | 12 | `feat[prediction]: add field motion vector prediction` | 帧场MV/ref_idx归一化、MBAFF参考奇偶、定向MVP与P_Skip，共享既有中值内核 | 负奇数/索引边界/可用性/C→D/分区/Skip规范手算及独立完整常规门禁通过 |
 | 13 | `feat[decoder]: add mbaff macroblock pair handling` | 双熵宏块对/Skip场标志、混合邻域、场参考/扫描、Direct、逐对去块与420场相位 | 192配置共1152帧外部Oracle、混合PCM/对侧场规范码流、登记语料固定哈希、实际CLI及独立完整常规门禁通过；PAFF仍拒绝 |
-| 14 | `feat[encoder]: add interlaced encoding with field order option` | `-tff/-bff` 等价 | FFmpeg 可解 |
+| 14 | `feat[encoder]: add interlaced encoding with field order option` | WithInterlaced及-field-order，真实全场MBAFF、场预测/扫描/重建/滤波与pic_timing | 六格式双熵/场序/多slice/B/矩阵/权重/负QP/PCM三方Oracle、跨行双Skip回归、独立完整门禁及实际CLI逐帧场序通过 |
 | 15 | `feat[syntax]: add fmo slice group map parsing` | type 0–6 | 定向语料 |
 | 16 | `feat[decoder]: add fmo and aso macroblock ordering` | 映射表应用 | FMO 语料一致 |
 | 17 | `feat[syntax]: add data partition nal types` | type 2/3/4 | 定向语料 |

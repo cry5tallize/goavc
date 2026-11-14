@@ -189,7 +189,7 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 | AVCC AU Writer | Annex-B AU重封装为1..4字节大端长度前缀，写前共享封装验证、前缀容量限制及NAL/AU/数量预算 | Conformant | 独立固定字节解析解、1/2字节255/65535边界与多字节长度；坏尾部/后续NAL超限零写出、所有权/短写/I/O粘性；5份语料×2/3/4宽度×6种chunk逐AU一致 | 输入仅已分组Annex-B，默认4字节前缀/8MiB单NAL/32MiB输入和输出AU/4096 NAL；单NAL还受前缀容量限制，不生成avcC/MP4或时间戳，不验证slice，不提供取消 |
 | EncodeStream / DecodeStream | 同步单输入、有界载荷、排空后继续生产、EOF自动Flush、内部codec清理 | Conformant | 全部26份受支持语料×Annex-B/AVCC×1/7/4096/整文件chunk核对独立FFmpeg输出哈希；PCM解析值、B/Lookahead尾组与时钟、限额/截断/错误释放测试 | MaxInputBuffer默认16MiB，仅单个输入；NAL源/codec/Writer内存各自限额，不是RSS总上限 |
 | pipeline取消与背压 | Context端点优先，操作前后检查ctx，取消释放帧；同步Writer阻止下个输入 | Conformant | 阻塞输入/输出确定性取消、200次读端取消循环与goroutine计数、慢消费者停产测试 | 非可中断I/O不能被context凭空中断；需Context*接口或由所有者设置deadline/关闭，无后台代读goroutine |
-| h264enc / h264dec | 参数预检、文件与二进制管道、Annex-B/AVCC、stderr进度、信号取消、文件别名保护 | Conformant | 实际子进程二进制管道与PCM像素解析值、High/B/Lookahead、码控参数、坏尾/资源/短写/取消/关闭测试；完整常规门禁通过 | 当前codec仅渐进8-bit420；CLI拥有进程标准流，库式CLI入口仍借用传入流；传输失败不回滚文件 |
+| h264enc / h264dec | 参数预检、文件/二进制管道、Annex-B/AVCC、stderr进度、信号取消、文件别名保护及-field-order | Conformant | 原M6测试；M7原生8/10-bit六格式与真实MBAFF CLI通过，TFF/BFF各六帧的FFmpeg像素和ffprobe逐帧场序一致 | codec范围见M7各项；PAFF仍拒绝；CLI拥有进程标准流，库式入口借用传入流；传输失败不回滚文件 |
 | h264probe语法树 | JSONL逐NAL展示共享SPS/PPS/VUI/ScalingList/SEI/slice结构，保留默认GOP JSON | Conformant | Baseline/Main/High与ffprobe尺寸/Profile/Level/图片数对照；参数集引用、多slice、严格尾部、限额、AVCC各前缀与输出失败测试 | 不解析宏块/残差，不把头部成功当作像素正确；输出错误前的行只代表局部已解析内容 |
 | 短时稳定性 | 同一对pipeline、io.Pipe、10FPS PCM持续传输30秒；RSS/GC后堆/帧积压/退出goroutine | Conformant | tools/streamcheck核对独立PCM常量解析值与预设资源阈值，退出0；取消后goroutine从3回到1；样本见gates/m6_smoke.json | 仅覆盖该输入与30秒窗口，不证明长期无泄漏，不替代M9混合输入验收 |
 
@@ -220,6 +220,7 @@ High10渐进420编解码及High422/High444渐进8/10-bit解码已接入，限定
 | 11：场图像与MBAFF语法 | SPS的frame_mbs_only/MBAFF/direct组合校验，map unit与完整帧高度/裁剪；slice场奇偶及POC条件字段 | Conformant | 固定SPS字节4d001ef668ea90/4d001ef669ea90、顶/底场与帧slice规范字节/精确payload边界；非法Baseline/flag组合写前拒绝；真实Main64×64 MBAFF语料h264probe -syntax及独立完整门禁通过 | 语法证据不单独代表像素支持；MBAFF像素接入见第13项，PAFF仍拒绝 |
 | 12：场运动矢量预测 | 显式帧/顶场/底场单位，帧场MV/ref_idx归一化，MBAFF场列表奇偶拆分，分区定向MVP与P_Skip | Conformant | 负奇数/参考边界/场奇偶/可用与帧内区别/C→D/定向/Skip规范向量及独立完整门禁；第13项接入后由真实帧场混合Oracle覆盖 | PAFF场列表不能用MBAFF拆分代替，PAFF流水线仍拒绝 |
 | 13：MBAFF宏块对解码 | 双熵宏块对遍历/Skip场标志推导，帧场混合物理邻域、原生场视图/扫描/MV与参考，B Direct、逐对去块及420对侧场色度相位 | Conformant | 六格式×双熵×TFF/BFF×四类I/P/B/8×8矩阵×全场/真实混合共192配置、1152帧外部x264/FFmpeg逐采样一致；混合PCM与对侧场规范码流；原Main隔行四帧固定YUV哈希及manifest状态迁移；独立完整CGO=0门禁（35包依赖/30条语料）与真实六帧CLI二进制比较通过 | 只接受MBAFF帧图片，PAFF及非MBAFF隔行序列仍ErrUnsupported；FMO/ASO/分区/SP/SI/冗余及transform bypass另项验收；未据此关闭M7总门禁 |
+| 14：顶/底场优先隔行编码 | WithInterlaced与CLI field-order，真实全field-coded MBAFF宏块对、原生场预测/扫描/重建/滤波及逐帧pic_timing | Conformant | 六格式/双熵/TFF-BFF/1与3slice、I/P/B/8×8矩阵/权重、负QP与显式PCM三方像素通过，独立平面按单色投影比较；跨pair-row无同slice邻pair的双Skip推导回归；完整CGO=0独立门禁及TFF/BFF实际CLI各六帧像素/逐帧场序通过 | 固定选择真实场宏块，不做自适应帧/场RDO，不生成PAFF；高度须能由2*SubHeightC裁剪单位表达，Baseline拒绝；B仍限既有非参考spatial-direct工具 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。

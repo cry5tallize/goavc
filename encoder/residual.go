@@ -3,7 +3,6 @@ package encoder
 import (
 	"github.com/goavc/h264/bitstream"
 	"github.com/goavc/h264/internal/entropy/cavlc"
-	"github.com/goavc/h264/internal/transform"
 )
 
 // Spec: table 9-4 的 Intra CBP 映射；值是 luma 位图 | chroma<<4。
@@ -102,7 +101,7 @@ func (s *frameState) writeResidual(w *bitstream.Writer, addr int, res *residual)
 		if info.transform8 {
 			// Spec: 8.5，CAVLC把一个8×8扫描交织为四个4×4子流。
 			for k := 0; k < 16; k++ {
-				stream[transform.Zigzag4x4[k]] = res.luma8[i8][transform.Zigzag8x8[4*k+n%4]]
+				stream[s.scan4()[k]] = res.luma8[i8][s.scan8()[4*k+n%4]]
 			}
 			levels = &stream
 		}
@@ -168,7 +167,7 @@ func (s *frameState) writeChroma444(w *bitstream.Writer, addr int, res *residual
 			var stream [16]int32
 			if info.transform8 {
 				for k := range 16 {
-					stream[transform.Zigzag4x4[k]] = res.chroma8[c][block][transform.Zigzag8x8[4*k+n%4]]
+					stream[s.scan4()[k]] = res.chroma8[c][block][s.scan8()[4*k+n%4]]
 				}
 				levels = &stream
 			}

@@ -103,6 +103,9 @@ func (e *Encoder) pSliceHeader(w *bitstream.Writer, first int, weights *Predicti
 		w.WriteBits(2, uint64(e.colourPlaneID))
 	}
 	w.WriteBits(4, uint64(e.frameNum))
+	if e.interlaced {
+		w.WriteBit(0) // MBAFF帧的field_pic_flag。
+	}
 	if e.cfg.MaxBFrames > 0 {
 		w.WriteBits(16, uint64(e.currentPOC))
 	}
@@ -130,6 +133,9 @@ var partitions = [4][]partition{
 func (s *frameState) predictPartition(addr, kind, index int) motion.MV {
 	p := partitions[kind][index]
 	bx, by := addr%s.pic.MBWidth*4+p.x/4, addr/s.pic.MBWidth*4+p.y/4
+	if s.field {
+		return s.predictFieldPartition(addr, kind, index)
+	}
 	if kind == 1 {
 		return motion.Predict16x8(s.mv, bx, by, index == 1, 0)
 	}
@@ -241,6 +247,12 @@ func (s *frameState) writeInter(w *bitstream.Writer, addr int, qp *int, res *res
 	if info.partition == 3 {
 		for range 4 {
 			w.WriteUE(0)
+		}
+	}
+	if s.field {
+		// MBAFF场宏块把一个活动帧参考展开成两个场；te(v)以反码写ref_idx=0。
+		for range partitions[info.partition] {
+			w.WriteBit(1)
 		}
 	}
 	var actual [4]motion.MV
