@@ -235,7 +235,7 @@ go tool pprof -top -nodecount=10 m5d-cpu.pprof
 
 CPU profile top 10（ABR/CBR 短基准合计 1.84 s，临时 profile 未纳入仓库）：SATD4x4 12.50%，SATD 聚合 11.41%，Writer.WriteBits 9.78%，`captureRD` 4.35% flat（24.46% cumulative），AddResidual4x4 3.26%，残差变换 2.72%，CAVLC encodeBlock 2.72%。该结果用于 M8 热点定位，不适用于跨机器比较。
 
-码率与缓冲断言见 `tests/codec/rate_control_test.go`：ABR 120 帧平均 ±10%，CBR 两个 30 帧窗口 ±10%，VBV 60 帧序列 fullness 始终处于配置上下界并通过 FFmpeg 像素 Oracle。当前没有 HRD filler NAL，因此 CBR 是窗口码率反馈，不承诺逐时刻恒定传输；1080p 长测试和 x264 质量报告仍未完成。
+码率与缓冲断言见 `tests/codec/rate_control_test.go`：ABR120帧平均±10%，CBR两个30帧窗口±10%，VBV60帧fullness在配置边界且通过FFmpeg像素Oracle。后续提交`fd1949b`已加入CBR/VBV filler与分数FPS预算，`f060c42`避免填充掩盖QP搜索；静态60帧30000/1001FPS码率误差≤1%。High 720p/1080p各300帧正确性已在`gates/m5cd.md`登记；正式质量/大尺寸码控结果仍待记录。
 
 ## 9. M5b RD 质量与等价剪枝
 
@@ -299,3 +299,53 @@ QP26、GOP600、B0、单参考、单 slice，先编码参考帧再计时首个P�
 `c5a20da07f41dbdffba959c07a3543a1303769fdce4d2be699e2b2021758b741`。
 RD 已修正 M5a 在场景突变中只选 P 的码率/质量缺口，不能据合成六帧替代长序列质量门禁。
 此运行与 race/fuzz/交叉编译并行，耗时不作独占性能基线。
+
+## 11. M5c/d 编码工具链验证与性能样本
+
+环境：HW-M2，Go1.27.4 windows/amd64，CGO=0，单实例串行、generic内核。
+本节所有计时均与长门禁任务并行，不作独占吞吐、前后加速或实时性能承诺。
+
+### CABAC/B/码控五次基准
+
+代码基线`7757362`，基准函数后以`c09116e`提交。输入是
+`pattern.Frame(1280,720,1)`二维斜坡；单帧SHA-256
+`b7fc8e5048a11a8a56e17f10cdc1073c840b8e1850e79f0fce9200b23ca22590`。
+B基准一个op含4个相同输入的IDR/P/B/B编码和Flush排空，四帧拼接SHA-256
+`6437ea41d594b2e27d1225988b6a2c2c6b7bd165fa436ad5520726fae08ab0b9`。
+其他基准一个op一帧。QP26、30FPS、GOP30、单slice；CABAC为Main，B为High/B2/8×8，
+ABR/CBR为Baseline、目标2Mbit/s。不能将四帧B的ns/op直接与单帧其他行比较。
+
+```powershell
+$env:CGO_ENABLED = '0'
+go test -run '^$' -bench '^BenchmarkEncoder(CABAC|B|ABR|CBR)_720p_Generic$' -benchtime=1x -count=5 -benchmem ./encoder
+```
+
+| 基准 | ns/op原始五次 | 中位数ns/op | 中位数B/op | 中位数allocs/op |
+|---|---|---:|---:|---:|
+| ABR | 1438101100 / 1250559000 / 1410279500 / 1317023100 / 1308730300 | 1,317,023,100 | 58,698,688 | 1,404,214 |
+| CBR | 1217447300 / 1224655700 / 1279773000 / 1472534700 / 1219431200 | 1,224,655,700 | 58,697,616 | 1,404,204 |
+| CABAC | 222202200 / 226249100 / 231497400 / 199869300 / 205933200 | 222,202,200 | 13,000,728 | 296,099 |
+| B四帧闭环 | 4678126400 / 5742922900 / 5597162700 / 6647665200 / 6003609300 | 5,742,922,900 | 43,499,096 | 903,317 |
+
+### 60帧CPU profile
+
+代码基线`7757362`与同期测量器。输入testsrc2 720p的前60帧，SHA-256
+`eec459dae028bea200ffad211140419190b86c6a024c34fc589c16f8e970b7ca`。
+High、CABAC、QP26、GOP/IDR60、B2、4slice、8×8/P自动权重/Lookahead2。
+输出SHA-256 `98d13d3aec0f48cbe50629eef5b3fb4781c18cd26b371b97c066b54fb76fca23`，
+重建SHA-256 `513c7aa814149591a8fae56e2060c5c78fa3e180999b6ec5525a40cba31c38b0`，
+实际帧型IDR1/P20/B39。记录含profile开销及并发负载，不能用0.5954FPS外推生产性能。
+
+```powershell
+encodebench -width 1280 -height 720 -frames 60 -profile high -bframes 2 -gop 60 -idr 60 -qp 26 -transform8 -weighted -lookahead 2 -slices 4 -input input.yuv -cpu-profile cpu.pprof
+go tool pprof -top -nodecount=15 cpu.pprof
+```
+
+101.01秒profile、99.17秒采样；热点flat/cumulative：pixClamped 54.33%/54.33%，
+jSample 7.76%/42.29%，MCBlockLuma 6.64%/78.55%，LumaSample 4.29%/71.92%，
+搜索SAD 3.36%/3.36%，clip8 1.66%，hSample 1.50%/11.39%，vSample 1.47%/11.72%，
+Forward8x8 1.39%/1.41%，SATD4x4 0.92%，captureRD 0.84%/2.66%。
+M8应优先核对亚像素插值/边界采样的重复工作；本次没有为压缩时间改变像素或规范舍入。
+
+大尺寸正确性（720p/1080p各300帧）见`gates/m5cd.md`。正式同QP/等码率与ABR/CBR/VBV
+长窗口尚待任务完成，不从上述smoke与profile推导质量门禁通过。

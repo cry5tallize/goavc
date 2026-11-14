@@ -472,13 +472,13 @@ M6/M7/M8 ───────────► M9 生产化与发布
 **范围外：** 多 pass 编码；心理视觉优化；8×8 以下子分割的性能极致化；字段编码。
 
 **退出标准：**
-- [ ] 720p/1080p 连续视频（≥ 300 帧）编码 → FFmpeg 与自研 Decoder 均可解码，无错误。
-- [ ] 双解码器一致性：FFmpeg 输出与自研 Decoder 输出逐像素一致（同一码流），且与本地重建一致。
+- [x] 720p/1080p 连续视频（≥ 300 帧）编码 → FFmpeg 与自研 Decoder 均可解码，无错误。High/B2/8×8/P权重/Lookahead，证据与哈希见`gates/m5cd.md`。
+- [x] 双解码器一致性：FFmpeg 输出与自研 Decoder 输出逐像素一致（同一码流），且与本地重建一致。上述各300帧逐帧/整段哈希通过，不等同全Profile认证。
 - [ ] 等 QP 下 PSNR 与 x264（`-preset veryfast -tune psnr` 同 QP）差距在预设阈值内（阈值在 M5 开始时写入 `docs/conformance.md`，例如 Y-PSNR 差值 ≤ 1.5 dB）。
 - [ ] 等码率下 PSNR 与 x264 差距记录并公开（不做选择性报告）。
 - [ ] ABR：目标码率 ±10% 内（长序列平均）；CBR：窗口内波动有记录；VBV 不越界。
 - [ ] GOP 参数变化（`GOPSize`、`MaxBFrames`、IDR 间隔）均正确反映在码流中（用 `h264probe` 断言）。局部证据：GOP/IDR ffprobe及MaxBFrames=1/2/3/16实际slice/POC/PTS/DTS、强制IDR和B+Lookahead边界已验证；完整大尺寸门禁待执行。
-- [ ] 编码器 CPU profile 有记录，热点排名写入 `docs/performance.md`（为 M8 定向优化）。
+- [x] 编码器 CPU profile 有记录，热点排名写入 `docs/performance.md`（为 M8 定向优化）。High/B2/8×8/权重/Lookahead 60帧profile及输入/输出哈希见§11；并发负载不作吞吐承诺。
 - [ ] `ErrUnsupported`：不支持的 Profile/Level/格式在 `NewEncoder` 阶段报错，而非产出坏码流。
 
 **风险：** 模式决策过早引入 RD 导致性能不达标 → 缓解：M5a 先出"可用非 RD 版本"，M5b 再加 RD，两者都有基准数据可回退。

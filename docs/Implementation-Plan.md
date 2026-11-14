@@ -509,7 +509,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 10 | `feat[prediction]: add weighted prediction in encoder` | explicit 权重 | Main/High 单参考 P 已实现；160帧三方 Oracle、权重表解析与实际加权 Skip；B 权重后续接入 |
 | 11 | `feat[syntax]: add main and high profile sps writing` | profile_idc 分支 | 已实现并经 ffprobe/FFmpeg Main/High I/P 验证 |
 | 12 | `test[oracle]: add main and high decode compatibility suite` | 全 profile 差分 | I/P288、P权重160、High8×8/矩阵320、Main/High B+码控1120帧三方Oracle |
-| 13 | `bench[encoder]: add cabac and b frame benchmarks` | 性能记录 | CABAC/B 专用基准未完成 |
+| 13 | `bench[encoder]: add cabac and b frame benchmarks` | 性能记录 | CABAC与真实四帧B闭环各5次、分配与60帧CPU profile已记录performance.md §11；注明并发负载，不作加速承诺 |
 | 14 | `docs[status]: mark cabac and b slice modules conformant` | 状态 | 已登记CABAC I/P/High8×8、P权重、非参考spatial B_Direct/B_Skip及重排的具体支持边界 |
 | 15 | `chore[release]: close milestone m5c gate and tag v0.5.3` | 证据 | 未关闭；见 `docs/gates/m5cd.md` |
 
@@ -524,7 +524,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 5 | `feat[encoder]: add vbv constraint enforcement` | VBV 上下界 | 60 帧 fullness 与上下边界测试通过；长序列未完成 |
 | 6 | `feat[encoder]: add scene change triggered idr` | 自适应 IDR | 当前帧检测与Lookahead未来帧确认、闪光抑制、实际IDR序列和三方Oracle通过 |
 | 7 | `test[encoder]: add bitrate accuracy and vbv window tests` | 长序列 | 32×32 ABR 120帧、CBR 2×30窗口、VBV 60帧通过；720p/1080p 各 300 帧未运行 |
-| 8 | `bench[encoder]: add end to end encode benchmark for 720p` | 全参数矩阵 | ABR/CBR 单次 smoke 已测；多次矩阵未完成 |
+| 8 | `bench[encoder]: add end to end encode benchmark for 720p` | 全参数矩阵 | ABR/CBR/CABAC/B2各5次与输入哈希已记performance.md §11；大尺寸自然视频码控矩阵在运行 |
 | 9 | `docs[performance]: publish encoder quality and bitrate report` | PSNR/SSIM/码率 vs x264 | 码率与 CPU profile 已记录；x264/SSIM 报告未完成 |
 | 10 | `chore[release]: close milestone m5d gate and tag v0.6.0` | 总证据 | 未关闭；见 `docs/gates/m5cd.md` |
 
