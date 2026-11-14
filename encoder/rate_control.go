@@ -50,7 +50,9 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 	feasible := false
 	unsupported, oversized := false, false
 	var tried [52]bool
-	for attempt := 0; attempt < 7; attempt++ {
+	// 0..51最多六步指数扩展，再最多六步二分；突变时也能夹紧远处目标，
+	// 避免已有低QP历史使快速阶段只找到一个过度量化的可行端点。
+	for attempt := 0; attempt < 12; attempt++ {
 		qp, more := search.next()
 		if !more {
 			break

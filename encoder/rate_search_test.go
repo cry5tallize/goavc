@@ -13,7 +13,7 @@ func TestQPSearch_LocalBracketAndColdFallback(t *testing.T) {
 			for boundary := 0; boundary <= 52; boundary++ {
 				s := newQPSearch(seed, known)
 				seen := [52]bool{}
-				for range 7 {
+				for range 12 {
 					qp, more := s.next()
 					if !more {
 						break
@@ -25,10 +25,10 @@ func TestQPSearch_LocalBracketAndColdFallback(t *testing.T) {
 					s.observe(qp < boundary)
 				}
 				if boundary <= 51 && !seen[boundary] {
-					// 有界快速阶段允许尚未夹紧远处目标，但不能错误地宣布无剩余QP。
-					if _, more := s.next(); !more {
-						t.Fatalf("跳过了可行边界QP%d：seed%d", boundary, seed)
-					}
+					t.Fatalf("突变后未找到边界QP%d：seed%d", boundary, seed)
+				}
+				if _, more := s.next(); more {
+					t.Fatalf("有界搜索未在12步内夹紧：seed%d boundary%d", seed, boundary)
 				}
 			}
 		}
