@@ -6,11 +6,12 @@ import (
 	"github.com/goavc/h264/internal/transform"
 )
 
-// ScalingMatrices 以空间光栅顺序返回 4:2:0 的有效矩阵。Four 为
-// intra Y/Cb/Cr、inter Y/Cb/Cr；Eight 为 intra Y、inter Y。
+// ScalingMatrices 以空间光栅顺序返回有效矩阵。Four 为
+// intra Y/Cb/Cr、inter Y/Cb/Cr；Eight 为 intra Y/inter Y、intra Cb/inter Cb、
+// intra Cr/inter Cr。非 4:4:4 仅 Eight 的前两项有效，其余项保持零值。
 type ScalingMatrices struct {
 	Four  [6][16]uint8
-	Eight [2][64]uint8
+	Eight [6][64]uint8
 }
 
 var defaultScaling4 = [2][16]uint8{
@@ -23,6 +24,8 @@ var defaultScaling8 = [2][64]uint8{
 }
 
 // SelectScalingMatrices 实现 Spec: 7.4.2.1/7.4.2.2 的 fallback A/B。
+// 表7-2的12-list索引用于chroma_format_idc=3，即使SeparateColourPlaneFlag
+// 为真也保留Cb/Cr列表；各独立平面只替换预测/变换过程，不改变列表选择。
 // scaling_list() 的 Values 是扫描顺序；useDefault 由首 delta=-8 表示，
 // 此时不能误用解析器为语法往返保留的重复值 8。
 func SelectScalingMatrices(s *SPS, p *PPS) (ScalingMatrices, error) {
@@ -30,19 +33,23 @@ func SelectScalingMatrices(s *SPS, p *PPS) (ScalingMatrices, error) {
 	if s == nil || p == nil {
 		return out, fmt.Errorf("syntax: scaling selection requires SPS/PPS: %w", h264.ErrInvalidData)
 	}
+	eightCount := 2
+	if s.effectiveChromaFormatIDC() == 3 {
+		eightCount = 6
+	}
 	for i := range out.Four {
 		for j := range out.Four[i] {
 			out.Four[i][j] = 16
 		}
 	}
-	for i := range out.Eight {
+	for i := range eightCount {
 		for j := range out.Eight[i] {
 			out.Eight[i][j] = 16
 		}
 	}
 	fill := func(dst []uint8, list *ScalingList, preset []uint8, scan []int) error {
-		if list == nil || len(list.Values) != len(dst) {
-			return fmt.Errorf("syntax: missing scaling list values: %w", h264.ErrInvalidData)
+		if list == nil || (list.Size != 4 && list.Size != 8) || list.Size*list.Size != len(dst) || len(list.Values) != len(dst) {
+			return fmt.Errorf("syntax: missing or invalid scaling list dimensions: %w", h264.ErrInvalidData)
 		}
 		if len(list.Deltas) > 0 && list.Deltas[0] == -8 {
 			copy(dst, preset)
@@ -69,13 +76,16 @@ func SelectScalingMatrices(s *SPS, p *PPS) (ScalingMatrices, error) {
 				out.Four[i] = out.Four[i-1]
 			}
 		}
-		for i := 0; i < 2; i++ {
+		for i := range eightCount {
+			kind := i % 2
 			if s.SeqScalingListPresentFlag[6+i] {
-				if err := fill(out.Eight[i][:], s.SeqScalingList[6+i], defaultScaling8[i][:], transform.Zigzag8x8[:]); err != nil {
+				if err := fill(out.Eight[i][:], s.SeqScalingList[6+i], defaultScaling8[kind][:], transform.Zigzag8x8[:]); err != nil {
 					return out, err
 				}
+			} else if i < 2 {
+				out.Eight[i] = defaultScaling8[kind]
 			} else {
-				out.Eight[i] = defaultScaling8[i]
+				out.Eight[i] = out.Eight[i-2]
 			}
 		}
 	}
@@ -94,13 +104,20 @@ func SelectScalingMatrices(s *SPS, p *PPS) (ScalingMatrices, error) {
 				out.Four[i] = out.Four[i-1]
 			}
 		}
-		for i := 0; i < 2; i++ {
-			if p.PicScalingListPresentFlag[6+i] {
-				if err := fill(out.Eight[i][:], p.PicScalingList[6+i], defaultScaling8[i][:], transform.Zigzag8x8[:]); err != nil {
-					return out, err
+		if p.Transform8x8ModeFlag {
+			for i := range eightCount {
+				kind := i % 2
+				if p.PicScalingListPresentFlag[6+i] {
+					if err := fill(out.Eight[i][:], p.PicScalingList[6+i], defaultScaling8[kind][:], transform.Zigzag8x8[:]); err != nil {
+						return out, err
+					}
+				} else if i >= 2 {
+					// fallback B 的色度列表继承当前 PPS 的同类前一平面，
+					// 不能保留 SPS 的对应 Cb/Cr 列表。
+					out.Eight[i] = out.Eight[i-2]
+				} else if !s.SeqScalingMatrixPresentFlag {
+					out.Eight[i] = defaultScaling8[kind]
 				}
-			} else if !s.SeqScalingMatrixPresentFlag {
-				out.Eight[i] = defaultScaling8[i]
 			}
 		}
 	}

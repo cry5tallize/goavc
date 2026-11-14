@@ -9,8 +9,36 @@ import (
 // Residual 写出 coded_block_flag=1 后的显著性、末位置、绝对值与符号。
 // 编解码共享类别基址与规范扫描上下文表；全零块必须由调用方写 CBF=0。
 func (e *Encoder) Residual(ctx *[ContextCount]Context, cat int, src []int32, scan []int) (int, error) {
-	if ctx == nil || !residualSizeValid(cat, len(scan)) {
+	if ctx == nil || cat < LumaDC || cat > Luma8x8 {
+		return 0, fmt.Errorf("cabac: invalid residual context domain: %w", h264.ErrInvalidData)
+	}
+	return e.residual(ctx[:], cat, src, scan, false)
+}
+
+// ResidualField 写出旧460模型域的场编码残差，scan须采用场扫描次序。
+func (e *Encoder) ResidualField(ctx *[ContextCount]Context, cat int, src []int32, scan []int) (int, error) {
+	if ctx == nil || cat < LumaDC || cat > Luma8x8 {
+		return 0, fmt.Errorf("cabac: invalid residual context domain: %w", h264.ErrInvalidData)
+	}
+	return e.residual(ctx[:], cat, src, scan, true)
+}
+
+// Residual444 写出全部14类残差，与解码器共享类别和帧场上下文映射。
+func (e *Encoder) Residual444(ctx *[ContextCount444]Context, cat int, src []int32, scan []int, field bool) (int, error) {
+	if ctx == nil {
+		return 0, fmt.Errorf("cabac: nil residual contexts: %w", h264.ErrInvalidData)
+	}
+	return e.residual(ctx[:], cat, src, scan, field)
+}
+
+// residual借用数组切片，420/422/444使用同一份残差算术。
+func (e *Encoder) residual(ctx []Context, cat int, src []int32, scan []int, field bool) (int, error) {
+	if !residualSizeValid(cat, len(scan)) {
 		return 0, fmt.Errorf("cabac: invalid residual encoding category: %w", h264.ErrInvalidData)
+	}
+	mode := 0
+	if field {
+		mode = 1
 	}
 	var positions [64]int
 	count := 0
@@ -34,17 +62,17 @@ func (e *Encoder) Residual(ctx *[ContextCount]Context, cat int, src []int32, sca
 	}
 	lastPos := positions[count-1]
 	for pos := 0; pos < len(scan)-1; pos++ {
-		sig, last := residualPositionContext(cat, len(scan), pos)
+		sig, last := residualPositionContext(cat, len(scan), pos, field)
 		if src[scan[pos]] == 0 {
-			e.Bin(&ctx[significantBase[cat]+sig], 0)
+			e.Bin(&ctx[significantBase[mode][cat]+sig], 0)
 			continue
 		}
-		e.Bin(&ctx[significantBase[cat]+sig], 1)
+		e.Bin(&ctx[significantBase[mode][cat]+sig], 1)
 		if pos == lastPos {
-			e.Bin(&ctx[lastBase[cat]+last], 1)
+			e.Bin(&ctx[lastBase[mode][cat]+last], 1)
 			break
 		}
-		e.Bin(&ctx[lastBase[cat]+last], 0)
+		e.Bin(&ctx[lastBase[mode][cat]+last], 0)
 	}
 	ones, greater := 0, 0
 	for n := count - 1; n >= 0; n-- {

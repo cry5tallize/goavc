@@ -94,7 +94,7 @@ func TestChromaDC422_IndependentCABACSyntax(t *testing.T) {
 
 func TestChromaDC422_CABACPositionAndBounds(t *testing.T) {
 	for pos, inc := range []int{0, 0, 1, 1, 2, 2, 2} {
-		sig, last := residualPositionContext(ChromaDC, 8, pos)
+		sig, last := residualPositionContext(ChromaDC, 8, pos, false)
 		if sig != inc || last != inc {
 			t.Fatal(pos, sig, last, inc)
 		}

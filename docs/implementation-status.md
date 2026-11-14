@@ -214,6 +214,7 @@ High10渐进420编解码及High422渐进8/10-bit解码已接入，限定工具�
 | 422 CAVLC残差前置 | 八系数ChromaDC422，隐含nC=-2；独立coeff_token/total_zeros规范列及共享level/run读写 | Conformant | 全部token/zeros码字、固定块比特串、截断与原420回归通过；独立提交完整常规门禁通过 | 调用者使用ChromaDC422且仅前八项，不能用四项或十六项表替代 |
 | PPS缩放列表计数修复 | transform_8x8_mode_flag=0时仅六个4×4列表，开启时按色度追加2/6个8×8列表 | Conformant | 独立RBSP字节ce38402c先触发尾位错误、修复后正确解析第二色度偏移-2并精确写回；独立提交完整常规门禁通过 | FMO及其余高级语法仍按各自实施项验收；不以自往返替代规范字节向量 |
 | 7：High422解码 | 渐进8/10-bit422双熵I/P/B、4×4/8×8/矩阵/权重、八DC与PCM、全高色度去块、原生LE及逐行裁剪 | Conformant | 两格式×九配置各八帧外部x264/FFmpeg逐采样一致；混合PCM/QP/去块规范Oracle、12×13裁剪解析解、420/422与8/10-bit切换/坏IDR恢复及单帧预算边界；独立提交快照完整常规门禁通过，manifest30条 | 仅渐进帧，444、隔行和transform bypass仍拒绝；422编码由第10项验收；动态生成语料尚未登记静态manifest，不替代M7最终语料门禁 |
+| 8：444图像与色度共享内核 | 8/10-bit444三平面16×16存储、边缘复制、裁剪重建与格式隔离池；444 CABAC十四类/1024模型及十二列表fallback | Conformant | 全平面几何/行共享/极值与六格式池隔离；ITU Amd.2表9-24d/e固定模型分段值、CBF/bin轨迹与范围；全部4096种列表presence组合×三种SPS/PPS来源；独立快照完整常规门禁通过 | 本项仅共享内核，不提前放开High444流水线；独立平面按colour_plane_id选择矩阵，QP仍用Y过程 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。

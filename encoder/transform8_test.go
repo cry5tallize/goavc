@@ -62,7 +62,7 @@ func TestTransform8x8_PCMFallbackClearsCandidateFlags(t *testing.T) {
 	dst, _ := picture.New(1, 1, h264.YUV420P)
 	s := frameState{src: src, pic: dst, info: []mbInfo{{transform8: true, is16: true, inter: true, skip: true}}, nz: make([]uint8, 16)}
 	for c := range s.cnz {
-		s.cnz[c] = make([]uint8, 4)
+		s.cnz[c] = make([]uint8, 16)
 	}
 	s.writePCMSamples(bitstream.NewWriter(), 0)
 	i := s.info[0]
@@ -137,7 +137,7 @@ func TestTransform8x8_ScalingSignalAndValidation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m.Eight != [2][64]uint8{a, b} {
+	if m.Eight[0] != a || m.Eight[1] != b {
 		t.Fatal("8×8 PPS矩阵扫描或delta回绕错误")
 	}
 	for _, matrix := range m.Four {

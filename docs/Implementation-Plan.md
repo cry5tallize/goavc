@@ -571,7 +571,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 5 | `feat[encoder]: add high10 encoding` | 原生10-bit压缩、双熵与既有I/P/B/码控/前瞻/矩阵工具、CLI | 32配置×12帧三方像素Oracle、真实CLI与FFmpeg原始LE哈希、独立提交完整常规门禁通过 |
 | 6 | `feat[picture]: add 422 plane geometry and chroma handling` | 8/10-bit422几何、全高色度、边缘与池，复用矩形色度预测 | 新布局先红后绿；独立尺寸/极值/池隔离、8×16预测解析解及独立完整常规门禁通过 |
 | 7 | `feat[decoder]: add high422 decoding` | 渐进8/10-bit422、双熵I/P/B、矩阵/权重/PCM/全高去块与原生输出 | 两格式×九配置各八帧FFmpeg Oracle、PCM/QP/裁剪/切换/预算解析用例及独立完整常规门禁通过 |
-| 8 | `feat[picture]: add 444 chroma support` | 4:4:4 | 尺寸/预测测试 |
+| 8 | `feat[picture]: add 444 chroma support` | 8/10-bit444全尺寸三平面、边缘/池；十四类CABAC与十二列表共享前置 | 几何/极值/六格式池、规范模型/bin轨迹、4096列表组合及独立完整常规门禁通过 |
 | 9 | `feat[decoder]: add high444 decoding` | 4:4:4 路径 | 语料一致 |
 | 10 | `feat[encoder]: add high422 and high444 encoding` | 扩展格式编码 | FFmpeg 可解 |
 | 11 | `feat[syntax]: add field picture and mbaff syntax parsing` | `field_pic_flag`、`mb_adaptive_frame_field_flag` | 定向语料 |

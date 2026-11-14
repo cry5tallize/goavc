@@ -6,6 +6,9 @@
 // 420/422 色度 DC 均使用 ctxBlockCat=ChromaDC：Residual 的 scan 长度4/8
 // 区分两者，CBF 仍用 ctxIdx=97+condA+2*condB；CBF=0 时调用方不调用 Residual。
 // 422 八项 DC 使用 transform.DC2x4Scan，显著性/末位上下文压缩到三个位置。
+// 444使用ContextCount444/InitContexts444及Residual444，覆盖ctxBlockCat=0..13；
+// 旧460模型域由Residual/ResidualField处理。帧场共用算术，仅扫描模型不同。
+// CodedBlockFlagBase负责非连续CBF基址，8×8块在444时也有独立CBF模型。
 //
 // 关键约束：
 //   - 上下文状态表必须静态生成，且在编码侧与解码侧共享同一份表；
