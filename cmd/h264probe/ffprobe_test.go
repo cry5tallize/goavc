@@ -82,7 +82,7 @@ func TestSyntax_FFprobeOracle(t *testing.T) {
 			if ew != nil || eh != nil || int(width) != o.Width || int(height) != o.Height || int(sps.LevelIDC) != o.Level || o.PixFmt != entry.PixFmt {
 				t.Fatalf("CLI与ffprobe元数据不一致: SPS=%+v ffprobe=%+v", sps, o)
 			}
-			profile := map[uint8]string{66: "baseline", 77: "main", 100: "high", 110: "high 10"}[sps.ProfileIDC]
+			profile := map[uint8]string{66: "baseline", 77: "main", 100: "high", 110: "high 10", 122: "high 4:2:2"}[sps.ProfileIDC]
 			if profile == "" || !strings.Contains(strings.ToLower(o.Profile), profile) {
 				t.Fatalf("CLI profile=%d，ffprobe=%q", sps.ProfileIDC, o.Profile)
 			}

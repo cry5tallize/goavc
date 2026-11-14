@@ -53,7 +53,7 @@
 | Annex-B 扫描 | B.1 | 3/4 字节起始码、任意分块、前导/尾随零 | Conformant | `annexb_test.go`、`annexb_chunk_test.go`、语料测试 | 前导非零字节按同步恢复策略跳过 |
 | AVCC / avcC | ISO/IEC 14496-15 | 1..4 字节长度、8 MiB 上限、avcC 解析与序列化 | Partial | `avcc_test.go`、`avcc_writer_test.go`、`avcconfig_test.go`、`avcconfig_writer_test.go` | 尚无真实 MP4/avcC 语料，目前只有合成记录 |
 | Access Unit 组装 | 7.4.1.2.3 | AUD/前缀/后缀、first_mb/frame_num/POC 等判定、显式 hint | Conformant | `accessunit_test.go`、`assembler_test.go`、`corpus_test.go` | 多 slice 且无 AUD 时依赖 SliceInfo hint；suffix SEI 归类保守 |
-| SPS 解析与序列化 | 7.3.2.1 | Baseline/Main/High 8-bit及High10渐进4:2:0、VUI/ScalingList、裁剪尺寸 | Conformant | 原语法/ffprobe语料回归及M7 High10真实压缩码流Oracle通过 | 422/444、隔行、qpprime仍显式拒绝，按M7后续实施项接入 |
+| SPS 解析与序列化 | 7.3.2.1 | Baseline/Main/High 8-bit、High10渐进420及High422渐进8/10-bit420/422、VUI/ScalingList、裁剪尺寸 | Conformant | 原语法/ffprobe回归及M7 High10/High422外部压缩码流Oracle通过 | 444、隔行、qpprime仍显式拒绝，按M7后续实施项接入 |
 | PPS 解析与序列化 | 7.3.2.2 | 核心字段、可选 8×8/scaling 扩展、FMO 拒绝 | Partial | `pps_test.go`、`corpus_test.go` | 无独立 PPS 级 Oracle；依赖 x264 原始字节往返与 manifest 熵模式 |
 | VUI | E.1 | 宽高比、overscan、video signal、timing、HRD、bitstream restriction | Partial | `vui_test.go`、`corpus_test.go` | timing/HRD 语义未与独立 Oracle 对比（裸流 ffprobe 帧率不可靠） |
 | ScalingList | 7.3.2.1.1.1 | 4×4/8×8、保留原始 delta 序列 | Partial | `scaling_list_test.go`、`sps_write_test.go` | 无自定义矩阵真实语料；应用层（反量化）在 M3 |
@@ -196,7 +196,7 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 ## M7：高级 AVC 特性（WIP）
 
 当前特性分支`feat/m7-high422`，按实施计划从共享内核到流水线逐项验收、独立提交。
-High10渐进420解码已接入，限定工具与证据逐项列于下表；既有8-bit编解码回归保持通过，不据基础内核进度承诺完整Profile。
+High10渐进420编解码及High422渐进8/10-bit解码已接入，限定工具与证据逐项列于下表；既有8-bit编解码回归保持通过，不据基础内核进度承诺完整Profile。
 
 | 实施项 | 职责 | Status | 证据 | 缺口 |
 |---|---|---|---|---|
@@ -213,6 +213,7 @@ High10渐进420解码已接入，限定工具与证据逐项列于下表；既�
 | 422 CABAC残差前置 | ChromaDC类别接受八项扫描，sig/last增量与幅值上下文按422规则选择，420路径不变 | Conformant | 独立bin/上下文轨迹、四种CBF邻域、截断与原420回归通过；独立提交完整常规门禁通过 | CBF仍为97..100；八DC不新增ctxBlockCat，后续流水线必须提供DC2x4Scan |
 | 422 CAVLC残差前置 | 八系数ChromaDC422，隐含nC=-2；独立coeff_token/total_zeros规范列及共享level/run读写 | Conformant | 全部token/zeros码字、固定块比特串、截断与原420回归通过；独立提交完整常规门禁通过 | 调用者使用ChromaDC422且仅前八项，不能用四项或十六项表替代 |
 | PPS缩放列表计数修复 | transform_8x8_mode_flag=0时仅六个4×4列表，开启时按色度追加2/6个8×8列表 | Conformant | 独立RBSP字节ce38402c先触发尾位错误、修复后正确解析第二色度偏移-2并精确写回；独立提交完整常规门禁通过 | FMO及其余高级语法仍按各自实施项验收；不以自往返替代规范字节向量 |
+| 7：High422解码 | 渐进8/10-bit422双熵I/P/B、4×4/8×8/矩阵/权重、八DC与PCM、全高色度去块、原生LE及逐行裁剪 | Conformant | 两格式×九配置各八帧外部x264/FFmpeg逐采样一致；混合PCM/QP/去块规范Oracle、12×13裁剪解析解、420/422与8/10-bit切换/坏IDR恢复及单帧预算边界；独立提交快照完整常规门禁通过，manifest30条 | 仅渐进帧，444、隔行和transform bypass仍拒绝；422编码由第10项验收；动态生成语料尚未登记静态manifest，不替代M7最终语料门禁 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。

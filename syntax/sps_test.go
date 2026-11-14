@@ -250,8 +250,8 @@ func TestParseSPS_POCType1(t *testing.T) {
 
 func TestParseSPS_Unsupported(t *testing.T) {
 	tests := map[string]testSPS{
-		"profile 122": {
-			profile: 122, chroma: 1, frameMbsOnly: true,
+		"profile 244": {
+			profile: 244, chroma: 1, frameMbsOnly: true,
 			widthMbsMinus1: 3, heightMapMinus1: 2,
 		},
 		"chroma 422": {

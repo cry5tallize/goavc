@@ -27,9 +27,9 @@ var interCBPMap = [48]uint8{
 // residual 保存两种熵模式共用的宏块 level（尚未反量化）。
 type residual struct {
 	luma     [16][16]int32 // 光栅块顺序
-	chroma   [2][4][16]int32
+	chroma   [2][8][16]int32
 	lumaDC   [16]int32
-	chromaDC [2][4]int32
+	chromaDC [2][8]int32
 	luma8    [4][64]int32
 }
 
@@ -193,7 +193,7 @@ func decodeIntraMacroblock(fs *frameState, addr, mbx, mby, mbType int, s *sliceE
 				return err
 			}
 		}
-		// I4x4 宏块的色度仍然使用 8x8 帧内预测（与亮度模式无关）。
+		// I4x4/I8x8的色度按采样格式使用8x8或8x16预测，与亮度模式无关。
 		if err := fs.predictChroma(mbx, mby, int(chromaMode)); err != nil {
 			return err
 		}
@@ -249,8 +249,8 @@ func decodePCMMacroblock(fs *frameState, addr, mbx, mby int, s *sliceEntry) erro
 		}
 	}
 	planes := [3]*picture.Plane{&fs.pic.Planes[0], &fs.pic.Planes[1], &fs.pic.Planes[2]}
-	dims := [3][2]int{{16, 16}, {8, 8}, {8, 8}}
-	origins := [3][2]int{{mbx * 16, mby * 16}, {mbx * 8, mby * 8}, {mbx * 8, mby * 8}}
+	dims := [3][2]int{{16, 16}, {fs.chromaW, fs.chromaH}, {fs.chromaW, fs.chromaH}}
+	origins := [3][2]int{{mbx * 16, mby * 16}, {mbx * fs.chromaW, mby * fs.chromaH}, {mbx * fs.chromaW, mby * fs.chromaH}}
 	for pi := 0; pi < 3; pi++ {
 		for y := 0; y < dims[pi][1]; y++ {
 			for x := 0; x < dims[pi][0]; x++ {
@@ -271,8 +271,8 @@ func decodePCMMacroblock(fs *frameState, addr, mbx, mby int, s *sliceEntry) erro
 	for i := 0; i < 16; i++ {
 		fs.lumaNZ[base+i] = 16
 	}
-	cb := addr * 4
-	for i := 0; i < 4; i++ {
+	cb := addr * fs.chromaBlocks
+	for i := 0; i < fs.chromaBlocks; i++ {
 		fs.chromaNZ[0][cb+i] = 16
 		fs.chromaNZ[1][cb+i] = 16
 	}

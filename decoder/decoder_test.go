@@ -133,7 +133,7 @@ func TestDecoder_ConfigurationAndLimits(t *testing.T) {
 			t.Fatalf("config %+v: %v", cfg, err)
 		}
 	}
-	for _, cfg := range []h264.DecoderConfig{{OutputFormat: h264.YUV422P}, {Threads: 2}} {
+	for _, cfg := range []h264.DecoderConfig{{OutputFormat: h264.PixelFormat(255)}, {Threads: 2}} {
 		if _, err := New(cfg); !errors.Is(err, h264.ErrUnsupported) {
 			t.Fatal(err)
 		}
@@ -162,7 +162,7 @@ func TestDecoder_UnsupportedTools(t *testing.T) {
 	for _, mutate := range []func(*syntax.SPS, *syntax.PPS, *syntax.SliceHeader){
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.FrameMbsOnlyFlag = false },
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.MbAdaptiveFrameFieldFlag = true },
-		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.ChromaFormatIDC = 2 },
+		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.ChromaFormatIDC = 0 },
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) {
 			s.BitDepthLumaMinus8 = 1
 			s.BitDepthChromaMinus8 = 1

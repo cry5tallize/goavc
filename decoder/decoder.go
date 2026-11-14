@@ -1,8 +1,8 @@
-// Package decoder 实现 H.264 Baseline 解码流水线。
+// Package decoder 实现 H.264 渐进式 4:2:0/4:2:2 8/10-bit 解码流水线。
 //
-// 输入单位是访问单元（Packet.Data 为 Annex-B），输出是显示顺序的
-// 4:2:0 8/10-bit Frame。支持 CAVLC/CABAC 的 I/P/B、多参考/MMCO、direct、加权
-// 预测、High 8x8/ScalingMatrix 和 POC 显示重排，范围为渐进式 4:2:0。
+// 输入单位是访问单元（Packet.Data 为 Annex-B），按显示顺序输出原生格式
+// Frame。支持 CAVLC/CABAC 的 I/P/B、多参考/MMCO、direct、加权预测、
+// High 8x8/ScalingMatrix，并按色度采样格式处理预测、残差、去块和裁剪。
 package decoder
 
 import (
@@ -53,8 +53,8 @@ func New(cfg h264.DecoderConfig) (*Decoder, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-	if (cfg.OutputFormat != h264.YUV420P && cfg.OutputFormat != h264.YUV420P10LE) || cfg.Threads > 1 {
-		return nil, fmt.Errorf("decoder: only serial 8/10-bit yuv420p output is supported: %w", h264.ErrUnsupported)
+	if (cfg.OutputFormat != h264.YUV420P && cfg.OutputFormat != h264.YUV420P10LE && cfg.OutputFormat != h264.YUV422P && cfg.OutputFormat != h264.YUV422P10LE) || cfg.Threads > 1 {
+		return nil, fmt.Errorf("decoder: only serial 8/10-bit yuv420p/yuv422p output is supported: %w", h264.ErrUnsupported)
 	}
 	d := &Decoder{
 		cfg:  cfg,
@@ -291,10 +291,23 @@ func (d *Decoder) checkSPSLimits(s *syntax.SPS) error {
 		return fmt.Errorf("decoder: %dx%d exceeds configured limit %dx%d: %w",
 			w, h, d.cfg.MaxWidth, d.cfg.MaxHeight, h264.ErrResourceLimit)
 	}
-	// 保留既有8-bit预算口径；高位深采样存储与输出均按双字节计费。
-	frameBytes := w * h * 2
-	if s.BitDepthLumaMinus8 == 2 || s.BitDepthChromaMinus8 == 2 {
-		frameBytes *= 2
+	// 按编码尺寸的实际平面采样数与各分量字节宽度计费，不能用420估算422。
+	subW, subH := uint64(2), uint64(2)
+	if s.ChromaFormatIDC == 2 {
+		subH = 1
+	} else if s.ChromaFormatIDC == 3 {
+		subW, subH = 1, 1
+	}
+	lumaBytes, chromaBytes := uint64(1), uint64(1)
+	if s.BitDepthLumaMinus8 > 0 {
+		lumaBytes = 2
+	}
+	if s.BitDepthChromaMinus8 > 0 {
+		chromaBytes = 2
+	}
+	frameBytes := w * h * lumaBytes
+	if s.ChromaFormatIDC != 0 {
+		frameBytes += 2 * (w / subW) * (h / subH) * chromaBytes
 	}
 	if d.cfg.MaxFrameSize > 0 && frameBytes > uint64(d.cfg.MaxFrameSize) {
 		return fmt.Errorf("decoder: frame size %d exceeds limit %d: %w",

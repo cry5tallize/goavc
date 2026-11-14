@@ -24,19 +24,18 @@ func (fs *frameState) deblock() error {
 			}
 			// 垂直边。
 			for _, edgeX := range []int{0, 4, 8, 12} {
-				if info.transform8 && (edgeX == 4 || edgeX == 12) {
-					continue
-				}
 				boundary := edgeX == 0
 				if boundary {
 					if mbx == 0 || fs.skipSliceBoundary(mbx, mby, mbx-1, mby) {
 						continue
 					}
 				}
-				if err := fs.filterLumaVertical(mbx, mby, edgeX, boundary); err != nil {
-					return err
+				if !info.transform8 || edgeX%8 == 0 {
+					if err := fs.filterLumaVertical(mbx, mby, edgeX, boundary); err != nil {
+						return err
+					}
 				}
-				if edgeX == 0 || edgeX == 8 {
+				if edgeX%(4*fs.subW) == 0 {
 					if err := fs.filterChromaVertical(mbx, mby, edgeX, boundary); err != nil {
 						return err
 					}
@@ -44,19 +43,18 @@ func (fs *frameState) deblock() error {
 			}
 			// 水平边。
 			for _, edgeY := range []int{0, 4, 8, 12} {
-				if info.transform8 && (edgeY == 4 || edgeY == 12) {
-					continue
-				}
 				boundary := edgeY == 0
 				if boundary {
 					if mby == 0 || fs.skipSliceBoundary(mbx, mby, mbx, mby-1) {
 						continue
 					}
 				}
-				if err := fs.filterLumaHorizontal(mbx, mby, edgeY, boundary); err != nil {
-					return err
+				if !info.transform8 || edgeY%8 == 0 {
+					if err := fs.filterLumaHorizontal(mbx, mby, edgeY, boundary); err != nil {
+						return err
+					}
 				}
-				if edgeY == 0 || edgeY == 8 {
+				if edgeY%(4*fs.subH) == 0 {
 					if err := fs.filterChromaHorizontal(mbx, mby, edgeY, boundary); err != nil {
 						return err
 					}
@@ -127,7 +125,7 @@ func (fs *frameState) filterLumaHorizontal(mbx, mby, edgeY int, boundary bool) e
 }
 
 func (fs *frameState) filterChromaVertical(mbx, mby, lumaEdgeX int, boundary bool) error {
-	chromaX := lumaEdgeX / 2
+	chromaX := lumaEdgeX / fs.subW
 	info := &fs.info[mby*fs.mbW+mbx]
 	for r := 0; r < 4; r++ {
 		pbx, pby := mbx*4+lumaEdgeX/4-1, mby*4+r
@@ -139,14 +137,14 @@ func (fs *frameState) filterChromaVertical(mbx, mby, lumaEdgeX int, boundary boo
 		for comp := 0; comp < 2; comp++ {
 			qpc := fs.edgeChromaQP(mbx, mby, boundary, boundary, comp)
 			pl := &fs.pic.Planes[comp+1]
-			x := mbx*8 + chromaX
-			y := mby*8 + r*2
+			x := mbx*fs.chromaW + chromaX
+			y := mby*fs.chromaH + r*4/fs.subH
 			if pl.BitDepth == 10 {
 				filter.ChromaEdgeHigh(pl.Data16, pl.Index(x, y), pl.Stride, 1, bS, qpc,
-					int(info.alphaDiv2), int(info.betaDiv2), 2, pl.BitDepth)
+					int(info.alphaDiv2), int(info.betaDiv2), 4/fs.subH, pl.BitDepth)
 			} else {
 				filter.ChromaEdge(pl.Data, pl.Index(x, y), pl.Stride, 1, bS, qpc,
-					int(info.alphaDiv2), int(info.betaDiv2), 2)
+					int(info.alphaDiv2), int(info.betaDiv2), 4/fs.subH)
 			}
 		}
 	}
@@ -154,7 +152,7 @@ func (fs *frameState) filterChromaVertical(mbx, mby, lumaEdgeX int, boundary boo
 }
 
 func (fs *frameState) filterChromaHorizontal(mbx, mby, lumaEdgeY int, boundary bool) error {
-	chromaY := lumaEdgeY / 2
+	chromaY := lumaEdgeY / fs.subH
 	// 水平边界的另一侧在上方，不是左侧；这里必须传 false。
 	info := &fs.info[mby*fs.mbW+mbx]
 	for c := 0; c < 4; c++ {
@@ -167,14 +165,14 @@ func (fs *frameState) filterChromaHorizontal(mbx, mby, lumaEdgeY int, boundary b
 		for comp := 0; comp < 2; comp++ {
 			qpc := fs.edgeChromaQP(mbx, mby, boundary, false, comp)
 			pl := &fs.pic.Planes[comp+1]
-			x := mbx*8 + c*2
-			y := mby*8 + chromaY
+			x := mbx*fs.chromaW + c*4/fs.subW
+			y := mby*fs.chromaH + chromaY
 			if pl.BitDepth == 10 {
 				filter.ChromaEdgeHigh(pl.Data16, pl.Index(x, y), 1, pl.Stride, bS, qpc,
-					int(info.alphaDiv2), int(info.betaDiv2), 2, pl.BitDepth)
+					int(info.alphaDiv2), int(info.betaDiv2), 4/fs.subW, pl.BitDepth)
 			} else {
 				filter.ChromaEdge(pl.Data, pl.Index(x, y), 1, pl.Stride, bS, qpc,
-					int(info.alphaDiv2), int(info.betaDiv2), 2)
+					int(info.alphaDiv2), int(info.betaDiv2), 4/fs.subW)
 			}
 		}
 	}

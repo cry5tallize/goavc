@@ -55,18 +55,21 @@ type frameState struct {
 	poc     int32
 	scaling syntax.ScalingMatrices
 
-	mbW, mbH, total int
-	decoded         []bool
-	info            []mbInfo
-	lumaNZ          []uint8
-	chromaNZ        [2][]uint8
-	dcCoded         [3][]bool
-	mvd             []motion.MV
-	referenceIDs    [2][]*dpb.Identity
-	mv              *motion.Grid
-	mv1             *motion.Grid
-	mvd1            []motion.MV
-	directBlocks    []bool
+	mbW, mbH, total  int
+	subW, subH       int
+	chromaW, chromaH int
+	chromaBlocks     int
+	decoded          []bool
+	info             []mbInfo
+	lumaNZ           []uint8
+	chromaNZ         [2][]uint8
+	dcCoded          [3][]bool
+	mvd              []motion.MV
+	referenceIDs     [2][]*dpb.Identity
+	mv               *motion.Grid
+	mv1              *motion.Grid
+	mvd1             []motion.MV
+	directBlocks     []bool
 }
 
 func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFrame bool) (*frameState, error) {
@@ -80,6 +83,15 @@ func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFrame bool) (*
 	if sps.BitDepthLumaMinus8 == 2 {
 		format = h264.YUV420P10LE
 	}
+	if sps.ChromaFormatIDC == 2 {
+		format = h264.YUV422P
+		if sps.BitDepthLumaMinus8 == 2 {
+			format = h264.YUV422P10LE
+		}
+	}
+	subW, subH := format.ChromaSubsampling()
+	chromaW, chromaH := format.PlaneDimensions(1, 16, 16)
+	chromaBlocks := chromaW * chromaH / 16
 	pic, err := d.pool.Get(mbW, mbH, format)
 	if err != nil {
 		return nil, err
@@ -94,13 +106,15 @@ func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFrame bool) (*
 		mbW:     mbW,
 		mbH:     mbH,
 		total:   total,
+		subW:    subW, subH: subH,
+		chromaW: chromaW, chromaH: chromaH, chromaBlocks: chromaBlocks,
 		decoded: make([]bool, total),
 		info:    make([]mbInfo, total),
 		lumaNZ:  make([]uint8, total*16),
 		mv:      motion.NewGrid(mbW, mbH),
 	}
-	fs.chromaNZ[0] = make([]uint8, total*4)
-	fs.chromaNZ[1] = make([]uint8, total*4)
+	fs.chromaNZ[0] = make([]uint8, total*chromaBlocks)
+	fs.chromaNZ[1] = make([]uint8, total*chromaBlocks)
 	fs.referenceIDs[0] = make([]*dpb.Identity, total*16)
 	if bFrame {
 		fs.mv1 = motion.NewGrid(mbW, mbH)
@@ -358,8 +372,8 @@ func (d *Decoder) checkSupported(sps *syntax.SPS, pps *syntax.PPS, hdr *syntax.S
 	if !sps.FrameMbsOnlyFlag || sps.MbAdaptiveFrameFieldFlag || hdr.FieldPicFlag {
 		return fmt.Errorf("decoder: field/MBAFF coding: %w", h264.ErrUnsupported)
 	}
-	if sps.ChromaFormatIDC != 1 || sps.BitDepthLumaMinus8 != sps.BitDepthChromaMinus8 || (sps.BitDepthLumaMinus8 != 0 && sps.BitDepthLumaMinus8 != 2) {
-		return fmt.Errorf("decoder: only 8/10-bit 4:2:0: %w", h264.ErrUnsupported)
+	if (sps.ChromaFormatIDC != 1 && sps.ChromaFormatIDC != 2) || sps.BitDepthLumaMinus8 != sps.BitDepthChromaMinus8 || (sps.BitDepthLumaMinus8 != 0 && sps.BitDepthLumaMinus8 != 2) {
+		return fmt.Errorf("decoder: only 8/10-bit 4:2:0/4:2:2: %w", h264.ErrUnsupported)
 	}
 	if hdr.Type == syntax.SliceTypeSP || hdr.Type == syntax.SliceTypeSI {
 		return fmt.Errorf("decoder: SP/SI slices: %w", h264.ErrUnsupported)
@@ -464,23 +478,20 @@ func (d *Decoder) toFrame(pic *picture.Picture, sps *syntax.SPS, p h264.Packet, 
 		KeyFrame: key,
 	}
 	for pi := 0; pi < 3; pi++ {
-		var pw, ph int
-		if pi == 0 {
-			pw, ph = w, h
-		} else {
-			pw, ph = (w+1)/2, (h+1)/2
-		}
+		pw, ph := pic.Format.PlaneDimensions(pi, w, h)
 		rowBytes := f.Format.RowBytes(pi, w)
 		buf := make([]byte, rowBytes*ph)
 		src := &pic.Planes[pi]
-		cropX, cropY := int(sps.FrameCropLeftOffset), int(sps.FrameCropTopOffset)
-		if pi == 0 {
-			cropX *= 2
-			cropY *= 2
+		subW, subH := pic.Format.ChromaSubsampling()
+		cropX := int(sps.FrameCropLeftOffset) * subW
+		cropY := int(sps.FrameCropTopOffset) * subH
+		if pi != 0 {
+			cropX /= subW
+			cropY /= subH
 		}
 		for y := 0; y < ph; y++ {
 			row := buf[y*rowBytes : (y+1)*rowBytes]
-			if pic.Format == h264.YUV420P10LE {
+			if pic.Format.BitDepth() > 8 {
 				for x, value := range src.Row16(y + cropY)[cropX : cropX+pw] {
 					binary.LittleEndian.PutUint16(row[x*2:], value)
 				}

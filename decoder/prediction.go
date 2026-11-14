@@ -15,23 +15,29 @@ func (fs *frameState) predictIntra4(mbx, mby, bx, by, x, y, mode int) error {
 
 func (fs *frameState) predictIntraBlock(mbx, mby, component, mode int) error {
 	pl := &fs.pic.Planes[component]
-	size := 16
+	w, h := 16, 16
 	if component != 0 {
-		size = 8
+		w, h = fs.chromaW, fs.chromaH
 	}
-	x, y := mbx*size, mby*size
+	x, y := mbx*w, mby*h
 	if pl.BitDepth == 10 {
 		s, top, left := intraBlockSamples(fs, mbx, mby, component, pl.Data16)
-		samples := prediction.IntraBlockSamples16{Top: s.Top[:size], Left: s.Left[:size], TopLeft: s.TopLeft}
+		samples := prediction.IntraBlockSamples16{Top: s.Top[:w], Left: s.Left[:h], TopLeft: s.TopLeft}
 		if component == 0 {
 			return prediction.Intra16x16High(pl.Data16[pl.Index(x, y):], pl.Stride, mode, samples, top, left, pl.BitDepth)
+		}
+		if h == 16 {
+			return prediction.Chroma422High(pl.Data16[pl.Index(x, y):], pl.Stride, mode, samples, top, left, pl.BitDepth)
 		}
 		return prediction.Chroma8x8High(pl.Data16[pl.Index(x, y):], pl.Stride, mode, samples, top, left, pl.BitDepth)
 	}
 	s, top, left := intraBlockSamples(fs, mbx, mby, component, pl.Data)
-	samples := prediction.IntraBlockSamples{Top: s.Top[:size], Left: s.Left[:size], TopLeft: s.TopLeft}
+	samples := prediction.IntraBlockSamples{Top: s.Top[:w], Left: s.Left[:h], TopLeft: s.TopLeft}
 	if component == 0 {
 		return prediction.Intra16x16(pl.Data[pl.Index(x, y):], pl.Stride, mode, samples, top, left)
+	}
+	if h == 16 {
+		return prediction.Chroma422(pl.Data[pl.Index(x, y):], pl.Stride, mode, samples, top, left)
 	}
 	return prediction.Chroma8x8(pl.Data[pl.Index(x, y):], pl.Stride, mode, samples, top, left)
 }

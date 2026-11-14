@@ -22,14 +22,14 @@ func (fs *frameState) cbfNeighbor(addr, mbx, mby, bx, by, comp int, dc bool) (bo
 				other -= fs.mbW
 			}
 		} else {
-			n := 4
+			w, h := 4, 4
 			if comp >= 0 {
-				n = 2
+				w, h = fs.chromaW/4, fs.chromaH/4
 			}
 			if side == 0 {
 				x--
 				if x < 0 {
-					x = n - 1
+					x = w - 1
 					other--
 					if mbx == 0 {
 						other = -1
@@ -38,7 +38,7 @@ func (fs *frameState) cbfNeighbor(addr, mbx, mby, bx, by, comp int, dc bool) (bo
 			} else {
 				y--
 				if y < 0 {
-					y = n - 1
+					y = h - 1
 					other -= fs.mbW
 				}
 			}
@@ -60,7 +60,7 @@ func (fs *frameState) cbfNeighbor(addr, mbx, mby, bx, by, comp int, dc bool) (bo
 		} else if comp < 0 {
 			values[side] = fs.lumaNZ[other*16+y*4+x] != 0
 		} else {
-			values[side] = fs.chromaNZ[comp][other*4+y*2+x] != 0
+			values[side] = fs.chromaNZ[comp][other*fs.chromaBlocks+y*2+x] != 0
 		}
 	}
 	return values[0], values[1]
@@ -115,8 +115,12 @@ func (fs *frameState) decodeCABACResidual(s *sliceEntry, addr, mbx, mby int, i16
 	}
 	chroma := (cbp >> 4) & 3
 	if chroma > 0 {
+		scan := transform.DC2x2Scan[:]
+		if fs.chromaBlocks == 8 {
+			scan = transform.DC2x4Scan[:]
+		}
 		for comp := 0; comp < 2; comp++ {
-			count, err := block(cabac.ChromaDC, 0, 0, comp, true, res.chromaDC[comp][:], transform.DC2x2Scan[:])
+			count, err := block(cabac.ChromaDC, 0, 0, comp, true, res.chromaDC[comp][:], scan)
 			if err != nil {
 				return err
 			}
@@ -125,12 +129,12 @@ func (fs *frameState) decodeCABACResidual(s *sliceEntry, addr, mbx, mby int, i16
 	}
 	if chroma == 2 {
 		for comp := 0; comp < 2; comp++ {
-			for b := 0; b < 4; b++ {
+			for b := 0; b < fs.chromaBlocks; b++ {
 				count, err := block(cabac.ChromaAC, b%2, b/2, comp, false, res.chroma[comp][b][:], transform.Zigzag4x4[1:])
 				if err != nil {
 					return err
 				}
-				fs.chromaNZ[comp][addr*4+b] = uint8(count)
+				fs.chromaNZ[comp][addr*fs.chromaBlocks+b] = uint8(count)
 			}
 		}
 	}

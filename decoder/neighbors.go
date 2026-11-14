@@ -74,21 +74,21 @@ func intra4Samples[T ~uint8 | ~uint16](fs *frameState, mbx, mby, bx, by int, dat
 func intraBlockSamples[T ~uint8 | ~uint16](fs *frameState, mbx, mby, component int, data []T) (intraBlockNeighborhood[T], bool, bool) {
 	var s intraBlockNeighborhood[T]
 	pl := &fs.pic.Planes[component]
-	size := 16
+	w, h := 16, 16
 	if component != 0 {
-		size = 8
+		w, h = fs.chromaW, fs.chromaH
 	}
-	x, y := mbx*size, mby*size
+	x, y := mbx*w, mby*h
 	addr := mby*fs.mbW + mbx
 	topAvail := fs.intraNeighbor(addr, addr-fs.mbW)
 	leftAvail := mbx > 0 && fs.intraNeighbor(addr, addr-1)
 	if topAvail {
-		for i := range size {
+		for i := range w {
 			s.Top[i] = data[pl.Index(x+i, y-1)]
 		}
 	}
 	if leftAvail {
-		for i := range size {
+		for i := range h {
 			s.Left[i] = data[pl.Index(x-1, y+i)]
 		}
 	}
@@ -169,16 +169,16 @@ func (fs *frameState) chromaNC(comp, mbx, mby, bx, by int) int {
 	var a, b int
 	leftAvail, topAvail := true, true
 	if bx > 0 {
-		a = int(grid[addr*4+by*2+bx-1])
+		a = int(grid[addr*fs.chromaBlocks+by*2+bx-1])
 	} else if mbx > 0 && fs.neighborAvailable(addr, addr-1) {
-		a = int(grid[(addr-1)*4+by*2+1])
+		a = int(grid[(addr-1)*fs.chromaBlocks+by*2+1])
 	} else {
 		leftAvail = false
 	}
 	if by > 0 {
-		b = int(grid[addr*4+(by-1)*2+bx])
+		b = int(grid[addr*fs.chromaBlocks+(by-1)*2+bx])
 	} else if fs.neighborAvailable(addr, addr-fs.mbW) {
-		b = int(grid[(addr-fs.mbW)*4+2+bx])
+		b = int(grid[(addr-fs.mbW)*fs.chromaBlocks+fs.chromaBlocks-2+bx])
 	} else {
 		topAvail = false
 	}

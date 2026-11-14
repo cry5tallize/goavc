@@ -15,10 +15,10 @@ func (s *sliceEntry) applyPWeights(fs *frameState, mbx, mby, x, y, w, h, ref int
 		px, py, pw, ph := (mbx*16 + x), (mby*16 + y), w, h
 		denom := t.LumaDenom
 		if c > 0 {
-			px /= 2
-			py /= 2
-			pw /= 2
-			ph /= 2
+			px /= fs.subW
+			py /= fs.subH
+			pw /= fs.subW
+			ph /= fs.subH
 			denom = t.ChromaDenom
 		}
 		pl := &fs.pic.Planes[c]
@@ -54,10 +54,10 @@ func mcBPartitionSamples[T ~uint8 | ~uint16](fs *frameState, s *sliceEntry, mbx,
 	for c := 0; c < 3; c++ {
 		x, y, w, h := mbx*16+p.x*4, mby*16+p.y*4, p.w*4, p.h*4
 		if c > 0 {
-			x /= 2
-			y /= 2
-			w /= 2
-			h /= 2
+			x /= fs.subW
+			y /= fs.subH
+			w /= fs.subW
+			h /= fs.subH
 		}
 		var samples [2][256]T
 		for l := 0; l < 2; l++ {
@@ -71,13 +71,13 @@ func mcBPartitionSamples[T ~uint8 | ~uint16](fs *frameState, s *sliceEntry, mbx,
 				if c == 0 {
 					prediction.MCBlockLuma(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
 				} else {
-					prediction.MCBlockChroma(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
+					prediction.MCBlockChromaFormat(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y), fs.subW, fs.subH)
 				}
 			case []uint16:
 				if c == 0 {
 					prediction.MCBlockLumaHigh(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
 				} else {
-					prediction.MCBlockChromaHigh(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
+					prediction.MCBlockChromaFormatHigh(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y), fs.subW, fs.subH)
 				}
 			}
 		}

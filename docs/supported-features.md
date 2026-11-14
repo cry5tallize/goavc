@@ -33,14 +33,14 @@
 > High 8×8/ScalingMatrix、Main 渐进帧 I/P/B、direct、加权预测和重排均已验证。
 > Profile 整体保留 Partial，范围外的字段/高位深工具仍明确拒绝；本地门禁证据见 gates/m3.md。
 
-> **M7 进展：** 当前分支`feat/m7-high422`。第1–6项及共享预测/滤波/运动前置已完成；
+> **M7 进展：** 当前分支`feat/m7-high422`。第1–7项及共享预测/滤波/运动前置已完成；
 > High10渐进420双熵I/P/B解码、原生LE输出与压缩编码通过独立Oracle，编码32配置共384帧三方逐采样一致。
-> CLI支持高位深与显式熵选项；隔行、422/444与transform bypass另项验收，不声明完整Profile支持。
+> CLI支持高位深与显式熵选项；High422渐进8/10-bit解码已验收，422编码、444、隔行与transform bypass另项验收，不声明完整Profile支持。
 > 共享预测已提供byte/uint16类型实例：高位深帧内、六抽头/色度MC、权重以及422矩形色度预测。
 > 独立提交快照通过完整常规门禁；这些内核入口不单独扩大Profile或编解码组合的支持声明。
 > 共享去块已完成8/10-bit类型参数化，弱/强滤波解析解及独立提交完整常规门禁通过；流水线按后续条目验收。
 > 共享运动搜索已覆盖8/10-bit原始SAD及所有亚像素阶段，低两位纹理与负MV解析测试、独立完整常规门禁通过。
-> 8/10-bit422平面几何、全高色度与8×16预测已通过规范解析测试和独立完整门禁；不据此提前声明High422流水线支持。
+> 8/10-bit422解码两格式×九配置各八帧与FFmpeg逐采样一致，覆盖双熵I/P/B、矩阵/权重/多slice；裁剪、PCM、格式切换及预算边界通过，独立完整常规门禁通过。
 > 422的2×4色度DC正逆变换与八项扫描已通过规范解析值和独立完整门禁；后续编码/解码使用同一内核。
 > CABAC八项色度DC已按规范上下文轨迹验证，仍复用ChromaDC类别；独立完整门禁通过，420路径不变。
 > CAVLC八系数ChromaDC422的规范码字、固定比特串与独立完整门禁通过，保留420四系数路径。
@@ -54,7 +54,7 @@
 | Main | 77 | CABAC、B、隔行 | Partial | Partial | CABAC I/P/P显式权重、spatial B_Direct/B_Skip非参考与重排已验证；隔行M7 |
 | High | 100 | 8×8 变换、ScalingMatrix | Partial | Partial | CABAC I4/I8/I16/P 4×4/8×8、自定义8×8矩阵及spatial B_Direct/B_Skip已验证；字段/扩展M7 |
 | High 10 | 110 | 10 bit | Partial | Partial | M7第4/5项渐进420双熵I/P/B、矩阵/权重/负QP/码控/LE接口已通过Oracle；字段与transform bypass仍拒绝，B编码限既有spatial-direct工具 |
-| High 4:2:2 | 122 | 4:2:2、10 bit | TODO | TODO | M7 |
+| High 4:2:2 | 122 | 4:2:2、10 bit | Partial | TODO | M7第7项渐进8/10-bit422双熵I/P/B、矩阵/权重/PCM/裁剪通过Oracle；隔行、transform bypass仍拒绝，编码另项验收 |
 | High 4:4:4 Predictive | 244 | 4:4:4、残差预测 | TODO | TODO | M7 |
 
 ## 2. 容器与封装
@@ -101,7 +101,7 @@
 | Intra 8×8（High） | Conformant | Conformant | 共享九模式预测、规范邻域、实际Intra8决策、High320帧三方Oracle；编码需WithTransform8x8 |
 | Intra 16×16（4 模式） | Conformant | Conformant | M4 全模式实际选中、共享预测与 DC/AC 重建 Oracle |
 | Chroma 8×8（4:2:0） | Conformant | Conformant | M4 全模式实际选中、双平面 SAD、共享 DC/AC/滤波 Oracle |
-| Chroma 4:2:2 | Unsupported | TODO | 当前 SPS 显式拒绝；M7 实现 |
+| Chroma 4:2:2 | Conformant | TODO | M7第6/7项8×16预测、2×4 DC、八DC双熵、MC与全高滤波通过规范解析解及外部压缩Oracle；编码第10项另验收 |
 | Chroma 4:4:4 | TODO | TODO | M7 |
 | Inter 16×16 / 16×8 / 8×16 / 8×8 | Conformant | Conformant | M5a 四种分区实际选中；单参考 P，360+600 帧双解码器 Oracle |
 | 亚像素插值（1/2、1/4） | Conformant | Conformant | M5a 共享 MC、解析亚像素平移与完整 P 帧 Oracle |
