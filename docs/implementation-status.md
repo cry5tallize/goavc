@@ -193,7 +193,7 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 | h264probe语法树 | JSONL逐NAL展示共享SPS/PPS/VUI/ScalingList/SEI/slice结构，保留默认GOP JSON | Conformant | Baseline/Main/High与ffprobe尺寸/Profile/Level/图片数对照；参数集引用、多slice、严格尾部、限额、AVCC各前缀与输出失败测试 | 不解析宏块/残差，不把头部成功当作像素正确；输出错误前的行只代表局部已解析内容 |
 | 短时稳定性 | 同一对pipeline、io.Pipe、10FPS PCM持续传输30秒；RSS/GC后堆/帧积压/退出goroutine | Conformant | tools/streamcheck核对独立PCM常量解析值与预设资源阈值，退出0；取消后goroutine从3回到1；样本见gates/m6_smoke.json | 仅覆盖该输入与30秒窗口，不证明长期无泄漏，不替代M9混合输入验收 |
 
-## M7：高级 AVC 特性（常规门禁通过，发布核验中）
+## M7：高级 AVC 特性（本地验收通过，v0.9.0仅本地标签）
 
 当前特性分支`feat/m7-high422`，按实施计划从共享内核到流水线逐项验收、独立提交。
 六格式8/10-bit编解码、MBAFF/TFF-BFF及限定FMO/ASO/分区/SP/SI/冗余已接入，VUI/HRD与完整矩阵已验收。表内前置条目描述其独立提交时的证明范围；当前有效组合以支持矩阵为准，不据此宣称完整Profile认证。
@@ -231,9 +231,10 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 | ScalingMatrix与组合级约束 | 列表全范围预检、解析缓存与真实矩阵一致；已知Profile的SPS/PPS/slice/分区组合限制 | Conformant | 十二列表/既有4096 fallback组合、解析矩阵到反量化固定数值、写前无污染、Profile工具矩阵与错误分类；旧Baseline B/场/CABAC及High冗余等非法夹具迁为合法上下文，完整独立CGO=0门禁通过 | 规范禁止组合返回ErrInvalidData；合法但未实现的9/12/14-bit、单色、PAFF或transform bypass仍ErrUnsupported，不以拒绝路径宣称完整Profile支持 |
 | 22：高级Profile Oracle语料套件 | 25份新增高级码流/76帧、原生位深/显示顺序哈希、Oracle来源与帧数清单、跨里程碑High10投影 | Conformant | 55条清单；八份422/444外部x264与一份真实HRD、十六份规范工具向量全部实际CLI匹配；11份新增可用FFmpeg像素证据，14份明确解析解；原M2/M3全部27份保留预测/残差/参考工具投影至High10（PCM扩至10位）与严格FFmpeg逐采样一致；完整独立CGO=0门禁通过，详见gates/m7_corpus.json | FFmpeg对FMO/ASO/分区/secondary SP/SI存在拒绝或差异；不篡改期望，不计作外部Oracle通过；独立平面互操作仍按单色投影与规范证据限定 |
 | 23：逐项支持矩阵与门禁文档 | 公开Profile/工具/组合限制、Oracle来源、原生I/O与发布边界 | Conformant | supported-features、README、stream与gates/m7.md同步；相对文档链接核对，功能证据指向独立测试/固定哈希，不把历史前置快照当当前拒绝范围 | 本地证据不冒充远端CI或完整Profile认证；最终发布检查见第24项 |
+| 24：本地退出标准与版本标签 | Roadmap五项证据、本地常规/race/六目标门禁和注释标签v0.9.0 | Conformant（本地范围） | CGO=0完整门禁、55条清单、27份High10投影、全库race24包成功/11包无测试及六目标构建通过；记录见gates/m7.md | 远端CI与对外发布未执行；Profile认证、M9长稳和未支持工具不计作通过 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
-CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。
+CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；analytic不计作外部Oracle通过。最终全库race与六目标构建均已通过，完整发布边界见gates/m7.md。
 
 ## M8–M9
 

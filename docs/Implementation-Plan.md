@@ -587,7 +587,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 21 | `feat[syntax]: add hrd parameters parsing and writing` | 完整VUI/HRD、参数集上下文与Level/Profile声明校验 | 固定规范字节、多CPB/尺度/延迟/预算/原子拒绝，旧非法合成声明重建且Oracle像素不变，独立完整门禁通过 |
 | 22 | `test[oracle]: add advanced profile corpus suite` | 25份高级码流与清单Oracle来源；M2/M3全部27份High10保工具投影 | 新增76帧原生像素/实际CLI一致、FFmpeg与解析解来源分列、严格High10投影Oracle及55条清单/完整门禁通过 |
 | 23 | `docs[status]: publish advanced feature support matrix` | 当前逐项能力、组合限制、原生I/O、Oracle来源与本地门禁 | 矩阵/README/stream同步及相对链接核对；证据详见gates/m7.md与m7_corpus.json |
-| 24 | `chore[release]: close milestone m7 gate and tag v0.9.0` | 证据 | 勾选 |
+| 24 | `chore[release]: close milestone m7 gate and tag v0.9.0` | 本地五项退出证据与注释标签v0.9.0，不执行远端发布 | 常规门禁/55条清单/27份High10投影/race/六目标构建全部通过，见gates/m7.md；远端CI未执行 |
 
 ---
 

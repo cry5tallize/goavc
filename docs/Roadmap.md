@@ -272,7 +272,7 @@ M6/M7/M8 ───────────► M9 生产化与发布
 | M4 | Encoder Baseline | SPS/PPS Writer、IDR、I_PCM、I4×4/I16×16、CAVLC、CQP、本地重建、Annex-B | L | WIP（本地门禁通过，待 CI；见 gates/m4.md） |
 | M5 | Encoder Main/High | P Slice、ME/MC、亚像素、模式决策、RD、B Frame、CABAC、8×8、GOP、RC | XL | WIP（M5a/b/c/d本地门禁已关闭，待远端CI；见gates/m5c.md、gates/m5d.md） |
 | M6 | 完整流式处理 | 增量Reader/AU/YUV、同步有界pipeline、取消/背压/Flush、三个CLI | M | WIP（功能、常规门禁/全库race/六目标构建及30秒稳定性验收通过，待远端CI；见gates/m6.md） |
-| M7 | 高级 AVC 特性 | High10/422/444、Interlaced、MBAFF/PAFF、FMO、Data Partitioning 等 | XL | WIP（feat/m7-high10从共享图像布局参数化开始；扩展Profile未接入，见implementation-status.md） |
+| M7 | 高级 AVC 特性 | High10/422/444、Interlaced、MBAFF/PAFF、FMO、Data Partitioning 等 | XL | WIP（限定能力本地全部退出证据、常规门禁/race/六目标通过，本地标签v0.9.0；待远端CI，未对外发布；见gates/m7.md） |
 | M8 | SIMD 与并行 | SSE2/AVX2/NEON、dispatch、pool、slice 并行、pipeline、profile | L | TODO |
 | M9 | 生产化与发布 | 全量测试、Fuzz、race、多平台、稳定性、文档、v1.0 | M | TODO |
 
@@ -534,11 +534,11 @@ M6/M7/M8 ───────────► M9 生产化与发布
 **范围外：** MVC / SVC / 3D-AVC。
 
 **退出标准：**
-- [ ] 每一项在 Feature Matrix 中从 `TODO` → `Conformant` 或 `Unsupported`，不允许长期停留 `Partial` 而无说明。
-- [ ] 每项至少 1 份真实语料通过 Oracle 逐像素一致（高位深按位深比较，含 10-bit 的 LE 打包）。
-- [ ] 高位深重构：8-bit 语料在 10-bit 路径下行为不回归（全套 M2/M3 测试在 10-bit 配置下通过）。
-- [ ] Interlaced / MBAFF 有专设语料（x264 `-tff/-bff/-interlaced`），两种 field order 均验证。
-- [ ] 不支持的组合（例如 4:4:4 + 某些工具）显式返回 `ErrUnsupported`，并在文档列出组合级限制。
+- [x] 每一项在 Feature Matrix 中从 `TODO` → `Conformant` 或 `Unsupported`，不允许长期停留 `Partial` 而无说明。见gates/m7.md逐项表；完整Profile认证边界另列。
+- [x] 每项至少 1 份真实语料通过 Oracle 逐像素一致（高位深按位深比较，含 10-bit 的 LE 打包）。已支持项具外部或规范解析像素；55条清单明确区分Oracle来源，Unsupported项不记作像素通过。
+- [x] 高位深重构：8-bit 语料在 10-bit 路径下行为不回归（全套 M2/M3 测试在 10-bit 配置下通过）。原27份语料保工具投影、PCM扩位及严格FFmpeg原生LE逐采样比较通过，普通全包测试通过。
+- [x] Interlaced / MBAFF 有专设语料（x264 `-tff/-bff/-interlaced`），两种 field order 均验证。六格式双熵、192配置/1152帧外部Oracle及真实CLI场序通过，新增静态422-TFF/444-BFF语料。
+- [x] 不支持的组合（例如 4:4:4 + 某些工具）显式返回 `ErrUnsupported`，并在文档列出组合级限制。PAFF、单色、9/12/14-bit、transform bypass与高级工具编码边界见支持矩阵。
 
 **风险：** 位深改造触及全部 kernel → 缓解：M7 之前 kernel 签名已参数化（`bitDepth` 作为编译期或运行期常量），避免大范围重写。
 

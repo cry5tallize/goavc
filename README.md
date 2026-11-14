@@ -3,11 +3,11 @@
 从零实现的 H.264/AVC 软件编解码器：**纯 Go**，允许 Go 汇编（amd64 SSE2/AVX2、arm64 NEON），
 **零 CGO、零 C/C++、零外部编解码库**。Encoder 与 Decoder 共享同一套预测、变换、重建、滤波内核。
 
-> 当前状态：**M7高级工具已通过本地常规门禁**。六种8/10-bit YUV420/422/444原生编解码，
+> 当前状态：**M7本地验收通过，本地标签`v0.9.0`**。六种8/10-bit YUV420/422/444原生编解码，
 > CAVLC/CABAC I/P/B、MBAFF与TFF/BFF编码、完整矩阵，以及限定FMO/ASO、分区、SP/SI、冗余解码已接入。
 > 55条语料登记；新增25份/76帧由实际CLI核对，明确区分FFmpeg原生Oracle与规范解析解。
 > 原M2/M3全部27份语料保工具投影至High10并与严格FFmpeg逐采样一致。
-> [M7门禁](docs/gates/m7.md)记录证据和发布状态；远端CI未执行，不声明完整Profile认证。
+> 常规门禁、全库race与六目标构建通过；[M7门禁](docs/gates/m7.md)列出完整证据。未push，远端CI与对外发布未执行，不声明完整Profile认证。
 > PAFF、transform bypass、单色及9/12/14-bit仍明确拒绝；详细组合见[支持矩阵](docs/supported-features.md)。
 
 > **M4 Baseline 帧内编码已通过本地门禁**。`encoder.New` 提供 CQP、I4/I16/色度 SAD
