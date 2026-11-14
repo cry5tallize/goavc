@@ -120,6 +120,10 @@ func (s *frameState) decideRD(addr, previousQP, radius int, full, early bool) (r
 // 调用前已经确认 Skip 的量化残差全零；因此所有其他 P 分区的 D 相同，
 // R 至少为 5 bit，被 Skip 的 1 bit 严格支配。帧内候选仍须正常比较。
 func (s *frameState) uniformPrediction(addr, radius int) bool {
+	if s.weights != nil {
+		// 原证明依赖未加权的参考常量；裁剪后的加权域不能沿用该下界。
+		return false
+	}
 	for comp := 0; comp < 3; comp++ {
 		n, pad := 16, radius+4
 		if comp > 0 {
@@ -155,10 +159,14 @@ func (s *frameState) interCandidate(addr, kind, radius int, full bool) residual 
 		info.modes[i] = -1
 	}
 	x, y := addr%s.pic.MBWidth*16, addr/s.pic.MBWidth*16
+	searchReference := s.reference
+	if s.searchReference != nil {
+		searchReference = s.searchReference
+	}
 	for i, p := range partitions[kind] {
 		pred := s.predictPartition(addr, kind, i)
 		lambda := motionLambdaQ8(info.qp)
-		mv, _ := search.EstimateWithCost(&s.src.Planes[0], &s.reference.Planes[0], x+p.x, y+p.y, p.w, p.h, pred, radius, full, func(m motion.MV, sad int) uint64 {
+		mv, _ := search.EstimateWithCost(&s.src.Planes[0], &searchReference.Planes[0], x+p.x, y+p.y, p.w, p.h, pred, radius, full, func(m motion.MV, sad int) uint64 {
 			return uint64(sad)*256 + lambda*uint64(mvBits(m.X-pred.X, m.Y-pred.Y))
 		})
 		s.mc(addr, p, mv)

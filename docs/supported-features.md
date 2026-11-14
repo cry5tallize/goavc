@@ -90,7 +90,7 @@
 | Chroma 4:4:4 | TODO | TODO | M7 |
 | Inter 16×16 / 16×8 / 8×16 / 8×8 | Conformant | Conformant | M5a 四种分区实际选中；单参考 P，360+600 帧双解码器 Oracle |
 | 亚像素插值（1/2、1/4） | Conformant | Conformant | M5a 共享 MC、解析亚像素平移与完整 P 帧 Oracle |
-| Weighted Prediction（explicit / implicit） | Conformant | TODO | M3 P/B 三平面显式与 POC 隐式权重解析解及 Oracle |
+| Weighted Prediction（explicit / implicit） | Conformant | Partial | 编码 Main/High 单参考 P 显式权重已验证：自动分析/固定三平面权重、负权重、裁剪、隐含默认值、多 slice 与160帧三方 Oracle；B/implicit 编码待实现 |
 | B Direct（temporal / spatial） | Conformant | TODO | M3 CABAC/CAVLC、B_Skip 与两类 direct Oracle |
 | 帧场自适应（MBAFF / PAFF） | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
 

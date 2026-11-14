@@ -61,6 +61,7 @@ func (e *Encoder) parameters() error {
 		e.sps.ConstraintSetFlags = [6]bool{}
 	}
 	e.pps.EntropyCodingModeFlag = e.cabac
+	e.pps.WeightedPredFlag = e.autoWeights || e.fixedWeights != nil
 	for _, l := range levels {
 		if l.id == selected {
 			e.maxAUBytes = int(int64(l.br) * 1000 * int64(c.FPSDen) / (8 * int64(c.FPSNum)))

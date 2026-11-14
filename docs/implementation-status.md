@@ -138,7 +138,7 @@ M5b 本地门禁已通过（`v0.5.2`，远端 CI 待执行）：SATD/RD、全候
 等价剪枝、600帧长Oracle与第一项x264质量比较已记录；Profile边界已补充显式拒绝。
 证据见 `docs/gates/m5b.md`。M5 整体的 Main/High 工具、B 帧与全参数质量/性能门禁仍未完成。
 
-M5c/d 已有部分本地验证，不能视为子阶段关闭：CABAC Main/High I/P 288 帧三方像素 Oracle、ABR/CBR 目标窗口、VBV fullness、I/P GOP 与 IDR 结构已验证；正向 8×8 仍为未接入码流的内核。Race 与六目标交叉构建通过。B slice/重排、Weighted Prediction、Lookahead、HRD filler、x264 等 QP/等码率和 720p/1080p 长序列门禁未完成。证据见 `docs/gates/m5cd.md`。
+M5c/d 已有部分本地验证，不能视为子阶段关闭：CABAC Main/High I/P 288 帧三方像素 Oracle、ABR/CBR 目标窗口、VBV fullness、I/P GOP 与 IDR 结构已验证；新增单参考 P 显式权重160帧三方 Oracle。正向 8×8 仍为未接入码流的内核。此前 Race 与六目标交叉构建通过。B slice/重排、Lookahead、HRD filler、x264 等 QP/等码率和 720p/1080p 长序列门禁未完成。证据见 `docs/gates/m5cd.md`。
 
 | Module | 规范条款/职责 | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|---|
@@ -154,6 +154,7 @@ M5c/d 已有部分本地验证，不能视为子阶段关闭：CABAC Main/High I
 | Profile 编码约束 | Annex A.2.1/A.2.2 | Baseline/Main 禁止零 PCM 采样与 level_prefix>15，非法候选排除、失败不更新状态 | Conformant | 明确 PCM 零样本拒绝、限长 CAVLC 无部分写入、极低 QP 极端色度拒绝后有效输入恢复 | 极低 QP 且无合法压缩/PCM 候选时 ErrUnsupported；这是配置与内容组合边界，未篡改输入/切换 Profile |
 | CABAC 编码基础 | 9.3.3 / 9.3.4 | 位精确算术、E3 延迟位、bypass/terminate/PCM restart、I/P 4×4/DC/AC 残差 | Partial | 规范区间码点、64状态混合流、残差转义；Main/High I/P 12组288帧独立 FFmpeg Oracle | CABAC RD 位数仍用 CAVLC 代理；B/8×8 slice 与通用零字预算未完成 |
 | CABAC I/P slice | 7.3.4 / 9.3.3 | Main/High I4/I16/PCM、P 四分区/Skip、MVD、CBP、QP、邻域 CBF、多 slice | Conformant | `tests/codec/cabac_test.go` QP 0/26/51、1/3 slice、宏块 QP 变化、帧号回绕及场景变化，三方像素一致 | 单参考、POC type2，无 B；Main/High 整体门禁尚未完成 |
+| P 显式加权预测编码 | 7.3.3.2 / 8.4.3.2 | 固定三平面权重、整数最小二乘自动分析、PPS/slice 信令、共享 MC 后加权、P_Skip | Conformant | 权重/偏移解析拟合、插值先于裁剪、实际 Skip、失败事务；Main/High 160帧权重表与三方 Oracle | 单参考 P；搜索使用加权参考代理估计 MV，最终 RD/重建使用原参考插值后加权；B/implicit 待接入 |
 | 正向 8×8 变换与缩放量化 | 8.5.13 | DCT-II 前向分析、QP 0..51、scale matrix 反推量化级 | Partial | `eight_test.go` 常量/单位脉冲解析值、平坦矩阵等价及逆量化符号/溢出边界 | 分析内核未接入 Intra8/P 宏块选择或 CABAC/CAVLC residual slice |
 | GOP / IDR 与场景变化 | 编码器策略 | GOPSize 非 IDR I 刷新、独立 IDRInterval、强制 IDR、显式阈值全平面变化检测 | Partial | `IndependentGOPAndSceneChangeIDR` KeyFrame 序列断言；InterPictureTypes ffprobe I/P 类型 | 无 B-frame placement 与 DTS 重排；场景检测直接比较当前帧/参考帧 |
 | ABR / CBR / VBV | 编码器码率控制 | 帧 QP 候选搜索、AU 比特反馈、CBR fullness 平滑、VBV 候选硬边界 | Partial | 120 帧 ABR ±10% + FFmpeg Oracle；2×30 帧 CBR 窗口 ±10%；60 帧 VBV fullness/Oracle 与失败事务测试 | 无 filler NAL/HRD CBR 恒定传输；暂无 720p/1080p 300 帧门禁、x264 质量比较 |

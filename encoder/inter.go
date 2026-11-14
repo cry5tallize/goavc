@@ -41,7 +41,7 @@ func (e *Encoder) encodeP(src *picture.Picture) ([]byte, *frameState, error) {
 		qp := e.frameQP
 		skipRun := uint32(0)
 		w := bitstream.NewWriter()
-		e.pSliceHeader(w, first)
+		e.pSliceHeader(w, first, s.weights)
 		for addr := first; addr < last; addr++ {
 			s.info[addr].start = first
 			res, err := s.analyzeRD(addr, qp, e.searchRange, e.fullSearch)
@@ -91,16 +91,20 @@ func (e *Encoder) encodeP(src *picture.Picture) ([]byte, *frameState, error) {
 	s.deblock()
 	s.src = nil
 	s.reference = nil
+	s.searchReference = nil
 	return b.Bytes(), s, nil
 }
 
-func (e *Encoder) pSliceHeader(w *bitstream.Writer, first int) {
+func (e *Encoder) pSliceHeader(w *bitstream.Writer, first int, weights *PredictionWeights) {
 	w.WriteUE(uint32(first))
 	w.WriteUE(0)
 	w.WriteUE(0)
 	w.WriteBits(4, uint64(e.frameNum))
 	w.WriteBit(0) // num_ref_idx_active_override_flag，单参考来自 PPS
 	w.WriteBit(0) // ref_pic_list_modification_flag_l0
+	if e.pps.WeightedPredFlag {
+		weights.writeTable(w)
+	}
 	w.WriteBit(0) // adaptive_ref_pic_marking_mode_flag，滑窗保留最近一个参考
 	if e.cabac {
 		w.WriteUE(0)
@@ -137,6 +141,7 @@ func (s *frameState) mc(addr int, p partition, mv motion.MV) {
 		pl = &s.pic.Planes[c]
 		prediction.MCBlockChroma(pl.Data[pl.Index(x/2, y/2):], pl.Stride, &s.reference.Planes[c], x/2, y/2, p.w/2, p.h/2, int(mv.X), int(mv.Y))
 	}
+	s.applyPredictionWeights(x, y, p.w, p.h)
 }
 
 func (s *frameState) interResidual(addr int) residual {

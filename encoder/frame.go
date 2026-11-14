@@ -15,6 +15,20 @@ func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
 	total := src.MBWidth * src.MBHeight
 	s := &frameState{src: src, pic: pic, info: make([]mbInfo, total), nz: make([]uint8, total*16), mv: motion.NewGrid(src.MBWidth, src.MBHeight)}
 	s.allowZeroPCM = e.cfg.Profile == h264.ProfileHigh
+	if e.reference != nil && (e.autoWeights || e.fixedWeights != nil) {
+		weights := e.fixedWeights
+		if e.autoWeights {
+			w := estimatePredictionWeights(src, e.reference)
+			weights = &w
+		}
+		s.weights = weights
+		// 该副本只用于整数/亚像素搜索启发式。真正 MC 必须先在原参考上插值，
+		// 再逐采样加权；裁剪与插值不可交换（Spec: 8.4.3.2）。
+		s.searchReference, err = weightedSearchReference(e.reference, weights)
+		if err != nil {
+			return nil, err
+		}
+	}
 	s.maxLevelPrefix = 15
 	if e.cabac || e.cfg.Profile == h264.ProfileHigh {
 		s.maxLevelPrefix = 28

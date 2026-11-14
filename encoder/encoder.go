@@ -21,6 +21,8 @@ type Encoder struct {
 	maxAUBytes              int
 	adaptiveQP              int
 	cabac                   bool
+	autoWeights             bool
+	fixedWeights            *PredictionWeights
 	sceneThreshold          int
 	frameQP, lastQP         int
 	vbvFullness             int64
@@ -120,6 +122,9 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	}
 	if e.cabac && cfg.Profile == h264.ProfileBaseline {
 		return nil, fmt.Errorf("encoder: baseline forbids CABAC: %w", h264.ErrUnsupported)
+	}
+	if (e.autoWeights || e.fixedWeights != nil) && (cfg.Profile == h264.ProfileBaseline || e.pcm) {
+		return nil, fmt.Errorf("encoder: weighted prediction requires Main/High compressed P slices: %w", h264.ErrUnsupported)
 	}
 	if err := e.parameters(); err != nil {
 		return nil, err

@@ -50,9 +50,12 @@ if err != nil {
 | WithSearchRange(n) | 运动搜索半径 1..64 整数像素，默认16；按小图像自适应收缩 |
 | WithFullSearch() | 用穷举代替默认菱形；两者都通过共享 MC 细化半/四像素 |
 | WithAdaptiveQP(n) | 按亮度活动度对基准 QP 加减 0..6，裁剪到0..51；默认关闭，不与显式 QP 回调或 PCM 共用 |
+| WithWeightedPrediction() | 自动分析 Main/High P slice 的三平面显式权重；默认关闭，Baseline/PCM 拒绝 |
+| WithPredictionWeights(weights) | 固定单参考 P 的三平面显式权重，与自动分析互斥；denom 0..7，显式 weight/offset -128..127 |
 | WithSceneChangeThreshold(n) | 全平面平均绝对采样变化达到 1..100% 时触发 IDR；直接比较当前输入与已重建参考，不做 lookahead |
 
 QP=0 仍为有损变换，不等同 PCM。无残差的 I4 不携带 mb_qp_delta，滤波沿用前一宏块 QP。
+加权预测在共享 MC 完成插值后应用，P_Skip 也使用同一权重；不是先对参考裁剪后再插值。自动权重仅在实际裁剪后的全平面 SSE 优于恒等预测时启用拟合结果；运动搜索使用加权参考副本作为启发式，最终残差/重建总是按规范顺序计算。暂不支持 B 显式/隐式权重编码。
 Baseline/Main 的 Annex A 限制 PCM 采样为1..255、CAVLC level_prefix≤15。
 强制 PCM 遇到0样本返回 ErrUnsupported；普通压缩允许0样本，但极低QP与极端色度邻接
 可能没有当前实现可表示的合法候选，此时同样明确拒绝，并保留前一参考帧和编号。

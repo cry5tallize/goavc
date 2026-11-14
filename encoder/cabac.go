@@ -59,7 +59,7 @@ func (e *Encoder) encodeCABAC(src *picture.Picture, intra, idr bool) ([]byte, *f
 		if intra {
 			e.sliceHeader(w, first, e.pcm, idr)
 		} else {
-			e.pSliceHeader(w, first)
+			e.pSliceHeader(w, first, s.weights)
 		}
 		for w.BitsWritten()%8 != 0 {
 			w.WriteBit(1)
@@ -131,6 +131,7 @@ func (e *Encoder) encodeCABAC(src *picture.Picture, intra, idr bool) ([]byte, *f
 		s.deblock()
 	}
 	s.src, s.reference = nil, nil
+	s.searchReference = nil
 	return out.Bytes(), s, nil
 }
 

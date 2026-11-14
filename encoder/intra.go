@@ -28,16 +28,18 @@ type residual struct {
 	chromaDC [2][4]int32
 }
 type frameState struct {
-	src, pic       *picture.Picture
-	info           []mbInfo
-	nz             []uint8
-	cnz            [2][]uint8
-	reference      *picture.Picture
-	mv             *motion.Grid
-	allowZeroPCM   bool
-	maxLevelPrefix int
-	dcCoded        [3][]bool
-	mvd            []motion.MV
+	src, pic        *picture.Picture
+	info            []mbInfo
+	nz              []uint8
+	cnz             [2][]uint8
+	reference       *picture.Picture
+	searchReference *picture.Picture
+	weights         *PredictionWeights
+	mv              *motion.Grid
+	allowZeroPCM    bool
+	maxLevelPrefix  int
+	dcCoded         [3][]bool
+	mvd             []motion.MV
 }
 
 // WithMacroblockQP 使用坐标回调覆盖 CQP；返回值必须为 0..51。
