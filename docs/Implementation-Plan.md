@@ -582,7 +582,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 16 | `feat[decoder]: add fmo and aso macroblock ordering` | 组内地址遍历、覆盖所有权、双类邻域隔离和ASO排序 | 七类PCM/I4/P-MVD/skip规范像素、坏覆盖恢复、独立完整门禁及实际CLI逐字节比较通过 |
 | 17 | `feat[syntax]: add data partition nal types` | 类型2/3/4前缀、关联快照、条件字段与数据位偏移 | 独立规范bit串、逐bit截断、错误/资源分类及完整独立常规门禁通过；重组见第18项 |
 | 18 | `feat[decoder]: add data partition reassembly` | A/B/C按slice_id关联、分类独立reader、AU与探测CLI | PCM/I16/P/混合非零规范像素、坏分区恢复、独立完整门禁及实际CLI两帧逐字节一致 |
-| 19 | `feat[decoder]: add sp and si slice support` | SP/SI 语法 | 定向语料 |
+| 19 | `feat[decoder]: add sp and si slice support` | 8.6切换核心、QP/QS分域、SP Skip、SI宏块映射与逐块反馈 | 正负DC/AC/色度解析解、真实Annex-B整帧及独立完整常规门禁通过 |
 | 20 | `feat[decoder]: add redundant slice handling` | `redundant_pic_cnt` | 定向语料 |
 | 21 | `feat[syntax]: add hrd parameters parsing and writing` | `hrd_parameters` | round-trip |
 | 22 | `test[oracle]: add advanced profile corpus suite` | 全高级语料 | 一致 |

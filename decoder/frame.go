@@ -365,7 +365,7 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 		if fs == nil {
 			return fmt.Errorf("decoder: invalid colour plane %d: %w", plane, h264.ErrInvalidData)
 		}
-		if s.hdr.Type != syntax.SliceTypeI {
+		if s.hdr.Type != syntax.SliceTypeI && s.hdr.Type != syntax.SliceTypeSI {
 			lists := d.dpb.Lists(s.hdr.FrameNum, poc, s.hdr.Type == syntax.SliceTypeB)
 			for list := 0; list < 1+boolToInt(s.hdr.Type == syntax.SliceTypeB); list++ {
 				n := int(s.hdr.NumRefIdxL0ActiveMinus1) + 1
@@ -458,8 +458,8 @@ func (d *Decoder) checkSupported(sps *syntax.SPS, pps *syntax.PPS, hdr *syntax.S
 	if sps.ChromaFormatIDC < 1 || sps.ChromaFormatIDC > 3 || sps.BitDepthLumaMinus8 != sps.BitDepthChromaMinus8 || (sps.BitDepthLumaMinus8 != 0 && sps.BitDepthLumaMinus8 != 2) {
 		return fmt.Errorf("decoder: only 8/10-bit 4:2:0/4:2:2/4:4:4: %w", h264.ErrUnsupported)
 	}
-	if hdr.Type == syntax.SliceTypeSP || hdr.Type == syntax.SliceTypeSI {
-		return fmt.Errorf("decoder: SP/SI slices: %w", h264.ErrUnsupported)
+	if err := checkSwitchingSupported(sps, pps, hdr); err != nil {
+		return err
 	}
 	if hdr.SliceQP < -6*int(sps.BitDepthLumaMinus8) || hdr.SliceQP > 51 {
 		return fmt.Errorf("decoder: slice QP %d: %w", hdr.SliceQP, h264.ErrInvalidData)

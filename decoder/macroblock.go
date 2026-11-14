@@ -83,6 +83,13 @@ func decodeSkipMacroblock(fs *frameState, addr int, s *sliceEntry, qp int, slice
 	info.deblockIDC = uint8(s.hdr.DisableDeblockingFilterIDC)
 	info.alphaDiv2 = int8(s.hdr.SliceAlphaC0OffsetDiv2)
 	info.betaDiv2 = int8(s.hdr.SliceBetaOffsetDiv2)
+	if s.hdr.Type == syntax.SliceTypeSP {
+		if err := checkSwitchingSupported(fs.sps, fs.pps, s.hdr); err != nil {
+			return err
+		}
+		var res residual
+		return fs.reconstructSwitching(mbx, mby, qp, s.hdr.SliceQS, switchingMode(s.hdr), false, &res)
+	}
 	return nil
 }
 
@@ -99,7 +106,12 @@ func decodeMacroblock(fs *frameState, addr int, s *sliceEntry, sliceID int, qsca
 	if err != nil {
 		return fmt.Errorf("mb_type: %w", err)
 	}
-	if s.hdr.Type == syntax.SliceTypeP {
+	if s.hdr.Type == syntax.SliceTypeSP || s.hdr.Type == syntax.SliceTypeSI {
+		if err := checkSwitchingSupported(fs.sps, fs.pps, s.hdr); err != nil {
+			return err
+		}
+	}
+	if s.hdr.Type == syntax.SliceTypeP || s.hdr.Type == syntax.SliceTypeSP {
 		if mbType <= 4 {
 			return decodeInterMacroblock(fs, addr, mbx, mby, int(mbType), s, qscale)
 		}
@@ -111,6 +123,12 @@ func decodeMacroblock(fs *frameState, addr int, s *sliceEntry, sliceID int, qsca
 		}
 		mbType -= 23
 	}
+	if s.hdr.Type == syntax.SliceTypeSI {
+		if mbType == 0 {
+			return decodeIntraMacroblock(fs, addr, mbx, mby, siMacroblockType, s, qscale)
+		}
+		mbType--
+	}
 	if mbType > 25 {
 		return fmt.Errorf("intra mb_type %d exceeds 25: %w", mbType, h264.ErrInvalidData)
 	}
@@ -119,6 +137,11 @@ func decodeMacroblock(fs *frameState, addr int, s *sliceEntry, sliceID int, qsca
 
 // decodeIntraMacroblock 处理 I 宏块（I4x4 / I8x8 / I16x16 / I_PCM）。
 func decodeIntraMacroblock(fs *frameState, addr, mbx, mby, mbType int, s *sliceEntry, qscale *int) error {
+	// SI 的 mb_type=0 与普通 I_NxN 共用语法，但只能走 8.6 的重建。
+	si := mbType == siMacroblockType
+	if si {
+		mbType = 0
+	}
 	info := &fs.info[addr]
 	info.intra = true
 	fs.mv.SetRect(mbx*4, fs.motionY(mby), 4, 4, motion.MV{}, -1)
@@ -193,6 +216,9 @@ func decodeIntraMacroblock(fs *frameState, addr, mbx, mby, mbType int, s *sliceE
 		}
 		if err := fs.decodeResiduals(s, addr, mbx, mby, false, false, cbp, &res); err != nil {
 			return err
+		}
+		if si {
+			return fs.reconstructSwitching(mbx, mby, *qscale, s.hdr.SliceQS, switchingMode(s.hdr), true, &res)
 		}
 		if info.transform8 {
 			if err := fs.reconstructIntra8x8(mbx, mby, cbp, *qscale, &res); err != nil {

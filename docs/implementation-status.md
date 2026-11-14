@@ -225,6 +225,7 @@ High10渐进420编解码及High422/High444渐进8/10-bit解码已接入，限定
 | 16：FMO/ASO宏块顺序解码 | 按组首址排序、NextMbAddress遍历、逐MB覆盖所有权、CAVLC上下文/MVP隔离与统一去块 | Conformant | 七种映射的非均匀PCM逐采样解析解、I4跨slice邻居不可用、普通逆序ASO、P非零MVD及跨组skip_run、cycle不一致/重叠/缺失/越界拒绝及IDR恢复；独立完整CGO=0门禁及真实h264dec 64×64三平面6144字节比较通过 | FMO限Baseline/Extended CAVLC，非法Main/High或CABAC组合返回ErrInvalidData；不生成FMO/ASO编码；PAFF仍拒绝，非PCM高级外部静态语料另验收 |
 | 17：数据分区NAL语法 | 类型2的完整slice_header与slice_id、类型3/4的条件前缀、关联上下文快照及精确数据位偏移 | Conformant | 手写规范bit串、每bit截断、NAL参考属性、colour_plane/redundant上下文、CABAC非法组合和尺寸溢出分类；SP/SI条件头一并覆盖；独立完整CGO=0门禁通过（35包依赖/30条语料） | 仅前缀语法，不验证残差或重组；像素与AU分组由第18项接入，SP/SI像素见第19项 |
 | 18：A/B/C分区重组解码 | 按slice_id关联ASO的A/B/C、独立PCM/帧内与帧间残差读端、各分区尾位与实际category校验；AU/探测CLI接入 | Conformant | PCM、I16非零DC、P非零MVD/DC、混合I/P及仅A的Skip规范像素；缺失/重复/孤立/错ID/RefIDC/截断/空category和恢复；独立完整CGO=0门禁及实际h264dec两帧12288字节独立采样一致 | 分区仅Extended/CAVLC，B在对应C前且A必须先到；不提供丢失残差的错误隐藏；h264probe只验证前缀，不能替代残差/像素验证 |
+| 19：SP/SI切片解码 | 规范8.6 primary/secondary/SI系数域合成，QP/QS及色度域分离，SP Skip切换量化，SI特殊与普通I宏块分派 | Conformant | 正负DC/AC空间基、QS≠QP、色度DC Hadamard域、分量偏移、SI逐块重建反馈、SP Skip与真实Annex-B整帧解析解；修正测试CBP码字31→32后完整独立CGO=0门禁通过 | 仅Extended逐行8-bit420/CAVLC/flat4×4，合法但未接入的位深/采样/隔行/矩阵组合明确拒绝，不生成SP/SI编码；规范像素证据不冒充外部播放器互操作 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。

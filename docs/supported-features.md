@@ -33,7 +33,7 @@
 > High 8×8/ScalingMatrix、Main 渐进帧 I/P/B、direct、加权预测和重排均已验证。
 > Profile 整体保留 Partial，范围外的字段/高位深工具仍明确拒绝；本地门禁证据见 gates/m3.md。
 
-> **M7 进展：** 当前分支`feat/m7-high422`。第1–18项及共享预测/滤波/运动前置已完成；
+> **M7 进展：** 当前分支`feat/m7-high422`。第1–19项及共享预测/滤波/运动前置已完成；
 > High10渐进420双熵I/P/B解码、原生LE输出与压缩编码通过独立Oracle，编码32配置共384帧三方逐采样一致。
 > High422/High444渐进8/10-bit双熵编解码、原生LE与实际CLI已验收；六格式QP/矩阵/权重/B/码控三方Oracle通过。MBAFF解码见下，PAFF与transform bypass仍拒绝，不声明完整Profile支持。
 > 共享预测已提供byte/uint16类型实例：高位深帧内、六抽头/色度MC、权重以及422矩形色度预测。
@@ -83,6 +83,7 @@
 | Slice Header | 7.3.3 | Conformant | Partial | M3 I/P/B、重排、权重和 MMCO 参数保留并消费；范围外工具明确拒绝 |
 | Macroblock Layer | 7.3.4 | Conformant | Partial | M4 I_PCM/I4/I16 的 CBP/QP/MPM/残差已验证；P/B 编码在 M5 |
 | Slice Data Partitioning | 7.3.5 | Conformant | Unsupported | Extended/CAVLC的A/B/C按slice_id关联，PCM与帧内/帧间残差独立消费；规范非零DC/MVD/混合像素、坏关联恢复及真实CLI两帧通过。不隐藏缺失残差；未提供分区编码 |
+| SP / SI Slice | 7.3.3 / 8.6 | Conformant | Unsupported | Extended逐行8-bit420/CAVLC/flat4×4；primary/secondary、QP/QS独立、SP Skip切换量化及SI特殊/普通I宏块通过非零空间基与完整帧规范解析解。不是普通P近似，不提供切换编码 |
 
 ## 4. 熵编码
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/internal/motion"
+	"github.com/goavc/h264/syntax"
 )
 
 // pPartition 坐标与尺寸均以 4×4 块为单位。参考索引属于宏块分区或
@@ -176,6 +177,9 @@ func (fs *frameState) interResidual(s *sliceEntry, addr, mbx, mby int, qscale *i
 	var res residual
 	if err := fs.decodeResiduals(s, addr, mbx, mby, false, false, cbp, &res); err != nil {
 		return err
+	}
+	if s.hdr.Type == syntax.SliceTypeSP {
+		return fs.reconstructSwitching(mbx, mby, *qscale, s.hdr.SliceQS, switchingMode(s.hdr), false, &res)
 	}
 	if err := fs.addLumaResidual(mbx, mby, cbp, false, *qscale, &res); err != nil {
 		return err
