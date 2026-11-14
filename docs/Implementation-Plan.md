@@ -575,7 +575,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 9 | `feat[decoder]: add high444 decoding` | 共同444全尺寸三平面、扩展CABAC与独立色平面组装 | 两格式×九配置各八帧x264/FFmpeg一致；独立平面PCM解析解/单色投影、预算/覆盖/恢复及独立完整常规门禁通过 |
 | 10 | `feat[encoder]: add high422 and high444 encoding` | 原生8/10-bit422/444双熵I/P/B、矩阵/权重/码控、PCM与独立平面 | 六格式QP极值/宏块QP/矩阵/权重/B/码控三方Oracle、独立平面单色投影、AU预算/重试、四格式真实CLI及独立完整常规门禁通过 |
 | 11 | `feat[syntax]: add field picture and mbaff syntax parsing` | 帧/场/MBAFF SPS组合、map unit几何/裁剪，slice场奇偶与POC条件字段 | 固定规范字节/写前拒绝、真实Main隔行h264probe、独立完整常规门禁通过；像素流水线保持显式拒绝 |
-| 12 | `feat[prediction]: add field motion vector prediction` | 字段 MV 规则 | 定向用例 |
+| 12 | `feat[prediction]: add field motion vector prediction` | 帧场MV/ref_idx归一化、MBAFF参考奇偶、定向MVP与P_Skip，共享既有中值内核 | 负奇数/索引边界/可用性/C→D/分区/Skip规范手算及独立完整常规门禁通过 |
 | 13 | `feat[decoder]: add mbaff macroblock pair handling` | 宏块对、`mb_field_decoding_flag` | MBAFF 语料一致 |
 | 14 | `feat[encoder]: add interlaced encoding with field order option` | `-tff/-bff` 等价 | FFmpeg 可解 |
 | 15 | `feat[syntax]: add fmo slice group map parsing` | type 0–6 | 定向语料 |
