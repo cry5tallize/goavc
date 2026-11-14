@@ -123,17 +123,17 @@ h264probe -syntax -input out.264 > syntax.jsonl
   不解析宏块/残差；后续错误使进程非零退出，此前输出只是已成功解析的局部记录。
   语法模式不接受 `-expect-*` GOP 断言；默认模式仍输出原 GOP JSON。
 
-## 验证与长稳
+## 验证与短时稳定性
 
 `stream/pipeline_test.go` 将登记的全部受支持语料按 Annex-B/AVCC 与
 1/7/4096/整文件 chunk 解码，核对独立 FFmpeg 显示顺序输出哈希；同时覆盖 PCM
 规范常量、B/Lookahead 末组 Flush、资源限额、尾部截断、慢消费者、取消及释放。
 CLI 测试包括真正子进程二进制管道、文件别名保护与 ffprobe 元数据对照。
 
-长门禁入口（本地结果见[门禁记录](gates/m6.md)）：
+M6稳定性验收入口（运行30秒，本地结果见[门禁记录](gates/m6.md)）：
 
 ```bash
-CGO_ENABLED=0 go run ./tools/streamcheck -duration 1h -warmup 1m -sample-interval 10s > m6_stability.json
+CGO_ENABLED=0 go run ./tools/streamcheck -duration 30s -warmup 5s -sample-interval 5s > m6_smoke.json
 ```
 
 同一对长存活 pipeline 通过 `io.Pipe` 连续传输 32×32 PCM、10 FPS；每个输出帧
@@ -141,13 +141,8 @@ CGO_ENABLED=0 go run ./tools/streamcheck -duration 1h -warmup 1m -sample-interva
 线性拟合增长率不超过 1 MiB/min，GC 后活跃堆增长不超过 8 MiB。
 逐样本记录真实 RSS、HeapAlloc、HeapSys、帧计数与 goroutine；HeapSys 不冒充 RSS。
 取消时关闭工具拥有的管道并 join 两个调用者，检测帧积压与退出后的 goroutine。
-这不是所有内容的吞吐承诺，也不替代 M9 八小时混合输入门禁。
+本项仅覆盖该输入的30秒运行窗口，不证明长期无泄漏，也不是所有内容的吞吐承诺。
 
-日常开发可显式运行短时smoke，避免阻塞功能提交：
-
-```bash
-CGO_ENABLED=0 go run ./tools/streamcheck -duration 30s -warmup 5s -sample-interval 5s > m6_smoke.json
-```
-
-本轮按用户要求停止一小时运行，仅保留30秒smoke通过的证据；正式一小时门禁保持未勾选。
-功能按逻辑分项提交，不以长测等待阻塞其余实施项，也不创建未满足门禁的版本标签。
+按用户要求，M6以此短时测试作为稳定性退出标准，不再设置额外的长测等待条件。
+已有[m6_smoke.json](gates/m6_smoke.json)报告通过；M9生产化混合输入验收范围不变。
+功能按逻辑分项提交，发布仍须遵守其余门禁；远端CI尚未执行，未创建M6版本标签。

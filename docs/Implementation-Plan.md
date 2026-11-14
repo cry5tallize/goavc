@@ -549,12 +549,12 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 11 | `feat[stream]: add context cancellation and backpressure` | Context端点与单帧边界检查 | 阻塞输入/输出取消、慢消费者停产测试通过；普通永久阻塞I/O必须由所有者中断，不遗留后台Read |
 | 12 | `feat[stream]: add flush and eof handling in pipeline` | 自动Flush至排空EOF | PCM末帧、B/Lookahead不足尾组和时间戳测试通过；损坏尾部不误报EOF |
 | 13 | `feat[stream]: add encode stream and decode stream helpers` | EncodeStream/DecodeStream | 26份语料×Annex-B/AVCC×1/7/4096/整文件chunk对独立Oracle哈希；真实CLI与FFmpeg像素烟测通过 |
-| 14 | `test[stream]: add long running memory stability test` | tools/streamcheck长稳工具已实现 | 预先固定RSS/堆/增长率阈值；30秒smoke通过，一小时运行按用户要求停止，不计正式长稳通过；提交fedb1d9，见gates/m6.md |
+| 14 | `test[stream]: add short memory stability test` | tools/streamcheck执行30秒稳定性验收 | 预热5秒、每5秒采样，预先固定RSS/堆/增长率阈值；已有30秒报告通过；提交fedb1d9，见gates/m6.md |
 | 15 | `test[stream]: add goroutine leak checks for cancellation` | 确定性阻塞与显式join | 200次输入取消、输出取消释放、goroutine计数与owned管道中断测试通过；CGO=1非缓存全库race通过 |
 | 16 | `feat[cmd]: add h264dec command line tool` | 参数/资源预检、文件/标准流、stderr进度 | 真实进程Annex-B/AVCC二进制管道、独立FFmpeg像素对照；同文件/截断/写错/取消测试通过 |
 | 17 | `feat[cmd]: add h264enc command line tool` | Profile/QP/GOP/B/码控/FPS/工具选项 | PCM原始字节、High/B/Lookahead、合法码控、错误配置保留输出、文件别名保护与进度测试通过 |
 | 18 | `feat[cmd]: add h264probe command line tool` | -syntax逐NAL JSONL，保留默认GOP模式 | 共享语法结构、嵌套VUI/矩阵/SEI、严格封装、限额；Baseline/Main/High与ffprobe元数据/帧数对照通过 |
-| 19 | `chore[release]: close milestone m6 gate and tag v0.7.0` | 证据与发布 | 正式一小时长稳门禁未关闭，不创建发布标签；已完成能力按逻辑分项提交，远端CI未执行 |
+| 19 | `chore[release]: close milestone m6 gate and tag v0.7.0` | 证据与发布 | 本地功能、常规门禁、全库race、六目标构建及30秒稳定性验收通过；远端CI未执行，尚未创建发布标签 |
 
 ---
 

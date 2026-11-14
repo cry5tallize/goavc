@@ -175,7 +175,7 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 ## M6：流式I/O（WIP）
 
 分支`feat/m6-streaming`。原始I/O、NAL/AU适配器、同步有界pipeline、自动Flush、取消/背压与三个CLI已接入；
-完整常规门禁、非缓存全库race和六目标构建通过。30秒稳定性smoke通过；一小时长测按用户要求停止，不计为通过，正式长稳门禁仍未关闭。证据与分项提交见`docs/gates/m6.md`，API见`docs/stream.md`。
+完整常规门禁、非缓存全库race、六目标构建及30秒稳定性验收通过；远端CI未执行。证据与分项提交见`docs/gates/m6.md`，API见`docs/stream.md`。
 
 | Module | 职责 | Status | 证据 | 缺口 |
 |---|---|---|---|---|
@@ -191,7 +191,7 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 | pipeline取消与背压 | Context端点优先，操作前后检查ctx，取消释放帧；同步Writer阻止下个输入 | Conformant | 阻塞输入/输出确定性取消、200次读端取消循环与goroutine计数、慢消费者停产测试 | 非可中断I/O不能被context凭空中断；需Context*接口或由所有者设置deadline/关闭，无后台代读goroutine |
 | h264enc / h264dec | 参数预检、文件与二进制管道、Annex-B/AVCC、stderr进度、信号取消、文件别名保护 | Conformant | 实际子进程二进制管道与PCM像素解析值、High/B/Lookahead、码控参数、坏尾/资源/短写/取消/关闭测试；完整常规门禁通过 | 当前codec仅渐进8-bit420；CLI拥有进程标准流，库式CLI入口仍借用传入流；传输失败不回滚文件 |
 | h264probe语法树 | JSONL逐NAL展示共享SPS/PPS/VUI/ScalingList/SEI/slice结构，保留默认GOP JSON | Conformant | Baseline/Main/High与ffprobe尺寸/Profile/Level/图片数对照；参数集引用、多slice、严格尾部、限额、AVCC各前缀与输出失败测试 | 不解析宏块/残差，不把头部成功当作像素正确；输出错误前的行只代表局部已解析内容 |
-| 长时稳定性 | 同一对pipeline、io.Pipe、10FPS PCM持续传输；RSS/GC后堆/帧积压/退出goroutine | WIP | tools/streamcheck已实现，30秒smoke退出0、取消后goroutine从3回到1；样本见gates/m6_smoke.json | 一小时运行按用户要求取消且无完整报告；短测不替代一小时退出标准或M9八小时混合输入 |
+| 短时稳定性 | 同一对pipeline、io.Pipe、10FPS PCM持续传输30秒；RSS/GC后堆/帧积压/退出goroutine | Conformant | tools/streamcheck核对独立PCM常量解析值与预设资源阈值，退出0；取消后goroutine从3回到1；样本见gates/m6_smoke.json | 仅覆盖该输入与30秒窗口，不证明长期无泄漏，不替代M9混合输入验收 |
 
 ## M7–M9
 

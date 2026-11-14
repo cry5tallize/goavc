@@ -159,7 +159,7 @@
 | 取消与背压 | Conformant | 无worker/预取队列；Context端点与单帧操作边界检查，输入/输出阻塞取消及重复取消无泄漏测试。永久阻塞普通I/O须所有者中断或实现Context*接口，不能宣称任意io.Reader自动可取消 |
 | h264enc / h264dec | Conformant | 文件/二进制管道、显式Annex-B/AVCC、参数与资源预检、stderr进度、信号取消、文件别名保护；实际子进程PCM像素测试。仍只生成/解码当前支持工具，无MP4/时间戳容器 |
 | h264probe语法树 | Conformant | -syntax逐NAL JSONL，SPS/PPS/VUI/ScalingList/SEI/slice头部，Baseline/Main/High与ffprobe元数据和帧数对照；保留默认GOP断言，不解析残差 |
-| 一小时内存稳定性 | WIP | tools/streamcheck已实现，30秒smoke通过、取消后goroutine回到1；一小时长测按用户要求停止，正式门禁未关闭，不冒充长时通过 |
+| 30秒内存稳定性 | Conformant | tools/streamcheck按独立PCM常量解析值及预设RSS/GC后堆阈值验收通过，预热5秒、每5秒采样；取消后goroutine回到1。证据见gates/m6_smoke.json；仅证明该输入的短时稳定性，不保证长期无泄漏 |
 
 ## 11. 明确不支持（第一版）
 

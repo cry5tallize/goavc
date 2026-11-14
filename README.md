@@ -98,7 +98,7 @@ go run ./tools/manifest -file testdata/manifest.json
 | [docs/architecture.md](docs/architecture.md) | 分层、依赖规则、内存所有权 |
 | [docs/supported-features.md](docs/supported-features.md) | 支持矩阵与 M2 已验证范围 |
 | [docs/implementation-status.md](docs/implementation-status.md) | 逐模块实现状态（Translation Ledger） |
-| [docs/stream.md](docs/stream.md) | M6流式API、取消/背压、资源预算、三个CLI与长稳入口 |
+| [docs/stream.md](docs/stream.md) | M6流式API、取消/背压、资源预算、三个CLI与30秒稳定性验收 |
 | [docs/performance.md](docs/performance.md) | 基准口径与结果 |
 | [docs/licensing.md](docs/licensing.md) | 代码许可与专利许可（两件独立的事） |
 
