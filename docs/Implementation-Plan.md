@@ -538,7 +538,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 |---|---|---|---|
 | 1 | `feat[stream]: add frame reader and writer interfaces` | 四个接口 | 已完成接口、所有权/EOF契约并编译；具体AU适配器及pipeline尚待实现 |
 | 2 | `feat[stream]: add yuv reader for 420 422 and 444` | 8-bit 读帧 | 已完成；已知字节布局、奇数尺寸、所有截断位置、EOF/所有权/资源/I/O错误测试通过 |
-| 3 | `feat[stream]: add yuv writer with stride handling` | 写出对齐/非对齐 | round-trip |
+| 3 | `feat[stream]: add yuv writer with stride handling` | 写出对齐/非对齐 | 已完成；已知字节、非对齐stride/最小末行、三格式多帧往返、短写/失败事务测试通过 |
 | 4 | `feat[stream]: add incremental annexb reader with chunk buffering` | 跨 chunk 起始码/NAL | 分块矩阵 |
 | 5 | `test[stream]: add chunk size matrix for annexb reader` | 1/2/3/7/4096/整文件 | 序列一致 |
 | 6 | `feat[stream]: add incremental avcc reader with configurable length size` | avcC 自动识别 | 定向用例 |

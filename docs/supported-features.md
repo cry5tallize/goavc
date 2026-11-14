@@ -149,6 +149,7 @@
 |---|---|---|
 | 四个流接口 | Partial | 完成接口及所有权/EOF契约，具体AU适配器与pipeline待实现 |
 | 8-bit YUV Reader | Conformant | 420/422/444、奇数尺寸、独立帧所有权、序号PTS/Duration1、帧边界EOF和尾帧截断；已知字节布局验证。原始I/O不扩大编码器格式支持 |
+| 8-bit YUV Writer | Conformant | 跳过stride填充、最小末行缓冲、写前完整校验、短写及I/O失败后停止追加；已知字节与三格式多帧往返验证。无原始流元数据头 |
 
 ## 11. 明确不支持（第一版）
 

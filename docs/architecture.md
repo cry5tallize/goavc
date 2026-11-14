@@ -91,6 +91,8 @@ decoder              encoder
 | `SendPacket(Packet)` | 解码器不在返回后持有 `Data` 引用（需要保留则内部拷贝） |
 | `ReceivePacket() (Packet, error)` | `Data` 归调用方所有 |
 | `Encoder.Reconstruction()` | 最近成功编码帧的独立重建快照，不消耗 Packet；调用方用完 Release |
+| `stream.FrameReader.ReadFrame()` | 成功帧归调用方，后续读取不覆盖；YUVReader每帧独立缓冲，用完Release |
+| `stream.FrameWriter.WriteFrame()` | 同步消费且不保留输入引用，不转移Release责任；底层I/O对象关闭权仍属调用方 |
 | `Frame.Clone()` | 独立内存，不参与池管理，调用方负责释放（GC 回收即可） |
 | `Frame.Release()` | 幂等；调用后帧失效，`Validate` 返回 `ErrInvalidData` |
 

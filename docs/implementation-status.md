@@ -174,13 +174,14 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 
 ## M6：流式I/O（WIP）
 
-分支`feat/m6-streaming`。四个接口及8-bit原始YUV Reader已实现；
-Writer、AU适配器、取消、背压、自动Flush与长时稳定性门禁尚未完成。
+分支`feat/m6-streaming`。四个接口及8-bit原始YUV Reader/Writer已实现；
+AU适配器、取消、背压、自动Flush与长时稳定性门禁尚未完成。接手记录见`docs/gates/m6.md`。
 
 | Module | 职责 | Status | 证据 | 缺口 |
 |---|---|---|---|---|
 | 流接口 | FrameReader/Writer、AccessUnitReader/Writer，独立输出所有权与同步消费 | Partial | `stream/interfaces.go`编译通过 | AU适配器与pipeline待实现 |
 | YUV Reader | 8-bit420/422/444、奇数尺寸、紧密Y/U/V、独立帧与序号时间戳 | Conformant | 3×3已知17/21/27字节解析解、单字节分块、每处截断、EOF/所有权/错误/资源限界测试 | 仅原始I/O，非422/444编码支持；高位深待M7，不中断底层阻塞Read |
+| YUV Writer | 8-bit420/422/444，忽略stride填充，最小末行缓冲，全帧验证后同步写出 | Conformant | 已知紧密字节、三格式多帧往返、晚平面错误无输出、短写/底层错误及粘性状态测试 | 原始流无尺寸/格式/时间戳头；不关闭底层Writer，不提供取消/重试传输 |
 
 ## M7–M9
 
