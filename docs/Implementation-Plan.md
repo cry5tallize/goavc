@@ -542,7 +542,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 4 | `feat[stream]: add incremental annexb reader with chunk buffering` | 跨 chunk 起始码/NAL | 已完成；复用有界Scanner，严格前导/尾部策略、独立NAL输出、EOF与I/O错误状态测试通过；AU组装待第7项 |
 | 5 | `test[stream]: add chunk size matrix for annexb reader` | 1/2/3/7/4096/整文件 | 与第4项同次验证固定字节向量一致；包含EOF前边界交付、转义零和混合起始码 |
 | 6 | `feat[stream]: add incremental avcc reader with configurable length size` | avcC 自动识别 | 已完成；1..4前缀×分块矩阵、逐处截断/限额/I/O错误、从提供的avcC取宽度及参数集快照；不猜测MP4/流格式 |
-| 7 | `feat[stream]: add access unit assembler with configurable rules` | 边界规则参数化 | 多 slice 用例 |
+| 7 | `feat[stream]: add access unit assembler with configurable rules` | 边界规则参数化 | 已完成；图像标识/first_mb模式、跨filler保留VCL摘要、AU字节/数量限额；无AUD多slice、POC0/1/2、分块与5份语料ffprobe计数通过 |
 | 8 | `feat[stream]: add annexb writer` | 流式写 | 重扫一致 |
 | 9 | `feat[stream]: add avcc writer with length prefix` | 长度前缀 | round-trip |
 | 10 | `feat[stream]: add stream pipeline with bounded buffering` | 有界队列 | 内存上限断言 |

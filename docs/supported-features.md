@@ -147,11 +147,12 @@
 
 | 能力 | 状态 | 证据与边界 |
 |---|---|---|
-| 四个流接口 | Partial | 完成接口及所有权/EOF契约，具体AU适配器与pipeline待实现 |
+| 四个流接口 | Partial | 帧读写与AU Reader已有具体实现；AU Writer与pipeline待实现 |
 | 8-bit YUV Reader | Conformant | 420/422/444、奇数尺寸、独立帧所有权、序号PTS/Duration1、帧边界EOF和尾帧截断；已知字节布局验证。原始I/O不扩大编码器格式支持 |
 | 8-bit YUV Writer | Conformant | 跳过stride填充、最小末行缓冲、写前完整校验、短写及I/O失败后停止追加；已知字节与三格式多帧往返验证。无原始流元数据头 |
 | 增量Annex-B NAL Reader | Conformant | 跨1/2/3/7/4096/整文件chunk，独立EBSP、默认8MiB单NAL限额、严格前导与残缺尾起始码处理；只切分NAL，不提供AU/帧/时间戳 |
 | 增量AVCC NAL Reader | Conformant | 1..4长度前缀、从提供的avcC取宽度并先交付复制的参数集，默认8MiB单NAL、分配前限额、截断/错误粘性；仅NAL，不解析MP4或提供AU/时间戳 |
+| 增量AU Reader | Conformant | 解析SPS/PPS/slice header，默认图像标识或可选first_mb规则；AUD/POC/filler/末AU测试及5份语料×6种chunk、ffprobe计数通过。独立Annex-B输出，默认32MiB/4096 NAL；时间戳均0，不验证残差，字段/FMO/冗余/分区等显式拒绝 |
 
 ## 11. 明确不支持（第一版）
 

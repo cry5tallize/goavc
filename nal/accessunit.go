@@ -20,6 +20,12 @@ type SliceInfo struct {
 	HasPicOrderCnt bool
 	PicOrderCntLsb uint32
 
+	// POC type 0 的 bottom delta 与 type 1 的两个 delta，供严格图像标识比较。
+	HasDeltaPicOrderCntBottom bool
+	DeltaPicOrderCntBottom    int32
+	HasDeltaPicOrderCnt       bool
+	DeltaPicOrderCnt          [2]int32
+
 	// RedundantPicCnt 大于 0 的 slice 属于当前 AU 的冗余编码，不开启新 AU。
 	RedundantPicCnt uint32
 
