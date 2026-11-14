@@ -150,6 +150,9 @@ func (s *frameState) writePCM(w *bitstream.Writer, addr int) {
 func (s *frameState) writePCMSamples(w *bitstream.Writer, addr int) {
 	info := &s.info[addr]
 	info.pcm = true
+	// PCM不携带transform_size_8x8_flag；候选回退必须清除原8×8/帧间状态，
+	// 否则本地去块会跳过解码器仍执行的4/12像素边，产生参考漂移。
+	info.transform8, info.is16, info.inter, info.skip = false, false, false, false
 	info.qp = 0
 	info.cbp = 47
 	for i := range info.modes {

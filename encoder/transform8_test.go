@@ -3,6 +3,8 @@ package encoder
 import (
 	"errors"
 	h264 "github.com/goavc/h264"
+	"github.com/goavc/h264/bitstream"
+	"github.com/goavc/h264/internal/picture"
 	"github.com/goavc/h264/internal/testutil/pattern"
 	"github.com/goavc/h264/syntax"
 	"testing"
@@ -52,6 +54,20 @@ func TestTransform8x8_ActualInterDecision(t *testing.T) {
 	}
 	if selected == 0 {
 		t.Fatal("没有实际选择8×8帧间残差候选")
+	}
+}
+
+func TestTransform8x8_PCMFallbackClearsCandidateFlags(t *testing.T) {
+	src, _ := picture.New(1, 1)
+	dst, _ := picture.New(1, 1)
+	s := frameState{src: src, pic: dst, info: []mbInfo{{transform8: true, is16: true, inter: true, skip: true}}, nz: make([]uint8, 16)}
+	for c := range s.cnz {
+		s.cnz[c] = make([]uint8, 4)
+	}
+	s.writePCMSamples(bitstream.NewWriter(), 0)
+	i := s.info[0]
+	if !i.pcm || i.transform8 || i.is16 || i.inter || i.skip || i.qp != 0 {
+		t.Fatalf("PCM回退残留候选状态：%+v", i)
 	}
 }
 
