@@ -18,6 +18,10 @@
 > 见[编码用法](docs/encoder.md)、[M4 门禁](docs/gates/m4.md)和
 > [性能基线](docs/performance.md#6-m4-帧内编码基线)。本地标签 `v0.5.0`，远端 CI 待执行。
 
+> **M5a/b 已通过本地子阶段门禁**：连续 P 帧、SATD/RD、活动度 QP、Profile 约束，
+> 720p/1080p 各300帧 Oracle，第一项同QP x264对比达到1.5dB阈值。
+> 见 [M5b 证据](docs/gates/m5b.md)，本地标签 `v0.5.2`。M5c/d 与其余总门禁尚未完成。
+
 ## 硬约束
 
 | 项目 | 约束 |

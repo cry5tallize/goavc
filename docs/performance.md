@@ -214,3 +214,66 @@ go run ./tools/encodebench -width 1280 -height 720 -frames 6 -qp 26 -gop 30
 5,676.016 / 12,628.748 kbit/s；均通过三方像素/哈希验证，输入和输出哈希见
 [M5a 门禁](gates/m5a.md)。这些长测试同时运行其他验证，不用其 FPS 声明加速。
 CPU profile、x264 等 QP/等码率质量门禁、SSIM、ABR/CBR/VBV 待 M5 后续阶段。
+
+## 9. M5b RD 质量与等价剪枝
+
+环境仍为 HW-M2、Go1.27.4 windows/amd64、CGO=0、单线程 generic。RD 采用 Q8 定点
+lambda、三平面 SSE 与实际 CAVLC 位数，比较 Skip/P四类/I4/I16/PCM。AQ 可选，以下均关闭。
+全阶段质量门禁仍按 conformance.md 的原始阈值，未因测量结果调整。
+
+### 同 QP 的独立 x264 对比（第一项）
+
+720p、30FPS、300帧 testsrc2，输入 SHA-256 与 §8 长测试相同：
+`dc1c14f1d0063c2743152dd81eef293a2b668a9cf00c29817104cf07994614e9`。
+Baseline、QP26、GOP30、B0、ref1、单 slice。Go 生产基线
+`8d3bda38bd8cd79c31aa512d649f1f0f121002f8`，等价剪枝版
+`3ba066f37e60b83612bf6d2db13ed46312db8078` 对全部300帧的码流逐比特相同。
+后续 Profile 限制修复 `37c41bb` 不影响这份正采样、QP26 语料的合法候选。
+
+| 编码器 | 字节数 | kbit/s | PSNR Y/U/V dB |
+|---|---|---|---|
+| Go RD CAVLC | 6,728,439 | 5,382.7512 | 49.225023 / 46.609165 / 46.815132 |
+| x264 veryfast / tune psnr | 6,450,215 | 5,160.1720 | 48.310034 / 45.510599 / 45.655809 |
+
+Y 差值 +0.914989 dB，在1.5 dB阈值内；Go 码率同时高约4.3%，不能解释成等码率优势。
+QP18/34、1080p 的质量比较、等码率测试以及 Main/High 仍未执行，M5 总质量门禁没有通过。
+这300帧的 Go 码流 SHA-256 为
+`103d8c8b0cfb116caaeb087351ceb4ad3c06fda2ae7ad33dec6ab4439c022577`，本地重建为
+`943b5fc150e36006915bd8c22e0c04efc855c5924fa332af768e508c09a8fa82`。
+
+复现时将原始字节直接经本机管道送入测量工具，避免 PowerShell 文本管道改写二进制：
+
+```text
+ffmpeg -v warning -f lavfi -i testsrc2=size=1280x720:rate=30 -frames:v 300 -pix_fmt yuv420p -f rawvideo pipe:1 |
+  encodebench -input - -width 1280 -height 720 -frames 300 -qp 26 -gop 30
+```
+
+x264 参数为 `-preset veryfast -tune psnr -profile:v baseline -qp 26 -bf 0 -g 30
+-keyint_min 30 -sc_threshold 0 -x264-params threads=1:ref=1:weightp=0:ipratio=1.0:pbratio=1.0`。
+显式关闭 I/P QP 比例差异，以相同 QP 比较；独立 FFmpeg psnr 过滤器统计 x264 的 Y/U/V。
+
+### 平坦候选剪枝的前后测量
+
+固定720p三平面全129，输入 SHA-256
+`f48fc6b97790ea962a78554bd46e30250b6b752339325767375e3a501698d01c`；
+QP26、GOP600、B0、单参考、单 slice，先编码参考帧再计时首个P。
+同一基准函数在两个独立 checkout 顺序执行，无其他验证并行；三次单帧测量：
+
+| 版本 | 原始 ns/op（三次） | 中位数 ns/op | B/op 中位数 | alloc/op 中位数 |
+|---|---|---|---|---|
+| 剪枝前 `8d3bda3` | 1904216300 1882726500 1821129100 | 1,882,726,500 | 9,284,808 | 172,837 |
+| 剪枝后 `3ba066f` | 144457000 162693700 150309000 | 150,309,000 | 9,198,408 | 162,037 |
+
+命令：`go test -run '^$' -bench '^BenchmarkEncoderPFlat_' -benchmem -benchtime=1x -count=3 ./encoder`。
+该改动按常量窗口和完整插值 halo 证明其余 P 候选被 Skip 支配，帧内候选保留；
+单元测试比较关闭全部剪枝后的完整候选结构，300帧真实语料又验证码流哈希相同。
+结果只代表这一平坦输入，不代表自然视频可获得相同倍数的速度改善。
+
+### 逐帧切换图案的 RD 回归
+
+与 §8 相同六类输入、QP26、GOP30，最终基线 `37c41bb`：1,223,693字节，
+48,947.72 kbit/s，PSNR=41.331417/41.141231/41.140979 dB。码流 SHA-256
+`4201618b78e78c84be86fb3c1e31eaa965c825e33090d67539861b1067c72001`，重建
+`c5a20da07f41dbdffba959c07a3543a1303769fdce4d2be699e2b2021758b741`。
+RD 已修正 M5a 在场景突变中只选 P 的码率/质量缺口，不能据合成六帧替代长序列质量门禁。
+此运行与 race/fuzz/交叉编译并行，耗时不作独占性能基线。
