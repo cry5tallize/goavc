@@ -511,7 +511,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 12 | `test[oracle]: add main and high decode compatibility suite` | 全 profile 差分 | I/P288、P权重160、High8×8/矩阵320、Main/High B+码控1120帧三方Oracle |
 | 13 | `bench[encoder]: add cabac and b frame benchmarks` | 性能记录 | CABAC与真实四帧B闭环各5次、分配与60帧CPU profile已记录performance.md §11；注明并发负载，不作加速承诺 |
 | 14 | `docs[status]: mark cabac and b slice modules conformant` | 状态 | 已登记CABAC I/P/High8×8、P权重、非参考spatial B_Direct/B_Skip及重排的具体支持边界 |
-| 15 | `chore[release]: close milestone m5c gate and tag v0.5.3` | 证据 | 本地证据齐备：两尺寸三QP长Oracle/质量、完整verify/race与六目标构建；见 `docs/gates/m5c.md`，远端CI未执行 |
+| 15 | `chore[release]: close milestone m5c gate and tag v0.5.3` | 证据 | 本地门禁关闭，标签v0.5.3：两尺寸三QP长Oracle/质量、完整verify/race与六目标构建；见 `docs/gates/m5c.md`，远端CI未执行 |
 
 ### M5d — GOP 与码率控制（`feat/m5d-rate-control`，10）
 

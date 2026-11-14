@@ -44,3 +44,5 @@ B运动搜索、temporal-direct、B-pyramid和B权重未生成，P仅单参考�
 CAVLC率代理；High10/422/444和字段编码留到M7，SIMD/并行留到M8。
 完整Profile状态保持Partial，不将本地工具闭环表述为全Profile认证。
 仓库未配置远端，远端CI未执行；本文件仅关闭本地子阶段门禁。
+
+本地子阶段标签：`v0.5.3`。后续M5d总验收另有独立收尾记录。
