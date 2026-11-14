@@ -1,6 +1,7 @@
 package encoder
 
 import (
+	"errors"
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/internal/testutil/pattern"
 	"testing"
@@ -130,6 +131,57 @@ func benchmarkRateControl(b *testing.B, c h264.EncoderConfig) {
 			b.Fatal(err)
 		}
 		if _, err = e.ReceivePacket(); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkEncoderCABAC_720p_Generic(b *testing.B) {
+	c := h264.DefaultEncoderConfig()
+	c.Width, c.Height = 1280, 720
+	c.Profile = h264.ProfileMain
+	benchmarkRateControl(b, c)
+}
+
+func BenchmarkEncoderB_720p_Generic(b *testing.B) {
+	c := h264.DefaultEncoderConfig()
+	c.Width, c.Height = 1280, 720
+	c.Profile = h264.ProfileHigh
+	c.MaxBFrames = 2
+	e, err := New(c, WithTransform8x8())
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer e.Close()
+	f := pattern.Frame(1280, 720, 1)
+	defer f.Release()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		f.PTS = int64(i)
+		f.Duration = 1
+		if err = e.SendFrame(f); err != nil {
+			b.Fatal(err)
+		}
+		for {
+			_, err = e.ReceivePacket()
+			if errors.Is(err, h264.ErrAgain) {
+				break
+			}
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	}
+	if err = e.Flush(); err != nil {
+		b.Fatal(err)
+	}
+	for {
+		_, err = e.ReceivePacket()
+		if errors.Is(err, h264.ErrEOF) {
+			break
+		}
+		if err != nil {
 			b.Fatal(err)
 		}
 	}
