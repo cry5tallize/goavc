@@ -520,7 +520,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 1 | `feat[encoder]: add gop structure with idr interval and b placement` | `IBBP`/`IPPP` | 连续1/2/3/16个B、独立GOP/IDR、强制关键帧、规则PTS/DTS、尾部Flush与场景边界已验证 |
 | 2 | `feat[encoder]: add lookahead window for scene change detection` | 小窗口分析 | WithLookahead(1..16)窗口分析、未来帧确认切换/抑制闪光、输入深拷贝/背压/失败事务/Flush排空已测试 |
 | 3 | `feat[encoder]: add abr rate control` | 目标码率 → QP | ABR 120 帧平均 ±10% 通过 |
-| 4 | `feat[encoder]: add cbr rate control with buffer model` | 固定码率 | 30 帧窗口 ±10%；无 filler NAL，仍为 Partial |
+| 4 | `feat[encoder]: add cbr rate control with buffer model` | 固定码率 | 30帧窗口±10%；静态filler与分数FPS60帧码率≤1%；大尺寸门禁待补 |
 | 5 | `feat[encoder]: add vbv constraint enforcement` | VBV 上下界 | 60 帧 fullness 与上下边界测试通过；长序列未完成 |
 | 6 | `feat[encoder]: add scene change triggered idr` | 自适应 IDR | 当前帧检测与Lookahead未来帧确认、闪光抑制、实际IDR序列和三方Oracle通过 |
 | 7 | `test[encoder]: add bitrate accuracy and vbv window tests` | 长序列 | 32×32 ABR 120帧、CBR 2×30窗口、VBV 60帧通过；720p/1080p 各 300 帧未运行 |

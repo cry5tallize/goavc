@@ -61,6 +61,12 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 			}
 			return nil, nil, qp, err
 		}
+		data, err = e.padRateControlledAU(data, target)
+		if err != nil {
+			oversized = true
+			low = qp + 1
+			continue
+		}
 		if len(data) > e.maxAUBytes {
 			oversized = true
 			low = qp + 1
@@ -98,7 +104,8 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 				}
 				return nil, nil, qp, err
 			}
-			if len(data) > e.maxAUBytes {
+			data, err = e.padRateControlledAU(data, target)
+			if err != nil {
 				oversized = true
 				continue
 			}
@@ -159,6 +166,8 @@ func (e *Encoder) commitRateControl(frameBytes int) {
 		return
 	}
 	target := e.bitsPerFrame()
+	numerator := int64(e.cfg.Bitrate)*int64(e.cfg.FPSDen) + e.rcRemainder
+	e.rcRemainder = numerator % int64(e.cfg.FPSNum)
 	if target <= 0 {
 		return
 	}
@@ -175,7 +184,7 @@ func (e *Encoder) bitsPerFrame() int64 {
 	if den != 0 && bitrate > math.MaxInt64/den {
 		return math.MaxInt64
 	}
-	return bitrate * den / int64(e.cfg.FPSNum)
+	return (bitrate*den + e.rcRemainder) / int64(e.cfg.FPSNum)
 }
 
 func (e *Encoder) sceneChanged(src *picture.Picture) bool {

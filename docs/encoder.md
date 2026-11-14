@@ -60,6 +60,7 @@ if err != nil {
 | WithSceneChangeThreshold(n) | 全平面平均绝对采样变化达到 1..100% 时触发 IDR；直接比较当前输入与已重建参考，不做 lookahead |
 
 QP=0 仍为有损变换，不等同 PCM。无残差的 I4 不携带 mb_qp_delta，滤波沿用前一宏块 QP。
+CBR/VBV使用规范filler NAL补足低复杂度画面的码量，填充进入AU上限与VBV约束；分数FPS预算保留余数。filler不改变像素，不代表已生成HRD参数或时序SEI。
 加权预测在共享 MC 完成插值后应用，P_Skip 也使用同一权重；不是先对参考裁剪后再插值。自动权重仅在实际裁剪后的全平面 SSE 优于恒等预测时启用拟合结果；运动搜索使用加权参考副本作为启发式，最终残差/重建总是按规范顺序计算。暂不支持 B 显式/隐式权重编码。
 Baseline/Main 的 Annex A 限制 PCM 采样为1..255、CAVLC level_prefix≤15。
 强制 PCM 遇到0样本返回 ErrUnsupported；普通压缩允许0样本，但极低QP与极端色度邻接

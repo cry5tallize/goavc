@@ -14,7 +14,7 @@
 | High 8×8 与矩阵闭环 | `TestEncoder_Transform8x8Oracle` QP0/18/26/51×1/3slice×flat/custom共320帧三方Oracle；规范逆基定点投影有常量/脉冲/非DC解析基；I/P实际选中8×8；PPS矩阵扫描/delta与4×4 flat不变量有测试 |
 | GOP / IDR | `TestEncoder_IndependentGOPAndSceneChangeIDR` 断言场景切换与 IDR 间隔；ffprobe 断言 GOPSize 产生非 IDR I picture，且剩余帧数正确 |
 | ABR | `TestEncoder_ABRLongSequenceAccuracy`：32×32、120 帧，实测平均码率在目标 ±10% 内，FFmpeg 与本地重建逐像素一致 |
-| CBR feedback | `TestEncoder_CBRWindowRate`：32×32、两个 30 帧窗口均在目标 ±10% 内；FFmpeg 与本地重建逐像素一致。无 filler NAL，不宣称恒定传输 |
+| CBR feedback/filler | `TestEncoder_CBRWindowRate`：两个30帧窗口±10%；`StaticFillerOracle`静态CBR/VBV各60帧，30000/1001 FPS码率≤1%，filler字节与资源门禁解析解，均有FFmpeg像素Oracle；未宣称HRD信令 |
 | VBV | 32×32、60 帧连续成功序列逐帧 fullness 在配置范围内，FFmpeg 像素一致；上/下边界和失败事务另有测试 |
 | 720p 性能 smoke | HW-M2 单次 ABR/CBR 数值与 CPU profile top 10 见 `docs/performance.md` §10；非统计稳健基准，不作性能承诺 |
 
@@ -25,7 +25,7 @@
 - High Intra8/P 8×8与自定义8×8矩阵已接入CABAC闭环；自定义4×4/DC矩阵编码仍未接入，现有路径保持flat=16。
 - CABAC 整帧率估算仍借用 CAVLC 候选代理；zero-word 已实施逐slice bin密度约束，计入PCM restart前的bin数，并在封装后进入AU资源门禁。解析阈值与5000个MPS密集流读回测试通过。
 - WithLookahead(1..16)已实现有界深拷贝、未来窗口确认切换/抑制闪光、PTS/DTS、背压、失败事务与尾部Flush排空；与B调度组合避免跨场景选未来锚点。
-- VBV 长序列/溢出压力语料、HRD 参数与 filler NAL 未实现。
+- VBV大尺寸长序列/突变压力证据待完成；filler NAL与分数FPS余数已实现，HRD参数信令仍属后续扩展。
 - M5 规定的 720p/1080p 各 300 帧完整参数门禁、QP 18/26/34 与 x264 对比、等码率 PSNR/SSIM 报告、全量 CPU profile、竞态检测与六目标交叉构建未因本次局部结果而自动通过。
 
 最近一次常规本地门禁（CGO=0）：`gofmt -l .`、`go vet ./...`、`go build ./...`、`go test ./...`、`go run ./tools/depscheck`、manifest 校验及 `git diff --check` 全通过。`CGO_ENABLED=1 go test -race -timeout 20m ./...` 全包通过；Windows/Linux/macOS × amd64/arm64 六目标 CGO=0 交叉构建通过。完整 M5 长序列与 x264 质量门禁本次未执行。

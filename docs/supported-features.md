@@ -9,7 +9,7 @@
 > 两条路径及混合 PCM 已通过 FFmpeg/自研解码/本地重建逐像素验证。
 > 本地门禁及性能记录已完成，证据见 gates/m4.md；远端 CI 尚待执行。
 > M5c 已接入Main/High CABAC I/P及非参考spatial B_Direct/B_Skip和重排。M5d已接入ABR/CBR/VBV，
-> 但没有 HRD filler NAL，仍未通过 M5 总门禁。LevelAuto 新增实际 AU 预算门禁，
+> CBR/VBV码量不足时输出filler NAL；HRD信令仍属后续扩展，M5总质量门禁未通过。LevelAuto新增AU预算门禁，
 > 1080p@30 已通过 300 帧三方像素验证。M5a 本地门禁见 gates/m5a.md；M5 整体未完成。
 
 > 状态图例：`TODO` 未开始 · `WIP` 进行中 · `Partial` 部分可用（有已知不支持路径）·
@@ -132,7 +132,7 @@
 | 特性 | 状态 | 目标里程碑 |
 |---|---|---|
 | CQP | Conformant | M4 固定 QP 与宏块 QP 回调，QP=0 仍为有损；无残差沿用前 QP |
-| ABR / CBR / VBV | Partial | M5d | ABR 120帧平均、CBR 2×30帧窗口均在 ±10%；VBV 60帧候选 AU fullness 上下界搜索；无 filler NAL/HRD，完整 M5 门禁未完成 |
+| ABR / CBR / VBV | Partial | M5d | ABR120帧平均、CBR2×30窗口±10%；VBV60帧上下界；静态CBR/VBV分数帧率filler60帧码率误差≤1%；完整大尺寸质量门禁待完成 |
 | GOP 结构 / IDR 间隔 | Partial | M5d | GOPSize/IDRInterval、连续1..16非参考B、强制IDR与场景边界；B需规则PTS与恒定Duration，完整长序列质量门禁未完成 |
 | 场景切换检测 | Conformant | M5d | 直接阈值比较或WithLookahead未来窗口确认/闪光抑制；实际IDR序列、PTS/DTS与三方Oracle |
 | Lookahead | Conformant | M5d | WithLookahead(1..16)有界深拷贝，未来确认场景/抑制闪光；B调度避免跨切换边界；背压/Flush/Reset/Close/失败事务已测 |

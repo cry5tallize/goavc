@@ -45,6 +45,7 @@ type Encoder struct {
 	vbvFullness               int64
 	lastFrameBits             int64
 	vbvBufferBits             int64
+	rcRemainder               int64
 	reference                 *picture.Picture
 	frameNum                  uint32
 	framesSinceIDR            int
@@ -347,6 +348,7 @@ func (e *Encoder) Reset() error {
 	e.idr = 0
 	e.frameQP, e.lastQP = e.cfg.QP, e.cfg.QP
 	e.lastFrameBits = 0
+	e.rcRemainder = 0
 	if e.cfg.RateControl == h264.RateControlCBR || e.cfg.RateControl == h264.RateControlVBV {
 		e.vbvFullness = e.vbvBufferBits / 2
 	}

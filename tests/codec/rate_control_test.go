@@ -156,3 +156,60 @@ func TestEncoder_VBVSequenceStaysWithinBuffer(t *testing.T) {
 	}
 	ffmpegCheck(t, stream, want)
 }
+
+// 静态画面即使QP=0也远低于目标码率，必须用规范filler补足而非伪称CBR。
+func TestEncoder_StaticFillerOracle(t *testing.T) {
+	for _, rc := range []h264.RateControl{h264.RateControlCBR, h264.RateControlVBV} {
+		t.Run(rc.String(), func(t *testing.T) {
+			cfg := h264.DefaultEncoderConfig()
+			cfg.Width, cfg.Height = 32, 32
+			cfg.Profile = h264.ProfileMain
+			cfg.RateControl = rc
+			cfg.Bitrate = 600_001
+			cfg.FPSNum, cfg.FPSDen = 30000, 1001
+			cfg.VBVBufferSize = 600_001
+			e, err := encoder.New(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer e.Close()
+			var stream, want []byte
+			for i := 0; i < 60; i++ {
+				f := movingFrame(32, 32, i)
+				for comp := range f.Planes {
+					for j := range f.Planes[comp].Data {
+						f.Planes[comp].Data[j] = 128
+					}
+				}
+				if err = e.SendFrame(f); err != nil {
+					t.Fatal(err)
+				}
+				f.Release()
+				p, err := e.ReceivePacket()
+				if err != nil {
+					t.Fatal(err)
+				}
+				r, err := e.Reconstruction()
+				if err != nil {
+					t.Fatal(err)
+				}
+				stream = append(stream, p.Data...)
+				want = append(want, packed(r)...)
+				r.Release()
+				stats := e.RateControlStats()
+				if rc == h264.RateControlVBV && (stats.VBVFullness < 0 || stats.VBVFullness > stats.VBVBufferBits) {
+					t.Fatal("静态VBV越界", stats)
+				}
+			}
+			actual := int64(len(stream)) * 8 * int64(cfg.FPSNum) / (60 * int64(cfg.FPSDen))
+			delta := actual - int64(cfg.Bitrate)
+			if delta < 0 {
+				delta = -delta
+			}
+			if delta*100 > int64(cfg.Bitrate) {
+				t.Fatalf("静态填充码率%d，目标%d，超过1%%", actual, cfg.Bitrate)
+			}
+			ffmpegCheck(t, stream, want)
+		})
+	}
+}
