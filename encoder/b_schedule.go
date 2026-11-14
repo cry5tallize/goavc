@@ -52,7 +52,7 @@ func (e *Encoder) queueBInput(frame *h264.Frame) (err error) {
 	if e.bClock > math.MaxInt64-step || frame.PTS > math.MaxInt64-step {
 		return fmt.Errorf("encoder: B timestamps overflow: %w", h264.ErrInvalidData)
 	}
-	e.bInputs = append(e.bInputs, bInput{frame: frame.Clone(), index: e.bNextIndex})
+	e.bInputs = append(e.bInputs, bInput{frame: copyQueuedFrame(frame), index: e.bNextIndex})
 	e.bNextIndex++
 	if e.reference != nil && len(e.bInputs) <= e.cfg.MaxBFrames+e.lookahead {
 		e.bLastInputPTS = frame.PTS
@@ -112,7 +112,7 @@ func (e *Encoder) encodeNextBOutput() error {
 	if anchor > 0 {
 		previousSource = e.bInputs[anchor-1].frame
 	}
-	flash := previousSource != nil && anchor+1 < len(e.bInputs) && framesDiffer(previousSource, entry.frame, e.sceneThreshold) && !framesDiffer(previousSource, e.bInputs[anchor+1].frame, e.sceneThreshold)
+	flash := e.sceneThreshold > 0 && previousSource != nil && anchor+1 < len(e.bInputs) && framesDiffer(previousSource, entry.frame, e.sceneThreshold) && !framesDiffer(previousSource, e.bInputs[anchor+1].frame, e.sceneThreshold)
 	e.bCurrentIndex = entry.index
 	if err := e.encodeFrameNow(entry.frame, e.bSceneAt(anchor)); err != nil {
 		return err

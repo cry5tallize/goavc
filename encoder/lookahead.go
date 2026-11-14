@@ -25,7 +25,7 @@ func (e *Encoder) queueLookahead(frame *h264.Frame) error {
 	if len(e.pendingFrames) > e.lookahead {
 		return h264.ErrAgain
 	}
-	e.pendingFrames = append(e.pendingFrames, frame.Clone())
+	e.pendingFrames = append(e.pendingFrames, copyQueuedFrame(frame))
 	if len(e.pendingFrames) <= e.lookahead {
 		return nil
 	}
@@ -103,4 +103,18 @@ func (e *Encoder) releaseLookahead() {
 		e.lookaheadPrevious.Release()
 		e.lookaheadPrevious = nil
 	}
+}
+
+// copyQueuedFrame 只复制有效平面，避免外部stride填充放大延迟队列内存。
+// 调用前已验证几何和数据长度；队列单帧空间恰为显示尺寸YUV420的有效字节数。
+func copyQueuedFrame(src *h264.Frame) *h264.Frame {
+	out := &h264.Frame{Width: src.Width, Height: src.Height, Format: src.Format, PTS: src.PTS, Duration: src.Duration, KeyFrame: src.KeyFrame}
+	for comp := range out.Planes {
+		w, h := src.Format.PlaneDimensions(comp, src.Width, src.Height)
+		out.Planes[comp] = h264.Plane{Stride: w, Data: make([]byte, w*h)}
+		for y := 0; y < h; y++ {
+			copy(out.Planes[comp].Data[y*w:(y+1)*w], src.Planes[comp].Data[y*src.Planes[comp].Stride:y*src.Planes[comp].Stride+w])
+		}
+	}
+	return out
 }

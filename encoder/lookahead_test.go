@@ -57,3 +57,36 @@ func TestLookahead_BoundsResetAndFailedSend(t *testing.T) {
 		t.Fatal("Close未释放窗口")
 	}
 }
+
+func TestLookahead_QueuedMemoryIgnoresExternalStride(t *testing.T) {
+	cfg := h264.DefaultEncoderConfig()
+	cfg.Width, cfg.Height = 32, 32
+	e, err := New(cfg, WithLookahead(2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Close()
+	f := testFrame(32, 32)
+	for comp := range f.Planes {
+		w, h := f.Format.PlaneDimensions(comp, 32, 32)
+		f.Planes[comp] = h264.Plane{Stride: 1024, Data: make([]byte, 1024*h)}
+		for y := 0; y < h; y++ {
+			for x := 0; x < w; x++ {
+				f.Planes[comp].Data[y*1024+x] = 91
+			}
+		}
+	}
+	if err = e.SendFrame(f); err != nil {
+		t.Fatal(err)
+	}
+	for comp := range e.pendingFrames[0].Planes {
+		w, h := f.Format.PlaneDimensions(comp, 32, 32)
+		p := e.pendingFrames[0].Planes[comp]
+		if p.Stride != w || len(p.Data) != w*h {
+			t.Fatal("延迟队列继承外部stride填充", comp, p.Stride, len(p.Data))
+		}
+		if p.Data[0] != 91 {
+			t.Fatal("有效像素拷贝错误")
+		}
+	}
+}
