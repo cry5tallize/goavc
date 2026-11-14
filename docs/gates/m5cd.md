@@ -40,7 +40,7 @@ WithTransform8x8、WithWeightedPrediction、WithLookahead(2)。每次Receive均�
 ## 未完成与门禁状态
 
 - B非参考spatial-direct零MV双参考策略已接入；B temporal-direct、B运动搜索与B-pyramid未生成，当前不作完整B宏块模式承诺。
-- P 单参考显式权重编码已验证；B 显式/隐式权重编码待 B slice 接入。
+- P 单参考显式权重编码已验证；B slice 已接入，但B显式/隐式权重编码尚未生成。
 - High Intra8/P8×8、六个4×4列表/DC首项和8×8 intra/inter自定义矩阵已接入CABAC闭环；320帧组合和126帧4×4/DC+B三方Oracle已通过。
 - CABAC 整帧率估算仍借用 CAVLC 候选代理；zero-word 已实施逐slice bin密度约束，计入PCM restart前的bin数，并在封装后进入AU资源门禁。解析阈值与5000个MPS密集流读回测试通过。
 - WithLookahead(1..16)已实现有界深拷贝、未来窗口确认切换/抑制闪光、PTS/DTS、背压、失败事务与尾部Flush排空；与B调度组合避免跨场景选未来锚点。
@@ -60,3 +60,31 @@ codec487.741秒；B调度fuzz先跑10秒11次，后续30秒4700次、发现16个
 dirty状态和`DecoderVerified`标记；重建YUV按PTS顺序输出并检查短写。
 
 因此 Roadmap M5 仍为 WIP；不创建 `m5c-gate`/`m5d-gate`/`v0.5.3`/`v0.6.0` 收尾提交。
+
+## 重新核验记录（2026-11-14 21:35 +08:00）
+
+核验基线为`fcfa674`，初始工作区干净。本轮没有更改编码实现或放宽门禁。
+
+- 当前HEAD重新执行CGO=0的gofmt/vet/build、非缓存全包测试（codec39.484秒）、
+  depscheck29包、manifest27条及diff检查，全部通过。
+- 单独补跑此前完整race记录未覆盖的新增`TestModeDecision_HighToolsMatchUnpruned`：
+  `CGO_ENABLED=1 go test -race -run '^TestModeDecision_HighToolsMatchUnpruned$' -count=1 ./encoder`
+  通过（3.940秒）。这不描述为本轮重新执行了完整race。
+- 重新读取两份High长Oracle报告，并对原始输入、Annex-B、重建和FFmpeg原始输出
+  现场重算SHA-256，全部与上表/报告相等。帧数均为300，重建长度分别为
+  414,720,000与933,120,000字节。这是既有配置和生产基线的产物复核，未重新编码长序列。
+- 原始`m5-formal-quality`产物确认720p QP18/26/34结果与§12一致，QP26为明确失败。
+  1080p QP18另有已完成报告：Go Y=56.454788、x264 Y=55.375895，绝对差1.078893dB，
+  该单项通过；当前1080p QP26仍在运行，不能将空JSON报告算作完成。
+- `m5-formal-rate`中720p ABR已有300帧报告：目标2,000,000bit/s，实测1,997,916bit/s，
+  偏差−0.1042%；码流和重建文件哈希与报告一致。后台测量器build info为
+  `f060c4270540801d6deba1835289dae83001be50`且`vcs.modified=true`，报告没有
+  `FrameBits`与`DecoderVerified`字段，独立FFmpeg原始输出也未在该结果目录出现。
+  因此这里只记录初步码率结果，不升级为当前HEAD的大尺寸完整码控门禁通过。
+  同一任务的720p CBR仍在运行；VBV及1080p完整码控结果未齐。
+- 代码确认B策略为双锚点、非参考、零MV spatial-direct/skip；不将未实现的
+  temporal-direct、B运动搜索或B-pyramid误写为已有能力。M5c要求的一种可用B策略已有证据。
+
+后台目录为`%LOCALAPPDATA%/Temp/opencode/m5-formal-quality`与`m5-formal-rate`。
+最终应使用当前测量器统一核验/补跑，保留现有长任务结果和失败项；后台进程存在、文件存在
+或旧报告产生均不等于当前HEAD验收完成。仍无`v0.5.3`与`v0.6.0`标签。

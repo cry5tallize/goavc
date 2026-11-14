@@ -1,8 +1,9 @@
 # 支持矩阵
 
-> **M5 开工：** 先推进 M5a。SAD、full/diamond 与亚像素搜索已有解析向量验证，
-> 连续 P 帧单参考、四种分区与 Skip 已通过 360 帧双解码器 Oracle；默认 GOPSize=30，
-> GOPSize=1 保留 M4 全帧内通道。M5 整体门禁未通过，质量阈值见 conformance.md。
+> **M5 当前进展：** M5a/b已有本地子阶段标签；M5c/d的CABAC、High8×8/矩阵、
+> P显式权重、非参考spatial B及重排、Lookahead、GOP和码控均已接入。
+> High两种大尺寸各300帧Oracle已通过；720p QP26质量门禁失败，1080p完整矩阵和
+> 大尺寸码控验证仍未齐。M5c/d保持未关闭，具体证据见 gates/m5cd.md。
 
 > **M4 进展：** `encoder.New` 默认执行串行 Baseline CQP 的 I4/I16/色度压缩，
 > 每帧独立 IDR；支持 I_PCM 选项、1..64 slice、偶数显示尺寸裁剪和宏块 QP 覆盖。

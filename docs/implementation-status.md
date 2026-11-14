@@ -138,7 +138,7 @@ M5b 本地门禁已通过（`v0.5.2`，远端 CI 待执行）：SATD/RD、全候
 等价剪枝、600帧长Oracle与第一项x264质量比较已记录；Profile边界已补充显式拒绝。
 证据见 `docs/gates/m5b.md`。M5 整体的 Main/High 工具、B 帧与全参数质量/性能门禁仍未完成。
 
-M5c/d已通过Main/High I/P288帧、P权重160帧、High8×8/矩阵320帧、非参考spatial B+重排/码控1120帧三方Oracle；Lookahead/B场景边界及ABR/CBR/VBV窗口已验证。完整720p/1080p长序列、x264等QP/等码率和性能矩阵门禁仍待执行；不据短序列关闭里程碑。证据见 `docs/gates/m5cd.md`。
+M5c/d已通过Main/High I/P288帧、P权重160帧、High8×8/矩阵320帧、非参考spatial B+重排/码控1120帧三方Oracle；High/B2/8×8/P权重/Lookahead的720p/1080p各300帧长Oracle也已通过。Lookahead/B场景边界及小尺寸ABR/CBR/VBV窗口已验证。720p同QP/等码率报告已完成，其中QP26绝对Y差1.542604dB未通过1.5dB门槛；1080p矩阵、大尺寸码控与正式验收仍未齐。M5c/d不据此关闭，最新复核见 `docs/gates/m5cd.md`。
 
 | Module | 规范条款/职责 | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|---|
@@ -153,7 +153,7 @@ M5c/d已通过Main/High I/P288帧、P权重160帧、High8×8/矩阵320帧、非�
 | 活动度 QP | 编码分析 / mb_qp_delta | AQ strength 0..6、方差分档、QP 0..51 裁剪 | Conformant | 平坦/棋盘解析活动度、实际 QP=23/29、0/26/51 的 36 帧双解码器 Oracle | 默认关闭；与显式宏块 QP 或 PCM 通道冲突时拒绝 |
 | Profile 编码约束 | Annex A.2.1/A.2.2 | Baseline/Main 禁止零 PCM 采样与 level_prefix>15，非法候选排除、失败不更新状态 | Conformant | 明确 PCM 零样本拒绝、限长 CAVLC 无部分写入、极低 QP 极端色度拒绝后有效输入恢复 | 极低 QP 且无合法压缩/PCM 候选时 ErrUnsupported；这是配置与内容组合边界，未篡改输入/切换 Profile |
 | CABAC 编码基础 | 9.3.3 / 9.3.4 | 位精确算术、E3延迟位、bypass/terminate/PCM restart、I/P 4×4/8×8/DC/AC、B_Direct/B_Skip与零字预算 | Conformant | 规范区间码点、64状态、残差转义、bin密度/密集MPS；Main/High I/P/B和High8×8 Oracle | RD仍用CAVLC比特代理；非Direct B模式未生成 |
-| CABAC I/P slice | 7.3.4 / 9.3.3 | Main/High I4/I16/PCM、P 四分区/Skip、MVD、CBP、QP、邻域 CBF、多 slice | Conformant | `tests/codec/cabac_test.go` QP 0/26/51、1/3 slice、宏块 QP 变化、帧号回绕及场景变化，三方像素一致 | 单参考、POC type2，无 B；Main/High 整体门禁尚未完成 |
+| CABAC I/P slice | 7.3.4 / 9.3.3 | Main/High I4/I16/PCM、P 四分区/Skip、MVD、CBP、QP、邻域 CBF、多 slice | Conformant | `tests/codec/cabac_test.go` QP 0/26/51、1/3 slice、宏块 QP 变化、帧号回绕及场景变化，三方像素一致 | 此行仅记录I/P测试；B与POC type0见B编码行；Main/High整体门禁尚未完成 |
 | P 显式加权预测编码 | 7.3.3.2 / 8.4.3.2 | 固定三平面权重、整数最小二乘自动分析、PPS/slice 信令、共享 MC 后加权、P_Skip | Conformant | 权重/偏移解析拟合、插值先于裁剪、实际 Skip、失败事务；Main/High 160帧权重表与三方 Oracle | 单参考 P；搜索使用加权参考代理估计 MV，最终 RD/重建使用原参考插值后加权；B/implicit 待接入 |
 | High 8×8 编码闭环 | 8.3.2 / 8.5.13 / 9.3 | 规范逆基定点投影、QP0..51、Intra8九模式与P 8×8残差RD候选、CABAC/代理CAVLC扫描、共享逆变换与滤波 | Conformant | 常量/脉冲/非DC解析基、实际I/P 8×8决策；QP0/18/26/51×1/3slice×flat/custom的320帧三方Oracle | 默认关闭，通过WithTransform8x8启用；RD仍借用CAVLC候选比特代理，不宣称CABAC最优 |
 | ScalingMatrix编码 | 7.3.2.2 / 8.5.13 | 4×4六个独立列表、DC首项、8×8 intra/inter光栅矩阵配置、PPS扫描/delta、正量化与共享重建 | Conformant | PPS选择与值拷贝核对、delta回绕/零项拒绝、flat兼容、flat/custom320帧及4×4/DC+B126帧三方Oracle | 默认flat；只生成PPS级矩阵，不生成SPS级矩阵继承信令 |
