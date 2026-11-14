@@ -2,6 +2,8 @@ package transform
 
 import (
 	"fmt"
+	"math"
+
 	h264 "github.com/goavc/h264"
 )
 
@@ -16,40 +18,29 @@ var Zigzag8x8 = [64]int{
 var levelScale8 = [6][6]int64{{20, 18, 32, 19, 25, 24}, {22, 19, 35, 21, 28, 26}, {26, 23, 42, 24, 33, 31}, {28, 25, 45, 26, 35, 33}, {32, 28, 51, 30, 40, 38}, {36, 32, 58, 34, 46, 43}}
 var scale8Class = [16]int{0, 3, 4, 3, 3, 1, 5, 1, 4, 5, 2, 5, 3, 1, 5, 1}
 
-// Forward8x8 实现 High Profile 的 8×8 可分离整数变换。
-// 输入为光栅顺序残差；编码侧缩放/舍入由 Quant8x8WithScaling 处理。
-// 行列运算使用 int64，避免极端合法 8-bit 残差累加溢出。
+// Forward8x8 以可分离的未归一化 DCT-II 分析残差，输入输出均按光栅顺序。
+// 前向分析与量化是编码器策略，不定义码流重建；重建仍由规范逆变换完成。
 func Forward8x8(dst, src *[64]int32) {
-	var temp [64]int64
-	for y := 0; y < 8; y++ {
-		var line [8]int64
-		for x := range line {
-			line[x] = int64(src[y*8+x])
-		}
-		out := forward8Line(line)
-		copy(temp[y*8:y*8+8], out[:])
-	}
-	for x := 0; x < 8; x++ {
-		var line [8]int64
-		for y := range line {
-			line[y] = temp[y*8+x]
-		}
-		out := forward8Line(line)
-		for y, v := range out {
-			dst[y*8+x] = int32(v)
+	var basis [8][8]float64
+	for k := range basis {
+		for n := range basis[k] {
+			basis[k][n] = math.Cos(math.Pi * float64((2*n+1)*k) / 16)
 		}
 	}
-}
-
-func forward8Line(x [8]int64) [8]int64 {
-	s0, s1, s2, s3 := x[0]+x[7], x[1]+x[6], x[2]+x[5], x[3]+x[4]
-	s4, s5, s6, s7 := x[3]-x[4], x[2]-x[5], x[1]-x[6], x[0]-x[7]
-	b0, b1, b2, b3 := s0+s3, s1+s2, s0-s3, s1-s2
-	b4, b5 := 2*s4+s5, s4-2*s5
-	b6, b7 := s7-2*s6, 2*s7+s6
-	return [8]int64{
-		b0 + b1, b2 + (b3 >> 1), b0 - b1, b2 - (b3 >> 1),
-		b4 + (b7 >> 1), b5 + b6, b5 - b6, b7 - (b4 >> 1),
+	for ky := 0; ky < 8; ky++ {
+		for kx := 0; kx < 8; kx++ {
+			var sum float64
+			for y := 0; y < 8; y++ {
+				for x := 0; x < 8; x++ {
+					sum += float64(src[y*8+x]) * basis[ky][y] * basis[kx][x]
+				}
+			}
+			if sum < 0 {
+				dst[ky*8+kx] = int32(math.Ceil(sum - 0.5))
+			} else {
+				dst[ky*8+kx] = int32(math.Floor(sum + 0.5))
+			}
+		}
 	}
 }
 

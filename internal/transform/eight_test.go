@@ -3,6 +3,7 @@ package transform
 import (
 	"errors"
 	h264 "github.com/goavc/h264"
+	"math"
 	"testing"
 )
 
@@ -90,15 +91,29 @@ func TestZigzag8x8_Permutation(t *testing.T) {
 	}
 }
 
-func TestForward8x8_AnalyticImpulse(t *testing.T) {
+func TestForward8x8_AnalyticConstantAndImpulse(t *testing.T) {
 	var src, got [64]int32
+	for i := range src {
+		src[i] = 1
+	}
+	Forward8x8(&got, &src)
+	if got[0] != 64 {
+		t.Fatalf("constant DC=%d want 64", got[0])
+	}
+	for i, value := range got[1:] {
+		if value != 0 {
+			t.Fatalf("constant block coefficient %d=%d want 0", i+1, value)
+		}
+	}
+	src = [64]int32{}
 	src[0] = 1
 	Forward8x8(&got, &src)
-	basis := [8]int32{1, 1, 1, 1, 1, 1, -1, 2}
+	basis := [8]float64{1, 0.9807852804032304, 0.9238795325112867, 0.8314696123025452, 0.7071067811865476, 0.5555702330196023, 0.38268343236508984, 0.19509032201612833}
 	for y := 0; y < 8; y++ {
 		for x := 0; x < 8; x++ {
-			if want := basis[y] * basis[x]; got[y*8+x] != want {
-				t.Fatalf("impulse coefficient (%d,%d)=%d want %d", x, y, got[y*8+x], want)
+			want := int32(math.Floor(basis[x]*basis[y] + 0.5))
+			if got[y*8+x] != want {
+				t.Fatalf("unit impulse coefficient (%d,%d)=%d want %d", x, y, got[y*8+x], want)
 			}
 		}
 	}
