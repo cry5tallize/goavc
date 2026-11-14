@@ -499,7 +499,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 |---|---|---|---|
 | 1 | `feat[cabac]: add arithmetic encoder with renormalization` | `encodeBin`、range 更新 | 已实现；规范区间向量见 `internal/entropy/cabac` |
 | 2 | `feat[cabac]: add context encoding for macroblock and residual` | 全部相关 context | 部分：I/P 单参考、4×4/DC/AC；B/8×8 residual 未接 |
-| 3 | `feat[cabac]: add cabac termination and zero word handling` | terminate / `cabac_zero_word` | terminate/PCM restart 已验证；通用零字预算未完成 |
+| 3 | `feat[cabac]: add cabac termination and zero word handling` | terminate / `cabac_zero_word` | terminate/PCM restart 已验证；逐 slice bin密度预算、终端03封装及5000个MPS密集流读回已验证 |
 | 4 | `feat[encoder]: add cabac slice writing path` | 熵模式分流 | I/P Main/High slice 已接入 |
 | 5 | `test[cabac]: add encoder decoder symmetry for full slices` | 整 slice 对称 | 288 帧 Main/High 三方像素 Oracle 通过 |
 | 6 | `feat[encoder]: add b slice with direct mode strategy` | B 帧编码 | 未完成；`MaxBFrames>0` 明确 ErrUnsupported |

@@ -22,7 +22,7 @@
 - B slice 编码、B Direct、参考列表、IBBP 放置、DTS/POC 重排均未实现；`MaxBFrames>0` 在 New 阶段明确返回 `ErrUnsupported`。
 - P 单参考显式权重编码已验证；B 显式/隐式权重编码待 B slice 接入。
 - 8×8 正变换及缩放量化尚未接入 Intra8/P 宏块决策、残差扫描和码流；High 编码仍只覆盖 CABAC 4×4 I/P。
-- CABAC 整帧率估算仍借用 CAVLC 候选代理，通用 CABAC zero-word 最坏封装预算未完成。
+- CABAC 整帧率估算仍借用 CAVLC 候选代理；zero-word 已实施逐slice bin密度约束，计入PCM restart前的bin数，并在封装后进入AU资源门禁。解析阈值与5000个MPS密集流读回测试通过。
 - Lookahead 未实现；场景检测为当前帧相对参考帧的全平面平均绝对差阈值。
 - VBV 长序列/溢出压力语料、HRD 参数与 filler NAL 未实现。
 - M5 规定的 720p/1080p 各 300 帧完整参数门禁、QP 18/26/34 与 x264 对比、等码率 PSNR/SSIM 报告、全量 CPU profile、竞态检测与六目标交叉构建未因本次局部结果而自动通过。

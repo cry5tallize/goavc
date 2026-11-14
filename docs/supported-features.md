@@ -76,7 +76,7 @@
 | CABAC：算术编解码器 | Conformant | Conformant | 编码区间解析解、64状态与 Main/High I/P 整帧 FFmpeg Oracle |
 | CABAC：上下文初始化与状态转移 | Conformant | Conformant | I/PB0..2、QP 0..51 共用初始化表；编码 slice 使用 idc=0 |
 | CABAC：宏块/MV/残差上下文 | Conformant | Partial | 编码 I/P 单参考、四分区、4×4/DC/AC、QP/CBP 及多 slice Oracle；B/8×8 待接入 |
-| CABAC：terminate / cabac_zero_word | Conformant | Partial | 停止位与 PCM 重启已验证；密集 bin 的零字预算待补 |
+| CABAC：terminate / cabac_zero_word | Conformant | Conformant | 停止位/PCM重启、逐slice bin密度预算、终端03封装、阈值解析解与5000个MPS密集流读回；现有整帧Oracle回归通过 |
 
 ## 5. 预测
 

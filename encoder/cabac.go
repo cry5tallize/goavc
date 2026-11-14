@@ -10,9 +10,10 @@ import (
 
 // cabacWriter 的上下文跨 PCM restart 保留，算术区间则重新初始化。
 type cabacWriter struct {
-	e         *cabac.Encoder
-	ctx       [cabac.ContextCount]cabac.Context
-	lastDelta bool
+	e             *cabac.Encoder
+	ctx           [cabac.ContextCount]cabac.Context
+	lastDelta     bool
+	completedBins uint64
 }
 
 func (c *cabacWriter) bin(index, value int) { c.e.Bin(&c.ctx[index], uint8(value)) }
@@ -102,6 +103,7 @@ func (e *Encoder) encodeCABAC(src *picture.Picture, intra, idr bool) ([]byte, *f
 						return nil, nil, err
 					}
 					s.writePCMSamples(w, addr)
+					c.completedBins += c.e.BinCount()
 					c.e, err = cabac.NewEncoder(w)
 					if err != nil {
 						return nil, nil, err
@@ -122,7 +124,8 @@ func (e *Encoder) encodeCABAC(src *picture.Picture, intra, idr bool) ([]byte, *f
 		if idr {
 			typ = nal.TypeSliceIDR
 		}
-		if err = emit(typ, w.Bytes()); err != nil {
+		payload := cabacZeroWordPayload(w.Bytes(), c.completedBins+c.e.BinCount(), last-first)
+		if err = aw.Write(nal.Unit{Header: nal.Header{Type: typ, RefIDC: 3}, Payload: payload}); err != nil {
 			return nil, nil, err
 		}
 	}
