@@ -15,32 +15,11 @@ const (
 	maxCPBCountMinus1 = 31
 )
 
-// CPBEntry 是 hrd_parameters() 中的一个 CPB 描述。
-type CPBEntry struct {
-	BitRateValueMinus1 uint32
-	CPBSizeValueMinus1 uint32
-	CBRFlag            bool
-}
-
-// HRDParameters 对应 hrd_parameters()（H.264 E.1.2）。
-type HRDParameters struct {
-	CPBCountMinus1 uint32
-	BitRateScale   uint8
-	CPBSizeScale   uint8
-
-	CPB []CPBEntry
-
-	InitialCPBRemovalDelayLengthMinus1 uint8
-	CPBRemovalDelayLengthMinus1        uint8
-	DPBOutputDelayLengthMinus1         uint8
-	TimeOffsetLength                   uint8
-}
-
 // VUI 对应 vui_parameters()（H.264 E.1.1）。
 //
 // 字段与规范同名（Go 命名为导出形式），条件字段只有在对应 present_flag
-// 为 true 时才参与解析/序列化。HRD 参数完整解析，但 M1 不消费它们；
-// 应用 HRD 语义属于更高里程碑。
+// 为 true 时才参与解析、校验和序列化。未出现字段保留 Go 零值，
+// 不在此原始语法结构中写入规范的推导默认值。
 type VUI struct {
 	AspectRatioInfoPresentFlag bool
 	AspectRatioIDC             uint8
@@ -87,6 +66,21 @@ type VUI struct {
 
 // ParseVUI 从当前读取位置解析 vui_parameters()。
 func ParseVUI(r *bitstream.Reader) (*VUI, error) {
+	v, err := parseVUI(r)
+	if err != nil {
+		return nil, err
+	}
+	if err := v.Validate(); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// parseVUI 只解析有界语法，由独立入口或SPS上下文入口统一校验一次。
+func parseVUI(r *bitstream.Reader) (*VUI, error) {
+	if r == nil {
+		return nil, fmt.Errorf("syntax: nil VUI reader: %w", h264.ErrInvalidData)
+	}
 	v := &VUI{}
 	var err error
 
@@ -241,70 +235,19 @@ func ParseVUI(r *bitstream.Reader) (*VUI, error) {
 	return v, nil
 }
 
-// parseHRDParameters 解析 hrd_parameters()（H.264 E.1.2）。
-func parseHRDParameters(r *bitstream.Reader) (*HRDParameters, error) {
-	h := &HRDParameters{}
-	var err error
-	if h.CPBCountMinus1, err = readUE(r, "cpb_cnt_minus1"); err != nil {
-		return nil, err
-	}
-	if h.CPBCountMinus1 > maxCPBCountMinus1 {
-		return nil, fmt.Errorf("syntax: cpb_cnt_minus1 = %d exceeds %d: %w",
-			h.CPBCountMinus1, maxCPBCountMinus1, h264.ErrInvalidData)
-	}
-	bitRateScale, err := readBits(r, 4, "bit_rate_scale")
-	if err != nil {
-		return nil, err
-	}
-	cpbSizeScale, err := readBits(r, 4, "cpb_size_scale")
-	if err != nil {
-		return nil, err
-	}
-	h.BitRateScale, h.CPBSizeScale = uint8(bitRateScale), uint8(cpbSizeScale)
-
-	h.CPB = make([]CPBEntry, 0, h.CPBCountMinus1+1)
-	for i := uint32(0); i <= h.CPBCountMinus1; i++ {
-		var entry CPBEntry
-		if entry.BitRateValueMinus1, err = readUE(r, "bit_rate_value_minus1"); err != nil {
-			return nil, err
-		}
-		if entry.CPBSizeValueMinus1, err = readUE(r, "cpb_size_value_minus1"); err != nil {
-			return nil, err
-		}
-		if entry.CBRFlag, err = readFlag(r, "cbr_flag"); err != nil {
-			return nil, err
-		}
-		h.CPB = append(h.CPB, entry)
-	}
-
-	initial, err := readBits(r, 5, "initial_cpb_removal_delay_length_minus1")
-	if err != nil {
-		return nil, err
-	}
-	cpbDelay, err := readBits(r, 5, "cpb_removal_delay_length_minus1")
-	if err != nil {
-		return nil, err
-	}
-	dpbDelay, err := readBits(r, 5, "dpb_output_delay_length_minus1")
-	if err != nil {
-		return nil, err
-	}
-	timeOffset, err := readBits(r, 5, "time_offset_length")
-	if err != nil {
-		return nil, err
-	}
-	h.InitialCPBRemovalDelayLengthMinus1 = uint8(initial)
-	h.CPBRemovalDelayLengthMinus1 = uint8(cpbDelay)
-	h.DPBOutputDelayLengthMinus1 = uint8(dpbDelay)
-	h.TimeOffsetLength = uint8(timeOffset)
-	return h, nil
-}
-
 // WriteTo 写出 vui_parameters()。
 func (v *VUI) WriteTo(w *bitstream.Writer) error {
-	if v == nil {
-		return fmt.Errorf("syntax: nil vui")
+	if err := v.Validate(); err != nil {
+		return err
 	}
+	if w == nil {
+		return fmt.Errorf("syntax: nil VUI writer: %w", h264.ErrInvalidData)
+	}
+	return writeVUIParameters(w, v)
+}
+
+// writeVUIParameters 仅用于已经通过完整VUI/SPS预验证的结构。
+func writeVUIParameters(w *bitstream.Writer, v *VUI) error {
 	var err error
 	if err = writeFlag(w, v.AspectRatioInfoPresentFlag); err != nil {
 		return err
@@ -384,9 +327,6 @@ func (v *VUI) WriteTo(w *bitstream.Writer) error {
 		return err
 	}
 	if v.NALHRDParametersPresentFlag {
-		if v.NALHRD == nil {
-			return fmt.Errorf("syntax: nal_hrd_parameters_present_flag set but NALHRD is nil")
-		}
 		if err = writeHRDParameters(w, v.NALHRD); err != nil {
 			return fmt.Errorf("syntax: nal hrd_parameters: %w", err)
 		}
@@ -395,9 +335,6 @@ func (v *VUI) WriteTo(w *bitstream.Writer) error {
 		return err
 	}
 	if v.VCLHRDParametersPresentFlag {
-		if v.VCLHRD == nil {
-			return fmt.Errorf("syntax: vcl_hrd_parameters_present_flag set but VCLHRD is nil")
-		}
 		if err = writeHRDParameters(w, v.VCLHRD); err != nil {
 			return fmt.Errorf("syntax: vcl hrd_parameters: %w", err)
 		}
@@ -435,50 +372,6 @@ func (v *VUI) WriteTo(w *bitstream.Writer) error {
 		if err = writeUE(w, v.MaxDecFrameBuffering, "max_dec_frame_buffering"); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-// writeHRDParameters 写出 hrd_parameters()。
-func writeHRDParameters(w *bitstream.Writer, h *HRDParameters) error {
-	if h.CPBCountMinus1 > maxCPBCountMinus1 {
-		return fmt.Errorf("cpb_cnt_minus1 = %d exceeds %d", h.CPBCountMinus1, maxCPBCountMinus1)
-	}
-	if len(h.CPB) != int(h.CPBCountMinus1)+1 {
-		return fmt.Errorf("cpb_cnt_minus1 = %d requires %d entries, got %d",
-			h.CPBCountMinus1, h.CPBCountMinus1+1, len(h.CPB))
-	}
-	if err := writeUE(w, h.CPBCountMinus1, "cpb_cnt_minus1"); err != nil {
-		return err
-	}
-	if err := writeBits(w, 4, uint64(h.BitRateScale), "bit_rate_scale"); err != nil {
-		return err
-	}
-	if err := writeBits(w, 4, uint64(h.CPBSizeScale), "cpb_size_scale"); err != nil {
-		return err
-	}
-	for i, e := range h.CPB {
-		if err := writeUE(w, e.BitRateValueMinus1, "bit_rate_value_minus1"); err != nil {
-			return fmt.Errorf("entry %d: %w", i, err)
-		}
-		if err := writeUE(w, e.CPBSizeValueMinus1, "cpb_size_value_minus1"); err != nil {
-			return fmt.Errorf("entry %d: %w", i, err)
-		}
-		if err := writeFlag(w, e.CBRFlag); err != nil {
-			return fmt.Errorf("entry %d: %w", i, err)
-		}
-	}
-	if err := writeBits(w, 5, uint64(h.InitialCPBRemovalDelayLengthMinus1), "initial_cpb_removal_delay_length_minus1"); err != nil {
-		return err
-	}
-	if err := writeBits(w, 5, uint64(h.CPBRemovalDelayLengthMinus1), "cpb_removal_delay_length_minus1"); err != nil {
-		return err
-	}
-	if err := writeBits(w, 5, uint64(h.DPBOutputDelayLengthMinus1), "dpb_output_delay_length_minus1"); err != nil {
-		return err
-	}
-	if err := writeBits(w, 5, uint64(h.TimeOffsetLength), "time_offset_length"); err != nil {
-		return err
 	}
 	return nil
 }

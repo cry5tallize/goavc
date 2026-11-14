@@ -39,6 +39,10 @@ func (e *Encoder) parameters() error {
 	selected := 0
 	fallback := 0
 	for _, l := range levels {
+		// Annex A表A-4/A-5：这些level只允许逐行序列，不能先选中再写非法SPS。
+		if e.interlaced && (l.id <= 20 || l.id >= 42) {
+			continue
+		}
 		if c.Level != 0 && c.Level != l.id {
 			continue
 		}

@@ -164,10 +164,7 @@ func (s *SPS) WriteTo(w *bitstream.Writer) error {
 		return err
 	}
 	if s.VUIParametersPresentFlag {
-		if s.VUI == nil {
-			return fmt.Errorf("syntax: sps vui_parameters_present_flag set but VUI is nil")
-		}
-		if err := s.VUI.WriteTo(w); err != nil {
+		if err := writeVUIParameters(w, s.VUI); err != nil {
 			return fmt.Errorf("syntax: sps vui_parameters: %w", err)
 		}
 	}
@@ -186,7 +183,7 @@ func (s *SPS) MarshalRBSP() ([]byte, error) {
 	return w.Bytes(), nil
 }
 
-// validateForWrite 校验结构不变量与 M1 支持范围。
+// validateForWrite 校验结构、支持范围与依赖 SPS 上下文的 Annex A/E 语义。
 func (s *SPS) validateForWrite() error {
 	if s == nil {
 		return fmt.Errorf("syntax: nil sps")
@@ -228,5 +225,8 @@ func (s *SPS) validateForWrite() error {
 			return fmt.Errorf("syntax: bit depth minus8 exceeds 6: %w", h264.ErrInvalidData)
 		}
 	}
-	return s.validateSupported()
+	if err := s.validateSupported(); err != nil {
+		return err
+	}
+	return s.validateVUIForSPS()
 }

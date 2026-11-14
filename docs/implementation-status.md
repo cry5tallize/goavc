@@ -55,7 +55,7 @@
 | Access Unit 组装 | 7.4.1.2.3 | AUD/前缀/后缀、first_mb/frame_num/POC 等判定、显式 hint | Conformant | `accessunit_test.go`、`assembler_test.go`、`corpus_test.go` | 多 slice 且无 AUD 时依赖 SliceInfo hint；suffix SEI 归类保守 |
 | SPS 解析与序列化 | 7.3.2.1 | Baseline/Main/High、High10/422/444的8/10-bit、独立色平面、帧/场与MBAFF语法、VUI/ScalingList与裁剪 | Conformant | 原语法/ffprobe及扩展Profile像素Oracle、场/MBAFF固定字节与真实隔行语法探测通过 | qpprime仍拒绝；MBAFF像素重建见第13项，PAFF场图像及单色解码仍拒绝 |
 | PPS 解析与序列化 | 7.3.2.2 | 核心字段、可选8×8/scaling扩展、FMO 0–6参数及尺寸校验 | Partial | 原pps/corpus回归；M7 FMO固定规范字节、七类映射、坏表与分配前限额测试 | FMO语法证据见第15项，不代表FMO宏块流水线已接入；完整组合限制另行验收 |
-| VUI | E.1 | 宽高比、overscan、video signal、timing、HRD、bitstream restriction | Partial | `vui_test.go`、`corpus_test.go` | timing/HRD 语义未与独立 Oracle 对比（裸流 ffprobe 帧率不可靠） |
+| VUI / HRD | E.1/E.2、Annex A | 完整条件语法、NAL/VCL CPB替代调度、profile/level声明与显式资源预算 | Conformant | M7第21项固定非字节对齐VUI/HRD字节、尺度/计数/32项/顺序/截断、level/profile倍率与DPB边界；完整独立门禁通过 | 参数集验证不代替实际AU码率、SEI时序与MV范围的运行时证明 |
 | ScalingList | 7.3.2.1.1.1 | 4×4/8×8、保留原始 delta 序列 | Partial | `scaling_list_test.go`、`sps_write_test.go` | 无自定义矩阵真实语料；应用层（反量化）在 M3 |
 | SEI 基础 | 7.3.2.3 | payloadType/Size 扩展、user_data_unregistered | Partial | `sei_test.go`、`corpus_test.go` | 仅框架与 user_data；recovery point 等语义消息在 M2/M3 |
 | Slice Header（最小） | 7.3.3 | AU 判定字段、POC type 0/1、field flags、redundant_pic_cnt | Partial | `slice_header_test.go`、`corpus_test.go` | 参考列表/加权预测/去块等字段在 M2 扩展；SP/SI 返回 `ErrUnsupported`（M7） |
@@ -227,6 +227,7 @@ High10渐进420编解码及High422/High444渐进8/10-bit解码已接入，限定
 | 18：A/B/C分区重组解码 | 按slice_id关联ASO的A/B/C、独立PCM/帧内与帧间残差读端、各分区尾位与实际category校验；AU/探测CLI接入 | Conformant | PCM、I16非零DC、P非零MVD/DC、混合I/P及仅A的Skip规范像素；缺失/重复/孤立/错ID/RefIDC/截断/空category和恢复；独立完整CGO=0门禁及实际h264dec两帧12288字节独立采样一致 | 分区仅Extended/CAVLC，B在对应C前且A必须先到；不提供丢失残差的错误隐藏；h264probe只验证前缀，不能替代残差/像素验证 |
 | 19：SP/SI切片解码 | 规范8.6 primary/secondary/SI系数域合成，QP/QS及色度域分离，SP Skip切换量化，SI特殊与普通I宏块分派 | Conformant | 正负DC/AC空间基、QS≠QP、色度DC Hadamard域、分量偏移、SI逐块重建反馈、SP Skip与真实Annex-B整帧解析解；修正测试CBP码字31→32后完整独立CGO=0门禁通过 | 仅Extended逐行8-bit420/CAVLC/flat4×4，合法但未接入的位深/采样/隔行/矩阵组合明确拒绝，不生成SP/SI编码；规范像素证据不冒充外部播放器互操作 |
 | 20：冗余slice解码 | 独立redundant_pic_cnt表示重建，优先primary/最小完整备用；失败归还图像，成功后仅一次DPB提交与输出 | Conformant | primary/backup重叠、备用独立ASO、低计数不完整回退、不同计数不拼图、非零MVD压缩备用、错误/下降cnt/覆盖恢复及多图片身份规范像素；独立完整CGO=0门禁通过 | 不输出多份冗余图；较低表示完整后丢弃其余残差，仅保留已解析头部的语法/资源检查；不执行丢失宏块的像素错误隐藏 |
+| 21：VUI/HRD参数解析生成及校验 | 安全派生bitrate/CPB、替代调度、延迟位宽、完整SPS写前/解析后Annex A/E校验和资源错误分类 | Conformant | 独立固定字节、双HRD/多CPB/非零尺度、全部已支持profile/level边界与原子拒绝；隔行Auto排除非法level；旧weighted-b VUI声明16→15由生成器重建，FFmpeg输出哈希仍41e461eb…f864236；独立完整CGO=0门禁通过 | 不把VUI/HRD声明等同实际码流HRD时序合规；编码流水线仍未自动生成buffering_period/完整HRD调度，API可读写并严格校验参数 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。

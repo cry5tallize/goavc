@@ -11,7 +11,7 @@ import (
 // 两个不同 PCM 参考帧夹一个显式加权 Bi B 帧，编码顺序 I0/I4/B2。
 // 使用不同的三个平面权重与偏移，让默认平均不能碰巧通过 Oracle。
 func generateWeightedB(output string) {
-	s := &syntax.SPS{ProfileIDC: 77, LevelIDC: 10, ChromaFormatIDC: 1, MaxNumRefFrames: 2, FrameMbsOnlyFlag: true, Direct8x8InferenceFlag: true, VUIParametersPresentFlag: true, VUI: &syntax.VUI{BitstreamRestrictionFlag: true, MotionVectorsOverPicBoundariesFlag: true, Log2MaxMVLengthHorizontal: 16, Log2MaxMVLengthVertical: 16, MaxNumReorderFrames: 1, MaxDecFrameBuffering: 2}}
+	s := &syntax.SPS{ProfileIDC: 77, LevelIDC: 10, ChromaFormatIDC: 1, MaxNumRefFrames: 2, FrameMbsOnlyFlag: true, Direct8x8InferenceFlag: true, VUIParametersPresentFlag: true, VUI: &syntax.VUI{BitstreamRestrictionFlag: true, MotionVectorsOverPicBoundariesFlag: true, Log2MaxMVLengthHorizontal: 15, Log2MaxMVLengthVertical: 15, MaxNumReorderFrames: 1, MaxDecFrameBuffering: 2}}
 	p := &syntax.PPS{DeblockingFilterControlPresentFlag: true, WeightedBipredIDC: 1}
 	srb, err := s.MarshalRBSP()
 	must(err)

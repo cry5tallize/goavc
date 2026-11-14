@@ -42,8 +42,8 @@ func fmoPacket(t *testing.T, v fmoVector, slices []fmoSliceVector) []byte {
 		MotionVectorsOverPicBoundariesFlag: true,
 		MaxBytesPerPicDenom:                0,
 		MaxBitsPerMBDenom:                  0,
-		Log2MaxMVLengthHorizontal:          16,
-		Log2MaxMVLengthVertical:            16,
+		Log2MaxMVLengthHorizontal:          15,
+		Log2MaxMVLengthVertical:            15,
 		MaxNumReorderFrames:                0,
 		MaxDecFrameBuffering:               1,
 	}

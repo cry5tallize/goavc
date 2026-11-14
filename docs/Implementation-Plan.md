@@ -584,7 +584,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 18 | `feat[decoder]: add data partition reassembly` | A/B/C按slice_id关联、分类独立reader、AU与探测CLI | PCM/I16/P/混合非零规范像素、坏分区恢复、独立完整门禁及实际CLI两帧逐字节一致 |
 | 19 | `feat[decoder]: add sp and si slice support` | 8.6切换核心、QP/QS分域、SP Skip、SI宏块映射与逐块反馈 | 正负DC/AC/色度解析解、真实Annex-B整帧及独立完整常规门禁通过 |
 | 20 | `feat[decoder]: add redundant slice handling` | 独立表示、primary优先与最小完整备用、输出和DPB单次提交 | 重叠/ASO/不完整回退/非零MVD/坏覆盖恢复规范像素及独立完整门禁通过 |
-| 21 | `feat[syntax]: add hrd parameters parsing and writing` | `hrd_parameters` | round-trip |
+| 21 | `feat[syntax]: add hrd parameters parsing and writing` | 完整VUI/HRD、参数集上下文与Level/Profile声明校验 | 固定规范字节、多CPB/尺度/延迟/预算/原子拒绝，旧非法合成声明重建且Oracle像素不变，独立完整门禁通过 |
 | 22 | `test[oracle]: add advanced profile corpus suite` | 全高级语料 | 一致 |
 | 23 | `docs[status]: publish advanced feature support matrix` | 逐项状态 | — |
 | 24 | `chore[release]: close milestone m7 gate and tag v0.9.0` | 证据 | 勾选 |

@@ -66,8 +66,8 @@ func fullVUI() *VUI {
 			BitRateScale:   2,
 			CPBSizeScale:   3,
 			CPB: []CPBEntry{
-				{BitRateValueMinus1: 10, CPBSizeValueMinus1: 20, CBRFlag: true},
-				{BitRateValueMinus1: 30, CPBSizeValueMinus1: 40, CBRFlag: false},
+				{BitRateValueMinus1: 10, CPBSizeValueMinus1: 40, CBRFlag: true},
+				{BitRateValueMinus1: 30, CPBSizeValueMinus1: 20, CBRFlag: false},
 			},
 			InitialCPBRemovalDelayLengthMinus1: 7,
 			CPBRemovalDelayLengthMinus1:        8,
@@ -81,12 +81,12 @@ func fullVUI() *VUI {
 			CPB: []CPBEntry{
 				{BitRateValueMinus1: 1, CPBSizeValueMinus1: 2, CBRFlag: false},
 			},
-			InitialCPBRemovalDelayLengthMinus1: 1,
-			CPBRemovalDelayLengthMinus1:        2,
-			DPBOutputDelayLengthMinus1:         3,
-			TimeOffsetLength:                   4,
+			InitialCPBRemovalDelayLengthMinus1: 7,
+			CPBRemovalDelayLengthMinus1:        8,
+			DPBOutputDelayLengthMinus1:         9,
+			TimeOffsetLength:                   10,
 		},
-		LowDelayHRDFlag: true,
+		LowDelayHRDFlag: false,
 
 		PicStructPresentFlag: true,
 

@@ -2,9 +2,11 @@ package syntax
 
 import (
 	"bytes"
+	"errors"
 	"reflect"
 	"testing"
 
+	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/bitstream"
 )
 
@@ -283,5 +285,103 @@ func TestSPS_MarshalRBSP_TrailingBits(t *testing.T) {
 	}
 	if _, err := ParseSPS(out); err != nil {
 		t.Fatalf("二次解析失败: %v", err)
+	}
+}
+
+// 写前必须完成上下文校验，非法嵌套VUI不能在已写出SPS头后才失败。
+func TestSPS_ContextValidationIsAtomic(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		edit func(*SPS)
+		want error
+	}{
+		{"unknown level", func(s *SPS) { s.LevelIDC = 0 }, h264.ErrUnsupported},
+		{"implicit DPB", func(s *SPS) { s.MaxNumRefFrames = 5 }, h264.ErrInvalidData},
+		{"nil VUI", func(s *SPS) { s.VUIParametersPresentFlag = true }, h264.ErrInvalidData},
+		{"VUI smaller than reference set", func(s *SPS) {
+			s.VUIParametersPresentFlag = true
+			s.VUI = &VUI{BitstreamRestrictionFlag: true, MaxDecFrameBuffering: 3}
+		}, h264.ErrInvalidData},
+		{"VUI exceeds level DPB", func(s *SPS) {
+			s.VUIParametersPresentFlag = true
+			s.VUI = &VUI{BitstreamRestrictionFlag: true, MaxDecFrameBuffering: 5}
+		}, h264.ErrInvalidData},
+		{"NAL HRD exceeds level", func(s *SPS) {
+			s.VUIParametersPresentFlag = true
+			s.VUI = &VUI{NALHRDParametersPresentFlag: true, NALHRD: &HRDParameters{CPB: []CPBEntry{{BitRateValueMinus1: 1200}}}}
+		}, h264.ErrInvalidData},
+		{"VCL HRD exceeds level", func(s *SPS) {
+			s.VUIParametersPresentFlag = true
+			s.VUI = &VUI{VCLHRDParametersPresentFlag: true, VCLHRD: &HRDParameters{CPB: []CPBEntry{{BitRateValueMinus1: 1000}}}}
+		}, h264.ErrInvalidData},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s, err := ParseSPS([]byte{0x42, 0x00, 0x0a, 0xd9, 0x42, 0xc4, 0xe4})
+			if err != nil {
+				t.Fatal(err)
+			}
+			tc.edit(s)
+			w := bitstream.NewWriter()
+			if err := w.WriteBits(3, 5); err != nil {
+				t.Fatal(err)
+			}
+			before := w.Bytes()
+			if err := s.WriteTo(w); !errors.Is(err, tc.want) {
+				t.Fatalf("写出错误 = %v，期望%v", err, tc.want)
+			}
+			if w.BitsWritten() != 3 || !bytes.Equal(w.Bytes(), before) {
+				t.Fatal("上下文非法SPS修改了调用方写入器")
+			}
+		})
+	}
+}
+
+func TestSPS_AbsentVUIIgnoresStalePointer(t *testing.T) {
+	data := []byte{0x42, 0x00, 0x0a, 0xd9, 0x42, 0xc4, 0xe4}
+	s, err := ParseSPS(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.VUI = &VUI{NALHRDParametersPresentFlag: true}
+	got, err := s.MarshalRBSP()
+	if err != nil || !bytes.Equal(got, data) {
+		t.Fatalf("未生效VUI指针影响SPS写出: %x, %v", got, err)
+	}
+}
+
+// 参数集语法仍支持8/10位与PAFF/MBAFF；解码器对PAFF的能力边界不在此改变。
+func TestSPS_ContextValidationPreservesDepthAndFieldSyntax(t *testing.T) {
+	for _, profile := range []uint8{66, 77, 88, 100, 110, 122, 244} {
+		for _, depth := range []uint32{0, 2} {
+			if depth != 0 && profile != 110 && profile != 122 && profile != 244 {
+				continue
+			}
+			for _, field := range []bool{false, true} {
+				if field && profile == 66 {
+					continue
+				}
+				for _, mbaff := range []bool{false, true} {
+					if !field && mbaff {
+						continue
+					}
+					s := &SPS{
+						ProfileIDC: profile, LevelIDC: 21, ChromaFormatIDC: 1,
+						BitDepthLumaMinus8: depth, BitDepthChromaMinus8: depth,
+						PicOrderCntType: 2, MaxNumRefFrames: 1,
+						FrameMbsOnlyFlag: !field, MbAdaptiveFrameFieldFlag: mbaff,
+						Direct8x8InferenceFlag: true,
+					}
+					data, err := s.MarshalRBSP()
+					if err != nil {
+						t.Fatalf("profile%d depth%d field%v mbaff%v写出: %v", profile, depth+8, field, mbaff, err)
+					}
+					got, err := ParseSPS(data)
+					if err != nil || got.BitDepthLumaMinus8 != depth || got.BitDepthChromaMinus8 != depth ||
+						got.FrameMbsOnlyFlag != !field || got.MbAdaptiveFrameFieldFlag != mbaff {
+						t.Fatalf("profile%d depth%d field%v mbaff%v解析: %+v, %v", profile, depth+8, field, mbaff, got, err)
+					}
+				}
+			}
+		}
 	}
 }

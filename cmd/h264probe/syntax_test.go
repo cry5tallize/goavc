@@ -293,6 +293,7 @@ func TestSyntax_ErrorsTruncationAndLimits(t *testing.T) {
 	}
 	s, p := syntaxParameters()
 	s.PicWidthInMbsMinus1 = h264.MaxFrameWidth / 16
+	s.LevelIDC = 60 // 合法Level6几何，独立触发库8192像素预算而非Annex A错误。
 	if err := runWithInput([]string{"-syntax", "-input", "-"}, bytes.NewReader(syntaxAnnexB(syntaxParameterUnits(t, s, p))), io.Discard, io.Discard); !errors.Is(err, h264.ErrResourceLimit) {
 		t.Fatal("SPS尺寸超限未拒绝", err)
 	}

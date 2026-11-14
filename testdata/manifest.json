@@ -492,10 +492,10 @@
         "m3_weighted",
         "explicit_b"
       ],
-      "sha256": "acf59a06f518dae613ba61ae62189af700a4a0f052d142e47f1ff868f61a9442",
+      "sha256": "921422549de5b2de1af66e46c2d1117f7dc4505a1c2fe340841e6829d32ac533",
       "expectedYUVSha256": "41e461ebd97d1b7aa13fef7116b4fbf8110a0216c36f5de3e8ed53ec1f864236",
       "status": "conformant",
-      "notes": "3 frames; FFmpeg 8.0 display-order YUV pixel exact; B/direct/weighted coverage."
+      "notes": "3 frames; FFmpeg 8.0 display-order YUV pixel exact; M7按规范将VUI MV长度声明16修为15并重建，独立FFmpeg输出SHA256保持不变；B/direct/weighted coverage."
     },
     {
       "name": "high_96x64_yuv420p_cabac_default_001",

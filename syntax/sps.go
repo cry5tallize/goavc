@@ -200,7 +200,7 @@ func ParseSPS(rbsp []byte) (*SPS, error) {
 		return nil, err
 	}
 	if s.VUIParametersPresentFlag {
-		if s.VUI, err = ParseVUI(r); err != nil {
+		if s.VUI, err = parseVUI(r); err != nil {
 			return nil, fmt.Errorf("syntax: sps vui_parameters: %w", err)
 		}
 	}
@@ -209,6 +209,9 @@ func ParseSPS(rbsp []byte) (*SPS, error) {
 		return nil, fmt.Errorf("syntax: sps trailing bits: %w", err)
 	}
 	if err := s.validateSupported(); err != nil {
+		return nil, err
+	}
+	if err := s.validateVUIForSPS(); err != nil {
 		return nil, err
 	}
 	return s, nil
@@ -327,6 +330,16 @@ func (s *SPS) validateSupported() error {
 		return fmt.Errorf("syntax: field coding requires direct_8x8_inference and non-Baseline profile: %w", h264.ErrInvalidData)
 	}
 	return nil
+}
+
+// validateVUIForSPS 由解析结束和写出预验证共同调用。VUI 未出现时使用
+// 零值语法结构检查 level 和推导的 DPB，不把陈旧的非生效指针当作信令。
+func (s *SPS) validateVUIForSPS() error {
+	if s.VUIParametersPresentFlag {
+		return s.VUI.ValidateForSPS(s)
+	}
+	var absent VUI
+	return absent.ValidateForSPS(s)
 }
 
 // effectiveChromaFormatIDC 返回实际生效的色度格式。
