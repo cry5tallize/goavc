@@ -9,7 +9,7 @@ import (
 // Residual 写出 coded_block_flag=1 后的显著性、末位置、绝对值与符号。
 // 编解码共享类别基址与规范扫描上下文表；全零块必须由调用方写 CBF=0。
 func (e *Encoder) Residual(ctx *[ContextCount]Context, cat int, src []int32, scan []int) (int, error) {
-	if ctx == nil || cat < 0 || cat >= 6 || len(scan) != [6]int{16, 15, 16, 4, 15, 64}[cat] {
+	if ctx == nil || !residualSizeValid(cat, len(scan)) {
 		return 0, fmt.Errorf("cabac: invalid residual encoding category: %w", h264.ErrInvalidData)
 	}
 	var positions [64]int
@@ -34,10 +34,7 @@ func (e *Encoder) Residual(ctx *[ContextCount]Context, cat int, src []int32, sca
 	}
 	lastPos := positions[count-1]
 	for pos := 0; pos < len(scan)-1; pos++ {
-		sig, last := pos, pos
-		if cat == Luma8x8 {
-			sig, last = significant8[pos], last8[pos]
-		}
+		sig, last := residualPositionContext(cat, len(scan), pos)
 		if src[scan[pos]] == 0 {
 			e.Bin(&ctx[significantBase[cat]+sig], 0)
 			continue
@@ -66,7 +63,7 @@ func (e *Encoder) Residual(ctx *[ContextCount]Context, cat int, src []int32, sca
 			ones++
 		} else {
 			e.Bin(&ctx[levelBase[cat]+inc], 1)
-			inc = 5 + min(4, greater)
+			inc = residualGreaterContext(cat, len(scan), greater)
 			for magnitude := int64(2); magnitude < 15; magnitude++ {
 				if magnitude < level {
 					e.Bin(&ctx[levelBase[cat]+inc], 1)

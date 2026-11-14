@@ -210,6 +210,7 @@ High10渐进420解码已接入，限定工具与证据逐项列于下表；既�
 | 5：High10编码 | 原生LE输入与重建，双熵I/P/B、I4/I8/I16、矩阵/权重/AQ/前瞻/码控，语法QP-12..51、显式PCM及CLI熵选项 | Conformant | 32配置×12帧共384帧FFmpeg/自研解码/本地重建三方逐采样一致；原失败的CAVLC自定义8×8矩阵组合保留并通过（去块按整个8×8块判断非零，保留子流nC）；真实CLI输出与FFmpeg原始LE哈希同为b47b60770a076d3073f7c58298d87642136a67afaadf98ff3987bcd39a9ce439；独立提交完整常规门禁通过 | 仅渐进420；B仍采用既有非参考spatial-direct工具，隔行与422/444另项接入；QP最小值不承诺transform bypass无损 |
 | 6：422图像与色度几何 | 8/10-bit422平面按水平2、垂直1采样，完整色度行、边缘扩展、格式隔离池；复用已验收8×16色度预测 | Conformant | 新增TestPicture422_GeometrySamplesAndPoolIsolation先因Unsupported失败后通过，独立48×32/24×32几何、0/255/1023边缘和池复用通过；矩形DC/Plane解析解及独立提交完整常规门禁通过 | 本项仅存储与共享预测；High422编解码分别由第7/10项验收 |
 | 422 DC变换前置 | 2×4 Hadamard、八DC扫描、正反向共享内核，422 DC的QP'C+3与规范舍入，原子溢出拒绝 | Conformant | 八个规范空间基、QP分段/缩放、原地运算与正负极值解析测试通过；独立提交完整常规门禁通过 | 量化复用QuantDC并传QP'C+3；逆量化入口传未加3的QP'C；Pipeline在第7/10项接入 |
+| 422 CABAC残差前置 | ChromaDC类别接受八项扫描，sig/last增量与幅值上下文按422规则选择，420路径不变 | Conformant | 独立bin/上下文轨迹、四种CBF邻域、截断与原420回归通过；独立提交完整常规门禁通过 | CBF仍为97..100；八DC不新增ctxBlockCat，后续流水线必须提供DC2x4Scan |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。

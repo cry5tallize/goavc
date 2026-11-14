@@ -5,7 +5,7 @@ import (
 	h264 "github.com/goavc/h264"
 )
 
-// 残差类别对应 Spec: 表 9-42 的 ctxBlockCat（4:2:0、4×4 路径）。
+// 残差类别对应 Spec: 表 9-42 的 ctxBlockCat；422 DC 仍为 ChromaDC，不能新增类别编号。
 const (
 	LumaDC = iota
 	LumaAC
@@ -23,14 +23,43 @@ var levelBase = [6]int{227, 237, 247, 257, 266, 426}
 var significant8 = [63]int{0, 1, 2, 3, 4, 5, 5, 4, 4, 3, 3, 4, 4, 4, 5, 5, 4, 4, 4, 4, 3, 3, 6, 7, 7, 7, 8, 9, 10, 9, 8, 7, 7, 6, 11, 12, 13, 11, 6, 7, 8, 9, 14, 10, 9, 8, 6, 11, 12, 13, 11, 6, 9, 14, 10, 9, 11, 12, 13, 11, 14, 10, 12}
 var last8 = [63]int{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8}
 
+// residualSizeValid 保持 420 的四项输入，并为同一 ctxBlockCat=3 接受八项 DC。
+// coded_block_flag 仍用 85+4*ChromaDC+condA+2*condB，即 97..100。
+func residualSizeValid(cat, size int) bool {
+	if cat < 0 || cat >= 6 {
+		return false
+	}
+	return size == [6]int{16, 15, 16, 4, 15, 64}[cat] || cat == ChromaDC && size == 8
+}
+
+// residualPositionContext 来自 Spec: 9.3.3.1.3；422 DC 的显著性和末位
+// 共用 min(levelListIdx/2,2)，第八项由剩余位置推导，不编码 sig/last。
+func residualPositionContext(cat, size, pos int) (int, int) {
+	if cat == Luma8x8 {
+		return significant8[pos], last8[pos]
+	}
+	if cat == ChromaDC && size == 8 {
+		inc := min(pos/2, 2)
+		return inc, inc
+	}
+	return pos, pos
+}
+
+// residualGreaterContext 的 422 DC 饱和值为 3，其余块为 4。
+// 因而 422 不得访问 ctxIdx=266（该位置已属于 ChromaAC）。
+func residualGreaterContext(cat, size, greater int) int {
+	if cat == ChromaDC && size == 8 {
+		return 5 + min(3, greater)
+	}
+	return 5 + min(4, greater)
+}
+
 // Residual 解码 coded_block_flag=1 之后的显著性、末系数、幅值与符号。
 // scan 指定有效系数到目标数组的映射，AC 使用跳过 DC 的 15 项扫描表。
 // Spec: 9.3.3.1.3，先顺序读取显著性，再按逆扫描顺序读取幅值。
+// ChromaDC 的 scan 可为 DC2x2Scan 或 DC2x4Scan；CBF=0 由调用方清零并跳过。
 func (d *Decoder) Residual(ctx *[ContextCount]Context, cat int, dst []int32, scan []int) (int, error) {
-	if cat < 0 || cat >= 6 || ctx == nil || len(scan) < 1 || len(scan) > 64 {
-		return 0, fmt.Errorf("cabac: invalid residual category or size: %w", h264.ErrInvalidData)
-	}
-	if len(scan) != [6]int{16, 15, 16, 4, 15, 64}[cat] {
+	if ctx == nil || !residualSizeValid(cat, len(scan)) {
 		return 0, fmt.Errorf("cabac: residual scan size does not match category: %w", h264.ErrInvalidData)
 	}
 	seen := uint64(0)
@@ -49,10 +78,7 @@ func (d *Decoder) Residual(ctx *[ContextCount]Context, cat int, dst []int32, sca
 			count++
 			break
 		}
-		sig, last := i, i
-		if cat == Luma8x8 {
-			sig, last = significant8[i], last8[i]
-		}
+		sig, last := residualPositionContext(cat, len(scan), i)
 		if d.Bin(&ctx[significantBase[cat]+sig]) == 0 {
 			if d.Err() != nil {
 				return 0, d.Err()
@@ -73,7 +99,7 @@ func (d *Decoder) Residual(ctx *[ContextCount]Context, cat int, dst []int32, sca
 		}
 		level := int32(1)
 		if d.Bin(&ctx[levelBase[cat]+inc]) != 0 {
-			inc = 5 + min(4, greater)
+			inc = residualGreaterContext(cat, len(scan), greater)
 			level = 2
 			for level < 15 && d.Err() == nil && d.Bin(&ctx[levelBase[cat]+inc]) != 0 {
 				level++
