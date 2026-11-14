@@ -78,7 +78,7 @@
 | SPS | 7.3.2.1 | Partial | Partial | M7扩展Profile及帧/场/MBAFF语法通过规范字节；真实隔行h264probe成功，像素流水线的场/MBAFF仍拒绝，组合级范围见台账 |
 | PPS | 7.3.2.2 | Partial | Partial | 核心与缩放扩展；M7 FMO 0–6读写、动态cycle与帧场地址映射通过独立规范字节/解析解；Baseline/Extended CAVLC像素遍历/ASO与实际CLI通过，组合限制见台账 |
 | VUI / HRD | E.1 / E.2 / Annex A | Conformant | Conformant | 完整条件参数读写、NAL/VCL调度/尺度、level倍率/DPB及显式预算通过规范固定字节和边界测试；状态仅语法API，不声称编码流水线已输出完整HRD/SEI时序 |
-| ScalingList | 7.3.2.1.1.1 | Conformant | Partial | M3 4×4/8×8、SPS/PPS fallback、JVT 与实际应用 Oracle |
+| ScalingList / ScalingMatrix | 7.3.2.1.1.1 | Conformant | Conformant | SPS/PPS 4×4/8×8、444十二列表与fallback A/B；完整presence组合、原生8/10-bit编解码Oracle、尾部错误写前原子拒绝、缓存/语法一致性和固定反量化值通过；Profile禁止的扩展不会静默输出 |
 | SEI（user_data / recovery point） | 7.3.2.3 | Partial | Partial | M1 框架与 user_data；其余语义消息 M2/M3 |
 | Slice Header | 7.3.3 | Conformant | Partial | M3 I/P/B、重排、权重和 MMCO 参数保留并消费；范围外工具明确拒绝 |
 | Macroblock Layer | 7.3.4 | Conformant | Partial | M4 I_PCM/I4/I16 的 CBP/QP/MPM/残差已验证；P/B 编码在 M5 |

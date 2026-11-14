@@ -26,7 +26,7 @@ func TestSwitchSliceTruncatedPrefix(t *testing.T) {
 // TestUnsupportedQPPPrime 验证 transform bypass 在 M1 显式拒绝。
 func TestUnsupportedQPPPrime(t *testing.T) {
 	rbsp := encodeTestSPS(t, testSPS{
-		profile:         100,
+		profile:         244,
 		chroma:          1,
 		qpprime:         true,
 		frameMbsOnly:    true,

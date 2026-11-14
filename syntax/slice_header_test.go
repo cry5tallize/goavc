@@ -126,6 +126,7 @@ func TestParseSliceHeader_DeltaPOCBottom(t *testing.T) {
 
 func TestParseSliceHeader_POCType1(t *testing.T) {
 	sps := testSPSForSlice()
+	sps.ProfileIDC = 77 // B切片属于Main，不再用非法Baseline上下文。
 	sps.PicOrderCntType = 1
 	sps.DeltaPicOrderAlwaysZeroFlag = false
 	pps := testPPSForSlice()
@@ -155,6 +156,7 @@ func TestParseSliceHeader_POCType1(t *testing.T) {
 
 func TestParseSliceHeader_FieldPicture(t *testing.T) {
 	sps := testSPSForSlice()
+	sps.ProfileIDC = 77
 	sps.FrameMbsOnlyFlag = false
 	pps := testPPSForSlice()
 	w := bitstream.NewWriter()

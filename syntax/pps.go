@@ -191,6 +191,9 @@ func ParsePPS(rbsp []byte, sps *SPS) (*PPS, error) {
 	if err := consumeRBSPTrailingBits(r); err != nil {
 		return nil, fmt.Errorf("syntax: pps trailing bits: %w", err)
 	}
+	if err := validateProfilePPS(sps, p); err != nil {
+		return nil, err
+	}
 	return p, nil
 }
 
@@ -356,7 +359,10 @@ func (p *PPS) validateForWrite(sps *SPS) error {
 			return err
 		}
 	}
-	return nil
+	if err := validateProfilePPS(sps, p); err != nil {
+		return err
+	}
+	return validatePPSScalingLists(sps, p)
 }
 
 // scalingListCount 仅在启用8×8变换时追加2/6个8×8列表（Spec: 7.3.2.2）。

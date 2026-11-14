@@ -292,6 +292,9 @@ func usesHighProfileSyntax(profile uint8) bool {
 
 // validateSupported 限制已经接入共享内核与流水线的工具组合。
 func (s *SPS) validateSupported() error {
+	if err := validateProfileSPS(s); err != nil {
+		return err
+	}
 	switch s.ProfileIDC {
 	case 66, 77, 88, 100, 110, 122, 244:
 	default:

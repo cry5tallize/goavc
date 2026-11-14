@@ -56,7 +56,7 @@
 | SPS 解析与序列化 | 7.3.2.1 | Baseline/Main/High、High10/422/444的8/10-bit、独立色平面、帧/场与MBAFF语法、VUI/ScalingList与裁剪 | Conformant | 原语法/ffprobe及扩展Profile像素Oracle、场/MBAFF固定字节与真实隔行语法探测通过 | qpprime仍拒绝；MBAFF像素重建见第13项，PAFF场图像及单色解码仍拒绝 |
 | PPS 解析与序列化 | 7.3.2.2 | 核心字段、可选8×8/scaling扩展、FMO 0–6参数及尺寸校验 | Partial | 原pps/corpus回归；M7 FMO固定规范字节、七类映射、坏表与分配前限额测试 | FMO语法证据见第15项，不代表FMO宏块流水线已接入；完整组合限制另行验收 |
 | VUI / HRD | E.1/E.2、Annex A | 完整条件语法、NAL/VCL CPB替代调度、profile/level声明与显式资源预算 | Conformant | M7第21项固定非字节对齐VUI/HRD字节、尺度/计数/32项/顺序/截断、level/profile倍率与DPB边界；完整独立门禁通过 | 参数集验证不代替实际AU码率、SEI时序与MV范围的运行时证明 |
-| ScalingList | 7.3.2.1.1.1 | 4×4/8×8、保留原始 delta 序列 | Partial | `scaling_list_test.go`、`sps_write_test.go` | 无自定义矩阵真实语料；应用层（反量化）在 M3 |
+| ScalingList / ScalingMatrix | 7.3.2.1.1.1、7.4.2.1/2 | SPS/PPS 4×4/8×8、444十二列表、fallback A/B与写前原子校验 | Conformant | 原4096 presence组合×SPS/PPS来源、444/独立平面Oracle；尾部delta/缓存分裂/最终列表失败无部分输出、真实反量化固定数值；完整独立门禁通过 | 语法支持不放开Profile禁止的PPS扩展，不表示transform bypass或单色流水线已接入 |
 | SEI 基础 | 7.3.2.3 | payloadType/Size 扩展、user_data_unregistered | Partial | `sei_test.go`、`corpus_test.go` | 仅框架与 user_data；recovery point 等语义消息在 M2/M3 |
 | Slice Header（最小） | 7.3.3 | AU 判定字段、POC type 0/1、field flags、redundant_pic_cnt | Partial | `slice_header_test.go`、`corpus_test.go` | 参考列表/加权预测/去块等字段在 M2 扩展；SP/SI 返回 `ErrUnsupported`（M7） |
 
@@ -228,6 +228,7 @@ High10渐进420编解码及High422/High444渐进8/10-bit解码已接入，限定
 | 19：SP/SI切片解码 | 规范8.6 primary/secondary/SI系数域合成，QP/QS及色度域分离，SP Skip切换量化，SI特殊与普通I宏块分派 | Conformant | 正负DC/AC空间基、QS≠QP、色度DC Hadamard域、分量偏移、SI逐块重建反馈、SP Skip与真实Annex-B整帧解析解；修正测试CBP码字31→32后完整独立CGO=0门禁通过 | 仅Extended逐行8-bit420/CAVLC/flat4×4，合法但未接入的位深/采样/隔行/矩阵组合明确拒绝，不生成SP/SI编码；规范像素证据不冒充外部播放器互操作 |
 | 20：冗余slice解码 | 独立redundant_pic_cnt表示重建，优先primary/最小完整备用；失败归还图像，成功后仅一次DPB提交与输出 | Conformant | primary/backup重叠、备用独立ASO、低计数不完整回退、不同计数不拼图、非零MVD压缩备用、错误/下降cnt/覆盖恢复及多图片身份规范像素；独立完整CGO=0门禁通过 | 不输出多份冗余图；较低表示完整后丢弃其余残差，仅保留已解析头部的语法/资源检查；不执行丢失宏块的像素错误隐藏 |
 | 21：VUI/HRD参数解析生成及校验 | 安全派生bitrate/CPB、替代调度、延迟位宽、完整SPS写前/解析后Annex A/E校验和资源错误分类 | Conformant | 独立固定字节、双HRD/多CPB/非零尺度、全部已支持profile/level边界与原子拒绝；隔行Auto排除非法level；旧weighted-b VUI声明16→15由生成器重建，FFmpeg输出哈希仍41e461eb…f864236；独立完整CGO=0门禁通过 | 不把VUI/HRD声明等同实际码流HRD时序合规；编码流水线仍未自动生成buffering_period/完整HRD调度，API可读写并严格校验参数 |
+| ScalingMatrix与组合级约束 | 列表全范围预检、解析缓存与真实矩阵一致；已知Profile的SPS/PPS/slice/分区组合限制 | Conformant | 十二列表/既有4096 fallback组合、解析矩阵到反量化固定数值、写前无污染、Profile工具矩阵与错误分类；旧Baseline B/场/CABAC及High冗余等非法夹具迁为合法上下文，完整独立CGO=0门禁通过 | 规范禁止组合返回ErrInvalidData；合法但未实现的9/12/14-bit、单色、PAFF或transform bypass仍ErrUnsupported，不以拒绝路径宣称完整Profile支持 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。

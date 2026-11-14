@@ -13,8 +13,8 @@ import (
 //   - Size 是边长（4 或 8），系数总数为 Size*Size；
 //   - Deltas 是按语法顺序保存的 delta_scale 值，序列化时原样回写，
 //     因此 parse→serialize 可以逐字节复现原始码流；
-//   - Values 是由 Deltas 按 §7.3.2.1.1.1 推导出的矩阵值，仅用于消费方，
-//     序列化不读取它。
+//   - Values 是由 Deltas 按 §7.3.2.1.1.1 推导出的消费方缓存；
+//     写出时验证其与 Deltas 一致，但仍按原 Deltas 保留语法表示。
 type ScalingList struct {
 	Size   int
 	Deltas []int32
@@ -36,7 +36,7 @@ func (s *ScalingList) Count() int {
 // ErrInvalidData，而不是截断后继续解析。
 func ParseScalingList(r *bitstream.Reader, size int) (*ScalingList, error) {
 	if size != 4 && size != 8 {
-		return nil, fmt.Errorf("syntax: scaling list size %d must be 4 or 8", size)
+		return nil, fmt.Errorf("syntax: scaling list size %d must be 4 or 8: %w", size, h264.ErrInvalidData)
 	}
 	count := size * size
 	list := &ScalingList{
@@ -72,31 +72,42 @@ func ParseScalingList(r *bitstream.Reader, size int) (*ScalingList, error) {
 
 // WriteTo 按保存的 Deltas 重新写出 scaling_list。
 //
-// 写出前会重放一遍推导过程，确保 Deltas 的数量与 Size 匹配；数量过多
-// 或不足都返回错误，不会输出半个矩阵。
+// 写出前完整重放 Deltas；非法列表不会改变 writer。若带 Values 缓存，
+// 非 useDefault 列表必须与语法一致，避免本地消费者和回读码流使用不同矩阵。
 func (s *ScalingList) WriteTo(w *bitstream.Writer) error {
-	if s == nil {
-		return fmt.Errorf("syntax: nil scaling list")
+	if err := s.validateSyntax(); err != nil {
+		return err
 	}
-	if s.Size != 4 && s.Size != 8 {
-		return fmt.Errorf("syntax: scaling list size %d must be 4 or 8", s.Size)
+	for j, delta := range s.Deltas {
+		if err := w.WriteSE(delta); err != nil {
+			return fmt.Errorf("syntax: write scaling_list delta[%d]: %w", j, err)
+		}
+	}
+	return nil
+}
+
+// validateSyntax 不分配临时码流，允许只有 Deltas 的写入用列表。
+// Values-only 是选择器的已有内存接口，但不能冒充可序列化语法。
+func (s *ScalingList) validateSyntax() error {
+	if s == nil || (s.Size != 4 && s.Size != 8) {
+		return fmt.Errorf("syntax: missing or invalid scaling list size: %w", h264.ErrInvalidData)
 	}
 	count := s.Size * s.Size
-	lastScale := int32(8)
-	nextScale := int32(8)
+	if s.Values != nil && len(s.Values) != count {
+		return fmt.Errorf("syntax: scaling list has %d cached values, want %d: %w", len(s.Values), count, h264.ErrInvalidData)
+	}
+	lastScale, nextScale := int32(8), int32(8)
 	di := 0
-	for j := 0; j < count; j++ {
+	useDefault := len(s.Deltas) > 0 && s.Deltas[0] == -8
+	for j := range count {
 		if nextScale != 0 {
 			if di >= len(s.Deltas) {
-				return fmt.Errorf("syntax: scaling list needs more than %d deltas", len(s.Deltas))
+				return fmt.Errorf("syntax: scaling list needs more than %d deltas: %w", len(s.Deltas), h264.ErrInvalidData)
 			}
 			delta := s.Deltas[di]
 			di++
 			if delta < -128 || delta > 127 {
-				return fmt.Errorf("syntax: scaling list delta[%d] = %d out of range", j, delta)
-			}
-			if err := w.WriteSE(delta); err != nil {
-				return fmt.Errorf("syntax: write scaling_list delta[%d]: %w", j, err)
+				return fmt.Errorf("syntax: scaling list delta[%d] = %d out of range: %w", j, delta, h264.ErrInvalidData)
 			}
 			nextScale = (lastScale + delta + 256) % 256
 		}
@@ -104,10 +115,13 @@ func (s *ScalingList) WriteTo(w *bitstream.Writer) error {
 		if nextScale != 0 {
 			value = nextScale
 		}
+		if !useDefault && s.Values != nil && s.Values[j] != value {
+			return fmt.Errorf("syntax: scaling list cached value[%d] = %d differs from syntax value %d: %w", j, s.Values[j], value, h264.ErrInvalidData)
+		}
 		lastScale = value
 	}
 	if di != len(s.Deltas) {
-		return fmt.Errorf("syntax: scaling list has %d unused deltas", len(s.Deltas)-di)
+		return fmt.Errorf("syntax: scaling list has %d unused deltas: %w", len(s.Deltas)-di, h264.ErrInvalidData)
 	}
 	return nil
 }

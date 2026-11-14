@@ -51,6 +51,11 @@ func SelectScalingMatrices(s *SPS, p *PPS) (ScalingMatrices, error) {
 		if list == nil || (list.Size != 4 && list.Size != 8) || list.Size*list.Size != len(dst) || len(list.Values) != len(dst) {
 			return fmt.Errorf("syntax: missing or invalid scaling list dimensions: %w", h264.ErrInvalidData)
 		}
+		if len(list.Deltas) != 0 {
+			if err := list.validateSyntax(); err != nil {
+				return err
+			}
+		}
 		if len(list.Deltas) > 0 && list.Deltas[0] == -8 {
 			copy(dst, preset)
 			return nil

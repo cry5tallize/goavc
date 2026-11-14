@@ -279,26 +279,21 @@ func TestParseSPS_POCType1(t *testing.T) {
 	}
 }
 
-func TestParseSPS_Unsupported(t *testing.T) {
-	tests := map[string]testSPS{
-		"unsupported profile": {
-			profile: 44, chroma: 1, frameMbsOnly: true,
-			widthMbsMinus1: 3, heightMapMinus1: 2,
-		},
-		"chroma 422": {
-			profile: 100, chroma: 2, frameMbsOnly: true,
-			widthMbsMinus1: 3, heightMapMinus1: 2,
-		},
-		"high10": {
-			profile: 100, chroma: 1, lumaDepth: 2, chromaDepth: 2, frameMbsOnly: true,
-			widthMbsMinus1: 3, heightMapMinus1: 2,
-		},
+func TestParseSPS_ProfileAndSupportErrors(t *testing.T) {
+	tests := map[string]struct {
+		params testSPS
+		want   error
+	}{
+		"unsupported profile":     {testSPS{profile: 44, chroma: 1, frameMbsOnly: true, widthMbsMinus1: 3, heightMapMinus1: 2}, h264.ErrUnsupported},
+		"High forbids 422":        {testSPS{profile: 100, chroma: 2, frameMbsOnly: true, widthMbsMinus1: 3, heightMapMinus1: 2}, h264.ErrInvalidData},
+		"High forbids 10-bit":     {testSPS{profile: 100, chroma: 1, lumaDepth: 2, chromaDepth: 2, frameMbsOnly: true, widthMbsMinus1: 3, heightMapMinus1: 2}, h264.ErrInvalidData},
+		"legal unsupported 9-bit": {testSPS{profile: 110, chroma: 1, lumaDepth: 1, chromaDepth: 1, frameMbsOnly: true, widthMbsMinus1: 3, heightMapMinus1: 2}, h264.ErrUnsupported},
 	}
-	for name, p := range tests {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			rbsp := encodeTestSPS(t, p)
-			if _, err := ParseSPS(rbsp); !errors.Is(err, h264.ErrUnsupported) {
-				t.Fatalf("错误 = %v，期望 ErrUnsupported", err)
+			rbsp := encodeTestSPS(t, tc.params)
+			if _, err := ParseSPS(rbsp); !errors.Is(err, tc.want) {
+				t.Fatalf("错误 = %v，期望 %v", err, tc.want)
 			}
 		})
 	}

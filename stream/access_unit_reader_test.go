@@ -177,6 +177,7 @@ func TestAUReader_ReusedNALBufferAndAVCC(t *testing.T) {
 
 func TestAUReader_CABACTerminalAndPrefixTail(t *testing.T) {
 	params := auParameters()
+	params[0][1] = 77 // CABAC必须使用Main，不能借非法Baseline参数集。
 	// PPS entropy_coding_mode_flag=1；I slice头部不含cabac_init_idc。
 	cabac := append([]byte{0x68}, auBits("1 1 1 0 1 1 1 0 00 1 1 1 0 0 0 1")...)
 	slice := append(auSlice("1", "0000", "0000", true), 0, 0, 3)

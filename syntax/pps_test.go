@@ -122,7 +122,6 @@ func TestPPS_RoundTrip_OptionalBlock(t *testing.T) {
 		ChromaQPIndexOffset:                2,
 		DeblockingFilterControlPresentFlag: true,
 		ConstrainedIntraPredFlag:           true,
-		RedundantPicCntPresentFlag:         true,
 		HasOptionalBlock:                   true,
 		Transform8x8ModeFlag:               true,
 		PicScalingMatrixPresentFlag:        true,

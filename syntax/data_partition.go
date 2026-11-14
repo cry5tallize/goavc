@@ -75,6 +75,9 @@ func ParseDataPartitionA(in DataPartitionInput, sps *SPS, ppsByID map[uint32]*PP
 		return nil, fmt.Errorf("syntax: partition A slice_header truncated at bit %d: %w", in.BitLength, h264.ErrInvalidData)
 	}
 	pps := ppsByID[h.PicParameterSetID]
+	if err := validateProfileSlice(sps, pps, h, true); err != nil {
+		return nil, err
+	}
 	if pps.EntropyCodingModeFlag {
 		return nil, fmt.Errorf("syntax: CABAC is not allowed for data partitions: %w", h264.ErrInvalidData)
 	}

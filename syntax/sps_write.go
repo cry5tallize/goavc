@@ -228,5 +228,8 @@ func (s *SPS) validateForWrite() error {
 	if err := s.validateSupported(); err != nil {
 		return err
 	}
+	if err := validateSPSScalingLists(s); err != nil {
+		return err
+	}
 	return s.validateVUIForSPS()
 }

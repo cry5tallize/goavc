@@ -420,5 +420,8 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 	}
 
 	h.HeaderBits = r.BitsRead()
+	if err := validateProfileSlice(sps, pps, h, false); err != nil {
+		return nil, err
+	}
 	return h, nil
 }
