@@ -37,7 +37,7 @@ func (e *Encoder) parameters() error {
 		}
 		// I_PCM 大小决策上限 + EBSP 最坏扩展，保守按每 MB 600 字节计算。
 		// 在 New 阶段即可拒绝不够的显式 Level；不依赖内容或 CQP 平均码率猜测。
-		bitsPerFrame := (fs*600 + int64(e.slices)*64 + 256) * 8
+		bitsPerFrame := (fs*int64(600*c.PixelFormat.BitDepth()/8) + int64(e.slices)*64 + 256) * 8
 		if bitsPerFrame*int64(c.FPSNum) > int64(l.br)*1000*int64(c.FPSDen) || int64(c.Bitrate) > int64(l.br)*1000 {
 			continue
 		}
@@ -54,6 +54,8 @@ func (e *Encoder) parameters() error {
 		return fmt.Errorf("encoder: dimensions/frame rate/bitrate exceed level %d: %w", c.Level, h264.ErrUnsupported)
 	}
 	e.sps = &syntax.SPS{ProfileIDC: 66, ConstraintSetFlags: [6]bool{true, true}, LevelIDC: uint8(selected), ChromaFormatIDC: 1, PicOrderCntType: 2, MaxNumRefFrames: 1, PicWidthInMbsMinus1: uint32(mw - 1), PicHeightInMapUnitsMinus1: uint32(mh - 1), FrameMbsOnlyFlag: true, Direct8x8InferenceFlag: true, FrameCroppingFlag: c.Width != mw*16 || c.Height != mh*16, FrameCropRightOffset: uint32((mw*16 - c.Width) / 2), FrameCropBottomOffset: uint32((mh*16 - c.Height) / 2), VUIParametersPresentFlag: true, VUI: &syntax.VUI{TimingInfoPresentFlag: true, NumUnitsInTick: uint32(c.FPSDen), TimeScale: uint32(c.FPSNum * 2), FixedFrameRateFlag: true, BitstreamRestrictionFlag: true, MotionVectorsOverPicBoundariesFlag: true, MaxDecFrameBuffering: 1}}
+	// E.2.1：显式声明保守MV范围，不以结构零值错误地承诺仅零运动。
+	e.sps.VUI.Log2MaxMVLengthHorizontal, e.sps.VUI.Log2MaxMVLengthVertical = 15, 15
 	e.pps = &syntax.PPS{PicInitQPMinus26: int32(c.QP - 26), DeblockingFilterControlPresentFlag: true}
 	if c.Profile == h264.ProfileMain {
 		e.sps.ProfileIDC = 77
@@ -62,6 +64,11 @@ func (e *Encoder) parameters() error {
 	if c.Profile == h264.ProfileHigh {
 		e.sps.ProfileIDC = 100
 		e.sps.ConstraintSetFlags = [6]bool{}
+	}
+	if c.Profile == h264.ProfileHigh10 {
+		e.sps.ProfileIDC = 110
+		e.sps.ConstraintSetFlags = [6]bool{}
+		e.sps.BitDepthLumaMinus8, e.sps.BitDepthChromaMinus8 = 2, 2
 	}
 	e.pps.EntropyCodingModeFlag = e.cabac
 	e.pps.WeightedPredFlag = e.autoWeights || e.fixedWeights != nil

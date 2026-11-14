@@ -3,13 +3,13 @@ package encoder
 import "github.com/goavc/h264/bitstream"
 
 // cabacZeroWordPayload 实施 Spec: 7.4.2.10 的 bin 密度上限。
-// 8-bit 4:2:0 的 RawMbBits=3072；不计 Annex-B start code，NAL header 计1字节。
+// 4:2:0的RawMbBits=384*bitDepth；不计Annex-B start code，NAL header计1字节。
 // 将不等式乘96消去分数：96*bins <= 1024*nalBytes + 3*RawMbBits*mbs。
 // 每 slice 分别满足该式，则相加后整 picture 也满足；无需持有全部 slice。
 // 调用方计数由已限界图像生成，uint64 中间值不会溢出。
-func cabacZeroWordPayload(rbsp []byte, bins uint64, mbs int) []byte {
+func cabacZeroWordPayload(rbsp []byte, bins uint64, mbs, bitDepth int) []byte {
 	ebsp := bitstream.RBSPToEBSP(rbsp)
-	allowance := uint64(mbs) * 3072 * 3
+	allowance := uint64(mbs) * uint64(384*bitDepth) * 3
 	if bins*96 <= uint64(len(ebsp)+1)*1024+allowance {
 		return ebsp
 	}

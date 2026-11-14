@@ -14,7 +14,7 @@ import (
 // 候选与4×4共享三平面RD代价；默认关闭，Baseline/Main不可使用。
 func WithTransform8x8() Option {
 	return func(e *Encoder) error {
-		if e.cfg.Profile != h264.ProfileHigh {
+		if e.cfg.Profile != h264.ProfileHigh && e.cfg.Profile != h264.ProfileHigh10 {
 			return fmt.Errorf("encoder: 8x8 transform requires High profile: %w", h264.ErrUnsupported)
 		}
 		e.transform8 = true
@@ -90,8 +90,8 @@ func reconstruct8(pl *picture.Plane, x, y int, levels *[64]int32, qp int, matrix
 	transform.IDCT8x8(&out, &coeff)
 	for j := 0; j < 8; j++ {
 		for i := 0; i < 8; i++ {
-			value := int32(pl.Pix(x+i, y+j)) + out[j*8+i]
-			pl.SetPix(x+i, y+j, byte(max(0, min(255, value))))
+			value := int32(pl.Sample(x+i, y+j)) + out[j*8+i]
+			pl.SetSample(x+i, y+j, uint16(max(0, min((1<<pl.BitDepth)-1, value))))
 		}
 	}
 }
@@ -106,7 +106,7 @@ func (c *cabacWriter) transformFlag(s *frameState, addr int) {
 	c.bin(399+inc, flag(s.info[addr].transform8))
 }
 
-func (s *frameState) samples8(addr, bx, by int) (prediction.Intra8x8Samples, bool, bool) {
+func (s *frameState) samples8(addr, bx, by int) (prediction.Intra8x8Samples16, bool, bool) {
 	mw := s.pic.MBWidth
 	mbx := addr % mw
 	x, y := mbx*16+bx*8, addr/mw*16+by*8
@@ -120,22 +120,22 @@ func (s *frameState) samples8(addr, bx, by int) (prediction.Intra8x8Samples, boo
 	if bx == 0 && by == 0 {
 		topLeft = mbx > 0 && s.available(addr, addr-mw-1)
 	}
-	a := prediction.Intra8x8Samples{TopLeftAvailable: topLeft}
+	a := prediction.Intra8x8Samples16{TopLeftAvailable: topLeft}
 	p := &s.pic.Planes[0]
 	if topLeft {
-		a.TopLeft = p.Pix(x-1, y-1)
+		a.TopLeft = p.Sample(x-1, y-1)
 	}
 	if top {
 		for i := 0; i < 16; i++ {
-			a.Top[i] = p.Pix(x+min(i, 7), y-1)
+			a.Top[i] = p.Sample(x+min(i, 7), y-1)
 			if i >= 8 && topRight {
-				a.Top[i] = p.Pix(x+i, y-1)
+				a.Top[i] = p.Sample(x+i, y-1)
 			}
 		}
 	}
 	if left {
 		for i := 0; i < 8; i++ {
-			a.Left[i] = p.Pix(x-1, y+i)
+			a.Left[i] = p.Sample(x-1, y+i)
 		}
 	}
 	return a, top, left
@@ -150,14 +150,14 @@ func (s *frameState) analyzeIntra8(addr int) residual {
 	for block := 0; block < 4; block++ {
 		bx, by := block%2, block/2
 		a, top, left := s.samples8(addr, bx, by)
-		var best [64]byte
+		var best [64]uint16
 		bestMode, bestCost := 2, int(^uint(0)>>1)
 		for mode := 0; mode < 9; mode++ {
 			if !prediction.Intra4x4ModeAvailable(mode, top, left, a.TopLeftAvailable) {
 				continue
 			}
-			var pred [64]byte
-			if prediction.Intra8x8(pred[:], 8, mode, a, top, left) != nil {
+			var pred [64]uint16
+			if prediction.Intra8x8High(pred[:], 8, mode, a, top, left, pl.BitDepth) != nil {
 				continue
 			}
 			cost := blockSATD(&s.src.Planes[0], x+bx*8, y+by*8, 8, pred[:])
@@ -173,15 +173,15 @@ func (s *frameState) analyzeIntra8(addr int) residual {
 		var input, coeff [64]int32
 		for j := 0; j < 8; j++ {
 			for i := 0; i < 8; i++ {
-				input[j*8+i] = int32(s.src.Planes[0].Pix(x+bx*8+i, y+by*8+j)) - int32(best[j*8+i])
+				input[j*8+i] = int32(s.src.Planes[0].Sample(x+bx*8+i, y+by*8+j)) - int32(best[j*8+i])
 			}
 		}
 		transform.Forward8x8(&coeff, &input)
-		transform.Quant8x8WithScaling(&res.luma8[block], &coeff, info.qp, s.matrix8(true))
+		transform.Quant8x8WithScaling(&res.luma8[block], &coeff, s.lumaQP(info.qp), s.matrix8(true))
 		if nonzero(res.luma8[block][:]) {
 			info.cbp |= 1 << block
 		}
-		reconstruct8(pl, x+bx*8, y+by*8, &res.luma8[block], info.qp, s.matrix8(true))
+		reconstruct8(pl, x+bx*8, y+by*8, &res.luma8[block], s.lumaQP(info.qp), s.matrix8(true))
 	}
 	s.chroma(addr, &res)
 	return res

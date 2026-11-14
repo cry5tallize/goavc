@@ -42,22 +42,22 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 		target = 1
 	}
 	kind := e.ratePictureKind(intra)
-	search := newQPSearch(e.rateQP[kind], e.rateQPKnown[kind])
+	minQP := -6 * (src.Planes[0].BitDepth - 8)
+	search := newQPSearch(e.rateQP[kind], e.rateQPKnown[kind], minQP)
 	var best []byte
 	var bestState *frameState
 	bestQP := e.frameQP
 	bestDelta := int64(math.MaxInt64)
 	feasible := false
 	unsupported, oversized := false, false
-	var tried [52]bool
-	// 0..51最多六步指数扩展，再最多六步二分；突变时也能夹紧远处目标，
-	// 避免已有低QP历史使快速阶段只找到一个过度量化的可行端点。
+	var tried [64]bool
+	// 高位深保留完整语法QP域；指数扩展和二分只是快速搜索启发式。
 	for attempt := 0; attempt < 12; attempt++ {
 		qp, more := search.next()
 		if !more {
 			break
 		}
-		tried[qp] = true
+		tried[qp-minQP] = true
 		data, state, err := e.encodeAtQP(src, intra, idr, qp)
 		if err != nil {
 			if errors.Is(err, h264.ErrUnsupported) {
@@ -96,8 +96,8 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 	// QP 与实际码量及 Profile 合法性不保证严格单调。快速搜索未找到
 	// 可行候选时穷举未试过的 QP，确保拒绝前检查整个合法范围。
 	if !feasible {
-		for qp := range 52 {
-			if tried[qp] {
+		for qp := minQP; qp <= 51; qp++ {
+			if tried[qp-minQP] {
 				continue
 			}
 			data, state, err := e.encodeAtQP(src, intra, idr, qp)
@@ -205,9 +205,8 @@ func (e *Encoder) sceneChanged(src *picture.Picture) bool {
 	var difference, samples int64
 	for comp := range src.Planes {
 		for y := 0; y < src.Planes[comp].Height; y++ {
-			a, b := src.Planes[comp].Row(y), e.reference.Planes[comp].Row(y)
-			for x, value := range a {
-				delta := int64(value) - int64(b[x])
+			for x := range src.Planes[comp].Width {
+				delta := int64(src.Planes[comp].Sample(x, y)) - int64(e.reference.Planes[comp].Sample(x, y))
 				if delta < 0 {
 					delta = -delta
 				}
@@ -216,7 +215,7 @@ func (e *Encoder) sceneChanged(src *picture.Picture) bool {
 			}
 		}
 	}
-	return difference*100 > samples*255*int64(e.sceneThreshold)
+	return difference*100 > samples*int64((1<<src.Planes[0].BitDepth)-1)*int64(e.sceneThreshold)
 }
 
 // LastQP 返回最近成功编码帧使用的基准 QP，不含 AQ 宏块偏移。

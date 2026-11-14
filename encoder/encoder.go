@@ -2,6 +2,7 @@ package encoder
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 
 	h264 "github.com/goavc/h264"
@@ -11,7 +12,7 @@ import (
 	"github.com/goavc/h264/syntax"
 )
 
-// Encoder 是串行8-bit 4:2:0编码器；Main/High可用双锚点非参考B与显示重排。
+// Encoder 是串行8/10-bit 4:2:0编码器；Main/High/High10可用双锚点非参考B与显示重排。
 // 同一实例非并发安全；输入在SendFrame返回前消费或复制到有界内部队列。
 type Encoder struct {
 	cfg                       h264.EncoderConfig
@@ -72,6 +73,15 @@ type Option func(*Encoder) error
 // WithPCM 选择无损 I_PCM 通道，用于传输和互操作检查。
 func WithPCM() Option { return func(e *Encoder) error { e.pcm = true; return nil } }
 
+// WithCABAC 选择CABAC或CAVLC；默认Baseline用CAVLC，其余Profile用CABAC。
+// Baseline禁止CABAC，选项在New中统一校验，不改变位深或预测工具。
+func WithCABAC(enabled bool) Option {
+	return func(e *Encoder) error {
+		e.cabac = enabled
+		return nil
+	}
+}
+
 // WithSliceCount 将宏块光栅序列等分为 count 个连续 slice（1..64）。
 func WithSliceCount(count int) Option {
 	return func(e *Encoder) error {
@@ -95,15 +105,16 @@ func WithSceneChangeThreshold(threshold int) Option {
 	}
 }
 
-// New 创建8-bit 4:2:0串行编码器。Baseline支持I/P，Main/High可设置
+// New 创建8/10-bit 4:2:0串行编码器。Baseline支持I/P，Main/High/High10可设置
 // MaxBFrames启用非参考spatial B_Direct/B_Skip及POC/DTS重排。
 func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	cfg.SetDefaults()
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-	if (cfg.Profile != h264.ProfileBaseline && cfg.Profile != h264.ProfileMain && cfg.Profile != h264.ProfileHigh) || cfg.PixelFormat != h264.YUV420P || cfg.Threads > 1 {
-		return nil, fmt.Errorf("encoder: only serial baseline/main/high yuv420p is supported: %w", h264.ErrUnsupported)
+	profile8 := cfg.Profile == h264.ProfileBaseline || cfg.Profile == h264.ProfileMain || cfg.Profile == h264.ProfileHigh
+	if !(profile8 && cfg.PixelFormat == h264.YUV420P || cfg.Profile == h264.ProfileHigh10 && cfg.PixelFormat == h264.YUV420P10LE) || cfg.Threads > 1 {
+		return nil, fmt.Errorf("encoder: only serial baseline/main/high/high10 420 is supported: %w", h264.ErrUnsupported)
 	}
 	// Spec: 7.4.2.1.1，4:2:0 渐进帧的 crop 单位为 2×2，不能无损表达奇数显示尺寸。
 	if cfg.Width%2 != 0 || cfg.Height%2 != 0 {
@@ -187,7 +198,7 @@ func (e *Encoder) SendFrame(f *h264.Frame) error {
 }
 
 func (e *Encoder) encodeFrameNow(f *h264.Frame, lookaheadScene bool) error {
-	if e.pcm && e.cfg.Profile != h264.ProfileHigh {
+	if e.pcm && (e.cfg.Profile == h264.ProfileBaseline || e.cfg.Profile == h264.ProfileMain) {
 		for comp := 0; comp < 3; comp++ {
 			w, h := f.Format.PlaneDimensions(comp, f.Width, f.Height)
 			for y := 0; y < h; y++ {
@@ -207,11 +218,21 @@ func (e *Encoder) encodeFrameNow(f *h264.Frame, lookaheadScene bool) error {
 		p := &pic.Planes[c]
 		w, h := f.Format.PlaneDimensions(c, f.Width, f.Height)
 		for y := 0; y < p.Height; y++ {
-			row := p.Row(y)
 			src := f.Planes[c].Data[min(y, h-1)*f.Planes[c].Stride:]
-			copy(row[:w], src[:w])
-			for x := w; x < p.Width; x++ {
-				row[x] = row[w-1]
+			if p.BitDepth > 8 {
+				row := p.Row16(y)
+				for x := range w {
+					row[x] = binary.LittleEndian.Uint16(src[x*2:])
+				}
+				for x := w; x < p.Width; x++ {
+					row[x] = row[w-1]
+				}
+			} else {
+				row := p.Row(y)
+				copy(row[:w], src[:w])
+				for x := w; x < p.Width; x++ {
+					row[x] = row[w-1]
+				}
 			}
 		}
 	}
@@ -318,12 +339,20 @@ func (e *Encoder) Reconstruction() (*h264.Frame, error) {
 	if e.recon == nil {
 		return nil, h264.ErrAgain
 	}
-	f := &h264.Frame{Width: e.cfg.Width, Height: e.cfg.Height, Format: h264.YUV420P, KeyFrame: e.reconKeyFrame, PTS: e.reconPTS, Duration: e.reconDuration}
+	f := &h264.Frame{Width: e.cfg.Width, Height: e.cfg.Height, Format: e.cfg.PixelFormat, KeyFrame: e.reconKeyFrame, PTS: e.reconPTS, Duration: e.reconDuration}
 	for c := range f.Planes {
 		w, h := f.Format.PlaneDimensions(c, f.Width, f.Height)
-		f.Planes[c] = h264.Plane{Data: make([]byte, w*h), Stride: w}
+		bytesPerSample := (e.recon.Planes[c].BitDepth + 7) / 8
+		stride := w * bytesPerSample
+		f.Planes[c] = h264.Plane{Data: make([]byte, stride*h), Stride: stride}
 		for y := 0; y < h; y++ {
-			copy(f.Planes[c].Data[y*w:], e.recon.Planes[c].Row(y)[:w])
+			if bytesPerSample == 2 {
+				for x, v := range e.recon.Planes[c].Row16(y)[:w] {
+					binary.LittleEndian.PutUint16(f.Planes[c].Data[y*stride+x*2:], v)
+				}
+			} else {
+				copy(f.Planes[c].Data[y*stride:], e.recon.Planes[c].Row(y)[:w])
+			}
 		}
 	}
 	return f, nil
@@ -410,8 +439,9 @@ func (e *Encoder) encodePCM(pic *picture.Picture) ([]byte, error) {
 					n = 8
 				}
 				for y := 0; y < n; y++ {
-					for _, v := range pic.Planes[c].Row(addr/pic.MBWidth*n + y)[addr%pic.MBWidth*n : addr%pic.MBWidth*n+n] {
-						w.WriteByte(v)
+					for x := range n {
+						v := pic.Planes[c].Sample(addr%pic.MBWidth*n+x, addr/pic.MBWidth*n+y)
+						w.WriteBits(uint(pic.Planes[c].BitDepth), uint64(v))
 					}
 				}
 			}

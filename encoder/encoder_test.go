@@ -126,7 +126,6 @@ func TestEncoder_Configuration(t *testing.T) {
 	base.Width = 64
 	base.Height = 48
 	for _, change := range []func(*h264.EncoderConfig){
-		func(c *h264.EncoderConfig) { c.Profile = h264.ProfileHigh10; c.PixelFormat = h264.YUV420P10LE },
 		func(c *h264.EncoderConfig) { c.Threads = 2 },
 		func(c *h264.EncoderConfig) { c.Width = 65 },
 		func(c *h264.EncoderConfig) { c.Level = 10 },

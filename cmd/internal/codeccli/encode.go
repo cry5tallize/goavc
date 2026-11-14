@@ -23,10 +23,10 @@ func Encode(ctx context.Context, args []string, stdin io.Reader, stdout, stderr 
 	cfg := h264.DefaultEncoderConfig()
 	f.IntVar(&cfg.Width, "width", 0, "YUV 显示宽度，必须为偶数")
 	f.IntVar(&cfg.Height, "height", 0, "YUV 显示高度，必须为偶数")
-	pixel := f.String("pixel-format", "yuv420p", "输入平面格式；当前编码器仅支持 yuv420p")
-	f.StringVar(&cfg.Profile, "profile", cfg.Profile, "baseline、main 或 high；完整 Profile 支持状态仍为 Partial")
+	pixel := f.String("pixel-format", "yuv420p", "输入平面格式，如yuv420p、yuv420p10le；组合由编码器校验")
+	f.StringVar(&cfg.Profile, "profile", cfg.Profile, "baseline、main、high、high10、high422或high444；支持边界见文档")
 	f.IntVar(&cfg.Level, "level", cfg.Level, "level_idc，0 自动")
-	f.IntVar(&cfg.QP, "qp", cfg.QP, "量化参数，0..51")
+	f.IntVar(&cfg.QP, "qp", cfg.QP, "语法QPY，8-bit为0..51，10-bit为-12..51")
 	f.IntVar(&cfg.GOPSize, "gop", cfg.GOPSize, "GOP 帧数")
 	f.IntVar(&cfg.IDRInterval, "idr", 0, "独立 IDR 间隔；0 跟随 GOP")
 	f.IntVar(&cfg.MaxBFrames, "bframes", 0, "连续非参考 B 帧上限；Baseline 必须为0")
@@ -41,6 +41,7 @@ func Encode(ctx context.Context, args []string, stdin io.Reader, stdout, stderr 
 	transform := f.Bool("8x8", false, "启用 High Profile 8x8 变换候选")
 	weighted := f.Bool("weighted", false, "启用 Main/High 自动加权 P 预测")
 	pcm := f.Bool("pcm", false, "使用无损 I_PCM 互操作通道")
+	entropy := f.String("entropy", "auto", "熵编码：auto、cavlc或cabac；Baseline不允许CABAC")
 	if err = f.Parse(args); err != nil {
 		return err
 	}
@@ -72,6 +73,15 @@ func Encode(ctx context.Context, args []string, stdin io.Reader, stdout, stderr 
 		return fmt.Errorf("前瞻窗口必须为0..16: %w", h264.ErrInvalidData)
 	}
 	options := []encoder.Option{encoder.WithSliceCount(*slices)}
+	switch *entropy {
+	case "auto":
+	case "cavlc":
+		options = append(options, encoder.WithCABAC(false))
+	case "cabac":
+		options = append(options, encoder.WithCABAC(true))
+	default:
+		return fmt.Errorf("无效熵编码 %q: %w", *entropy, h264.ErrInvalidData)
+	}
 	if *lookahead > 0 {
 		options = append(options, encoder.WithLookahead(*lookahead))
 	}
@@ -93,7 +103,11 @@ func Encode(ctx context.Context, args []string, stdin io.Reader, stdout, stderr 
 		return err
 	}
 	// 固定 YUV 布局在打开输出前即可判定，超小预算不能先截断已有文件。
-	frameBytes := cfg.Width*cfg.Height + 2*((cfg.Width+1)/2)*((cfg.Height+1)/2)
+	frameBytes := 0
+	for comp := range 3 {
+		_, rows := cfg.PixelFormat.PlaneDimensions(comp, cfg.Width, cfg.Height)
+		frameBytes += cfg.PixelFormat.RowBytes(comp, cfg.Width) * rows
+	}
 	if frameBytes > c.maxInput {
 		return fmt.Errorf("YUV 单帧 %d 字节超过输入预算 %d: %w", frameBytes, c.maxInput, h264.ErrResourceLimit)
 	}

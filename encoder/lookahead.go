@@ -1,6 +1,7 @@
 package encoder
 
 import (
+	"encoding/binary"
 	"fmt"
 	h264 "github.com/goavc/h264"
 )
@@ -82,7 +83,11 @@ func framesDiffer(a, b *h264.Frame, threshold int) bool {
 		for y := 0; y < h; y++ {
 			ar, br := a.Planes[comp].Data[y*a.Planes[comp].Stride:], b.Planes[comp].Data[y*b.Planes[comp].Stride:]
 			for x := 0; x < w; x++ {
-				d := int64(ar[x]) - int64(br[x])
+				av, bv := uint16(ar[x]), uint16(br[x])
+				if a.Format.BitDepth() > 8 {
+					av, bv = binary.LittleEndian.Uint16(ar[x*2:]), binary.LittleEndian.Uint16(br[x*2:])
+				}
+				d := int64(av) - int64(bv)
 				if d < 0 {
 					d = -d
 				}
@@ -91,7 +96,7 @@ func framesDiffer(a, b *h264.Frame, threshold int) bool {
 			}
 		}
 	}
-	return difference*100 > samples*255*int64(threshold)
+	return difference*100 > samples*int64((1<<a.Format.BitDepth())-1)*int64(threshold)
 }
 
 func (e *Encoder) releaseLookahead() {
@@ -111,6 +116,7 @@ func copyQueuedFrame(src *h264.Frame) *h264.Frame {
 	out := &h264.Frame{Width: src.Width, Height: src.Height, Format: src.Format, PTS: src.PTS, Duration: src.Duration, KeyFrame: src.KeyFrame}
 	for comp := range out.Planes {
 		w, h := src.Format.PlaneDimensions(comp, src.Width, src.Height)
+		w *= (src.Format.BitDepth() + 7) / 8
 		out.Planes[comp] = h264.Plane{Stride: w, Data: make([]byte, w*h)}
 		for y := 0; y < h; y++ {
 			copy(out.Planes[comp].Data[y*w:(y+1)*w], src.Planes[comp].Data[y*src.Planes[comp].Stride:y*src.Planes[comp].Stride+w])

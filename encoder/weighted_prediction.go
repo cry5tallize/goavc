@@ -102,9 +102,10 @@ func (s *frameState) applyPredictionWeights(x, y, width, height int) {
 			px, py, w, h = x/2, y/2, width/2, height/2
 		}
 		for row := 0; row < h; row++ {
-			pixels := s.pic.Planes[comp].Row(py + row)[px : px+w]
-			for i, value := range pixels {
-				pixels[i] = prediction.WeightSample(value, s.weights.Weight[comp], s.weights.Offset[comp], s.weights.denom(comp))
+			pl := &s.pic.Planes[comp]
+			for i := range w {
+				v := prediction.WeightSampleHigh(pl.Sample(px+i, py+row), s.weights.Weight[comp], s.weights.Offset[comp], s.weights.denom(comp), pl.BitDepth)
+				pl.SetSample(px+i, py+row, v)
 			}
 		}
 	}
@@ -117,8 +118,9 @@ func weightedSearchReference(reference *picture.Picture, weights *PredictionWeig
 	}
 	for comp := range out.Planes {
 		for y := 0; y < out.Planes[comp].Height; y++ {
-			for x, value := range reference.Planes[comp].Row(y) {
-				out.Planes[comp].Row(y)[x] = prediction.WeightSample(value, weights.Weight[comp], weights.Offset[comp], weights.denom(comp))
+			for x := range out.Planes[comp].Width {
+				value := reference.Planes[comp].Sample(x, y)
+				out.Planes[comp].SetSample(x, y, prediction.WeightSampleHigh(value, weights.Weight[comp], weights.Offset[comp], weights.denom(comp), out.Planes[comp].BitDepth))
 			}
 		}
 	}
@@ -136,8 +138,8 @@ func estimatePredictionWeights(src, reference *picture.Picture) PredictionWeight
 		stepX, stepY := (src.Planes[comp].Width+127)/128, (src.Planes[comp].Height+127)/128
 		for y := 0; y < src.Planes[comp].Height; y += stepY {
 			for x := 0; x < src.Planes[comp].Width; x += stepX {
-				value := src.Planes[comp].Pix(x, y)
-				a, b := int64(reference.Planes[comp].Pix(x, y)), int64(value)
+				value := src.Planes[comp].Sample(x, y)
+				a, b := int64(reference.Planes[comp].Sample(x, y)), int64(value)
 				n++
 				sumX += a
 				sumY += b
@@ -151,13 +153,14 @@ func estimatePredictionWeights(src, reference *picture.Picture) PredictionWeight
 			covariance := n*sumXY - sumX*sumY
 			weight = max(int64(-128), min(int64(127), covariance*64/variance))
 		}
-		offset := max(int64(-128), min(int64(127), (sumY-(sumX*weight+32)/64)/n))
+		offset := max(int64(-128), min(int64(127), (sumY-(sumX*weight+32)/64)/(n<<(src.Planes[comp].BitDepth-8))))
 		var identitySSE, weightedSSE int64
 		for y := 0; y < src.Planes[comp].Height; y++ {
-			for x, value := range src.Planes[comp].Row(y) {
-				r := reference.Planes[comp].Pix(x, y)
+			for x := range src.Planes[comp].Width {
+				value := src.Planes[comp].Sample(x, y)
+				r := reference.Planes[comp].Sample(x, y)
 				a := int64(value) - int64(r)
-				b := int64(value) - int64(prediction.WeightSample(r, int32(weight), int32(offset), 6))
+				b := int64(value) - int64(prediction.WeightSampleHigh(r, int32(weight), int32(offset), 6, src.Planes[comp].BitDepth))
 				identitySSE += a * a
 				weightedSSE += b * b
 			}

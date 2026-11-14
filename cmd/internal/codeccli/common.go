@@ -90,6 +90,12 @@ func pixelFormat(name string) (h264.PixelFormat, error) {
 		return h264.YUV422P, nil
 	case "yuv444p":
 		return h264.YUV444P, nil
+	case "yuv420p10le":
+		return h264.YUV420P10LE, nil
+	case "yuv422p10le":
+		return h264.YUV422P10LE, nil
+	case "yuv444p10le":
+		return h264.YUV444P10LE, nil
 	default:
 		return 0, fmt.Errorf("不支持的像素格式 %q: %w", name, h264.ErrUnsupported)
 	}

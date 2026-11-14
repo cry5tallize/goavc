@@ -568,7 +568,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 2 | `feat[picture]: add 10 bit plane storage and sample accessors` | uint16存储/采样、边缘复制、位深裁剪、格式隔离池 | 10-bit构造测试先失败后通过；边界/极值/奇数stride/存储溢出/池隔离及完整常规门禁通过 |
 | 3 | `feat[transform]: add 10 bit transform and quantization depth` | 语法QPY转QP'，共享内核QP'0..63，DC临时量int64，逆变换仍归一化>>6 | 负QPY/色度非线性/QP'52..63/正负1023解析基/溢出测试及完整常规门禁通过；流水线未接入 |
 | 4 | `feat[decoder]: add high10 decoding` | 渐进10-bit420全部既有工具、负QP、原生LE与资源/恢复 | 七组动态外部压缩Oracle、三份18帧真实语料、PCM/QP/恢复/裁剪解析解及独立提交完整常规门禁通过 |
-| 5 | `feat[encoder]: add high10 encoding` | 10-bit 编码 | FFmpeg 可解 |
+| 5 | `feat[encoder]: add high10 encoding` | 原生10-bit压缩、双熵与既有I/P/B/码控/前瞻/矩阵工具、CLI | 32配置×12帧三方像素Oracle、真实CLI与FFmpeg原始LE哈希、独立提交完整常规门禁通过 |
 | 6 | `feat[picture]: add 422 plane geometry and chroma handling` | 4:2:2 | 尺寸/预测测试 |
 | 7 | `feat[decoder]: add high422 decoding` | 4:2:2 路径 | 语料一致 |
 | 8 | `feat[picture]: add 444 chroma support` | 4:4:4 | 尺寸/预测测试 |

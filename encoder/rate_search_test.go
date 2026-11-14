@@ -11,7 +11,7 @@ func TestQPSearch_LocalBracketAndColdFallback(t *testing.T) {
 	for _, known := range []bool{false, true} {
 		for seed := 0; seed <= 51; seed++ {
 			for boundary := 0; boundary <= 52; boundary++ {
-				s := newQPSearch(seed, known)
+				s := newQPSearch(seed, known, 0)
 				seen := [52]bool{}
 				for range 12 {
 					qp, more := s.next()
@@ -35,7 +35,7 @@ func TestQPSearch_LocalBracketAndColdFallback(t *testing.T) {
 	}
 	// 稳态目标在QP39，已有反馈39：只需39/38两个相邻候选夹紧，
 	// 而冷启动仍覆盖完整区间，不直接信任调用方提供的未知seed。
-	warm := newQPSearch(39, true)
+	warm := newQPSearch(39, true, 0)
 	for _, want := range []int{39, 38} {
 		qp, more := warm.next()
 		if !more || qp != want {
@@ -46,7 +46,7 @@ func TestQPSearch_LocalBracketAndColdFallback(t *testing.T) {
 	if _, more := warm.next(); more {
 		t.Fatal("相邻QP已夹紧后仍重复编码")
 	}
-	cold := newQPSearch(51, false)
+	cold := newQPSearch(51, false, 0)
 	if qp, more := cold.next(); !more || qp != 25 {
 		t.Fatal("新帧型未从完整区间开始", qp, more)
 	}

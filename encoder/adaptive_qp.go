@@ -25,7 +25,7 @@ func activityQP(p *picture.Plane, x, y, qp, strength int) int {
 	var sum, squares int64
 	for j := 0; j < 16; j++ {
 		for i := 0; i < 16; i++ {
-			v := int64(p.Pix(x+i, y+j))
+			v := int64(p.Sample(x+i, y+j)) >> (p.BitDepth - 8)
 			sum += v
 			squares += v * v
 		}
@@ -37,5 +37,5 @@ func activityQP(p *picture.Plane, x, y, qp, strength int) int {
 	} else if variance > 1024 {
 		delta = strength
 	}
-	return min(51, max(0, qp+delta))
+	return min(51, max(-6*(p.BitDepth-8), qp+delta))
 }

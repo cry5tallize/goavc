@@ -12,7 +12,9 @@ func (s *frameState) bResidualRD(addr, previousQP int) (residual, error) {
 		}
 		x, y := addr%s.pic.MBWidth*n, addr/s.pic.MBWidth*n
 		for j := 0; j < n; j++ {
-			copy(base.pixels[offset:offset+n], s.pic.Planes[comp].Row(y + j)[x:x+n])
+			for i := range n {
+				base.pixels[offset+i] = s.pic.Planes[comp].Sample(x+i, y+j)
+			}
 			offset += n
 		}
 	}

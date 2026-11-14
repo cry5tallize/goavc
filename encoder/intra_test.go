@@ -16,21 +16,21 @@ import (
 func TestIntraSelection_AllModes(t *testing.T) {
 	// 对每种预测先用解析参考邻域生成唯一零 SAD 图案，再调用实际编码决策函数。
 	// 不用模式强制选项，避免只测到写出路径而绕过搜索。
-	a := prediction.Intra4x4Samples{Top: [4]byte{41, 193, 77, 11}, TopRight: [4]byte{222, 65, 118, 9}, Left: [4]byte{231, 32, 161, 93}, TopLeft: 124}
+	a := prediction.Intra4x4Samples16{Top: [4]uint16{41, 193, 77, 11}, TopRight: [4]uint16{222, 65, 118, 9}, Left: [4]uint16{231, 32, 161, 93}, TopLeft: 124}
 	pic, _ := picture.New(1, 1, h264.YUV420P)
 	for mode := 0; mode < 9; mode++ {
-		var pattern, chosen [16]byte
-		prediction.Intra4x4(pattern[:], 4, mode, a, true, true)
+		var pattern, chosen [16]uint16
+		prediction.Intra4x4High(pattern[:], 4, mode, a, true, true, 8)
 		putBlock(&pic.Planes[0], 0, 0, 4, pattern[:])
 		got, cost := select4(&chosen, &pic.Planes[0], 0, 0, a, true, true, true)
 		if got != mode || cost != 0 {
 			t.Fatalf("I4 target %d selected %d cost %d", mode, got, cost)
 		}
 	}
-	b := prediction.IntraBlockSamples{Top: []byte{40, 55, 100, 20, 95, 140, 120, 89, 19, 120, 145, 78, 91, 73, 111, 99}, Left: []byte{140, 99, 60, 88, 145, 18, 65, 174, 35, 13, 18, 219, 175, 99, 160, 185}, TopLeft: 85}
+	b := prediction.IntraBlockSamples16{Top: []uint16{40, 55, 100, 20, 95, 140, 120, 89, 19, 120, 145, 78, 91, 73, 111, 99}, Left: []uint16{140, 99, 60, 88, 145, 18, 65, 174, 35, 13, 18, 219, 175, 99, 160, 185}, TopLeft: 85}
 	for mode := 0; mode < 4; mode++ {
-		var pattern, chosen [256]byte
-		prediction.Intra16x16(pattern[:], 16, mode, b, true, true)
+		var pattern, chosen [256]uint16
+		prediction.Intra16x16High(pattern[:], 16, mode, b, true, true, 8)
 		putBlock(&pic.Planes[0], 0, 0, 16, pattern[:])
 		got, cost := select16(&chosen, &pic.Planes[0], 0, 0, b, true, true, true)
 		if got != mode || cost != 0 {
@@ -46,13 +46,13 @@ func TestIntraSelection_AllModes(t *testing.T) {
 		for c := 1; c < 3; c++ {
 			p := &recon.Planes[c]
 			for i := 0; i < 8; i++ {
-				p.SetPix(8+i, 7, b.Top[i])
-				p.SetPix(7, 8+i, b.Left[i])
+				p.SetSample(8+i, 7, b.Top[i])
+				p.SetSample(7, 8+i, b.Left[i])
 			}
-			p.SetPix(7, 7, b.TopLeft)
+			p.SetSample(7, 7, b.TopLeft)
 			a, t, l, _ := s.blockSamples(3, c)
-			var target [64]byte
-			prediction.Chroma8x8(target[:], 8, mode, a, t, l)
+			var target [64]uint16
+			prediction.Chroma8x8High(target[:], 8, mode, a, t, l, 8)
 			putBlock(&src.Planes[c], 8, 8, 8, target[:])
 		}
 		var r residual

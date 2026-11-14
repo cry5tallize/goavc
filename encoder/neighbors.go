@@ -6,7 +6,7 @@ func (s *frameState) available(addr, other int) bool {
 	return other >= s.info[addr].start && other < addr
 }
 
-func (s *frameState) blockSamples(addr, c int) (prediction.IntraBlockSamples, bool, bool, bool) {
+func (s *frameState) blockSamples(addr, c int) (prediction.IntraBlockSamples16, bool, bool, bool) {
 	n := 16
 	if c > 0 {
 		n = 8
@@ -15,25 +15,25 @@ func (s *frameState) blockSamples(addr, c int) (prediction.IntraBlockSamples, bo
 	x, y := addr%mw*n, addr/mw*n
 	top, left := s.available(addr, addr-mw), addr%mw > 0 && s.available(addr, addr-1)
 	tl := x > 0 && s.available(addr, addr-mw-1)
-	a := prediction.IntraBlockSamples{Top: make([]byte, n), Left: make([]byte, n)}
+	a := prediction.IntraBlockSamples16{Top: make([]uint16, n), Left: make([]uint16, n)}
 	p := &s.pic.Planes[c]
 	if top {
 		for i := 0; i < n; i++ {
-			a.Top[i] = p.Pix(x+i, y-1)
+			a.Top[i] = p.Sample(x+i, y-1)
 		}
 	}
 	if left {
 		for i := 0; i < n; i++ {
-			a.Left[i] = p.Pix(x-1, y+i)
+			a.Left[i] = p.Sample(x-1, y+i)
 		}
 	}
 	if tl {
-		a.TopLeft = p.Pix(x-1, y-1)
+		a.TopLeft = p.Sample(x-1, y-1)
 	}
 	return a, top, left, tl
 }
 
-func (s *frameState) samples4(addr, bx, by int) (prediction.Intra4x4Samples, bool, bool, bool) {
+func (s *frameState) samples4(addr, bx, by int) (prediction.Intra4x4Samples16, bool, bool, bool) {
 	mw := s.pic.MBWidth
 	mbx, mby := addr%mw, addr/mw
 	x, y := mbx*16+bx*4, mby*16+by*4
@@ -43,7 +43,7 @@ func (s *frameState) samples4(addr, bx, by int) (prediction.Intra4x4Samples, boo
 	if bx == 0 && by == 0 {
 		tl = mbx > 0 && s.available(addr, addr-mw-1)
 	}
-	var a prediction.Intra4x4Samples
+	var a prediction.Intra4x4Samples16
 	p := &s.pic.Planes[0]
 	if top {
 		tr := false
@@ -53,20 +53,20 @@ func (s *frameState) samples4(addr, bx, by int) (prediction.Intra4x4Samples, boo
 			tr = order(bx+1, by-1) < order(bx, by)
 		}
 		for i := 0; i < 4; i++ {
-			a.Top[i] = p.Pix(x+i, y-1)
-			a.TopRight[i] = p.Pix(x+3, y-1)
+			a.Top[i] = p.Sample(x+i, y-1)
+			a.TopRight[i] = p.Sample(x+3, y-1)
 			if tr {
-				a.TopRight[i] = p.Pix(x+4+i, y-1)
+				a.TopRight[i] = p.Sample(x+4+i, y-1)
 			}
 		}
 	}
 	if left {
 		for i := 0; i < 4; i++ {
-			a.Left[i] = p.Pix(x-1, y+i)
+			a.Left[i] = p.Sample(x-1, y+i)
 		}
 	}
 	if tl {
-		a.TopLeft = p.Pix(x-1, y-1)
+		a.TopLeft = p.Sample(x-1, y-1)
 	}
 	return a, top, left, tl
 }

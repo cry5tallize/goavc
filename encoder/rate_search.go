@@ -1,7 +1,7 @@
 package encoder
 
 // qpSearch 先从同帧型已提交的反馈QP向相邻级扩展，跨过目标后改为二分。
-// 新帧型仍从完整0..51二分；不把单调启发式当成合法性证明，最终无可行
+// 新帧型仍从完整语法QP域二分；不把单调启发式当成合法性证明，最终无可行
 // 候选时由encodeRateControlled穷举剩余QP。失败的尝试不写入反馈历史。
 type qpSearch struct {
 	low, high, qp, step int
@@ -9,11 +9,11 @@ type qpSearch struct {
 	bracketed           bool
 }
 
-func newQPSearch(qp int, known bool) qpSearch {
+func newQPSearch(qp int, known bool, minimum int) qpSearch {
 	if !known {
-		qp = 25
+		qp = (minimum + 51) / 2
 	}
-	return qpSearch{low: 0, high: 51, qp: qp, step: 1, bracketed: !known}
+	return qpSearch{low: minimum, high: 51, qp: qp, step: 1, bracketed: !known}
 }
 
 func (s *qpSearch) next() (int, bool) {

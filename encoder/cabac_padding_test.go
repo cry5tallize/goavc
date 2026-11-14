@@ -16,7 +16,7 @@ func TestCABACPadding_AnalyticBinBudget(t *testing.T) {
 	}{
 		{0, 1, 1}, {117, 1, 1}, {118, 1, 4}, {1000, 1, 85}, {1000, 2, 76},
 	} {
-		got := cabacZeroWordPayload([]byte{0x80}, tc.bins, tc.mbs)
+		got := cabacZeroWordPayload([]byte{0x80}, tc.bins, tc.mbs, 8)
 		if len(got) != tc.want {
 			t.Fatalf("bins=%d MB=%d 封装长度%d，期望%d", tc.bins, tc.mbs, len(got), tc.want)
 		}
@@ -27,7 +27,7 @@ func TestCABACPadding_AnalyticBinBudget(t *testing.T) {
 			t.Fatal("改变原始RBSP")
 		}
 	}
-	if !bytes.Equal(cabacZeroWordPayload([]byte{0x80}, 0, 1), []byte{0x80}) {
+	if !bytes.Equal(cabacZeroWordPayload([]byte{0x80}, 0, 1, 8), []byte{0x80}) {
 		t.Fatal("无需填充时改变码流")
 	}
 }
@@ -46,7 +46,7 @@ func TestCABACPadding_DenseArithmeticStream(t *testing.T) {
 	if err := ce.Err(); err != nil {
 		t.Fatal(err)
 	}
-	payload := cabacZeroWordPayload(w.Bytes(), ce.BinCount(), 1)
+	payload := cabacZeroWordPayload(w.Bytes(), ce.BinCount(), 1, 8)
 	if len(payload) <= len(w.Bytes()) {
 		t.Fatal("高密度MPS未触发填充")
 	}

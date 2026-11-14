@@ -207,6 +207,7 @@ High10渐进420解码已接入，限定工具与证据逐项列于下表；既�
 | 共享滤波前置 | byte/uint16共用弱/强亮度与色度去块，按位深缩放alpha/beta/tc0，保留规范附加量与舍入常量 | Conformant | 独立暂存区快照通过CGO=0完整常规门禁；10-bit阈值、裁剪及正负边界解析向量、旧8-bit Oracle回归通过 | 高位深流水线另行验收；QP实参仍为去掉位深偏移的语法域 |
 | 共享运动搜索前置 | 8/10-bit复用整数/菱形/半与四像素搜索控制，uint16原始SAD与共享高位深MC，不降位深 | Conformant | 独立暂存区快照通过CGO=0完整常规门禁；低两位纹理平移、负MV、奇数stride、极值SAD与原8-bit Oracle回归通过 | 编码器High10接入另行验收；Scorer接收原位深SAD |
 | 4：High10解码 | 渐进10-bit420 CAVLC/CABAC I/P/B、帧内4/8/16、矩阵、权重、PCM、去块、LE裁剪输出、资源预算与SPS恢复 | Conformant | 七组外部x264压缩序列与三份18帧登记语料逐采样FFmpeg一致；负QP/模64/混合PCM滤波边界/8→10→8与坏IDR恢复/裁剪解析解通过；独立暂存区完整常规门禁通过，manifest30条 | 隔行、422/444、transform bypass仍按现有组合门禁拒绝；不声明完整High10 Profile；高位深编码另验收 |
+| 5：High10编码 | 原生LE输入与重建，双熵I/P/B、I4/I8/I16、矩阵/权重/AQ/前瞻/码控，语法QP-12..51、显式PCM及CLI熵选项 | Conformant | 32配置×12帧共384帧FFmpeg/自研解码/本地重建三方逐采样一致；原失败的CAVLC自定义8×8矩阵组合保留并通过（去块按整个8×8块判断非零，保留子流nC）；真实CLI输出与FFmpeg原始LE哈希同为b47b60770a076d3073f7c58298d87642136a67afaadf98ff3987bcd39a9ce439；独立提交完整常规门禁通过 | 仅渐进420；B仍采用既有非参考spatial-direct工具，隔行与422/444另项接入；QP最小值不承诺transform bypass无损 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。

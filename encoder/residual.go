@@ -60,13 +60,7 @@ func (s *frameState) writeMB(w *bitstream.Writer, addr int, qp *int, res *residu
 		}
 	}
 	if info.is16 || info.cbp != 0 {
-		delta := info.qp - *qp
-		if delta > 25 {
-			delta -= 52
-		}
-		if delta < -26 {
-			delta += 52
-		}
+		delta := s.qpDelta(info.qp, *qp)
 		w.WriteSE(int32(delta))
 		*qp = info.qp
 	} else {

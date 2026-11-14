@@ -33,9 +33,9 @@
 > High 8×8/ScalingMatrix、Main 渐进帧 I/P/B、direct、加权预测和重排均已验证。
 > Profile 整体保留 Partial，范围外的字段/高位深工具仍明确拒绝；本地门禁证据见 gates/m3.md。
 
-> **M7 进展：** 分支`feat/m7-high10`。第1–4项及共享预测/滤波/运动前置已完成；
-> High10渐进420解码的双熵I/P/B、8×8/矩阵、权重、PCM、负QP与原生LE输出已通过FFmpeg逐采样Oracle。
-> 高位深编码另行验收；隔行、422/444与transform bypass尚未接入，不声明完整Profile支持。
+> **M7 进展：** 分支`feat/m7-high10`。第1–5项及共享预测/滤波/运动前置已完成；
+> High10渐进420双熵I/P/B解码、原生LE输出与压缩编码通过独立Oracle，编码32配置共384帧三方逐采样一致。
+> CLI支持高位深与显式熵选项；隔行、422/444与transform bypass另项验收，不声明完整Profile支持。
 > 共享预测已提供byte/uint16类型实例：高位深帧内、六抽头/色度MC、权重以及422矩形色度预测。
 > 独立提交快照通过完整常规门禁；这些内核入口不单独扩大Profile或编解码组合的支持声明。
 > 共享去块已完成8/10-bit类型参数化，弱/强滤波解析解及独立提交完整常规门禁通过；流水线按后续条目验收。
@@ -48,7 +48,7 @@
 | Baseline | 66 | CAVLC、I/P | Partial | Partial | M4 I_PCM/I4/I16、M5 I/P/CAVLC及码控已验证；高级工具M7，禁止Baseline B |
 | Main | 77 | CABAC、B、隔行 | Partial | Partial | CABAC I/P/P显式权重、spatial B_Direct/B_Skip非参考与重排已验证；隔行M7 |
 | High | 100 | 8×8 变换、ScalingMatrix | Partial | Partial | CABAC I4/I8/I16/P 4×4/8×8、自定义8×8矩阵及spatial B_Direct/B_Skip已验证；字段/扩展M7 |
-| High 10 | 110 | 10 bit | Partial | TODO | M7第4项渐进420双熵I/P/B及LE输出已通过Oracle；字段与transform bypass仍拒绝，编码另验收 |
+| High 10 | 110 | 10 bit | Partial | Partial | M7第4/5项渐进420双熵I/P/B、矩阵/权重/负QP/码控/LE接口已通过Oracle；字段与transform bypass仍拒绝，B编码限既有spatial-direct工具 |
 | High 4:2:2 | 122 | 4:2:2、10 bit | TODO | TODO | M7 |
 | High 4:4:4 Predictive | 244 | 4:4:4、残差预测 | TODO | TODO | M7 |
 

@@ -30,18 +30,22 @@ func (e *Encoder) encodeB(src *picture.Picture) ([]byte, *frameState, error) {
 		s.mv.BeginSlice(first)
 		w := bitstream.NewWriter()
 		e.bSliceHeader(w, first)
-		for w.BitsWritten()%8 != 0 {
-			w.WriteBit(1)
+		var c cabacWriter
+		if e.cabac {
+			for w.BitsWritten()%8 != 0 {
+				w.WriteBit(1)
+			}
+			ctx, err := cabac.InitContexts(false, 0, min(51, max(0, e.frameQP)))
+			if err != nil {
+				return nil, nil, err
+			}
+			ce, err := cabac.NewEncoder(w)
+			if err != nil {
+				return nil, nil, err
+			}
+			c = cabacWriter{e: ce, ctx: ctx}
 		}
-		ctx, err := cabac.InitContexts(false, 0, e.frameQP)
-		if err != nil {
-			return nil, nil, err
-		}
-		ce, err := cabac.NewEncoder(w)
-		if err != nil {
-			return nil, nil, err
-		}
-		c := cabacWriter{e: ce, ctx: ctx}
+		skipRun := uint32(0)
 		qp := e.frameQP
 		for addr := first; addr < last; addr++ {
 			i := &s.info[addr]
@@ -59,15 +63,29 @@ func (e *Encoder) encodeB(src *picture.Picture) ([]byte, *frameState, error) {
 				}
 				pl := &s.pic.Planes[comp]
 				for yy := 0; yy < n; yy++ {
-					row := pl.Row(py + yy)[px : px+n]
-					for xx := range row {
-						row[xx] = prediction.BiWeightSample(e.bPast.Planes[comp].Pix(px+xx, py+yy), e.bFuture.Planes[comp].Pix(px+xx, py+yy), 1, 1, 0, 0, 0)
+					for xx := range n {
+						v := prediction.BiWeightSampleHigh(e.bPast.Planes[comp].Sample(px+xx, py+yy), e.bFuture.Planes[comp].Sample(px+xx, py+yy), 1, 1, 0, 0, 0, pl.BitDepth)
+						pl.SetSample(px+xx, py+yy, v)
 					}
 				}
 			}
 			res, err := s.bResidualRD(addr, qp)
 			if err != nil {
 				return nil, nil, err
+			}
+			if !e.cabac {
+				if i.skip {
+					i.qp = qp
+					skipRun++
+					continue
+				}
+				w.WriteUE(skipRun)
+				skipRun = 0
+				w.WriteUE(0) // B_Direct_16x16无运动差语法。
+				if err = s.writeInterResidual(w, addr, &qp, &res); err != nil {
+					return nil, nil, err
+				}
+				continue
 			}
 			inc := 0
 			for _, neighbor := range s.cabacNeighbors(addr) {
@@ -84,12 +102,21 @@ func (e *Encoder) encodeB(src *picture.Picture) ([]byte, *frameState, error) {
 				c.bin(27, 0)
 				c.residualMacroblock(s, addr, &qp, &res)
 			}
-			ce.Terminate(uint8(flag(addr == last-1)))
-			if err = ce.Err(); err != nil {
+			c.e.Terminate(uint8(flag(addr == last-1)))
+			if err = c.e.Err(); err != nil {
 				return nil, nil, err
 			}
 		}
-		payload := cabacZeroWordPayload(w.Bytes(), ce.BinCount(), last-first)
+		var payload []byte
+		if e.cabac {
+			payload = cabacZeroWordPayload(w.Bytes(), c.e.BinCount(), last-first, src.Planes[0].BitDepth)
+		} else {
+			if skipRun > 0 {
+				w.WriteUE(skipRun)
+			}
+			bitstream.WriteRBSPTrailingBits(w)
+			payload = bitstream.RBSPToEBSP(w.Bytes())
+		}
 		if err = aw.Write(nal.Unit{Header: nal.Header{Type: nal.TypeSlice, RefIDC: 0}, Payload: payload}); err != nil {
 			return nil, nil, err
 		}
@@ -110,7 +137,9 @@ func (e *Encoder) bSliceHeader(w *bitstream.Writer, first int) {
 	w.WriteBit(0) // num_ref_idx_active_override_flag: L0/L1各一个
 	w.WriteBit(0)
 	w.WriteBit(0) // 两列表默认POC顺序：L0过去锚点、L1未来锚点
-	w.WriteUE(0)  // cabac_init_idc；非参考B不携带dec_ref_pic_marking
+	if e.cabac {
+		w.WriteUE(0) // cabac_init_idc；非参考B不携带dec_ref_pic_marking。
+	}
 	w.WriteSE(int32(e.frameQP - e.cfg.QP))
 	w.WriteUE(0)
 	w.WriteSE(0)

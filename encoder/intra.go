@@ -48,7 +48,7 @@ type frameState struct {
 	mvd             []motion.MV
 }
 
-// WithMacroblockQP 使用坐标回调覆盖 CQP；返回值必须为 0..51。
+// WithMacroblockQP 使用坐标回调覆盖 CQP；8位为0..51，10位为-12..51。
 // 回调在 SendFrame 内同步调用，不得重入编码器。不同 QP 通过 mb_qp_delta 写出。
 func WithMacroblockQP(qp func(x, y int) int) Option {
 	return func(e *Encoder) error {
@@ -109,7 +109,7 @@ func (e *Encoder) encodeIntra(src *picture.Picture, idr bool) ([]byte, *frameSta
 			}
 			// CQP 的噪声极端情况下残差比原始像素更长；显式选择规范 I_PCM
 			// 保证每 MB 的大小上限，Level 自动选择据此给出保守保证。
-			if trial.BitsWritten() > 3072 && s.pcmAllowed(addr) {
+			if trial.BitsWritten() > uint64(384*s.pic.Planes[0].BitDepth) && s.pcmAllowed(addr) {
 				qp = previousQP
 				s.writePCM(w, addr)
 			} else {
@@ -154,7 +154,8 @@ func (s *frameState) writePCMSamples(w *bitstream.Writer, addr int) {
 	// PCM不携带transform_size_8x8_flag；候选回退必须清除原8×8/帧间状态，
 	// 否则本地去块会跳过解码器仍执行的4/12像素边，产生参考漂移。
 	info.transform8, info.is16, info.inter, info.skip = false, false, false, false
-	info.qp = 0
+	// PCM的QP'=0；去块元数据保存语法域QPY，10位必须减去位深偏移。
+	info.qp = -6 * (s.pic.Planes[0].BitDepth - 8)
 	info.cbp = 47
 	for i := range info.modes {
 		info.modes[i] = 2
@@ -173,10 +174,10 @@ func (s *frameState) writePCMSamples(w *bitstream.Writer, addr int) {
 		}
 		x, y := addr%s.pic.MBWidth*n, addr/s.pic.MBWidth*n
 		for j := 0; j < n; j++ {
-			row := s.src.Planes[c].Row(y + j)[x : x+n]
-			copy(s.pic.Planes[c].Row(y + j)[x:x+n], row)
-			for _, v := range row {
-				w.WriteByte(v)
+			for i := range n {
+				v := s.src.Planes[c].Sample(x+i, y+j)
+				s.pic.Planes[c].SetSample(x+i, y+j, v)
+				w.WriteBits(uint(s.pic.Planes[c].BitDepth), uint64(v))
 			}
 		}
 	}
@@ -193,7 +194,7 @@ func (s *frameState) analyzeIntra(addr, family int) residual {
 	x, y := addr%mw*16, addr/mw*16
 	pl := &s.pic.Planes[0]
 	samples, top, left, tl := s.blockSamples(addr, 0)
-	var best16 [256]byte
+	var best16 [256]uint16
 	mode16, _ := select16(&best16, &s.src.Planes[0], x, y, samples, top, left, tl)
 	var res residual
 	if family != 2 {
@@ -201,13 +202,13 @@ func (s *frameState) analyzeIntra(addr, family int) residual {
 			r := raster(n)
 			bx, by := r%4, r/4
 			a, t, l, corner := s.samples4(addr, bx, by)
-			var pred [16]byte
+			var pred [16]uint16
 			mode, _ := select4(&pred, &s.src.Planes[0], x+bx*4, y+by*4, a, t, l, corner)
 			info.modes[r] = int8(mode)
 			putBlock(pl, x+bx*4, y+by*4, 4, pred[:])
 			coeff := residualTransform(&s.src.Planes[0], pl, x+bx*4, y+by*4)
-			transform.Quant4x4WithScaling(&res.luma[r], &coeff, info.qp, s.matrix4(true, 0))
-			reconstructScaled(pl, x+bx*4, y+by*4, &res.luma[r], info.qp, nil, s.matrix4(true, 0))
+			transform.Quant4x4WithScaling(&res.luma[r], &coeff, s.lumaQP(info.qp), s.matrix4(true, 0))
+			reconstructScaled(pl, x+bx*4, y+by*4, &res.luma[r], s.lumaQP(info.qp), nil, s.matrix4(true, 0))
 		}
 	}
 	if family == 2 {
@@ -219,13 +220,13 @@ func (s *frameState) analyzeIntra(addr, family int) residual {
 			coeff := residualTransform(&s.src.Planes[0], pl, x+r%4*4, y+r/4*4)
 			dc[r] = coeff[0]
 			coeff[0] = 0
-			transform.Quant4x4WithScaling(&res.luma[r], &coeff, info.qp, s.matrix4(true, 0))
+			transform.Quant4x4WithScaling(&res.luma[r], &coeff, s.lumaQP(info.qp), s.matrix4(true, 0))
 		}
 		transform.ForwardLumaDC(&had, &dc)
-		transform.QuantDCWithScaling(res.lumaDC[:], had[:], info.qp, scalingDC(s.matrix4(true, 0)))
-		transform.DequantLumaDCWithScaling(&dc, &res.lumaDC, info.qp, scalingDC(s.matrix4(true, 0)))
+		transform.QuantDCWithScaling(res.lumaDC[:], had[:], s.lumaQP(info.qp), scalingDC(s.matrix4(true, 0)))
+		transform.DequantLumaDCWithScaling(&dc, &res.lumaDC, s.lumaQP(info.qp), scalingDC(s.matrix4(true, 0)))
 		for r := 0; r < 16; r++ {
-			reconstructScaled(pl, x+r%4*4, y+r/4*4, &res.luma[r], info.qp, &dc[r], s.matrix4(true, 0))
+			reconstructScaled(pl, x+r%4*4, y+r/4*4, &res.luma[r], s.lumaQP(info.qp), &dc[r], s.matrix4(true, 0))
 			info.modes[r] = 2
 		}
 	}
@@ -245,10 +246,10 @@ func (s *frameState) analyzeIntra(addr, family int) residual {
 func (s *frameState) chroma(addr int, res *residual) {
 	info := &s.info[addr]
 	x, y := addr%s.pic.MBWidth*8, addr/s.pic.MBWidth*8
-	var best [2][64]byte
+	var best [2][64]uint16
 	bestCost := int(^uint(0) >> 1)
 	for mode := 0; mode < 4; mode++ {
-		var pred [2][64]byte
+		var pred [2][64]uint16
 		cost := 0
 		available := true
 		for c := 0; c < 2; c++ {
@@ -257,7 +258,7 @@ func (s *frameState) chroma(addr int, res *residual) {
 				available = false
 				break
 			}
-			if prediction.Chroma8x8(pred[c][:], 8, mode, a, t, l) != nil {
+			if prediction.Chroma8x8High(pred[c][:], 8, mode, a, t, l, s.pic.Planes[c+1].BitDepth) != nil {
 				available = false
 				break
 			}
@@ -270,7 +271,7 @@ func (s *frameState) chroma(addr int, res *residual) {
 		}
 	}
 	cbp := 0
-	qpc := transform.ChromaQP(info.qp, 0)
+	qpc := s.chromaQP(info.qp)
 	for c := 0; c < 2; c++ {
 		pl := &s.pic.Planes[c+1]
 		putBlock(pl, x, y, 8, best[c][:])
@@ -301,7 +302,7 @@ func residualTransform(src, pred *picture.Plane, x, y int) [16]int32 {
 	var residual, coeff [16]int32
 	for j := 0; j < 4; j++ {
 		for i := 0; i < 4; i++ {
-			residual[j*4+i] = int32(src.Pix(x+i, y+j)) - int32(pred.Pix(x+i, y+j))
+			residual[j*4+i] = int32(src.Sample(x+i, y+j)) - int32(pred.Sample(x+i, y+j))
 		}
 	}
 	transform.Forward4x4(&coeff, &residual)
@@ -332,23 +333,37 @@ func nonzero(v []int32) bool {
 }
 func raster(n int) int   { return (n/8*2+n%4/2)*4 + (n/4%2)*2 + n%2 }
 func order(x, y int) int { return (y/2*2+x/2)*4 + y%2*2 + x%2 }
-func putBlock(p *picture.Plane, x, y, n int, b []byte) {
-	for j := 0; j < n; j++ {
-		copy(p.Row(y + j)[x:x+n], b[j*n:(j+1)*n])
+func putBlock(p *picture.Plane, x, y, n int, b []uint16) {
+	for j := range n {
+		for i := range n {
+			p.SetSample(x+i, y+j, b[j*n+i])
+		}
 	}
 }
-func blockSATD(p *picture.Plane, x, y, n int, pred []byte) int {
-	return transform.SATD(p.Data[p.Index(x, y):], p.Stride, pred, n, n, n)
+func blockSATD(p *picture.Plane, x, y, n int, pred []uint16) int {
+	sum := 0
+	for by := 0; by < n; by += 4 {
+		for bx := 0; bx < n; bx += 4 {
+			var diff [16]int32
+			for j := range 4 {
+				for i := range 4 {
+					diff[j*4+i] = int32(p.Sample(x+bx+i, y+by+j)) - int32(pred[(by+j)*n+bx+i])
+				}
+			}
+			sum += transform.SATD4x4(&diff)
+		}
+	}
+	return sum
 }
 
-func select4(dst *[16]byte, src *picture.Plane, x, y int, a prediction.Intra4x4Samples, top, left, tl bool) (int, int) {
+func select4(dst *[16]uint16, src *picture.Plane, x, y int, a prediction.Intra4x4Samples16, top, left, tl bool) (int, int) {
 	best, mode := int(^uint(0)>>1), 2
 	for m := 0; m < 9; m++ {
 		if !prediction.Intra4x4ModeAvailable(m, top, left, tl) {
 			continue
 		}
-		var p [16]byte
-		prediction.Intra4x4(p[:], 4, m, a, top, left)
+		var p [16]uint16
+		prediction.Intra4x4High(p[:], 4, m, a, top, left, src.BitDepth)
 		cost := blockSATD(src, x, y, 4, p[:])
 		if cost < best {
 			best = cost
@@ -358,14 +373,14 @@ func select4(dst *[16]byte, src *picture.Plane, x, y int, a prediction.Intra4x4S
 	}
 	return mode, best
 }
-func select16(dst *[256]byte, src *picture.Plane, x, y int, a prediction.IntraBlockSamples, top, left, tl bool) (int, int) {
+func select16(dst *[256]uint16, src *picture.Plane, x, y int, a prediction.IntraBlockSamples16, top, left, tl bool) (int, int) {
 	best, mode := int(^uint(0)>>1), 2
 	for m := 0; m < 4; m++ {
 		if m == 3 && !tl {
 			continue
 		}
-		var p [256]byte
-		if prediction.Intra16x16(p[:], 16, m, a, top, left) != nil {
+		var p [256]uint16
+		if prediction.Intra16x16High(p[:], 16, m, a, top, left, src.BitDepth) != nil {
 			continue
 		}
 		cost := blockSATD(src, x, y, 16, p[:])

@@ -65,7 +65,7 @@ func (e *Encoder) encodeCABAC(src *picture.Picture, intra, idr bool) ([]byte, *f
 		for w.BitsWritten()%8 != 0 {
 			w.WriteBit(1)
 		}
-		ctx, err := cabac.InitContexts(intra, 0, e.frameQP)
+		ctx, err := cabac.InitContexts(intra, 0, min(51, max(0, e.frameQP)))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -124,7 +124,7 @@ func (e *Encoder) encodeCABAC(src *picture.Picture, intra, idr bool) ([]byte, *f
 		if idr {
 			typ = nal.TypeSliceIDR
 		}
-		payload := cabacZeroWordPayload(w.Bytes(), c.completedBins+c.e.BinCount(), last-first)
+		payload := cabacZeroWordPayload(w.Bytes(), c.completedBins+c.e.BinCount(), last-first, src.Planes[0].BitDepth)
 		if err = aw.Write(nal.Unit{Header: nal.Header{Type: typ, RefIDC: 3}, Payload: payload}); err != nil {
 			return nil, nil, err
 		}
@@ -262,13 +262,7 @@ func (c *cabacWriter) residualMacroblock(s *frameState, addr int, qp *int, res *
 		c.transformFlag(s, addr)
 	}
 	if i.is16 || i.cbp != 0 {
-		delta := i.qp - *qp
-		if delta > 25 {
-			delta -= 52
-		}
-		if delta < -26 {
-			delta += 52
-		}
+		delta := s.qpDelta(i.qp, *qp)
 		v := 2*delta - 1
 		if delta <= 0 {
 			v = -2 * delta

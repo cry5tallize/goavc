@@ -12,7 +12,7 @@ import (
 type rdCandidate struct {
 	info                   mbInfo
 	res                    residual
-	pixels                 [384]byte
+	pixels                 [384]uint16
 	vectors                [16]motion.MV
 	nz                     [16]uint8
 	cnz                    [2][4]uint8
@@ -78,7 +78,7 @@ func (s *frameState) decideRD(addr, previousQP, radius int, full, early bool) (r
 			return residual{}, err
 		}
 		// 其余非 Skip 宏块最少 5 bit 且 D>=0，此剪枝不会跳过更低 J 的候选。
-		if early && best.cost <= rdCost(qp, 0, 5) {
+		if early && best.cost <= rdCost(s.lumaQP(qp), 0, 5) {
 			s.restoreRD(addr, &best)
 			return best.res, nil
 		}
@@ -159,17 +159,17 @@ func (s *frameState) uniformPrediction(addr, radius int) bool {
 		}
 		x, y := addr%s.pic.MBWidth*n, addr/s.pic.MBWidth*n
 		source, reference, pred := &s.src.Planes[comp], &s.reference.Planes[comp], &s.pic.Planes[comp]
-		sv, pv := source.Pix(x, y), pred.Pix(x, y)
+		sv, pv := source.Sample(x, y), pred.Sample(x, y)
 		for j := 0; j < n; j++ {
 			for i := 0; i < n; i++ {
-				if source.Pix(x+i, y+j) != sv || pred.Pix(x+i, y+j) != pv {
+				if source.Sample(x+i, y+j) != sv || pred.Sample(x+i, y+j) != pv {
 					return false
 				}
 			}
 		}
 		for j := max(0, y-pad); j < min(reference.Height, y+n+pad); j++ {
-			for _, v := range reference.Row(j)[max(0, x-pad):min(reference.Width, x+n+pad)] {
-				if v != pv {
+			for i := max(0, x-pad); i < min(reference.Width, x+n+pad); i++ {
+				if reference.Sample(i, j) != pv {
 					return false
 				}
 			}
@@ -200,7 +200,7 @@ func (s *frameState) interCandidateUsingMotion(addr, kind, radius int, full bool
 			mv = vectors[i]
 		} else {
 			pred := s.predictPartition(addr, kind, i)
-			lambda := motionLambdaQ8(info.qp)
+			lambda := motionLambdaQ8(s.lumaQP(info.qp))
 			mv, _ = search.EstimateWithCost(&s.src.Planes[0], &searchReference.Planes[0], x+p.x, y+p.y, p.w, p.h, pred, radius, full, func(m motion.MV, sad int) uint64 {
 				return uint64(sad)*256 + lambda*uint64(mvBits(m.X-pred.X, m.Y-pred.Y))
 			})
@@ -253,13 +253,13 @@ func (s *frameState) captureRD(addr, previousQP, qp int, res residual) (rdCandid
 		}
 		x, y := addr%s.pic.MBWidth*n, addr/s.pic.MBWidth*n
 		for j := 0; j < n; j++ {
-			row := s.pic.Planes[comp].Row(y + j)[x : x+n]
-			copy(c.pixels[offset:offset+n], row)
-			offset += n
-			for i, v := range row {
-				d := int64(v) - int64(s.src.Planes[comp].Pix(x+i, y+j))
+			for i := range n {
+				v := s.pic.Planes[comp].Sample(x+i, y+j)
+				c.pixels[offset+i] = v
+				d := int64(v) - int64(s.src.Planes[comp].Sample(x+i, y+j))
 				c.distortion += uint64(d * d)
 			}
+			offset += n
 		}
 	}
 	x, y := addr%s.pic.MBWidth*4, addr/s.pic.MBWidth*4
@@ -270,7 +270,7 @@ func (s *frameState) captureRD(addr, previousQP, qp int, res residual) (rdCandid
 	for comp := range c.cnz {
 		copy(c.cnz[comp][:], s.cnz[comp][addr*4:addr*4+4])
 	}
-	c.cost = rdCost(qp, c.distortion, c.rate)
+	c.cost = rdCost(s.lumaQP(qp), c.distortion, c.rate)
 	return c, nil
 }
 
@@ -326,7 +326,9 @@ func (s *frameState) restoreRD(addr int, c *rdCandidate) {
 		}
 		x, y := addr%s.pic.MBWidth*n, addr/s.pic.MBWidth*n
 		for j := 0; j < n; j++ {
-			copy(s.pic.Planes[comp].Row(y + j)[x:x+n], c.pixels[offset:offset+n])
+			for i := range n {
+				s.pic.Planes[comp].SetSample(x+i, y+j, c.pixels[offset+i])
+			}
 			offset += n
 		}
 	}

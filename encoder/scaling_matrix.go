@@ -9,7 +9,7 @@ import (
 // 每项必须为1..255；按值复制。DC路径使用对应矩阵的首项，不单独引入DC矩阵。
 func WithScalingMatrices4x4(matrices [6][16]uint8) Option {
 	return func(e *Encoder) error {
-		if e.cfg.Profile != h264.ProfileHigh {
+		if e.cfg.Profile != h264.ProfileHigh && e.cfg.Profile != h264.ProfileHigh10 {
 			return fmt.Errorf("encoder: custom scaling matrices require High: %w", h264.ErrUnsupported)
 		}
 		for _, matrix := range matrices {

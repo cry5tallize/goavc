@@ -69,7 +69,7 @@ func (e *Encoder) encodeP(src *picture.Picture) ([]byte, *frameState, error) {
 			if err != nil {
 				return nil, nil, err
 			}
-			if trial.BitsWritten() > 3072 && s.pcmAllowed(addr) {
+			if trial.BitsWritten() > uint64(384*s.pic.Planes[0].BitDepth) && s.pcmAllowed(addr) {
 				qp = previousQP
 				s.info[addr].inter = false
 				s.info[addr].skip = false
@@ -139,10 +139,18 @@ func (s *frameState) predictPartition(addr, kind, index int) motion.MV {
 func (s *frameState) mc(addr int, p partition, mv motion.MV) {
 	x, y := addr%s.pic.MBWidth*16+p.x, addr/s.pic.MBWidth*16+p.y
 	pl := &s.pic.Planes[0]
-	prediction.MCBlockLuma(pl.Data[pl.Index(x, y):], pl.Stride, &s.reference.Planes[0], x, y, p.w, p.h, int(mv.X), int(mv.Y))
+	if pl.BitDepth > 8 {
+		prediction.MCBlockLumaHigh(pl.Data16[pl.Index(x, y):], pl.Stride, &s.reference.Planes[0], x, y, p.w, p.h, int(mv.X), int(mv.Y))
+	} else {
+		prediction.MCBlockLuma(pl.Data[pl.Index(x, y):], pl.Stride, &s.reference.Planes[0], x, y, p.w, p.h, int(mv.X), int(mv.Y))
+	}
 	for c := 1; c < 3; c++ {
 		pl = &s.pic.Planes[c]
-		prediction.MCBlockChroma(pl.Data[pl.Index(x/2, y/2):], pl.Stride, &s.reference.Planes[c], x/2, y/2, p.w/2, p.h/2, int(mv.X), int(mv.Y))
+		if pl.BitDepth > 8 {
+			prediction.MCBlockChromaHigh(pl.Data16[pl.Index(x/2, y/2):], pl.Stride, &s.reference.Planes[c], x/2, y/2, p.w/2, p.h/2, int(mv.X), int(mv.Y))
+		} else {
+			prediction.MCBlockChroma(pl.Data[pl.Index(x/2, y/2):], pl.Stride, &s.reference.Planes[c], x/2, y/2, p.w/2, p.h/2, int(mv.X), int(mv.Y))
+		}
 	}
 	s.applyPredictionWeights(x, y, p.w, p.h)
 }
@@ -164,7 +172,7 @@ func (s *frameState) interResidual(addr int) residual {
 			break
 		}
 		coeff := residualTransform(&s.src.Planes[0], &s.pic.Planes[0], x+r%4*4, y+r/4*4)
-		quant4(&res.luma[r], &coeff, info.qp, s.matrix4(false, 0))
+		quant4(&res.luma[r], &coeff, s.lumaQP(info.qp), s.matrix4(false, 0))
 		if nonzero(res.luma[r][:]) {
 			info.cbp |= 1 << ((r/4/2)*2 + r%4/2)
 		}
@@ -175,18 +183,18 @@ func (s *frameState) interResidual(addr int) residual {
 			var input, coeff [64]int32
 			for j := 0; j < 8; j++ {
 				for i := 0; i < 8; i++ {
-					input[j*8+i] = int32(s.src.Planes[0].Pix(bx+i, by+j)) - int32(s.pic.Planes[0].Pix(bx+i, by+j))
+					input[j*8+i] = int32(s.src.Planes[0].Sample(bx+i, by+j)) - int32(s.pic.Planes[0].Sample(bx+i, by+j))
 				}
 			}
 			transform.Forward8x8(&coeff, &input)
-			quant8(&res.luma8[block], &coeff, info.qp, s.matrix8(false))
+			quant8(&res.luma8[block], &coeff, s.lumaQP(info.qp), s.matrix8(false))
 			if nonzero(res.luma8[block][:]) {
 				info.cbp |= 1 << block
 			}
 		}
 	}
 	cbp := 0
-	qpc := transform.ChromaQP(info.qp, 0)
+	qpc := s.chromaQP(info.qp)
 	for c := 0; c < 2; c++ {
 		var dc, had [4]int32
 		for r := 0; r < 4; r++ {
@@ -220,14 +228,14 @@ func (s *frameState) reconstructInter(addr int, res *residual) {
 		if s.info[addr].transform8 {
 			break
 		}
-		reconstructScaled(&s.pic.Planes[0], x+r%4*4, y+r/4*4, &res.luma[r], qp, nil, s.matrix4(false, 0))
+		reconstructScaled(&s.pic.Planes[0], x+r%4*4, y+r/4*4, &res.luma[r], s.lumaQP(qp), nil, s.matrix4(false, 0))
 	}
 	if s.info[addr].transform8 {
 		for block := 0; block < 4; block++ {
-			reconstruct8(&s.pic.Planes[0], x+(block%2)*8, y+(block/2)*8, &res.luma8[block], qp, s.matrix8(false))
+			reconstruct8(&s.pic.Planes[0], x+(block%2)*8, y+(block/2)*8, &res.luma8[block], s.lumaQP(qp), s.matrix8(false))
 		}
 	}
-	qpc := transform.ChromaQP(qp, 0)
+	qpc := s.chromaQP(qp)
 	for c := 0; c < 2; c++ {
 		var dc [4]int32
 		transform.DequantChromaDCWithScaling(&dc, &res.chromaDC[c], qpc, scalingDC(s.matrix4(false, c+1)))
@@ -259,6 +267,12 @@ func (s *frameState) writeInter(w *bitstream.Writer, addr int, qp *int, res *res
 		w.WriteSE(actual[i].Y - pred.Y)
 		s.mv.SetRect(x+p.x/4, y+p.y/4, p.w/4, p.h/4, actual[i], 0)
 	}
+	return s.writeInterResidual(w, addr, qp, res)
+}
+
+// P与B_Direct共用CBP、QP差和CAVLC残差语法，运动头由各自调用方写出。
+func (s *frameState) writeInterResidual(w *bitstream.Writer, addr int, qp *int, res *residual) error {
+	info := &s.info[addr]
 	for code, cbp := range interCBP {
 		if cbp == info.cbp {
 			w.WriteUE(uint32(code))
@@ -269,13 +283,7 @@ func (s *frameState) writeInter(w *bitstream.Writer, addr int, qp *int, res *res
 		w.WriteBit(uint8(flag(info.transform8)))
 	}
 	if info.cbp != 0 {
-		delta := info.qp - *qp
-		if delta > 25 {
-			delta -= 52
-		}
-		if delta < -26 {
-			delta += 52
-		}
+		delta := s.qpDelta(info.qp, *qp)
 		w.WriteSE(int32(delta))
 		*qp = info.qp
 	} else {
