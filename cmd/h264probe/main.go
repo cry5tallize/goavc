@@ -1,5 +1,5 @@
-// h264probe读取Annex-B参数集与slice header，供GOP门禁使用；不解码像素，
-// 头部探测成功不能替代Decoder或独立Oracle对残差的验证。
+// h264probe 提供 GOP 统计与逐 NAL 语法树；仅解析头部，不解码像素或残差，
+// 探测成功不能替代 Decoder 或独立 Oracle 对完整码流的验证。
 package main
 
 import (
@@ -11,9 +11,7 @@ import (
 	"os"
 
 	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
 	"github.com/goavc/h264/nal"
-	"github.com/goavc/h264/syntax"
 )
 
 type pictureInfo struct {
@@ -41,25 +39,46 @@ func main() {
 }
 
 func run(args []string, out, stderr io.Writer) error {
+	return runWithInput(args, os.Stdin, out, stderr)
+}
+
+func runWithInput(args []string, stdin io.Reader, out, stderr io.Writer) error {
 	f := flag.NewFlagSet("h264probe", flag.ContinueOnError)
 	f.SetOutput(stderr)
-	input := f.String("input", "", "Annex-B输入路径")
-	limit := f.Int("max-frames", 1<<20, "最大图片数")
+	input := f.String("input", "", "输入路径；-表示stdin")
+	format := f.String("format", "annexb", "输入格式：annexb或avcc")
+	lengthSize := f.Int("length-size", 4, "AVCC长度前缀字节数，1..4")
+	syntaxMode := f.Bool("syntax", false, "逐NAL输出JSON Lines语法树，不解码残差；错误前可能已有输出")
+	maxNALSize := f.Int("max-nal-size", 64<<20, "单NAL字节上限，包含头部；最大64MiB")
+	maxNALs := f.Int("max-nals", 1<<20, "NAL数量上限")
+	limit := f.Int("max-frames", 1<<20, "GOP统计最大图片数")
 	frames := f.Int("expect-frames", -1, "断言图片总数，-1关闭")
 	b := f.Int("expect-max-b", -1, "断言连续B图片最大数，-1关闭")
 	idr := f.Int("expect-idr-interval", -1, "断言相邻IDR图片的编码顺序间隔，-1关闭")
 	if err := f.Parse(args); err != nil {
 		return err
 	}
-	if *input == "" || *limit < 1 || *limit > 1<<24 || *frames < -1 || *b < -1 || *idr < -1 || *idr == 0 || f.NArg() != 0 {
+	if *input == "" || *limit < 1 || *limit > 1<<24 || *frames < -1 || *b < -1 || *idr < -1 || *idr == 0 || f.NArg() != 0 || (*format != "annexb" && *format != "avcc") || *lengthSize < 1 || *lengthSize > 4 || *maxNALSize < 1 || *maxNALSize > 64<<20 || *maxNALs < 1 || *maxNALs > 1<<24 || *syntaxMode && (*frames >= 0 || *b >= 0 || *idr >= 0) {
 		return fmt.Errorf("h264probe: 输入或资源上限无效: %w", h264.ErrInvalidData)
 	}
-	in, err := os.Open(*input)
+	var in io.Reader = stdin
+	if *input != "-" {
+		file, err := os.Open(*input)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		in = file
+	}
+	reader, err := newUnitReader(in, *format, *lengthSize, *maxNALSize)
 	if err != nil {
 		return err
 	}
-	defer in.Close()
-	r, err := probe(in, *limit)
+	units := &limitedUnits{unitReader: reader, limit: *maxNALs}
+	if *syntaxMode {
+		return probeSyntax(units, out)
+	}
+	r, err := probeUnits(units, *limit)
 	if err != nil {
 		return err
 	}
@@ -82,10 +101,12 @@ func run(args []string, out, stderr io.Writer) error {
 }
 
 func probe(input io.Reader, maxFrames int) (report, error) {
+	return probeUnits(&limitedUnits{unitReader: nal.NewAnnexBScannerWithLimit(input, 64<<20), limit: 1 << 20}, maxFrames)
+}
+
+func probeUnits(scanner unitReader, maxFrames int) (report, error) {
 	r := report{Counts: map[string]int{}}
-	sps := map[uint32]*syntax.SPS{}
-	pps := map[uint32]*syntax.PPS{}
-	scanner := nal.NewAnnexBScannerWithLimit(input, 64<<20)
+	state := newSyntaxState()
 	consecutive := 0
 	var lastMB uint32
 	for {
@@ -99,57 +120,15 @@ func probe(input io.Reader, maxFrames int) (report, error) {
 		if u.Header.Type != nal.TypeSPS && u.Header.Type != nal.TypePPS && !u.IsVCL() {
 			continue
 		}
-		if u.IsVCL() && u.Header.Type != nal.TypeSlice && !u.IsIDR() {
-			return r, fmt.Errorf("h264probe: 不支持数据分区: %w", h264.ErrUnsupported)
-		}
-		payload := u.Payload
-		// 仅已解析CABAC PPS的slice允许规范终端zero-word转义；参数集仍严格校验。
-		terminal := u.IsVCL() && len(payload) >= 3 && payload[len(payload)-3] == 0 && payload[len(payload)-2] == 0 && payload[len(payload)-1] == 3
-		if terminal {
-			payload = payload[:len(payload)-1]
-		}
-		rbsp, err := bitstream.EBSPToRBSP(payload)
+		record, err := state.parse(u)
 		if err != nil {
 			return r, err
 		}
-		switch u.Header.Type {
-		case nal.TypeSPS:
-			s, err := syntax.ParseSPS(rbsp)
-			if err != nil {
-				return r, err
-			}
-			sps[s.SeqParameterSetID] = s
-		case nal.TypePPS:
-			bits := bitstream.NewReader(rbsp)
-			if _, err = bits.ReadUE(); err != nil {
-				return r, err
-			}
-			id, err := bits.ReadUE()
-			if err != nil || sps[id] == nil {
-				return r, fmt.Errorf("h264probe: PPS缺少有效SPS: %w", h264.ErrInvalidData)
-			}
-			p, err := syntax.ParsePPS(rbsp, sps[id])
-			if err != nil {
-				return r, err
-			}
-			pps[p.PicParameterSetID] = p
-		default:
-			bits := bitstream.NewReader(rbsp)
-			for range 2 {
-				if _, err = bits.ReadUE(); err != nil {
-					return r, err
-				}
-			}
-			id, err := bits.ReadUE()
-			p := pps[id]
-			if err != nil || p == nil || terminal && !p.EntropyCodingModeFlag {
-				return r, fmt.Errorf("h264probe: slice缺少有效PPS或终端转义非法: %w", h264.ErrInvalidData)
-			}
-			s := sps[p.SeqParameterSetID]
-			h, err := syntax.ParseSliceHeaderEx(rbsp, s, pps, u.IsIDR(), u.Header.RefIDC)
-			if err != nil {
-				return r, err
-			}
+		if record.SliceHeader != nil {
+			h := record.SliceHeader
+			id := h.PicParameterSetID
+			p := state.pps[id]
+			s := state.sps[p.SeqParameterSetID]
 			if !s.FrameMbsOnlyFlag || h.RedundantPicCnt != 0 {
 				return r, fmt.Errorf("h264probe: 字段/冗余slice尚未提供图片统计: %w", h264.ErrUnsupported)
 			}
@@ -160,12 +139,6 @@ func probe(input io.Reader, maxFrames int) (report, error) {
 			}
 			if eh != nil {
 				return r, eh
-			}
-			if w > h264.MaxFrameWidth || height > h264.MaxFrameHeight || s.PicWidthInMbs() > h264.MaxFrameWidth/16 || s.FrameHeightInMbs() > h264.MaxFrameHeight/16 {
-				return r, fmt.Errorf("h264probe: 显示尺寸无效或超限: %w", h264.ErrResourceLimit)
-			}
-			if uint64(h.FirstMBInSlice) >= s.PicWidthInMbs()*s.FrameHeightInMbs() || u.IsIDR() && u.Header.RefIDC == 0 {
-				return r, fmt.Errorf("h264probe: slice地址或IDR参考标志无效: %w", h264.ErrInvalidData)
 			}
 			kind := h.Type.String()
 			if u.IsIDR() {
