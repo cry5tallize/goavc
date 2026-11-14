@@ -19,9 +19,16 @@ type PPS struct {
 	EntropyCodingModeFlag                 bool
 	BottomFieldPicOrderInFramePresentFlag bool
 
-	// NumSliceGroupsMinus1 非 0 表示 FMO；M1 不支持，解析时直接返回
-	// ErrUnsupported，因此成功解析的 PPS 该字段恒为 0。
-	NumSliceGroupsMinus1 uint32
+	// FMO 字段的长度和地址均以 map unit 为单位（§7.3.2.2）。
+	NumSliceGroupsMinus1          uint32
+	SliceGroupMapType             uint32
+	RunLengthMinus1               []uint32
+	TopLeft                       []uint32
+	BottomRight                   []uint32
+	SliceGroupChangeDirectionFlag bool
+	SliceGroupChangeRateMinus1    uint32
+	PicSizeInMapUnitsMinus1       uint32
+	SliceGroupID                  []uint8
 
 	NumRefIdxL0DefaultActiveMinus1 uint32
 	NumRefIdxL1DefaultActiveMinus1 uint32
@@ -47,11 +54,10 @@ type PPS struct {
 // ParsePPS 解析完整的 PPS RBSP。
 //
 // sps 用于确定 scaling list 的数量（4:2:0/4:2:2 为 8，4:4:4 为 12），
-// 因此不能为 nil。FMO（num_slice_groups_minus1 > 0）属于 M7 范围，
-// 解析到该字段时返回 ErrUnsupported。
+// 因此不能为 nil。FMO 0..6 的参数按 SPS 图像尺寸校验。
 func ParsePPS(rbsp []byte, sps *SPS) (*PPS, error) {
 	if sps == nil {
-		return nil, fmt.Errorf("syntax: parse pps requires an sps context")
+		return nil, fmt.Errorf("syntax: parse pps requires an sps context: %w", h264.ErrInvalidData)
 	}
 	if sps.BitDepthLumaMinus8 > 6 {
 		return nil, fmt.Errorf("syntax: invalid SPS bit depth: %w", h264.ErrInvalidData)
@@ -74,6 +80,9 @@ func ParsePPS(rbsp []byte, sps *SPS) (*PPS, error) {
 		return nil, fmt.Errorf("syntax: seq_parameter_set_id = %d exceeds 31: %w",
 			p.SeqParameterSetID, h264.ErrInvalidData)
 	}
+	if p.SeqParameterSetID != sps.SeqParameterSetID {
+		return nil, fmt.Errorf("syntax: PPS references SPS %d, got SPS %d: %w", p.SeqParameterSetID, sps.SeqParameterSetID, h264.ErrInvalidData)
+	}
 	if p.EntropyCodingModeFlag, err = readFlag(r, "entropy_coding_mode_flag"); err != nil {
 		return nil, err
 	}
@@ -83,9 +92,8 @@ func ParsePPS(rbsp []byte, sps *SPS) (*PPS, error) {
 	if p.NumSliceGroupsMinus1, err = readUE(r, "num_slice_groups_minus1"); err != nil {
 		return nil, err
 	}
-	if p.NumSliceGroupsMinus1 != 0 {
-		return nil, fmt.Errorf("syntax: FMO (num_slice_groups_minus1 = %d) is not supported: %w",
-			p.NumSliceGroupsMinus1, h264.ErrUnsupported)
+	if err := p.parseFMO(r, sps); err != nil {
+		return nil, err
 	}
 	if p.NumRefIdxL0DefaultActiveMinus1, err = readUE(r, "num_ref_idx_l0_default_active_minus1"); err != nil {
 		return nil, err
@@ -206,6 +214,9 @@ func (p *PPS) WriteTo(w *bitstream.Writer, sps *SPS) error {
 	if err := writeUE(w, p.NumSliceGroupsMinus1, "num_slice_groups_minus1"); err != nil {
 		return err
 	}
+	if err := p.writeFMO(w); err != nil {
+		return err
+	}
 	if err := writeUE(w, p.NumRefIdxL0DefaultActiveMinus1, "num_ref_idx_l0_default_active_minus1"); err != nil {
 		return err
 	}
@@ -303,10 +314,10 @@ func (p *PPS) needsOptionalBlock() bool {
 
 func (p *PPS) validateForWrite(sps *SPS) error {
 	if p == nil {
-		return fmt.Errorf("syntax: nil pps")
+		return fmt.Errorf("syntax: nil pps: %w", h264.ErrInvalidData)
 	}
 	if sps == nil {
-		return fmt.Errorf("syntax: write pps requires an sps context")
+		return fmt.Errorf("syntax: write pps requires an sps context: %w", h264.ErrInvalidData)
 	}
 	if sps.BitDepthLumaMinus8 > 6 {
 		return fmt.Errorf("syntax: invalid SPS bit depth: %w", h264.ErrInvalidData)
@@ -319,8 +330,11 @@ func (p *PPS) validateForWrite(sps *SPS) error {
 		return fmt.Errorf("syntax: seq_parameter_set_id %d exceeds 31: %w",
 			p.SeqParameterSetID, h264.ErrInvalidData)
 	}
-	if p.NumSliceGroupsMinus1 != 0 {
-		return fmt.Errorf("syntax: FMO is not supported: %w", h264.ErrUnsupported)
+	if p.SeqParameterSetID != sps.SeqParameterSetID {
+		return fmt.Errorf("syntax: PPS references SPS %d, got SPS %d: %w", p.SeqParameterSetID, sps.SeqParameterSetID, h264.ErrInvalidData)
+	}
+	if err := p.validateFMO(sps); err != nil {
+		return err
 	}
 	if p.NumRefIdxL0DefaultActiveMinus1 > 31 || p.NumRefIdxL1DefaultActiveMinus1 > 31 {
 		return fmt.Errorf("syntax: num_ref_idx default active minus1 exceeds 31: %w", h264.ErrInvalidData)

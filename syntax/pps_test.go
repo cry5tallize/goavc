@@ -168,8 +168,8 @@ func TestPPS_RoundTrip_OptionalBlock(t *testing.T) {
 	}
 }
 
-// TestParsePPS_FMOUnsupported 验证 FMO 被显式拒绝。
-func TestParsePPS_FMOUnsupported(t *testing.T) {
+// TestParsePPS_FMOTruncated 验证缺少 FMO 语法仍属于截断，而非 Unsupported。
+func TestParsePPS_FMOTruncated(t *testing.T) {
 	w := bitstream.NewWriter()
 	if err := w.WriteUE(0); err != nil { // pps id
 		t.Fatal(err)
@@ -190,8 +190,8 @@ func TestParsePPS_FMOUnsupported(t *testing.T) {
 		t.Fatal(err)
 	}
 	sps := &SPS{ProfileIDC: 66, FrameMbsOnlyFlag: true}
-	if _, err := ParsePPS(w.Bytes(), sps); !errors.Is(err, h264.ErrUnsupported) {
-		t.Fatalf("错误 = %v，期望 ErrUnsupported", err)
+	if _, err := ParsePPS(w.Bytes(), sps); !errors.Is(err, h264.ErrInvalidData) {
+		t.Fatalf("错误 = %v，期望 ErrInvalidData", err)
 	}
 }
 
@@ -239,9 +239,9 @@ func TestPPS_Errors(t *testing.T) {
 			t.Fatal("chroma_qp_index_offset=13 应返回错误")
 		}
 	})
-	t.Run("fmo write", func(t *testing.T) {
-		if _, err := (&PPS{NumSliceGroupsMinus1: 1}).MarshalRBSP(sps); !errors.Is(err, h264.ErrUnsupported) {
-			t.Fatalf("错误 = %v，期望 ErrUnsupported", err)
+	t.Run("fmo missing run lengths", func(t *testing.T) {
+		if _, err := (&PPS{NumSliceGroupsMinus1: 1}).MarshalRBSP(sps); !errors.Is(err, h264.ErrInvalidData) {
+			t.Fatalf("错误 = %v，期望 ErrInvalidData", err)
 		}
 	})
 	t.Run("scaling list missing", func(t *testing.T) {

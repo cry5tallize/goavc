@@ -106,6 +106,9 @@ type SliceHeader struct {
 	SliceAlphaC0OffsetDiv2     int32
 	SliceBetaOffsetDiv2        int32
 
+	// SliceGroupChangeCycle 仅动态FMO类型3..5携带，决定当前图片的映射。
+	SliceGroupChangeCycle uint32
+
 	// HeaderBits 是 slice header 占用的比特数，slice data 从该位置开始。
 	// 调用方在同一 RBSP 上新建 Reader 并 SkipBits(HeaderBits) 即可。
 	HeaderBits uint64
@@ -365,6 +368,20 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 					h.SliceBetaOffsetDiv2, h264.ErrInvalidData)
 			}
 		}
+	}
+	if pps.NumSliceGroupsMinus1 > 0 && pps.SliceGroupMapType >= 3 && pps.SliceGroupMapType <= 5 {
+		width, maxCycle, err := pps.SliceGroupChangeCycleBits(sps)
+		if err != nil {
+			return nil, err
+		}
+		cycle, err := readBits(r, width, "slice_group_change_cycle")
+		if err != nil {
+			return nil, err
+		}
+		if cycle > uint64(maxCycle) {
+			return nil, fmt.Errorf("syntax: slice_group_change_cycle exceeds %d: %w", maxCycle, h264.ErrInvalidData)
+		}
+		h.SliceGroupChangeCycle = uint32(cycle)
 	}
 
 	h.HeaderBits = r.BitsRead()

@@ -54,7 +54,7 @@
 | AVCC / avcC | ISO/IEC 14496-15 | 1..4 字节长度、8 MiB 上限、avcC 解析与序列化 | Partial | `avcc_test.go`、`avcc_writer_test.go`、`avcconfig_test.go`、`avcconfig_writer_test.go` | 尚无真实 MP4/avcC 语料，目前只有合成记录 |
 | Access Unit 组装 | 7.4.1.2.3 | AUD/前缀/后缀、first_mb/frame_num/POC 等判定、显式 hint | Conformant | `accessunit_test.go`、`assembler_test.go`、`corpus_test.go` | 多 slice 且无 AUD 时依赖 SliceInfo hint；suffix SEI 归类保守 |
 | SPS 解析与序列化 | 7.3.2.1 | Baseline/Main/High、High10/422/444的8/10-bit、独立色平面、帧/场与MBAFF语法、VUI/ScalingList与裁剪 | Conformant | 原语法/ffprobe及扩展Profile像素Oracle、场/MBAFF固定字节与真实隔行语法探测通过 | qpprime仍拒绝；MBAFF像素重建见第13项，PAFF场图像及单色解码仍拒绝 |
-| PPS 解析与序列化 | 7.3.2.2 | 核心字段、可选 8×8/scaling 扩展、FMO 拒绝 | Partial | `pps_test.go`、`corpus_test.go` | 无独立 PPS 级 Oracle；依赖 x264 原始字节往返与 manifest 熵模式 |
+| PPS 解析与序列化 | 7.3.2.2 | 核心字段、可选8×8/scaling扩展、FMO 0–6参数及尺寸校验 | Partial | 原pps/corpus回归；M7 FMO固定规范字节、七类映射、坏表与分配前限额测试 | FMO语法证据见第15项，不代表FMO宏块流水线已接入；完整组合限制另行验收 |
 | VUI | E.1 | 宽高比、overscan、video signal、timing、HRD、bitstream restriction | Partial | `vui_test.go`、`corpus_test.go` | timing/HRD 语义未与独立 Oracle 对比（裸流 ffprobe 帧率不可靠） |
 | ScalingList | 7.3.2.1.1.1 | 4×4/8×8、保留原始 delta 序列 | Partial | `scaling_list_test.go`、`sps_write_test.go` | 无自定义矩阵真实语料；应用层（反量化）在 M3 |
 | SEI 基础 | 7.3.2.3 | payloadType/Size 扩展、user_data_unregistered | Partial | `sei_test.go`、`corpus_test.go` | 仅框架与 user_data；recovery point 等语义消息在 M2/M3 |
@@ -221,6 +221,7 @@ High10渐进420编解码及High422/High444渐进8/10-bit解码已接入，限定
 | 12：场运动矢量预测 | 显式帧/顶场/底场单位，帧场MV/ref_idx归一化，MBAFF场列表奇偶拆分，分区定向MVP与P_Skip | Conformant | 负奇数/参考边界/场奇偶/可用与帧内区别/C→D/定向/Skip规范向量及独立完整门禁；第13项接入后由真实帧场混合Oracle覆盖 | PAFF场列表不能用MBAFF拆分代替，PAFF流水线仍拒绝 |
 | 13：MBAFF宏块对解码 | 双熵宏块对遍历/Skip场标志推导，帧场混合物理邻域、原生场视图/扫描/MV与参考，B Direct、逐对去块及420对侧场色度相位 | Conformant | 六格式×双熵×TFF/BFF×四类I/P/B/8×8矩阵×全场/真实混合共192配置、1152帧外部x264/FFmpeg逐采样一致；混合PCM与对侧场规范码流；原Main隔行四帧固定YUV哈希及manifest状态迁移；独立完整CGO=0门禁（35包依赖/30条语料）与真实六帧CLI二进制比较通过 | 只接受MBAFF帧图片，PAFF及非MBAFF隔行序列仍ErrUnsupported；FMO/ASO/分区/SP/SI/冗余及transform bypass另项验收；未据此关闭M7总门禁 |
 | 14：顶/底场优先隔行编码 | WithInterlaced与CLI field-order，真实全field-coded MBAFF宏块对、原生场预测/扫描/重建/滤波及逐帧pic_timing | Conformant | 六格式/双熵/TFF-BFF/1与3slice、I/P/B/8×8矩阵/权重、负QP与显式PCM三方像素通过，独立平面按单色投影比较；跨pair-row无同slice邻pair的双Skip推导回归；完整CGO=0独立门禁及TFF/BFF实际CLI各六帧像素/逐帧场序通过 | 固定选择真实场宏块，不做自适应帧/场RDO，不生成PAFF；高度须能由2*SubHeightC裁剪单位表达，Baseline拒绝；B仍限既有非参考spatial-direct工具 |
+| 15：FMO 0–6语法与映射 | PPS参数读写、动态slice_group_change_cycle位宽、map-unit/帧场宏块映射及NextMBAddress | Conformant | 固定规范PPS字节、七类型手算映射、双方向/矩形覆盖/退化尺寸/动态cycle与payload边界、坏表及分配前资源限制；独立暂存区完整CGO=0门禁通过（35包依赖/30条语料） | 本项仅语法和地址映射；FMO/ASO像素解码仍由第16项接入，不宣称完整Baseline/Extended支持 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。
