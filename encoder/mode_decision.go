@@ -93,10 +93,25 @@ func (s *frameState) decideRD(addr, previousQP, radius int, full, early bool) (r
 		if err = evaluate(res); err != nil {
 			return residual{}, err
 		}
-		if s.allow8 {
+		// 同一分区的变换与死区候选使用相同QP、MVP和SAD目标。
+		// 复用ME结果，不复用重建；保留原1/3候选，以J选择是否采用1/6，
+		// 避免将扩大死区当作无条件降低码量/画质的捷径。
+		var vectors [4]motion.MV
+		var reused *[4]motion.MV
+		if early {
+			for index, p := range partitions[kind] {
+				vectors[index], _, _ = s.mv.Get(x+p.x/4, y+p.y/4)
+			}
+			reused = &vectors
+		}
+		for variant := 1; variant < 4; variant++ {
+			if variant >= 2 && !s.allow8 {
+				break
+			}
 			reset()
-			s.info[addr].transform8 = true
-			res = s.interCandidate(addr, kind, radius, full)
+			s.info[addr].transform8 = variant >= 2
+			s.info[addr].interDeadZone = variant%2 == 1
+			res = s.interCandidateUsingMotion(addr, kind, radius, full, reused)
 			if err = evaluate(res); err != nil {
 				return residual{}, err
 			}
@@ -164,6 +179,10 @@ func (s *frameState) uniformPrediction(addr, radius int) bool {
 }
 
 func (s *frameState) interCandidate(addr, kind, radius int, full bool) residual {
+	return s.interCandidateUsingMotion(addr, kind, radius, full, nil)
+}
+
+func (s *frameState) interCandidateUsingMotion(addr, kind, radius int, full bool, vectors *[4]motion.MV) residual {
 	info := &s.info[addr]
 	info.inter = true
 	info.partition = kind
@@ -176,11 +195,16 @@ func (s *frameState) interCandidate(addr, kind, radius int, full bool) residual 
 		searchReference = s.searchReference
 	}
 	for i, p := range partitions[kind] {
-		pred := s.predictPartition(addr, kind, i)
-		lambda := motionLambdaQ8(info.qp)
-		mv, _ := search.EstimateWithCost(&s.src.Planes[0], &searchReference.Planes[0], x+p.x, y+p.y, p.w, p.h, pred, radius, full, func(m motion.MV, sad int) uint64 {
-			return uint64(sad)*256 + lambda*uint64(mvBits(m.X-pred.X, m.Y-pred.Y))
-		})
+		var mv motion.MV
+		if vectors != nil {
+			mv = vectors[i]
+		} else {
+			pred := s.predictPartition(addr, kind, i)
+			lambda := motionLambdaQ8(info.qp)
+			mv, _ = search.EstimateWithCost(&s.src.Planes[0], &searchReference.Planes[0], x+p.x, y+p.y, p.w, p.h, pred, radius, full, func(m motion.MV, sad int) uint64 {
+				return uint64(sad)*256 + lambda*uint64(mvBits(m.X-pred.X, m.Y-pred.Y))
+			})
+		}
 		s.mc(addr, p, mv)
 		s.mv.SetRect(x/4+p.x/4, y/4+p.y/4, p.w/4, p.h/4, mv, 0)
 	}

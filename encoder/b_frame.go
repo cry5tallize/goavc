@@ -65,8 +65,10 @@ func (e *Encoder) encodeB(src *picture.Picture) ([]byte, *frameState, error) {
 					}
 				}
 			}
-			res := s.interResidual(addr)
-			i.skip = i.cbp == 0
+			res, err := s.bResidualRD(addr, qp)
+			if err != nil {
+				return nil, nil, err
+			}
 			inc := 0
 			for _, neighbor := range s.cabacNeighbors(addr) {
 				if neighbor >= 0 && !s.info[neighbor].skip {
@@ -80,7 +82,6 @@ func (e *Encoder) encodeB(src *picture.Picture) ([]byte, *frameState, error) {
 			} else {
 				// B_Direct_16x16: 所有已编码邻宏块均为direct，ctxIdxInc=0。
 				c.bin(27, 0)
-				s.reconstructInter(addr, &res)
 				c.residualMacroblock(s, addr, &qp, &res)
 			}
 			ce.Terminate(uint8(flag(addr == last-1)))

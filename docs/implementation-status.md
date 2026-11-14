@@ -148,7 +148,7 @@ M5c/d已通过Main/High I/P288帧、P权重160帧、High8×8/矩阵320帧、非�
 | I/P 状态与参考更新 | 公共 API / POC type0/2 | GOPSize非IDR I刷新、独立IDRInterval、输入KeyFrame/场景变化触发IDR；无B时PTS=DTS | Conformant | I/P40帧；GOP ffprobe、Lookahead和B调度的PTS/参考/边界Oracle | PCM全IDR；启用B时参考标记滑窗保留双锚点 |
 | CQP AU 资源门禁 | Annex A / 事务边界 | Auto 几何/帧率校验，实际 AU 上限检查，1080p30 不再因最坏预算在 New 拒绝 | Conformant | `LevelBudgetIsTransactional` 注入超限、已有 Oracle 回归 | 超限返回 ErrResourceLimit 且不发布输出；仍非 HRD/VBV 保证；显式 Level 与 PCM 保留保守初始化检查 |
 | SATD | 编码分析 | 4×4 Hadamard、8×8/16×16 聚合、非对齐 stride、帧内候选搜索 | Conformant | 独立常量/脉冲解析解，正负极值，17 模式实际选择与整帧 Oracle | 不参与解码重建 |
-| RD 代价与决策 | 编码分析 | Q8 lambda、三平面 SSE、实际 CAVLC 位数、MV 比特搜索代价、Skip/四种 P/I4/I16/PCM 全比较 | Conformant | QP 全范围单调性、位数精确、穷举候选最低 J 对照、参考只读、场景变化选择帧内块及完整 Oracle | skip_run 按独立宏块开销估计，不宣称全 slice 全局最优；x264 质量门禁待执行 |
+| RD 代价与决策 | 编码分析 | Q8 lambda、三平面 SSE、CAVLC 位数、MV 比特搜索代价、Skip/四种 P/I4/I16/PCM；P/B保留1/3与1/6死区候选按J选优 | Conformant | QP全范围、完整未剪枝对照、B两种死区独立最低J断言；Main/High与矩阵/B三方Oracle回归通过 | CABAC仍使用CAVLC率代理，skip_run按独立宏块估计；不宣称全slice最优；新长质量矩阵待执行 |
 | RD 剪枝与状态回滚 | 候选事务 | 按 D>=0/语法下界提前终止；常量运动窗口支配 P 候选；恢复完整状态 | Conformant | 全部未剪枝候选对照、平坦块完整候选结构相等、插值 halo 拒绝、逐4×4 MV、参考 fuzz 和 Oracle | 非并行；未采用近似像素或降低质量换速度；等价剪枝前后基准见性能记录 |
 | 活动度 QP | 编码分析 / mb_qp_delta | AQ strength 0..6、方差分档、QP 0..51 裁剪 | Conformant | 平坦/棋盘解析活动度、实际 QP=23/29、0/26/51 的 36 帧双解码器 Oracle | 默认关闭；与显式宏块 QP 或 PCM 通道冲突时拒绝 |
 | Profile 编码约束 | Annex A.2.1/A.2.2 | Baseline/Main 禁止零 PCM 采样与 level_prefix>15，非法候选排除、失败不更新状态 | Conformant | 明确 PCM 零样本拒绝、限长 CAVLC 无部分写入、极低 QP 极端色度拒绝后有效输入恢复 | 极低 QP 且无合法压缩/PCM 候选时 ErrUnsupported；这是配置与内容组合边界，未篡改输入/切换 Profile |

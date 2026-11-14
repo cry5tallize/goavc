@@ -137,7 +137,7 @@
 | GOP 结构 / IDR 间隔 | Partial | M5d | GOPSize/IDRInterval、连续1..16非参考B、强制IDR与场景边界；B需规则PTS与恒定Duration，完整长序列质量门禁未完成 |
 | 场景切换检测 | Conformant | M5d | 直接阈值比较或WithLookahead未来窗口确认/闪光抑制；实际IDR序列、PTS/DTS与三方Oracle |
 | Lookahead | Conformant | M5d | WithLookahead(1..16)有界深拷贝，未来确认场景/抑制闪光；B调度避免跨切换边界；背压/Flush/Reset/Close/失败事务已测 |
-| RD 模式决策（J = D + λR） | Conformant | M5b 定点 lambda、SSE/实际 CAVLC 比特、Skip/P/I4/I16/PCM 候选；整段质量门禁仍待执行 |
+| RD 模式决策（J = D + λR） | Conformant | 定点lambda、三平面SSE、Skip/P/I4/I16/PCM；P/B两种死区保留原候选按J选优。CABAC率仍为CAVLC代理；整段质量门禁待执行 |
 | 自适应 QP | Conformant | M5b 活动度 QP 选项 0..6、QP 0..51 裁剪，默认关闭，显式回调/PCM 冲突拒绝 |
 | SSE2 / AVX2 / NEON | TODO | M8 |
 

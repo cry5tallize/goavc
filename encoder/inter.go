@@ -150,13 +150,21 @@ func (s *frameState) mc(addr int, p partition, mv motion.MV) {
 func (s *frameState) interResidual(addr int) residual {
 	x, y := addr%s.pic.MBWidth*16, addr/s.pic.MBWidth*16
 	info := &s.info[addr]
+	quant4 := transform.Quant4x4WithScaling
+	quant8 := transform.Quant8x8WithScaling
+	quantDC := transform.QuantDCWithScaling
+	if info.interDeadZone {
+		quant4 = transform.QuantInter4x4WithScaling
+		quant8 = transform.QuantInter8x8WithScaling
+		quantDC = transform.QuantInterDCWithScaling
+	}
 	var res residual
 	for r := 0; r < 16; r++ {
 		if info.transform8 {
 			break
 		}
 		coeff := residualTransform(&s.src.Planes[0], &s.pic.Planes[0], x+r%4*4, y+r/4*4)
-		transform.Quant4x4WithScaling(&res.luma[r], &coeff, info.qp, s.matrix4(false, 0))
+		quant4(&res.luma[r], &coeff, info.qp, s.matrix4(false, 0))
 		if nonzero(res.luma[r][:]) {
 			info.cbp |= 1 << ((r/4/2)*2 + r%4/2)
 		}
@@ -171,7 +179,7 @@ func (s *frameState) interResidual(addr int) residual {
 				}
 			}
 			transform.Forward8x8(&coeff, &input)
-			transform.Quant8x8WithScaling(&res.luma8[block], &coeff, info.qp, s.matrix8(false))
+			quant8(&res.luma8[block], &coeff, info.qp, s.matrix8(false))
 			if nonzero(res.luma8[block][:]) {
 				info.cbp |= 1 << block
 			}
@@ -185,13 +193,13 @@ func (s *frameState) interResidual(addr int) residual {
 			coeff := residualTransform(&s.src.Planes[c+1], &s.pic.Planes[c+1], x/2+r%2*4, y/2+r/2*4)
 			dc[r] = coeff[0]
 			coeff[0] = 0
-			transform.Quant4x4WithScaling(&res.chroma[c][r], &coeff, qpc, s.matrix4(false, c+1))
+			quant4(&res.chroma[c][r], &coeff, qpc, s.matrix4(false, c+1))
 			if nonzero(res.chroma[c][r][:]) {
 				cbp = 2
 			}
 		}
 		transform.ForwardChromaDC(&had, &dc)
-		transform.QuantDCWithScaling(res.chromaDC[c][:], had[:], qpc, scalingDC(s.matrix4(false, c+1)))
+		quantDC(res.chromaDC[c][:], had[:], qpc, scalingDC(s.matrix4(false, c+1)))
 		if cbp == 0 && nonzero(res.chromaDC[c][:]) {
 			cbp = 1
 		}

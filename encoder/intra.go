@@ -20,6 +20,7 @@ type mbInfo struct {
 	pcm                                bool
 	inter, skip                        bool
 	partition                          int
+	interDeadZone                      bool
 	modes                              [16]int8
 }
 type residual struct {
