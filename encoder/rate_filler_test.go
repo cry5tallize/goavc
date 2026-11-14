@@ -43,3 +43,32 @@ func TestRateControl_FractionalBudgetCarriesRemainder(t *testing.T) {
 		t.Fatalf("分数预算累计%d，余数%d", total, e.rcRemainder)
 	}
 }
+
+func TestRateFiller_PaddingDoesNotSteerQPUpwards(t *testing.T) {
+	for _, rc := range []h264.RateControl{h264.RateControlCBR, h264.RateControlVBV} {
+		cfg := h264.DefaultEncoderConfig()
+		cfg.Width, cfg.Height = 32, 32
+		cfg.Profile = h264.ProfileMain
+		cfg.RateControl = rc
+		cfg.Bitrate = 600_000
+		cfg.VBVBufferSize = 600_000
+		e, err := New(cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		f := testFrame(32, 32)
+		for comp := range f.Planes {
+			for i := range f.Planes[comp].Data {
+				f.Planes[comp].Data[i] = 128
+			}
+		}
+		if err = e.SendFrame(f); err != nil {
+			t.Fatal(err)
+		}
+		if e.LastQP() != 0 {
+			t.Fatalf("%s填充掩盖了低QP可行候选：QP=%d", rc, e.LastQP())
+		}
+		e.Close()
+		f.Release()
+	}
+}

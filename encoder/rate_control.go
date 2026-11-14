@@ -61,6 +61,7 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 			}
 			return nil, nil, qp, err
 		}
+		codedBits := int64(len(data)) * 8
 		data, err = e.padRateControlledAU(data, target)
 		if err != nil {
 			oversized = true
@@ -78,12 +79,13 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 			if delta < 0 {
 				delta = -delta
 			}
-			if !feasible || delta < bestDelta || delta == bestDelta && absInt(qp-e.lastQP) < absInt(bestQP-e.lastQP) {
+			if !feasible || delta < bestDelta || delta == bestDelta && e.preferRateQP(qp, bestQP) {
 				best, bestState, bestQP, bestDelta = data, state, qp, delta
 			}
 			feasible = true
 		}
-		if int64(len(data))*8 > target {
+		// Filler只改变传输码量，不能掩盖VCL码量的QP搜索方向。
+		if codedBits > target {
 			low = qp + 1
 		} else {
 			high = qp - 1
@@ -121,7 +123,7 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 			if delta < 0 {
 				delta = -delta
 			}
-			if !feasible || delta < bestDelta || delta == bestDelta && absInt(qp-e.lastQP) < absInt(bestQP-e.lastQP) {
+			if !feasible || delta < bestDelta || delta == bestDelta && e.preferRateQP(qp, bestQP) {
 				best, bestState, bestQP, bestDelta = data, state, qp, delta
 			}
 			feasible = true
@@ -134,6 +136,13 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 		return nil, nil, bestQP, fmt.Errorf("encoder: no QP satisfies rate-control and access-unit bounds: %w", h264.ErrResourceLimit)
 	}
 	return best, bestState, bestQP, nil
+}
+
+func (e *Encoder) preferRateQP(candidate, current int) bool {
+	if e.cfg.RateControl == h264.RateControlCBR || e.cfg.RateControl == h264.RateControlVBV {
+		return candidate < current
+	}
+	return absInt(candidate-e.lastQP) < absInt(current-e.lastQP)
 }
 
 func absInt(v int) int {
