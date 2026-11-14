@@ -52,6 +52,10 @@ if err != nil {
 | WithAdaptiveQP(n) | 按亮度活动度对基准 QP 加减 0..6，裁剪到0..51；默认关闭，不与显式 QP 回调或 PCM 共用 |
 
 QP=0 仍为有损变换，不等同 PCM。无残差的 I4 不携带 mb_qp_delta，滤波沿用前一宏块 QP。
+Baseline/Main 的 Annex A 限制 PCM 采样为1..255、CAVLC level_prefix≤15。
+强制 PCM 遇到0样本返回 ErrUnsupported；普通压缩允许0样本，但极低QP与极端色度邻接
+可能没有当前实现可表示的合法候选，此时同样明确拒绝，并保留前一参考帧和编号。
+调用方可提高QP或修正输入后重试。测试的 PCM 合法输入域与此边界分别验证。
 M5b 用 SATD 搜索预测，再按三平面重建 SSE + 定点 lambda×实际 CAVLC 位数比较
 Skip、P 的四种分区、I4、I16 和 PCM。运动搜索同时计入 MVD 比特代价；合法零残差 Skip
 和语法位数下界允许安全提前终止。候选试探不会修改先前参考帧。

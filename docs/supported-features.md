@@ -17,6 +17,9 @@
 > 规则：**只有通过 Oracle 或规范解析解测试的模块才能标 `Conformant`**；
 > 仅靠自研编解码器互相验证的，最高只能标 `Partial`。
 >
+> **Profile 边界：** Baseline/Main PCM 仅1..255，CAVLC level_prefix≤15。
+> 极低QP的内容若无合法候选则 ErrUnsupported；不能以 FFmpeg 可解替代 Annex A 约束。
+>
 > 本文档与每个 PR 同步更新。任何新增的 `Unsupported` 必须写明原因与计划。
 >
 > **M2 状态说明：** Baseline 的无重排、单参考 CAVLC I/P 解码已通过整帧 Oracle。

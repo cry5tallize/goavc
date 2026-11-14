@@ -2,6 +2,7 @@ package codec_test
 
 import (
 	"bytes"
+	"errors"
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/decoder"
 	"github.com/goavc/h264/encoder"
@@ -40,7 +41,32 @@ func FuzzEncoder_InterRoundTrip(f *testing.F) {
 				}
 			}
 			if err = e.SendFrame(input); err != nil {
-				t.Fatal(frame, err)
+				minQP := 51
+				hasZero := false
+				for y := 0; y < c.Height/16; y++ {
+					for x := 0; x < c.Width/16; x++ {
+						minQP = min(minQP, int(data[(x+y)%len(data)]%52))
+					}
+				}
+				for comp := range input.Planes {
+					for _, v := range input.Planes[comp].Data {
+						hasZero = hasZero || v == 0
+					}
+				}
+				if !errors.Is(err, h264.ErrUnsupported) || minQP >= 4 || !hasZero {
+					t.Fatal(frame, err)
+				}
+				if _, pending := e.ReceivePacket(); !errors.Is(pending, h264.ErrAgain) {
+					t.Fatal("unsupported frame published output", pending)
+				}
+				for comp := range input.Planes {
+					for i := range input.Planes[comp].Data {
+						input.Planes[comp].Data[i] = 128
+					}
+				}
+				if err = e.SendFrame(input); err != nil {
+					t.Fatal("valid retry failed", frame, err)
+				}
 			}
 			p, err := e.ReceivePacket()
 			if err != nil {

@@ -2,6 +2,7 @@ package codec_test
 
 import (
 	"bytes"
+	"errors"
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/decoder"
 	"github.com/goavc/h264/encoder"
@@ -42,8 +43,23 @@ func FuzzEncoder_RoundTrip(f *testing.F) {
 				input.Planes[comp].Data[i] = data[(i+comp)%len(data)]
 			}
 		}
+		if data[3]&128 != 0 {
+			nonzeroPCM(input)
+		}
 		if err = e.SendFrame(input); err != nil {
-			t.Fatal(err)
+			if !errors.Is(err, h264.ErrUnsupported) || c.QP >= 4 || data[3]&128 != 0 {
+				t.Fatal(err)
+			}
+			// Annex A 的极低 QP 前缀/零 PCM 边界可显式拒绝；检查调用方修正
+			// 输入后仍能编码合法 IDR，不把不支持算作成功编解码。
+			for comp := range input.Planes {
+				for i := range input.Planes[comp].Data {
+					input.Planes[comp].Data[i] = 128
+				}
+			}
+			if err = e.SendFrame(input); err != nil {
+				t.Fatal(err)
+			}
 		}
 		p, err := e.ReceivePacket()
 		if err != nil {

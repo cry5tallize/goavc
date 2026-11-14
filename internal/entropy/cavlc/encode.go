@@ -11,6 +11,19 @@ import (
 // Spec: 9.2。直接复用规范 VLC 的码长/码字表，不另维护一份反向生成表。
 // LumaAC 跳过 DC；ChromaDC 使用 src 的前四项。nC 由调用方推导。
 func EncodeBlock(w *bitstream.Writer, src *[16]int32, typ BlockType, nC int) (int, error) {
+	return encodeBlock(w, src, typ, nC, 28)
+}
+
+// EncodeBlockLimited 限制 level_prefix；Baseline/Main 的 Annex A 上限为15。
+// 超出是合法高 Profile 工具，不可静默写入受限 Profile，返回 ErrUnsupported。
+func EncodeBlockLimited(w *bitstream.Writer, src *[16]int32, typ BlockType, nC, maxPrefix int) (int, error) {
+	if maxPrefix < 15 || maxPrefix > 28 {
+		return 0, fmt.Errorf("cavlc: invalid prefix limit: %w", h264.ErrInvalidData)
+	}
+	return encodeBlock(w, src, typ, nC, maxPrefix)
+}
+
+func encodeBlock(w *bitstream.Writer, src *[16]int32, typ BlockType, nC, maxPrefix int) (int, error) {
 	if w == nil || src == nil || typ > ChromaDC {
 		return 0, fmt.Errorf("cavlc: invalid block: %w", h264.ErrInvalidData)
 	}
@@ -74,7 +87,7 @@ func EncodeBlock(w *bitstream.Writer, src *[16]int32, typ BlockType, nC int) (in
 		if first && trailing < 3 {
 			code -= 2
 		}
-		if err := encodeLevel(b, code, suffix); err != nil {
+		if err := encodeLevel(b, code, suffix, maxPrefix); err != nil {
 			return 0, err
 		}
 		if suffix == 0 {
@@ -112,7 +125,7 @@ func EncodeBlock(w *bitstream.Writer, src *[16]int32, typ BlockType, nC int) (in
 
 // encodeLevel 显式枚举规范前缀区间，避免 suffixLength=0 的两个特殊区间
 // （prefix=14 和 >=15）被普通除法公式吞掉。
-func encodeLevel(w *bitstream.Writer, code int64, suffix int) error {
+func encodeLevel(w *bitstream.Writer, code int64, suffix, maxPrefix int) error {
 	for prefix := 0; prefix <= 28; prefix++ {
 		size := suffix
 		base := int64(prefix) << suffix
@@ -131,6 +144,9 @@ func encodeLevel(w *bitstream.Writer, code int64, suffix int) error {
 		}
 		if code < base || code-base >= int64(1)<<size {
 			continue
+		}
+		if prefix > maxPrefix {
+			return fmt.Errorf("cavlc: level_prefix %d exceeds profile limit %d: %w", prefix, maxPrefix, h264.ErrUnsupported)
 		}
 		w.WriteBits(uint(prefix), 0)
 		w.WriteBit(1)

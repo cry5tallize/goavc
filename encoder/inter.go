@@ -69,7 +69,7 @@ func (e *Encoder) encodeP(src *picture.Picture) ([]byte, *frameState, error) {
 			if err != nil {
 				return nil, nil, err
 			}
-			if trial.BitsWritten() > 3072 {
+			if trial.BitsWritten() > 3072 && s.pcmAllowed(addr) {
 				qp = previousQP
 				s.info[addr].inter = false
 				s.info[addr].skip = false

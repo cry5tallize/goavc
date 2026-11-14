@@ -39,6 +39,18 @@ func testFrame(w, h int) *h264.Frame {
 	return f
 }
 
+func pcmFrame(w, h int) *h264.Frame {
+	f := testFrame(w, h)
+	for comp := range f.Planes {
+		for i, v := range f.Planes[comp].Data {
+			if v == 0 {
+				f.Planes[comp].Data[i] = 1
+			}
+		}
+	}
+	return f
+}
+
 func TestEncoder_StateAndOwnership(t *testing.T) {
 	c := h264.DefaultEncoderConfig()
 	c.Width = 34
@@ -54,7 +66,7 @@ func TestEncoder_StateAndOwnership(t *testing.T) {
 	if _, err = e.Reconstruction(); !errors.Is(err, h264.ErrAgain) {
 		t.Fatal(err)
 	}
-	f := testFrame(34, 18)
+	f := pcmFrame(34, 18)
 	if err = e.SendFrame(f); err != nil {
 		t.Fatal(err)
 	}
@@ -98,6 +110,7 @@ func TestEncoder_StateAndOwnership(t *testing.T) {
 	if err = e.Reset(); err != nil {
 		t.Fatal(err)
 	}
+	f = pcmFrame(34, 18)
 	if err = e.SendFrame(f); err != nil {
 		t.Fatal(err)
 	}

@@ -28,12 +28,14 @@ type residual struct {
 	chromaDC [2][4]int32
 }
 type frameState struct {
-	src, pic  *picture.Picture
-	info      []mbInfo
-	nz        []uint8
-	cnz       [2][]uint8
-	reference *picture.Picture
-	mv        *motion.Grid
+	src, pic       *picture.Picture
+	info           []mbInfo
+	nz             []uint8
+	cnz            [2][]uint8
+	reference      *picture.Picture
+	mv             *motion.Grid
+	allowZeroPCM   bool
+	maxLevelPrefix int
 }
 
 // WithMacroblockQP 使用坐标回调覆盖 CQP；返回值必须为 0..51。
@@ -95,7 +97,7 @@ func (e *Encoder) encodeIntra(src *picture.Picture) ([]byte, *frameState, error)
 			}
 			// CQP 的噪声极端情况下残差比原始像素更长；显式选择规范 I_PCM
 			// 保证每 MB 的大小上限，Level 自动选择据此给出保守保证。
-			if trial.BitsWritten() > 3072 {
+			if trial.BitsWritten() > 3072 && s.pcmAllowed(addr) {
 				qp = previousQP
 				s.writePCM(w, addr)
 			} else {

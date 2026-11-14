@@ -2,6 +2,7 @@ package encoder
 
 import (
 	"bytes"
+	"errors"
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/internal/motion"
 	"github.com/goavc/h264/internal/picture"
@@ -66,6 +67,9 @@ func TestModeDecision_MatchesExhaustiveCandidateCosts(t *testing.T) {
 			check := func(s *frameState, res residual) {
 				candidate, err := s.captureRD(0, qp, qp, res)
 				if err != nil {
+					if errors.Is(err, h264.ErrUnsupported) {
+						return
+					}
 					t.Fatal(err)
 				}
 				if candidate.cost < winner.cost {

@@ -40,6 +40,16 @@ func packed(f *h264.Frame) []byte {
 	return b
 }
 
+func nonzeroPCM(f *h264.Frame) {
+	for comp := range f.Planes {
+		for i, v := range f.Planes[comp].Data {
+			if v == 0 {
+				f.Planes[comp].Data[i] = 1
+			}
+		}
+	}
+}
+
 func TestEncoder_PCMCompatibility(t *testing.T) {
 	for _, slices := range []int{1, 3} {
 		c := h264.DefaultEncoderConfig()
@@ -59,7 +69,8 @@ func TestEncoder_PCMCompatibility(t *testing.T) {
 		for i := 0; i < 3; i++ {
 			f := pattern(34, 18)
 			f.PTS = int64(i * 100)
-			f.Planes[0].Data[0] = byte(i)
+			f.Planes[0].Data[0] = byte(i + 1)
+			nonzeroPCM(f)
 			if err = e.SendFrame(f); err != nil {
 				t.Fatal(err)
 			}
@@ -185,7 +196,11 @@ func TestEncoder_FFprobeMetadata(t *testing.T) {
 		defer e.Close()
 		var stream []byte
 		for i := 0; i < 3; i++ {
-			if err = e.SendFrame(pattern(c.Width, c.Height)); err != nil {
+			f := pattern(c.Width, c.Height)
+			if pcm {
+				nonzeroPCM(f)
+			}
+			if err = e.SendFrame(f); err != nil {
 				t.Fatal(err)
 			}
 			p, _ := e.ReceivePacket()
@@ -309,6 +324,11 @@ func TestEncoder_IntraCompatibility(t *testing.T) {
 					for i := 0; i < 2; i++ {
 						f := pattern(c.Width, c.Height)
 						f.Planes[0].Data[0] = byte(i * 100)
+						// QP0 的兼容性矩阵使用合法 PCM 候选域（1..255）；
+						// 含0且需要超长前缀的低QP内容在独立边界测试中明确拒绝。
+						if qp == 0 {
+							nonzeroPCM(f)
+						}
 						if err = e.SendFrame(f); err != nil {
 							t.Fatal(err)
 						}

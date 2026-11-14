@@ -67,7 +67,7 @@ func (s *frameState) writeMB(w *bitstream.Writer, addr int, qp *int, res *residu
 func (s *frameState) writeResidual(w *bitstream.Writer, addr int, res *residual) error {
 	info := &s.info[addr]
 	if info.is16 {
-		if _, err := cavlc.EncodeBlock(w, &res.lumaDC, cavlc.LumaDC, s.nc(addr, 0, 0)); err != nil {
+		if _, err := s.encodeResidualBlock(w, &res.lumaDC, cavlc.LumaDC, s.nc(addr, 0, 0)); err != nil {
 			return err
 		}
 	}
@@ -81,7 +81,7 @@ func (s *frameState) writeResidual(w *bitstream.Writer, addr int, res *residual)
 		if info.is16 {
 			typ = cavlc.LumaAC
 		}
-		count, err := cavlc.EncodeBlock(w, &res.luma[r], typ, s.nc(addr, r, 0))
+		count, err := s.encodeResidualBlock(w, &res.luma[r], typ, s.nc(addr, r, 0))
 		if err != nil {
 			return err
 		}
@@ -92,7 +92,7 @@ func (s *frameState) writeResidual(w *bitstream.Writer, addr int, res *residual)
 		for c := 0; c < 2; c++ {
 			var block [16]int32
 			copy(block[:4], res.chromaDC[c][:])
-			if _, err := cavlc.EncodeBlock(w, &block, cavlc.ChromaDC, 0); err != nil {
+			if _, err := s.encodeResidualBlock(w, &block, cavlc.ChromaDC, 0); err != nil {
 				return err
 			}
 		}
@@ -100,7 +100,7 @@ func (s *frameState) writeResidual(w *bitstream.Writer, addr int, res *residual)
 	if cbp == 2 {
 		for c := 0; c < 2; c++ {
 			for r := 0; r < 4; r++ {
-				count, err := cavlc.EncodeBlock(w, &res.chroma[c][r], cavlc.LumaAC, s.nc(addr, r, c+1))
+				count, err := s.encodeResidualBlock(w, &res.chroma[c][r], cavlc.LumaAC, s.nc(addr, r, c+1))
 				if err != nil {
 					return err
 				}

@@ -1,6 +1,9 @@
 package encoder
 
 import (
+	"errors"
+	"fmt"
+	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/bitstream"
 	"github.com/goavc/h264/internal/motion"
 	"github.com/goavc/h264/internal/motion/search"
@@ -41,11 +44,17 @@ func (s *frameState) decideRD(addr, previousQP, radius int, full, early bool) (r
 	s.mv.SetRect(x, y, 4, 4, motion.MV{}, -1)
 	best, err := s.captureRD(addr, previousQP, qp, residual{})
 	if err != nil {
-		return residual{}, err
+		if !errors.Is(err, h264.ErrUnsupported) {
+			return residual{}, err
+		}
+		best = rdCandidate{cost: ^uint64(0)}
 	}
 	evaluate := func(res residual) error {
 		c, err := s.captureRD(addr, previousQP, qp, res)
 		if err != nil {
+			if errors.Is(err, h264.ErrUnsupported) {
+				return nil
+			}
 			return err
 		}
 		if c.cost < best.cost {
@@ -99,6 +108,9 @@ func (s *frameState) decideRD(addr, previousQP, radius int, full, early bool) (r
 				return residual{}, err
 			}
 		}
+	}
+	if best.cost == ^uint64(0) {
+		return residual{}, fmt.Errorf("encoder: no candidate satisfies profile limits: %w", h264.ErrUnsupported)
 	}
 	s.restoreRD(addr, &best)
 	return best.res, nil
@@ -159,6 +171,9 @@ func (s *frameState) interCandidate(addr, kind, radius int, full bool) residual 
 
 func (s *frameState) captureRD(addr, previousQP, qp int, res residual) (rdCandidate, error) {
 	info := &s.info[addr]
+	if info.pcm && !s.pcmAllowed(addr) {
+		return rdCandidate{}, fmt.Errorf("encoder: zero PCM sample is forbidden by profile: %w", h264.ErrUnsupported)
+	}
 	w := bitstream.NewWriter()
 	rate := uint64(1)
 	if s.reference == nil {
@@ -220,7 +235,10 @@ func (s *frameState) analyzeIntraRD(addr, previousQP int) (residual, error) {
 	s.mv.SetRect(x, y, 4, 4, motion.MV{}, -1)
 	best, err := s.captureRD(addr, previousQP, qp, residual{})
 	if err != nil {
-		return residual{}, err
+		if !errors.Is(err, h264.ErrUnsupported) {
+			return residual{}, err
+		}
+		best = rdCandidate{cost: ^uint64(0)}
 	}
 	for _, family := range []int{1, 2} {
 		s.info[addr] = base
@@ -231,11 +249,17 @@ func (s *frameState) analyzeIntraRD(addr, previousQP int) (residual, error) {
 		res := s.analyzeIntra(addr, family)
 		candidate, err := s.captureRD(addr, previousQP, qp, res)
 		if err != nil {
+			if errors.Is(err, h264.ErrUnsupported) {
+				continue
+			}
 			return residual{}, err
 		}
 		if candidate.cost < best.cost {
 			best = candidate
 		}
+	}
+	if best.cost == ^uint64(0) {
+		return residual{}, fmt.Errorf("encoder: no intra candidate satisfies profile limits: %w", h264.ErrUnsupported)
 	}
 	s.restoreRD(addr, &best)
 	return best.res, nil

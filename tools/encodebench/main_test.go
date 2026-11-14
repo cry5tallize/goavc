@@ -38,7 +38,7 @@ func TestMeasure_PCMIsLossless(t *testing.T) {
 	c := h264.DefaultEncoderConfig()
 	c.Width = 16
 	c.Height = 16
-	r, b, err := measure(c, 2, 1, true)
+	r, b, err := measureInput(c, 2, 1, true, bytes.NewReader(bytes.Repeat([]byte{128}, 16*16*3)))
 	if err != nil {
 		t.Fatal(err)
 	}

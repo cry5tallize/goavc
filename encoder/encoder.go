@@ -112,6 +112,18 @@ func (e *Encoder) SendFrame(f *h264.Frame) error {
 	if f.Width != e.cfg.Width || f.Height != e.cfg.Height || f.Format != e.cfg.PixelFormat {
 		return fmt.Errorf("encoder: frame differs from configuration: %w", h264.ErrInvalidData)
 	}
+	if e.pcm && e.cfg.Profile != h264.ProfileHigh {
+		for comp := 0; comp < 3; comp++ {
+			w, h := f.Format.PlaneDimensions(comp, f.Width, f.Height)
+			for y := 0; y < h; y++ {
+				for _, v := range f.Planes[comp].Data[y*f.Planes[comp].Stride : y*f.Planes[comp].Stride+w] {
+					if v == 0 {
+						return fmt.Errorf("encoder: Baseline/Main PCM forbids zero samples: %w", h264.ErrUnsupported)
+					}
+				}
+			}
+		}
+	}
 	pic, err := picture.New((f.Width+15)/16, (f.Height+15)/16)
 	if err != nil {
 		return err
