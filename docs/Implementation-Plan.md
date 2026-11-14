@@ -526,7 +526,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 7 | `test[encoder]: add bitrate accuracy and vbv window tests` | 长序列 | 720p/1080p×ABR/CBR/VBV各300帧，三方Oracle、完整QP/AU/时钟/缓冲轨迹及ffprobe帧型通过 |
 | 8 | `bench[encoder]: add end to end encode benchmark for 720p` | 全参数矩阵 | §11五次基准、§13候选与反馈前后样本/300帧CPU profile、§14完整长测延迟/堆内存均公开；并发负载不作实时承诺 |
 | 9 | `docs[performance]: publish encoder quality and bitrate report` | PSNR/SSIM/码率 vs x264 | §12历史五过一失败保留；§14新六项同QP全部通过，实测匹配码率差距、PSNR/SSIM和哈希完整公开 |
-| 10 | `chore[release]: close milestone m5d gate and tag v0.6.0` | 总证据 | 本地证据齐备；见 `docs/gates/m5d.md` 和 `m5cd_results.json`，远端CI未执行 |
+| 10 | `chore[release]: close milestone m5d gate and tag v0.6.0` | 总证据 | 本地门禁关闭，标签v0.6.0；见 `docs/gates/m5d.md` 和 `m5cd_results.json`，远端CI未执行 |
 
 ---
 
