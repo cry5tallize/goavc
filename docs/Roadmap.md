@@ -270,7 +270,7 @@ M6/M7/M8 ───────────► M9 生产化与发布
 | M2 | Decoder Baseline | CAVLC + Intra + P + MC + 4×4 IDCT + Deblock + 基础 DPB，与 FFmpeg 逐像素一致 | L | WIP（本地门禁通过，待 CI；见 gates/m2.md） |
 | M3 | Decoder Main/High | CABAC、B Slice、POC、RefList、MMCO、8×8、ScalingMatrix、延迟输出 | L | WIP（本地门禁通过，待 CI；见 gates/m3.md） |
 | M4 | Encoder Baseline | SPS/PPS Writer、IDR、I_PCM、I4×4/I16×16、CAVLC、CQP、本地重建、Annex-B | L | WIP（本地门禁通过，待 CI；见 gates/m4.md） |
-| M5 | Encoder Main/High | P Slice、ME/MC、亚像素、模式决策、RD、B Frame、CABAC、8×8、GOP、RC | XL | WIP（M5a/b 本地门禁通过，M5c/d 待完成；见 gates/m5b.md） |
+| M5 | Encoder Main/High | P Slice、ME/MC、亚像素、模式决策、RD、B Frame、CABAC、8×8、GOP、RC | XL | WIP（M5a/b 子阶段本地门禁通过；M5c/d 部分实现、未关闭；见 gates/m5cd.md） |
 | M6 | 完整流式处理 | 增量 Reader、AU 组装、YUV I/O、Pipeline、背压、取消、Flush | M | TODO |
 | M7 | 高级 AVC 特性 | High10/422/444、Interlaced、MBAFF/PAFF、FMO、Data Partitioning 等 | XL | TODO |
 | M8 | SIMD 与并行 | SSE2/AVX2/NEON、dispatch、pool、slice 并行、pipeline、profile | L | TODO |
@@ -477,7 +477,7 @@ M6/M7/M8 ───────────► M9 生产化与发布
 - [ ] 等 QP 下 PSNR 与 x264（`-preset veryfast -tune psnr` 同 QP）差距在预设阈值内（阈值在 M5 开始时写入 `docs/conformance.md`，例如 Y-PSNR 差值 ≤ 1.5 dB）。
 - [ ] 等码率下 PSNR 与 x264 差距记录并公开（不做选择性报告）。
 - [ ] ABR：目标码率 ±10% 内（长序列平均）；CBR：窗口内波动有记录；VBV 不越界。
-- [ ] GOP 参数变化（`GOPSize`、`MaxBFrames`、IDR 间隔）均正确反映在码流中（用 `h264probe` 断言）。
+- [ ] GOP 参数变化（`GOPSize`、`MaxBFrames`、IDR 间隔）均正确反映在码流中（用 `h264probe` 断言）。部分证据：I/P 的 `GOPSize` 非 IDR I picture 与独立 IDRInterval 已由 ffprobe 测试；`MaxBFrames>0` 当前显式拒绝，B-frame placement 尚未通过。
 - [ ] 编码器 CPU profile 有记录，热点排名写入 `docs/performance.md`（为 M8 定向优化）。
 - [ ] `ErrUnsupported`：不支持的 Profile/Level/格式在 `NewEncoder` 阶段报错，而非产出坏码流。
 

@@ -497,36 +497,36 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 
 | # | Commit | 内容 | 验证 |
 |---|---|---|---|
-| 1 | `feat[cabac]: add arithmetic encoder with renormalization` | `encodeBin`、range 更新 | 解码器可回读 |
-| 2 | `feat[cabac]: add context encoding for macroblock and residual` | 全部相关 context | 对称性测试 |
-| 3 | `feat[cabac]: add cabac termination and zero word handling` | terminate / `cabac_zero_word` | 定向用例 |
-| 4 | `feat[encoder]: add cabac slice writing path` | 熵模式分流 | CABAC 码流可解 |
-| 5 | `test[cabac]: add encoder decoder symmetry for full slices` | 整 slice 对称 | 全绿 |
-| 6 | `feat[encoder]: add b slice with direct mode strategy` | B 帧编码 | 码流可解 |
-| 7 | `feat[encoder]: add b frame reordering and poc assignment` | 输出 DTS 顺序 | 顺序断言 |
-| 8 | `feat[transform]: add forward 8x8 transform` | 8×8 变换 | 与反向对比 |
-| 9 | `feat[transform]: add scaling matrix in forward path` | 量化矩阵 | 往返对比 |
-| 10 | `feat[prediction]: add weighted prediction in encoder` | explicit 权重 | 解码一致 |
-| 11 | `feat[syntax]: add main and high profile sps writing` | profile_idc 分支 | ffprobe 校验 |
-| 12 | `test[oracle]: add main and high decode compatibility suite` | 全 profile 差分 | 一致 |
-| 13 | `bench[encoder]: add cabac and b frame benchmarks` | 性能记录 | 基线 |
-| 14 | `docs[status]: mark cabac and b slice modules conformant` | 状态 | — |
-| 15 | `chore[release]: close milestone m5c gate and tag v0.5.3` | 证据 | 勾选 |
+| 1 | `feat[cabac]: add arithmetic encoder with renormalization` | `encodeBin`、range 更新 | 已实现；规范区间向量见 `internal/entropy/cabac` |
+| 2 | `feat[cabac]: add context encoding for macroblock and residual` | 全部相关 context | 部分：I/P 单参考、4×4/DC/AC；B/8×8 residual 未接 |
+| 3 | `feat[cabac]: add cabac termination and zero word handling` | terminate / `cabac_zero_word` | terminate/PCM restart 已验证；通用零字预算未完成 |
+| 4 | `feat[encoder]: add cabac slice writing path` | 熵模式分流 | I/P Main/High slice 已接入 |
+| 5 | `test[cabac]: add encoder decoder symmetry for full slices` | 整 slice 对称 | 288 帧 Main/High 三方像素 Oracle 通过 |
+| 6 | `feat[encoder]: add b slice with direct mode strategy` | B 帧编码 | 未完成；`MaxBFrames>0` 明确 ErrUnsupported |
+| 7 | `feat[encoder]: add b frame reordering and poc assignment` | 输出 DTS 顺序 | 未完成；当前 PTS=DTS，无重排 |
+| 8 | `feat[transform]: add forward 8x8 transform` | 8×8 变换 | 正向内核已提交，解析向量测试；未接入宏块 |
+| 9 | `feat[transform]: add scaling matrix in forward path` | 量化矩阵 | 8×8 缩放量化内核已提交；未接入 residual slice |
+| 10 | `feat[prediction]: add weighted prediction in encoder` | explicit 权重 | 未完成 |
+| 11 | `feat[syntax]: add main and high profile sps writing` | profile_idc 分支 | 已实现并经 ffprobe/FFmpeg Main/High I/P 验证 |
+| 12 | `test[oracle]: add main and high decode compatibility suite` | 全 profile 差分 | I/P 288 帧通过；B/8×8 未覆盖 |
+| 13 | `bench[encoder]: add cabac and b frame benchmarks` | 性能记录 | CABAC/B 专用基准未完成 |
+| 14 | `docs[status]: mark cabac and b slice modules conformant` | 状态 | 已登记 CABAC I/P；B 与 High 8×8 保留 Partial/TODO |
+| 15 | `chore[release]: close milestone m5c gate and tag v0.5.3` | 证据 | 未关闭；见 `docs/gates/m5cd.md` |
 
 ### M5d — GOP 与码率控制（`feat/m5d-rate-control`，10）
 
 | # | Commit | 内容 | 验证 |
 |---|---|---|---|
-| 1 | `feat[encoder]: add gop structure with idr interval and b placement` | `IBBP`/`IPPP` | 结构断言 |
-| 2 | `feat[encoder]: add lookahead window for scene change detection` | 小窗口分析 | 场景切换用例 |
-| 3 | `feat[encoder]: add abr rate control` | 目标码率 → QP | ±10% 断言 |
-| 4 | `feat[encoder]: add cbr rate control with buffer model` | 固定码率 | 波动记录 |
-| 5 | `feat[encoder]: add vbv constraint enforcement` | VBV 上下界 | 不越界 |
-| 6 | `feat[encoder]: add scene change triggered idr` | 自适应 IDR | 结构断言 |
-| 7 | `test[encoder]: add bitrate accuracy and vbv window tests` | 长序列 | 全绿 |
-| 8 | `bench[encoder]: add end to end encode benchmark for 720p` | 全参数矩阵 | 记录 |
-| 9 | `docs[performance]: publish encoder quality and bitrate report` | PSNR/SSIM/码率 vs x264 | — |
-| 10 | `chore[release]: close milestone m5 gate and tag v0.6.0` | 总证据 | 勾选 |
+| 1 | `feat[encoder]: add gop structure with idr interval and b placement` | `IBBP`/`IPPP` | I/P GOP 与独立 IDR 已验证；B placement 未完成 |
+| 2 | `feat[encoder]: add lookahead window for scene change detection` | 小窗口分析 | 未完成；当前阈值直接比较输入帧与参考帧 |
+| 3 | `feat[encoder]: add abr rate control` | 目标码率 → QP | ABR 120 帧平均 ±10% 通过 |
+| 4 | `feat[encoder]: add cbr rate control with buffer model` | 固定码率 | 30 帧窗口 ±10%；无 filler NAL，仍为 Partial |
+| 5 | `feat[encoder]: add vbv constraint enforcement` | VBV 上下界 | 60 帧 fullness 与上下边界测试通过；长序列未完成 |
+| 6 | `feat[encoder]: add scene change triggered idr` | 自适应 IDR | 当前帧检测与 ffprobe GOP 断言通过；lookahead 未实现 |
+| 7 | `test[encoder]: add bitrate accuracy and vbv window tests` | 长序列 | 32×32 ABR 120帧、CBR 2×30窗口、VBV 60帧通过；720p/1080p 各 300 帧未运行 |
+| 8 | `bench[encoder]: add end to end encode benchmark for 720p` | 全参数矩阵 | ABR/CBR 单次 smoke 已测；多次矩阵未完成 |
+| 9 | `docs[performance]: publish encoder quality and bitrate report` | PSNR/SSIM/码率 vs x264 | 码率与 CPU profile 已记录；x264/SSIM 报告未完成 |
+| 10 | `chore[release]: close milestone m5d gate and tag v0.6.0` | 总证据 | 未关闭；见 `docs/gates/m5cd.md` |
 
 ---
 

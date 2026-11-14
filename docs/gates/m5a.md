@@ -53,5 +53,6 @@ M5b 的 SATD/RD、Intra/Inter 全比较与自适应 QP 尚未完成；M5c 的 CA
 编码和 M5d 的 ABR/CBR/VBV/独立 GOP/IDR 间隔尚未完成。等 QP 1.5 dB 的 x264 质量门禁、
 等码率报告及 CPU profile 仍待执行。不能据此宣称 M5 或完整 Baseline 编码支持已完成。
 
-默认 GOPSize=30 现在激活 I/P，GOPSize=1 保留 M4 全帧内；当前要求 GOPSize=IDRInterval。
+默认 GOPSize=30 现在激活 I/P，GOPSize=1 保留全帧内；该阶段结束时仍要求 GOPSize=IDRInterval。
+后续 M5d 已分离非 IDR I 刷新周期与 IDRInterval，新增证据见 `m5cd.md`。
 WithPCM 仍为全 IDR 诊断通道。LevelAuto 支持实际 AU 预算，显式 Level 和 PCM 仍较保守。

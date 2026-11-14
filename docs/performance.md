@@ -213,7 +213,29 @@ go run ./tools/encodebench -width 1280 -height 720 -frames 6 -qp 26 -gop 30
 真实 testsrc2 的各 300 帧 720p/1080p、30FPS、QP26、GOP30、四 slice 输出码率为
 5,676.016 / 12,628.748 kbit/s；均通过三方像素/哈希验证，输入和输出哈希见
 [M5a 门禁](gates/m5a.md)。这些长测试同时运行其他验证，不用其 FPS 声明加速。
-CPU profile、x264 等 QP/等码率质量门禁、SSIM、ABR/CBR/VBV 待 M5 后续阶段。
+CPU profile、x264 等 QP/等码率质量门禁和 SSIM 待 M5 后续阶段；ABR/CBR/VBV 初步验证见 §10。
+
+## 10. M5d 码率控制基线
+
+日期：2026-11-14；HW-M2（Ryzen 7 5700X，Windows amd64），Go 1.27.4，CGO=0。
+以下为 `feat/m5d-rate-control` 开发期单次 smoke 基准，不是统计稳健的性能承诺。
+
+复现命令：
+
+```powershell
+$env:CGO_ENABLED = '0'
+go test -run '^$' -bench '^BenchmarkEncoder(ABR|CBR)_720p_Generic$' -benchtime=1x -benchmem -cpuprofile m5d-cpu.pprof ./encoder
+go tool pprof -top -nodecount=10 m5d-cpu.pprof
+```
+
+| 策略 | 分辨率 | 目标码率 | ns/op | FPS | B/op | allocs/op |
+|---|---|---:|---:|---:|---:|---:|
+| ABR | 1280×720 | 2 Mbit/s | 917,960,200 | 1.09 | 58,719,520 | 1,404,506 |
+| CBR feedback | 1280×720 | 2 Mbit/s | 901,796,000 | 1.11 | 58,699,904 | 1,404,207 |
+
+CPU profile top 10（ABR/CBR 短基准合计 1.84 s，临时 profile 未纳入仓库）：SATD4x4 12.50%，SATD 聚合 11.41%，Writer.WriteBits 9.78%，`captureRD` 4.35% flat（24.46% cumulative），AddResidual4x4 3.26%，残差变换 2.72%，CAVLC encodeBlock 2.72%。该结果用于 M8 热点定位，不适用于跨机器比较。
+
+码率与缓冲断言见 `tests/codec/rate_control_test.go`：ABR 120 帧平均 ±10%，CBR 两个 30 帧窗口 ±10%，VBV 60 帧序列 fullness 始终处于配置上下界并通过 FFmpeg 像素 Oracle。当前没有 HRD filler NAL，因此 CBR 是窗口码率反馈，不承诺逐时刻恒定传输；1080p 长测试和 x264 质量报告仍未完成。
 
 ## 9. M5b RD 质量与等价剪枝
 

@@ -1,8 +1,8 @@
 # Baseline 帧内编码 API
 
 `encoder.New(cfg, options...)` 创建非并发安全的编码器。M4 范围为串行、渐进式
-8-bit YUV420、CQP、偶数显示尺寸；M5a 默认使用 IDR/P 单参考，GOPSize=1 可选择 M4
-全帧内路径。Profile 整体仍为 Partial，Main/High/B 与其他码控尚待实现。
+8-bit YUV420、偶数显示尺寸；支持 CQP/ABR/CBR/VBV 帧级 QP 搜索，Main/High 使用
+CABAC I/P slice，Baseline 使用 CAVLC。仍为单参考、无 B 重排；Profile 整体 Partial。
 
 ```go
 cfg := h264.DefaultEncoderConfig()
@@ -37,7 +37,7 @@ if err != nil {
   未编码返回 `ErrAgain`，关闭后返回 `ErrEOF`。返回帧使用完毕调用 Release。
 - IDR AU 包含 SPS/PPS；P AU 只包含 slice，PTS=DTS，Duration 保留。
   KeyFrame 与实际 IDR 一致。首帧、IDRInterval 边界或输入 KeyFrame=true 时写 IDR。
-  暂要求 GOPSize=IDRInterval，尚无 B 或延迟/重排；PCM 通道仍全帧 IDR。
+  GOPSize 触发非 IDR I 刷新、IDRInterval 独立触发 IDR；仍无 B 或延迟/重排；PCM 通道仍全帧 IDR。
 
 选项：
 
@@ -50,6 +50,7 @@ if err != nil {
 | WithSearchRange(n) | 运动搜索半径 1..64 整数像素，默认16；按小图像自适应收缩 |
 | WithFullSearch() | 用穷举代替默认菱形；两者都通过共享 MC 细化半/四像素 |
 | WithAdaptiveQP(n) | 按亮度活动度对基准 QP 加减 0..6，裁剪到0..51；默认关闭，不与显式 QP 回调或 PCM 共用 |
+| WithSceneChangeThreshold(n) | 全平面平均绝对采样变化达到 1..100% 时触发 IDR；直接比较当前输入与已重建参考，不做 lookahead |
 
 QP=0 仍为有损变换，不等同 PCM。无残差的 I4 不携带 mb_qp_delta，滤波沿用前一宏块 QP。
 Baseline/Main 的 Annex A 限制 PCM 采样为1..255、CAVLC level_prefix≤15。
@@ -61,8 +62,7 @@ Skip、P 的四种分区、I4、I16 和 PCM。运动搜索同时计入 MVD 比�
 和语法位数下界允许安全提前终止。候选试探不会修改先前参考帧。
 QP 回调所有返回值先校验，失败不发布半帧、不递增 IDR；调用方可修正输入后重试。
 
-New 显式拒绝 Main/High、非 YUV420P、非 CQP、Threads>1、无法满足的 Level 和奇数
-显示尺寸。LevelAuto 按最坏 PCM/EBSP 预算保守选择，可能明显高于平均码率需要的 Level。
+New 显式拒绝 Baseline CABAC、非 YUV420P、B 帧、Threads>1、显式宏块 QP 与码控并用、无法满足的 Level 和奇数显示尺寸。GOPSize 控制非 IDR I 刷新，IDRInterval 独立控制 IDR。ABR/CBR/VBV 目标窗口的实证与 HRD/filler 限制见 [M5c/d 进展](gates/m5cd.md)。LevelAuto 按最坏 PCM/EBSP 预算保守选择，可能明显高于平均码率需要的 Level。
 M5a 对最坏预算超出最高 Level 的 Auto 配置，改为选择满足几何/帧率的最高级别，
 并在发布 AU 前检查实际大小。1080p30 可初始化；内容超限返回 ErrResourceLimit，
 保持原参考帧与编号，调用方可降低帧率/调整质量或 Reset。

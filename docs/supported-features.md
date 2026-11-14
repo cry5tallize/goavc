@@ -8,7 +8,8 @@
 > 每帧独立 IDR；支持 I_PCM 选项、1..64 slice、偶数显示尺寸裁剪和宏块 QP 覆盖。
 > 两条路径及混合 PCM 已通过 FFmpeg/自研解码/本地重建逐像素验证。
 > 本地门禁及性能记录已完成，证据见 gates/m4.md；远端 CI 尚待执行。
-> M5c 已接入 Main/High CABAC I/P；B、ABR/CBR 仍明确拒绝。LevelAuto 新增实际 AU 预算门禁，
+> M5c 已接入 Main/High CABAC I/P；B 帧仍明确拒绝。M5d 已接入 ABR/CBR/VBV 帧级码控，
+> 但没有 HRD filler NAL，仍未通过 M5 总门禁。LevelAuto 新增实际 AU 预算门禁，
 > 1080p@30 已通过 300 帧三方像素验证。M5a 本地门禁见 gates/m5a.md；M5 整体未完成。
 
 > 状态图例：`TODO` 未开始 · `WIP` 进行中 · `Partial` 部分可用（有已知不支持路径）·
@@ -100,9 +101,9 @@
 | 4×4 逆/正整数变换 | Conformant | Conformant | M4 正向独立矩阵基底与完整 Oracle；编码重建共享逆内核 |
 | 4×4 亮度 DC Hadamard | Conformant | Conformant | M4 常量/基底解析解及 I16 Oracle |
 | 2×2 色度 DC Hadamard | Conformant | Conformant | M4 常量解析解及完整 Intra Oracle |
-| 8×8 逆/正变换 | Partial | TODO | M3 逆变换 Conformant；正变换属于编码阶段 |
+| 8×8 逆/正变换 | Conformant | Partial | M3 逆变换 Oracle；M5c 有 DCT-II 前向分析与缩放量化内核，尚未接入宏块/码流 |
 | 量化 / 反量化 | Conformant | Conformant | M4 平坦矩阵 QP 0..51；编码重建共享反量化；非平坦正向 M5c |
-| ScalingMatrix 应用 | Conformant | TODO | M3 4×4/8×8/DC，默认、SPS/PPS、自定义及 JVT Oracle |
+| ScalingMatrix 应用 | Conformant | Partial | M3 解码器 4×4/8×8/DC Oracle；编码器 8×8 缩放量化内核未接入 residual slice |
 | 10 bit 变换路径 | TODO | TODO | M7 |
 
 ## 7. 滤波
@@ -131,10 +132,10 @@
 | 特性 | 状态 | 目标里程碑 |
 |---|---|---|
 | CQP | Conformant | M4 固定 QP 与宏块 QP 回调，QP=0 仍为有损；无残差沿用前 QP |
-| ABR / CBR / VBV | TODO | M5d |
-| GOP 结构 / IDR 间隔 | Partial | M5a IDRInterval 与强制 KeyFrame 已验证；暂要求 GOPSize=IDRInterval，无 B；完整 M5d |
-| 场景切换检测 | TODO | M5d |
-| Lookahead | TODO | M5d |
+| ABR / CBR / VBV | Partial | M5d | ABR 120帧平均、CBR 2×30帧窗口均在 ±10%；VBV 60帧候选 AU fullness 上下界搜索；无 filler NAL/HRD，完整 M5 门禁未完成 |
+| GOP 结构 / IDR 间隔 | Partial | M5d | GOPSize 控制非 IDR I 刷新，IDRInterval 独立控制 IDR；MaxBFrames>0 仍拒绝 |
+| 场景切换检测 | Partial | M5d | `WithSceneChangeThreshold` 按全平面平均绝对采样变化触发 IDR；为当前帧/参考帧比较，不是 lookahead |
+| Lookahead | TODO | M5d | 未实现；当前无未来帧分析 |
 | RD 模式决策（J = D + λR） | Conformant | M5b 定点 lambda、SSE/实际 CAVLC 比特、Skip/P/I4/I16/PCM 候选；整段质量门禁仍待执行 |
 | 自适应 QP | Conformant | M5b 活动度 QP 选项 0..6、QP 0..51 裁剪，默认关闭，显式回调/PCM 冲突拒绝 |
 | SSE2 / AVX2 / NEON | TODO | M8 |
