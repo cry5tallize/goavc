@@ -147,7 +147,7 @@ func ParsePPS(rbsp []byte, sps *SPS) (*PPS, error) {
 			return nil, err
 		}
 		if p.PicScalingMatrixPresentFlag {
-			count := scalingListCount(sps)
+			count := scalingListCount(sps, p.Transform8x8ModeFlag)
 			for i := 0; i < count; i++ {
 				present, err := readFlag(r, "pic_scaling_list_present_flag")
 				if err != nil {
@@ -245,7 +245,7 @@ func (p *PPS) WriteTo(w *bitstream.Writer, sps *SPS) error {
 			return err
 		}
 		if p.PicScalingMatrixPresentFlag {
-			count := scalingListCount(sps)
+			count := scalingListCount(sps, p.Transform8x8ModeFlag)
 			for i := 0; i < count; i++ {
 				present := p.PicScalingListPresentFlag[i]
 				if err := writeFlag(w, present); err != nil {
@@ -345,8 +345,11 @@ func (p *PPS) validateForWrite(sps *SPS) error {
 	return nil
 }
 
-// scalingListCount 返回该 SPS 下 PPS scaling list 的数量。
-func scalingListCount(sps *SPS) int {
+// scalingListCount 仅在启用8×8变换时追加2/6个8×8列表（Spec: 7.3.2.2）。
+func scalingListCount(sps *SPS, transform8 bool) int {
+	if !transform8 {
+		return 6
+	}
 	if sps.effectiveChromaFormatIDC() == 3 {
 		return 12
 	}

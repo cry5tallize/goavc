@@ -212,6 +212,7 @@ High10渐进420解码已接入，限定工具与证据逐项列于下表；既�
 | 422 DC变换前置 | 2×4 Hadamard、八DC扫描、正反向共享内核，422 DC的QP'C+3与规范舍入，原子溢出拒绝 | Conformant | 八个规范空间基、QP分段/缩放、原地运算与正负极值解析测试通过；独立提交完整常规门禁通过 | 量化复用QuantDC并传QP'C+3；逆量化入口传未加3的QP'C；Pipeline在第7/10项接入 |
 | 422 CABAC残差前置 | ChromaDC类别接受八项扫描，sig/last增量与幅值上下文按422规则选择，420路径不变 | Conformant | 独立bin/上下文轨迹、四种CBF邻域、截断与原420回归通过；独立提交完整常规门禁通过 | CBF仍为97..100；八DC不新增ctxBlockCat，后续流水线必须提供DC2x4Scan |
 | 422 CAVLC残差前置 | 八系数ChromaDC422，隐含nC=-2；独立coeff_token/total_zeros规范列及共享level/run读写 | Conformant | 全部token/zeros码字、固定块比特串、截断与原420回归通过；独立提交完整常规门禁通过 | 调用者使用ChromaDC422且仅前八项，不能用四项或十六项表替代 |
+| PPS缩放列表计数修复 | transform_8x8_mode_flag=0时仅六个4×4列表，开启时按色度追加2/6个8×8列表 | Conformant | 独立RBSP字节ce38402c先触发尾位错误、修复后正确解析第二色度偏移-2并精确写回；独立提交完整常规门禁通过 | FMO及其余高级语法仍按各自实施项验收；不以自往返替代规范字节向量 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。
