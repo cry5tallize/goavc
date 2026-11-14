@@ -33,7 +33,7 @@
 > High 8×8/ScalingMatrix、Main 渐进帧 I/P/B、direct、加权预测和重排均已验证。
 > Profile 整体保留 Partial，范围外的字段/高位深工具仍明确拒绝；本地门禁证据见 gates/m3.md。
 
-> **M7 进展：** 当前分支`feat/m7-high422`。第1–10项及共享预测/滤波/运动前置已完成；
+> **M7 进展：** 当前分支`feat/m7-high422`。第1–11项及共享预测/滤波/运动前置已完成；
 > High10渐进420双熵I/P/B解码、原生LE输出与压缩编码通过独立Oracle，编码32配置共384帧三方逐采样一致。
 > High422/High444渐进8/10-bit双熵编解码、原生LE与实际CLI已验收；六格式QP/矩阵/权重/B/码控三方像素Oracle通过。隔行与transform bypass另项验收，不声明完整Profile支持。
 > 共享预测已提供byte/uint16类型实例：高位深帧内、六抽头/色度MC、权重以及422矩形色度预测。
@@ -46,6 +46,7 @@
 > CAVLC八系数ChromaDC422的规范码字、固定比特串与独立完整门禁通过，保留420四系数路径。
 > PPS的六/八/十二个缩放列表由transform_8x8_mode_flag和色度共同确定；未开启8×8时不再误读写两个额外标志，固定规范RBSP及独立完整门禁通过。
 > High444共同编码双熵I/P/B两格式×九配置各八帧与FFmpeg一致；十四类CABAC、逐分量矩阵与QP、亮度插值及共享亮度bS已接入。独立平面PCM规范向量与单色投影通过；FFmpeg8不支持原始独立平面封装，投影不替代该工具能力声明。
+> 场/MBAFF的SPS与slice头语法已通过固定规范字节和真实隔行语料探测，条件字段不再被SPS解析提前拒绝；这不是场像素解码支持，Decoder及AUReader仍明确拒绝。
 
 ## 1. Profile
 
@@ -73,7 +74,7 @@
 
 | 语法元素 | Spec | Decoder | Encoder | 备注 |
 |---|---|---|---|---|
-| SPS | 7.3.2.1 | Partial | Partial | M1 解析/序列化 + ffprobe；流水线 M2/M4 |
+| SPS | 7.3.2.1 | Partial | Partial | M7扩展Profile及帧/场/MBAFF语法通过规范字节；真实隔行h264probe成功，像素流水线的场/MBAFF仍拒绝，组合级范围见台账 |
 | PPS | 7.3.2.2 | Partial | Partial | M1 解析/序列化；独立 PPS Oracle 待补 |
 | VUI | E.1 | Partial | Partial | M1 结构往返；timing/HRD 语义待 Oracle |
 | ScalingList | 7.3.2.1.1.1 | Conformant | Partial | M3 4×4/8×8、SPS/PPS fallback、JVT 与实际应用 Oracle |

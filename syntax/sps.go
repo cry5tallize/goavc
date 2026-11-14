@@ -319,8 +319,12 @@ func (s *SPS) validateSupported() error {
 				s.BitDepthLumaMinus8+8, s.BitDepthChromaMinus8+8, s.ProfileIDC, h264.ErrUnsupported)
 		}
 	}
-	if !s.FrameMbsOnlyFlag {
-		return fmt.Errorf("syntax: interlaced/field coding is not supported: %w", h264.ErrUnsupported)
+	// Spec: 7.4.2.1.1与Annex A；字段语法可解析不代表流水线已支持。
+	if s.FrameMbsOnlyFlag && s.MbAdaptiveFrameFieldFlag {
+		return fmt.Errorf("syntax: MBAFF requires frame_mbs_only_flag=0: %w", h264.ErrInvalidData)
+	}
+	if !s.FrameMbsOnlyFlag && (!s.Direct8x8InferenceFlag || s.ProfileIDC == 66) {
+		return fmt.Errorf("syntax: field coding requires direct_8x8_inference and non-Baseline profile: %w", h264.ErrInvalidData)
 	}
 	return nil
 }
@@ -365,7 +369,7 @@ func (s *SPS) PicWidthInMbs() uint64 { return uint64(s.PicWidthInMbsMinus1) + 1 
 // PicHeightInMapUnits 返回以宏块对/宏块为单位的图像高度（未乘帧场因子）。
 func (s *SPS) PicHeightInMapUnits() uint64 { return uint64(s.PicHeightInMapUnitsMinus1) + 1 }
 
-// FrameHeightInMbs 返回非隔行帧的宏块高度。
+// FrameHeightInMbs 返回完整帧的宏块行数；隔行序列的map unit高度须乘2。
 func (s *SPS) FrameHeightInMbs() uint64 {
 	if s.FrameMbsOnlyFlag {
 		return s.PicHeightInMapUnits()

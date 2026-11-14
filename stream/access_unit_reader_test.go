@@ -217,6 +217,7 @@ func TestAUReader_ErrorsAndBudgets(t *testing.T) {
 		{"io", valid, AccessUnitConfig{}, io.ErrClosedPipe, io.ErrClosedPipe},
 		{"truncated header", auUnits(params[0], params[1], []byte{0x61}), AccessUnitConfig{}, nil, h264.ErrInvalidData},
 		{"data partition", auUnits([]byte{0x62, 0x80}), AccessUnitConfig{}, nil, h264.ErrUnsupported},
+		{"field SPS", auUnits([]byte{0x67, 0x4d, 0x00, 0x1e, 0xf6, 0x69, 0xea, 0x90}), AccessUnitConfig{}, nil, h264.ErrUnsupported},
 		{"cavlc terminal", auUnits(params[0], params[1], append(append([]byte{}, slice...), 0, 0, 3)), AccessUnitConfig{}, nil, h264.ErrInvalidData},
 		{"out of range mb", auUnits(params[0], params[1], auSlice("011", "0001", "0010", false)), AccessUnitConfig{}, nil, h264.ErrInvalidData},
 	} {

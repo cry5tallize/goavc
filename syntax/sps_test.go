@@ -262,10 +262,6 @@ func TestParseSPS_Unsupported(t *testing.T) {
 			profile: 100, chroma: 1, lumaDepth: 2, chromaDepth: 2, frameMbsOnly: true,
 			widthMbsMinus1: 3, heightMapMinus1: 2,
 		},
-		"interlaced": {
-			profile: 66, chroma: 1, frameMbsOnly: false,
-			widthMbsMinus1: 3, heightMapMinus1: 2,
-		},
 	}
 	for name, p := range tests {
 		t.Run(name, func(t *testing.T) {

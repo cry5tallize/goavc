@@ -53,7 +53,7 @@
 | Annex-B 扫描 | B.1 | 3/4 字节起始码、任意分块、前导/尾随零 | Conformant | `annexb_test.go`、`annexb_chunk_test.go`、语料测试 | 前导非零字节按同步恢复策略跳过 |
 | AVCC / avcC | ISO/IEC 14496-15 | 1..4 字节长度、8 MiB 上限、avcC 解析与序列化 | Partial | `avcc_test.go`、`avcc_writer_test.go`、`avcconfig_test.go`、`avcconfig_writer_test.go` | 尚无真实 MP4/avcC 语料，目前只有合成记录 |
 | Access Unit 组装 | 7.4.1.2.3 | AUD/前缀/后缀、first_mb/frame_num/POC 等判定、显式 hint | Conformant | `accessunit_test.go`、`assembler_test.go`、`corpus_test.go` | 多 slice 且无 AUD 时依赖 SliceInfo hint；suffix SEI 归类保守 |
-| SPS 解析与序列化 | 7.3.2.1 | Baseline/Main/High、High10/422/444渐进8/10-bit、独立色平面、VUI/ScalingList与裁剪 | Conformant | 原语法/ffprobe回归及M7扩展Profile外部压缩Oracle、独立平面PCM规范向量通过 | 隔行与qpprime仍拒绝；解码流水线不接受单色格式 |
+| SPS 解析与序列化 | 7.3.2.1 | Baseline/Main/High、High10/422/444的8/10-bit、独立色平面、帧/场与MBAFF语法、VUI/ScalingList与裁剪 | Conformant | 原语法/ffprobe及扩展Profile像素Oracle、场/MBAFF固定字节与真实隔行语法探测通过 | qpprime仍拒绝；场/MBAFF重建另验收，解码流水线仍拒绝隔行及单色格式 |
 | PPS 解析与序列化 | 7.3.2.2 | 核心字段、可选 8×8/scaling 扩展、FMO 拒绝 | Partial | `pps_test.go`、`corpus_test.go` | 无独立 PPS 级 Oracle；依赖 x264 原始字节往返与 manifest 熵模式 |
 | VUI | E.1 | 宽高比、overscan、video signal、timing、HRD、bitstream restriction | Partial | `vui_test.go`、`corpus_test.go` | timing/HRD 语义未与独立 Oracle 对比（裸流 ffprobe 帧率不可靠） |
 | ScalingList | 7.3.2.1.1.1 | 4×4/8×8、保留原始 delta 序列 | Partial | `scaling_list_test.go`、`sps_write_test.go` | 无自定义矩阵真实语料；应用层（反量化）在 M3 |
@@ -217,6 +217,7 @@ High10渐进420编解码及High422/High444渐进8/10-bit解码已接入，限定
 | 8：444图像与色度共享内核 | 8/10-bit444三平面16×16存储、边缘复制、裁剪重建与格式隔离池；444 CABAC十四类/1024模型及十二列表fallback | Conformant | 全平面几何/行共享/极值与六格式池隔离；ITU Amd.2表9-24d/e固定模型分段值、CBF/bin轨迹与范围；全部4096种列表presence组合×三种SPS/PPS来源；独立快照完整常规门禁通过 | 本项仅共享内核，不提前放开High444流水线；独立平面按colour_plane_id选择矩阵，QP仍用Y过程 |
 | 9：High444解码 | 共同444三平面全尺寸残差、十四类CABAC、逐分量矩阵/QP、亮度插值与共享bS；独立平面覆盖/运动/权重头隔离 | Conformant | 两格式×九配置各八帧x264/FFmpeg逐采样一致；独立平面PCM的13×11裁剪/LE固定采样、乱序平面/缺失/重复/恢复与预算边界；权重固定字节521e；独立提交完整CGO=0门禁（35包依赖、30条语料）及真实h264dec双帧10-bit像素比较通过 | 独立平面原始封装被FFmpeg8明确拒绝，使用规范固定采样与保持slice_data/对齐的单色投影Oracle，不宣称FFmpeg支持原始封装；隔行/transform bypass及编码另项验收，静态高级语料门禁仍待完成 |
 | 10：High422/High444编码 | 8/10-bit422/444双熵压缩与PCM、I/P/既有spatial-direct B、逐分量矩阵/QP、权重/AQ/前瞻/码控及独立平面 | Conformant | 六格式双熵QP极值、4/8×8矩阵、实际权重表、宏块QP、B与四种码控、PCM及三平面独立集合的三方像素Oracle；独立平面按保持slice_data对齐的单色投影逐平面FFmpeg比较；AU预算失败/重试及亮度bS/CBF规范回归；独立完整CGO=0门禁通过，四种422/444格式真实CLI各两帧与FFmpeg一致 | 仅渐进帧，B限既有非参考spatial-direct；不生成隔行与transform bypass；FFmpeg8不支持独立平面原始封装，投影不冒充原始封装互操作性；静态高级语料/race/六目标最终门禁另行完成 |
+| 11：场图像与MBAFF语法 | SPS的frame_mbs_only/MBAFF/direct组合校验，map unit与完整帧高度/裁剪；slice场奇偶及POC条件字段 | Conformant | 固定SPS字节4d001ef668ea90/4d001ef669ea90、顶/底场与帧slice规范字节/精确payload边界；非法Baseline/flag组合写前拒绝；真实Main64×64 MBAFF语料h264probe -syntax成功；独立完整常规门禁通过 | 仅语法，不代表场运动、宏块对或像素重建已接入；Decoder和AUReader继续显式ErrUnsupported，原隔行语料状态不升级 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。
