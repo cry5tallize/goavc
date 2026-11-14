@@ -569,7 +569,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 3 | `feat[transform]: add 10 bit transform and quantization depth` | 语法QPY转QP'，共享内核QP'0..63，DC临时量int64，逆变换仍归一化>>6 | 负QPY/色度非线性/QP'52..63/正负1023解析基/溢出测试及完整常规门禁通过；流水线未接入 |
 | 4 | `feat[decoder]: add high10 decoding` | 渐进10-bit420全部既有工具、负QP、原生LE与资源/恢复 | 七组动态外部压缩Oracle、三份18帧真实语料、PCM/QP/恢复/裁剪解析解及独立提交完整常规门禁通过 |
 | 5 | `feat[encoder]: add high10 encoding` | 原生10-bit压缩、双熵与既有I/P/B/码控/前瞻/矩阵工具、CLI | 32配置×12帧三方像素Oracle、真实CLI与FFmpeg原始LE哈希、独立提交完整常规门禁通过 |
-| 6 | `feat[picture]: add 422 plane geometry and chroma handling` | 4:2:2 | 尺寸/预测测试 |
+| 6 | `feat[picture]: add 422 plane geometry and chroma handling` | 8/10-bit422几何、全高色度、边缘与池，复用矩形色度预测 | 新布局先红后绿；独立尺寸/极值/池隔离、8×16预测解析解及独立完整常规门禁通过 |
 | 7 | `feat[decoder]: add high422 decoding` | 4:2:2 路径 | 语料一致 |
 | 8 | `feat[picture]: add 444 chroma support` | 4:4:4 | 尺寸/预测测试 |
 | 9 | `feat[decoder]: add high444 decoding` | 4:4:4 路径 | 语料一致 |

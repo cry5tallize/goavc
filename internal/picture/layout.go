@@ -15,7 +15,7 @@ func validateLayout(mbWidth, mbHeight int, format h264.PixelFormat) error {
 	if mbWidth > h264.MaxFrameWidth/16 || mbHeight > h264.MaxFrameHeight/16 {
 		return fmt.Errorf("picture: dimensions %dx%d MB exceed limit: %w", mbWidth, mbHeight, h264.ErrResourceLimit)
 	}
-	if format != h264.YUV420P && format != h264.YUV420P10LE {
+	if format != h264.YUV420P && format != h264.YUV420P10LE && format != h264.YUV422P && format != h264.YUV422P10LE {
 		return fmt.Errorf("picture: pixel format %s: %w", format, h264.ErrUnsupported)
 	}
 	return nil
