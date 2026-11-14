@@ -33,9 +33,9 @@
 > High 8×8/ScalingMatrix、Main 渐进帧 I/P/B、direct、加权预测和重排均已验证。
 > Profile 整体保留 Partial，范围外的字段/高位深工具仍明确拒绝；本地门禁证据见 gates/m3.md。
 
-> **M7 已开工：** 分支`feat/m7-high10`。先参数化共享图像布局，再接入10-bit存储、
-> 变换量化与编解码流水线，逐项独立验收；High10/422/444 Profile仍未支持。
-> 图像构造与池已显式区分PixelFormat，本次布局重构不改变8-bit420输出。
+> **M7 已开工：** 分支`feat/m7-high10`。已完成共享布局参数化与内部10-bit420存储，
+> 包括uint16采样、边缘复制、按位深裁剪和缓冲池隔离，规范极值测试与8-bit Oracle回归通过。
+> 高位深变换量化与编解码流水线逐项接入；High10/422/444 Profile仍未支持，不能据此传入10-bit码流。
 
 ## 1. Profile
 

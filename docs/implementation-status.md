@@ -200,7 +200,11 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 
 | 实施项 | 职责 | Status | 证据 | 缺口 |
 |---|---|---|---|---|
-| 1：共享图像布局参数化 | New/Pool.Get显式接收PixelFormat，平面几何复用公共布局，池按尺寸与格式分桶 | Conformant | 2026-11-15完整常规门禁通过：CGO=0 vet/build/非缓存全包test、depscheck34包、manifest27条、gofmt；既有布局/边缘复制/池复用回归及未支持布局拒绝测试通过 | 本项只接受8-bit420；10-bit存储与High10编解码尚未接入 |
+| 1：共享图像布局参数化 | New/Pool.Get显式接收PixelFormat，平面几何复用公共布局，池按尺寸与格式分桶 | Conformant | 2026-11-15完整常规门禁通过：CGO=0 vet/build/非缓存全包test、depscheck34包、manifest27条、gofmt；既有布局/边缘复制/池复用回归及未支持布局拒绝测试通过 | 本项只证明8-bit行为不变；高位深证据见后续实施项 |
+| 2：10-bit平面存储 | uint16采样、Sample/SetSample/Row16、采样单位stride、共享边缘复制与Clip1重建、格式隔离池 | Conformant | TestNew_High10Storage先因ErrUnsupported失败、实现后通过；奇数stride/0与1023/四角边缘/行填充/极端残差/损坏容量与溢出/8与10-bit池隔离测试通过；CGO=0完整常规门禁及8-bit FFmpeg Oracle回归通过 | 仅内部8/10-bit420存储；不表示High10解码/编码或公共Frame LE输入输出已接入 |
+
+本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
+CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。
 
 ## M8–M9
 

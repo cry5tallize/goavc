@@ -78,6 +78,8 @@ decoder              encoder
 - 内部 `picture` 缓冲使用**编码尺寸**：宽高按 16 对齐，并用边缘复制填充。
 - 解码输出前按 SPS 的裁剪窗口裁到显示尺寸；编码输入时按 16 对齐补齐。
 - 因此 `PixelFormat.PlaneDimensions` 一律使用向上取整，不假设偶数。
+- 内部`picture.Plane`的Stride/Border/Index均以采样计数：8-bit使用`[]byte`，10-bit使用`[]uint16`，两种缓冲互斥；公共`Frame.Plane.Stride`仍以字节计数。内部uint16是本机数值，公共10-bit格式的LE打包由I/O边界负责，禁止把两者直接复用为同一字节视图。
+- `picture.Pool`按编码尺寸和PixelFormat共同分桶，不得跨位深复用像素存储；共享边缘复制与残差裁剪按采样类型实例化，不保留两套算法。
 
 这样上层永远只看到真实画面，不需要自己处理 Crop；内部算法又始终面对对齐尺寸，
 可以安全使用 SIMD 的越界读。

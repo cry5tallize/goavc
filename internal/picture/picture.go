@@ -28,11 +28,12 @@ const DefaultBorder = 32
 
 // Plane 是一个带边界扩展区的平面。
 //
-// 坐标约定：x/y 是图像坐标（0 表示第一个有效像素），边界区坐标为负或
-// 大于等于 Width/Height。Index 负责把图像坐标翻译到 Data 下标，因此
-// 所有访问都必须经过 Pix/SetPix/Row，不能直接按图像坐标切片 Data。
+// 坐标、Stride、Border均以采样为单位，不是字节。8-bit仅分配Data，
+// 10-bit仅分配Data16（本机uint16值，公共Frame的LE序列化由输出层负责）。
+// 有效区域与边界区共享缓冲；高位深访问用Sample/SetSample/Row16。
 type Plane struct {
 	Data     []byte
+	Data16   []uint16
 	Stride   int
 	Width    int
 	Height   int
@@ -40,7 +41,7 @@ type Plane struct {
 	BitDepth int
 }
 
-// Index 返回图像坐标 (x, y) 在 Data 中的下标。
+// Index 返回图像坐标 (x, y) 在对应采样缓冲中的下标。
 //
 // 调用方必须保证 -Border <= x < Width+Border、-Border <= y < Height+Border；
 // 本函数不做边界检查（热路径调用），越界访问由 Alloc/Validate 保证不会发生。
@@ -48,17 +49,17 @@ func (p *Plane) Index(x, y int) int {
 	return (y+p.Border)*p.Stride + x + p.Border
 }
 
-// Pix 读取图像坐标处的像素。
+// Pix 读取8-bit图像坐标处的像素；高位深必须使用Sample。
 func (p *Plane) Pix(x, y int) byte {
 	return p.Data[p.Index(x, y)]
 }
 
-// SetPix 写入图像坐标处的像素。
+// SetPix 写入8-bit图像坐标处的像素；高位深必须使用SetSample。
 func (p *Plane) SetPix(x, y int, v byte) {
 	p.Data[p.Index(x, y)] = v
 }
 
-// Row 返回第 y 行有效区域的切片（不含左右边界）。
+// Row 返回8-bit平面第 y 行有效区域的切片（不含左右边界）。
 //
 // 返回的切片与 Plane 共享底层数组；写入即写入图像。
 func (p *Plane) Row(y int) []byte {
@@ -71,39 +72,10 @@ func (p *Plane) Row(y int) []byte {
 // 先填充左右边界，再整行复制到上下边界，这样四个角自然得到最近角像素，
 // 与 H.264 的“边缘像素重复”外推规则一致（8.4.2.1 的边缘扩展语义）。
 func (p *Plane) FillBorder() {
-	b := p.Border
-	if p.Width <= 0 || p.Height <= 0 {
-		return
-	}
-	// 左右边界：每一行（含上下边界行）都复制该行最左/最右有效像素。
-	for y := -b; y < p.Height+b; y++ {
-		var left, right byte
-		if y < 0 {
-			left = p.Pix(0, 0)
-			right = p.Pix(p.Width-1, 0)
-		} else if y >= p.Height {
-			left = p.Pix(0, p.Height-1)
-			right = p.Pix(p.Width-1, p.Height-1)
-		} else {
-			left = p.Pix(0, y)
-			right = p.Pix(p.Width-1, y)
-		}
-		rowStart := p.Index(-b, y)
-		for x := 0; x < b; x++ {
-			p.Data[rowStart+x] = left
-		}
-		rowEnd := p.Index(p.Width, y)
-		for x := 0; x < b; x++ {
-			p.Data[rowEnd+x] = right
-		}
-	}
-	// 上下边界：把第 0 行/最后一行的完整行（含左右角）复制上去。
-	rowLen := p.Width + 2*b
-	first := p.Index(-b, 0)
-	last := p.Index(-b, p.Height-1)
-	for y := 0; y < b; y++ {
-		copy(p.Data[p.Index(-b, -1-y):p.Index(-b, -1-y)+rowLen], p.Data[first:first+rowLen])
-		copy(p.Data[p.Index(-b, p.Height+y):p.Index(-b, p.Height+y)+rowLen], p.Data[last:last+rowLen])
+	if p.BitDepth == 10 {
+		fillBorder(p.Data16, p.Stride, p.Width, p.Height, p.Border)
+	} else {
+		fillBorder(p.Data, p.Stride, p.Width, p.Height, p.Border)
 	}
 }
 
@@ -150,17 +122,20 @@ func New(mbWidth, mbHeight int, format h264.PixelFormat) (*Picture, error) {
 // Go 运行时按 8/16 字节对齐。后续 SIMD 内核必须使用非对齐加载指令，
 // 或由 M8 的 buffer 包提供显式对齐分配。
 func allocPlane(width, height, border, bitDepth int) Plane {
-	stride := width + 2*border
-	stride = (stride + 63) &^ 63
-	rows := height + 2*border
-	return Plane{
-		Data:     make([]byte, stride*rows),
-		Stride:   stride,
-		Width:    width,
-		Height:   height,
-		Border:   border,
-		BitDepth: bitDepth,
+	// 构造器已限制编码尺寸≤8192；含边界的容量乘法在32位int内仍安全。
+	// Stride以采样计数，但每行起点始终保持64字节的相对对齐。
+	align := 64
+	if bitDepth == 10 {
+		align = 32
 	}
+	stride := (width + 2*border + align - 1) &^ (align - 1)
+	p := Plane{Stride: stride, Width: width, Height: height, Border: border, BitDepth: bitDepth}
+	if bitDepth == 10 {
+		p.Data16 = make([]uint16, stride*(height+2*border))
+	} else {
+		p.Data = make([]byte, stride*(height+2*border))
+	}
+	return p
 }
 
 // Validate 检查平面几何是否自洽，主要用于测试与池取回后的防御性检查。
@@ -183,14 +158,21 @@ func (p *Picture) Validate() error {
 			return fmt.Errorf("picture: plane %d layout does not match %s: %w",
 				i, p.Format, h264.ErrInvalidData)
 		}
-		if pl.Border < 0 || pl.Stride < pl.Width+2*pl.Border {
-			return fmt.Errorf("picture: plane %d stride %d too small: %w",
-				i, pl.Stride, h264.ErrInvalidData)
+		maxInt := int(^uint(0) >> 1)
+		if pl.Border < 0 || pl.Border > (maxInt-pl.Width)/2 || pl.Border > (maxInt-pl.Height)/2 {
+			return fmt.Errorf("picture: plane %d border overflows: %w", i, h264.ErrInvalidData)
 		}
-		need := pl.Stride * (pl.Height + 2*pl.Border)
-		if len(pl.Data) < need {
-			return fmt.Errorf("picture: plane %d buffer %d bytes, need %d: %w",
-				i, len(pl.Data), need, h264.ErrInvalidData)
+		rows := pl.Height + 2*pl.Border
+		if pl.Stride < pl.Width+2*pl.Border || pl.Stride > maxInt/rows {
+			return fmt.Errorf("picture: plane %d invalid stride %d: %w", i, pl.Stride, h264.ErrInvalidData)
+		}
+		need := pl.Stride * rows
+		if pl.BitDepth == 10 {
+			if len(pl.Data) != 0 || len(pl.Data16) < need {
+				return fmt.Errorf("picture: plane %d needs %d uint16 samples: %w", i, need, h264.ErrInvalidData)
+			}
+		} else if len(pl.Data16) != 0 || len(pl.Data) < need {
+			return fmt.Errorf("picture: plane %d needs %d byte samples: %w", i, need, h264.ErrInvalidData)
 		}
 	}
 	return nil
