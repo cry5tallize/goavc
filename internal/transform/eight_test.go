@@ -90,6 +90,53 @@ func TestZigzag8x8_Permutation(t *testing.T) {
 	}
 }
 
+func TestForward8x8_AnalyticImpulse(t *testing.T) {
+	var src, got [64]int32
+	src[0] = 1
+	Forward8x8(&got, &src)
+	basis := [8]int32{1, 1, 1, 1, 1, 1, -1, 2}
+	for y := 0; y < 8; y++ {
+		for x := 0; x < 8; x++ {
+			if want := basis[y] * basis[x]; got[y*8+x] != want {
+				t.Fatalf("impulse coefficient (%d,%d)=%d want %d", x, y, got[y*8+x], want)
+			}
+		}
+	}
+}
+
+func TestQuant8x8WithScaling_ParityAndBounds(t *testing.T) {
+	var src, flat, dequant [64]int32
+	var scaling [64]uint8
+	for i := range src {
+		src[i] = int32((i*17)%101 - 50)
+		scaling[i] = 16
+	}
+	for qp := 0; qp <= 51; qp++ {
+		if err := Quant8x8WithScaling(&flat, &src, qp, nil); err != nil {
+			t.Fatal(err)
+		}
+		if err := Quant8x8WithScaling(&dequant, &src, qp, &scaling); err != nil {
+			t.Fatal(err)
+		}
+		if flat != dequant {
+			t.Fatalf("flat matrix mismatch at QP %d", qp)
+		}
+		var restored [64]int32
+		if err := Dequant8x8(&restored, &flat, qp, nil); err != nil {
+			t.Fatal(err)
+		}
+		for i, level := range flat {
+			if level != 0 && (restored[i] == 0 || (restored[i] < 0) != (src[i] < 0)) {
+				t.Fatalf("QP%d coefficient%d sign/scale mismatch: src=%d level=%d dequant=%d", qp, i, src[i], level, restored[i])
+			}
+		}
+	}
+	scaling[23] = 0
+	if err := Quant8x8WithScaling(&flat, &src, 26, &scaling); !errors.Is(err, h264.ErrInvalidData) {
+		t.Fatal("zero scaling matrix entry accepted", err)
+	}
+}
+
 func TestDequant8x8_NonDCScalingAnalyticOutput(t *testing.T) {
 	var levels, coeff, out [64]int32
 	levels[1] = 64
