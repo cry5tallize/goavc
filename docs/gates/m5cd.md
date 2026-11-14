@@ -52,7 +52,7 @@ WithTransform8x8、WithWeightedPrediction、WithLookahead(2)。每次Receive均�
 不降低画质或放宽阈值。实测等码率匹配误差均<1%，Go Y-PSNR低于x264约
 7.09..8.79dB，完整公开。1080p与大尺寸码控仍在执行；M5总质量门禁保持未通过。
 
-常规门禁（CGO=0）gofmt/vet/build/test、depscheck和manifest27条通过；非缓存`go test -count=1 ./...`也通过。`CGO_ENABLED=1 go test -race -timeout 30m ./...`全包通过（该次codec591.553秒；4×4/DC后续改动另跑相关包race）；Windows/Linux/macOS×amd64/arm64六目标CGO=0构建通过。High两尺寸各300帧Oracle已通过；同参数x264、大尺寸码控、最新相关包race仍以完成通知和记录为准。
+常规门禁（CGO=0）gofmt/vet/build/test、depscheck和manifest27条通过；非缓存`go test -count=1 ./...`也通过。`CGO_ENABLED=1 go test -race -timeout 30m ./...`全包通过，最新一次codec500.406秒，包含4×4/DC矩阵、B队列、filler、延迟测量及其回归；部分未改包命中Go测试缓存，不描述为全部非缓存执行。该次启动于新增High剪枝对照测试之前，不将其算作该新增测试的race证据。Windows/Linux/macOS×amd64/arm64六目标CGO=0构建通过。High两尺寸各300帧Oracle已通过；1080p质量与大尺寸码控仍等待长任务结果。
 
 4×4/DC改动后相关包`encoder/internal/transform/tests/codec/tools/encodebench`的race通过，
 codec487.741秒；B调度fuzz先跑10秒11次，后续30秒4700次、发现16个新覆盖输入，均无失败；仍只是smoke，不替代长时覆盖。
