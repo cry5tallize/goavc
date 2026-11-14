@@ -4,7 +4,7 @@ import h264 "github.com/goavc/h264"
 
 // FrameReader按显示顺序读取完整帧。正常结束返回io.EOF，不完整尾帧返回错误。
 // 成功帧归调用方所有，用完Release；后续读取不得覆盖此前返回的帧。
-// 实例非并发安全；取消与背压由后续pipeline层管理。
+// 实例非并发安全；pipeline在操作间检查取消，可能阻塞的源应实现ContextFrameReader。
 type FrameReader interface {
 	ReadFrame() (*h264.Frame, error)
 }
