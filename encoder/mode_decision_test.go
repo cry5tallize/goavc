@@ -7,6 +7,7 @@ import (
 	"github.com/goavc/h264/internal/motion"
 	"github.com/goavc/h264/internal/picture"
 	"github.com/goavc/h264/internal/testutil/pattern"
+	"reflect"
 	"testing"
 )
 
@@ -104,6 +105,72 @@ func TestModeDecision_MatchesExhaustiveCandidateCosts(t *testing.T) {
 		for comp := range reference {
 			if !bytes.Equal(reference[comp], e.reference.Planes[comp].Data) {
 				t.Fatal("RD changed reference picture")
+			}
+		}
+		e.Close()
+	}
+}
+
+func TestModeDecision_HighToolsMatchUnpruned(t *testing.T) {
+	for _, qp := range []int{0, 18, 26, 51} {
+		cfg := h264.DefaultEncoderConfig()
+		cfg.Width, cfg.Height = 32, 32
+		cfg.Profile = h264.ProfileHigh
+		cfg.QP = qp
+		var four [6][16]uint8
+		for l := range four {
+			for i := range four[l] {
+				four[l][i] = uint8(8 + (l*7+i*3)%31)
+			}
+		}
+		e, err := New(cfg, WithTransform8x8(), WithWeightedPrediction(), WithScalingMatrices4x4(four))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f := pattern.Frame(32, 32, 1)
+		if err = e.SendFrame(f); err != nil {
+			t.Fatal(err)
+		}
+		f.Release()
+		e.ReceivePacket()
+		for _, kind := range []int{1, 2, 4, 5} {
+			input := pattern.Frame(32, 32, kind)
+			src, _ := picture.New(2, 2)
+			for comp := range src.Planes {
+				for y := 0; y < src.Planes[comp].Height; y++ {
+					copy(src.Planes[comp].Row(y), input.Planes[comp].Data[y*input.Planes[comp].Stride:])
+				}
+			}
+			input.Release()
+			fresh := func() *frameState {
+				s, err := e.newFrameState(src)
+				if err != nil {
+					t.Fatal(err)
+				}
+				s.reference = e.reference
+				return s
+			}
+			pruned, full := fresh(), fresh()
+			for addr := 0; addr < 4; addr++ {
+				resA, err := pruned.decideRD(addr, qp, 2, false, true)
+				if err != nil {
+					t.Fatal(err)
+				}
+				resB, err := full.decideRD(addr, qp, 2, false, false)
+				if err != nil {
+					t.Fatal(err)
+				}
+				a, err := pruned.captureRD(addr, qp, qp, resA)
+				if err != nil {
+					t.Fatal(err)
+				}
+				b, err := full.captureRD(addr, qp, qp, resB)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(a, b) {
+					t.Fatalf("QP%d图案%d宏块%d剪枝与完整候选不一致：J%d/%d info%+v/%+v", qp, kind, addr, a.cost, b.cost, a.info, b.info)
+				}
 			}
 		}
 		e.Close()

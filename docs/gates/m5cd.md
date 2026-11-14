@@ -55,7 +55,7 @@ WithTransform8x8、WithWeightedPrediction、WithLookahead(2)。每次Receive均�
 常规门禁（CGO=0）gofmt/vet/build/test、depscheck和manifest27条通过；非缓存`go test -count=1 ./...`也通过。`CGO_ENABLED=1 go test -race -timeout 30m ./...`全包通过（该次codec591.553秒；4×4/DC后续改动另跑相关包race）；Windows/Linux/macOS×amd64/arm64六目标CGO=0构建通过。High两尺寸各300帧Oracle已通过；同参数x264、大尺寸码控、最新相关包race仍以完成通知和记录为准。
 
 4×4/DC改动后相关包`encoder/internal/transform/tests/codec/tools/encodebench`的race通过，
-codec487.741秒；B调度fuzz10秒11次无失败，只是smoke，不替代长时覆盖。
+codec487.741秒；B调度fuzz先跑10秒11次，后续30秒4700次、发现16个新覆盖输入，均无失败；仍只是smoke，不替代长时覆盖。
 最新测量器加入CPU profile、实际帧型、QP序列、每AU比特与30帧窗口码率、构建revision/
 dirty状态和`DecoderVerified`标记；重建YUV按PTS顺序输出并检查短写。
 
