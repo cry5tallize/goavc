@@ -29,6 +29,7 @@ if err != nil {
 
 - SendFrame 同步消费输入；成功返回后可修改或释放 frame。输出槽只有一个，尚未取走
   packet 时 SendFrame 返回 `ErrAgain` 且不消费输入。成功 ReceivePacket 后应继续送帧。
+- WithLookahead(depth)启用后，SendFrame深拷贝输入，初次输出延迟depth帧；需循环Receive直到Again。Flush后继续Receive直到EOF，不能假定每个Send立即产出一个包。Reconstruction始终对应最近成功编码的帧，排空时在每次成功Receive后获取。
 - 暂无输出时 ReceivePacket 返回 `ErrAgain`。Flush（或 SendFrame(nil)）结束输入，
   最后一个包仍可取走，之后返回 `ErrEOF`。Flush 幂等。
 - Reset 丢弃待取包和重建，保留配置，从 IDR 编号 0 重新开始。Close 幂等，关闭后
@@ -54,6 +55,7 @@ if err != nil {
 | WithPredictionWeights(weights) | 固定单参考 P 的三平面显式权重，与自动分析互斥；denom 0..7，显式 weight/offset -128..127 |
 | WithTransform8x8() | High增加Intra8与P 8×8残差候选，按RD与原4×4比较；默认关闭，Baseline/Main拒绝 |
 | WithScalingMatrix8x8(intra, inter) | 两个光栅顺序[64]uint8矩阵，项为1..255；按值复制、隐式开启8×8，4×4/DC列表显式flat=16 |
+| WithLookahead(depth) | 1..16帧未来窗口确认场景变化并抑制单帧闪光，默认20%阈值；有界深拷贝、延迟输出/Flush排空；PCM拒绝，当前不启用B帧 |
 | WithSceneChangeThreshold(n) | 全平面平均绝对采样变化达到 1..100% 时触发 IDR；直接比较当前输入与已重建参考，不做 lookahead |
 
 QP=0 仍为有损变换，不等同 PCM。无残差的 I4 不携带 mb_qp_delta，滤波沿用前一宏块 QP。

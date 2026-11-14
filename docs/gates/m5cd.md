@@ -23,7 +23,7 @@
 - P 单参考显式权重编码已验证；B 显式/隐式权重编码待 B slice 接入。
 - High Intra8/P 8×8与自定义8×8矩阵已接入CABAC闭环；自定义4×4/DC矩阵编码仍未接入，现有路径保持flat=16。
 - CABAC 整帧率估算仍借用 CAVLC 候选代理；zero-word 已实施逐slice bin密度约束，计入PCM restart前的bin数，并在封装后进入AU资源门禁。解析阈值与5000个MPS密集流读回测试通过。
-- Lookahead 未实现；场景检测为当前帧相对参考帧的全平面平均绝对差阈值。
+- WithLookahead(1..16)已实现有界深拷贝、未来窗口确认切换/抑制闪光、PTS/DTS、背压、失败事务与尾部Flush排空，并通过三方Oracle；尚无B调度。
 - VBV 长序列/溢出压力语料、HRD 参数与 filler NAL 未实现。
 - M5 规定的 720p/1080p 各 300 帧完整参数门禁、QP 18/26/34 与 x264 对比、等码率 PSNR/SSIM 报告、全量 CPU profile、竞态检测与六目标交叉构建未因本次局部结果而自动通过。
 

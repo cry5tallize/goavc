@@ -157,7 +157,8 @@ M5c/d 已有部分本地验证，不能视为子阶段关闭：CABAC Main/High I
 | P 显式加权预测编码 | 7.3.3.2 / 8.4.3.2 | 固定三平面权重、整数最小二乘自动分析、PPS/slice 信令、共享 MC 后加权、P_Skip | Conformant | 权重/偏移解析拟合、插值先于裁剪、实际 Skip、失败事务；Main/High 160帧权重表与三方 Oracle | 单参考 P；搜索使用加权参考代理估计 MV，最终 RD/重建使用原参考插值后加权；B/implicit 待接入 |
 | High 8×8 编码闭环 | 8.3.2 / 8.5.13 / 9.3 | 规范逆基定点投影、QP0..51、Intra8九模式与P 8×8残差RD候选、CABAC/代理CAVLC扫描、共享逆变换与滤波 | Conformant | 常量/脉冲/非DC解析基、实际I/P 8×8决策；QP0/18/26/51×1/3slice×flat/custom的320帧三方Oracle | 默认关闭，通过WithTransform8x8启用；RD仍借用CAVLC候选比特代理，不宣称CABAC最优 |
 | 8×8 ScalingMatrix编码 | 7.3.2.2 / 8.5.13 | intra/inter亮度光栅矩阵配置、PPS扫描/delta、正量化与共享重建 | Conformant | PPS解析与矩阵选择核对、delta回绕、零项拒绝、flat/custom320帧三方Oracle | 4×4/DC编码列表显式flat=16；自定义4×4/DC未接入 |
-| GOP / IDR 与场景变化 | 编码器策略 | GOPSize 非 IDR I 刷新、独立 IDRInterval、强制 IDR、显式阈值全平面变化检测 | Partial | `IndependentGOPAndSceneChangeIDR` KeyFrame 序列断言；InterPictureTypes ffprobe I/P 类型 | 无 B-frame placement 与 DTS 重排；场景检测直接比较当前帧/参考帧 |
+| GOP / IDR 与场景变化 | 编码器策略 | GOPSize非IDR I刷新、独立IDRInterval、强制IDR、直接阈值或未来窗口确认场景变化 | Partial | GOP ffprobe、Lookahead单帧闪光/持续切换IDR序列、PTS/DTS与三方Oracle | 无B-frame placement与DTS重排 |
+| Lookahead窗口 | 输入所有权/帧类型分析 | 1..16帧未来窗口、深拷贝、闪光抑制、持续切换IDR、尾部排空 | Conformant | `Lookahead_BoundsResetAndFailedSend`、`LookaheadFlashSceneAndDrainOracle` | 非并行；无B调度；最多depth+1输入副本及一个分析锚点；错误保持已接受队列，Reset可丢弃 |
 | ABR / CBR / VBV | 编码器码率控制 | 帧 QP 候选搜索、AU 比特反馈、CBR fullness 平滑、VBV 候选硬边界 | Partial | 120 帧 ABR ±10% + FFmpeg Oracle；2×30 帧 CBR 窗口 ±10%；60 帧 VBV fullness/Oracle 与失败事务测试 | 无 filler NAL/HRD CBR 恒定传输；暂无 720p/1080p 300 帧门禁、x264 质量比较 |
 | CABAC 零字封装修复 | 7.4.1 / 9.3.4.6 | VCL 末尾00 00 03按已知 CABAC PPS 接受；CAVLC 仍拒绝 | Conformant | `EncapsulatedZeroWordPadding` 先失败后修复，FFmpeg 像素对照；CAVLC 终端转义拒绝 | 通用 EBSP 严格规则保持；不扩大参数集/未知 PPS 的截断容忍 |
 

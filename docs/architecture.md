@@ -86,7 +86,7 @@ decoder              encoder
 
 | 场景 | 契约 |
 |---|---|
-| `SendFrame(*Frame)` | 返回后调用方可复用/释放输入；M4 在调用内完成消费，不保留调用方 Frame 或 Data 引用 |
+| `SendFrame(*Frame)` | 返回后调用方可复用/释放输入；默认调用内消费，WithLookahead使用有界内部深拷贝，不保留调用方Frame/Data引用 |
 | `ReceiveFrame() (*Frame, error)` | 返回帧归调用方；用完必须 `Release()`，否则缓冲无法回池 |
 | `SendPacket(Packet)` | 解码器不在返回后持有 `Data` 引用（需要保留则内部拷贝） |
 | `ReceivePacket() (Packet, error)` | `Data` 归调用方所有 |

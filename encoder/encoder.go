@@ -25,6 +25,9 @@ type Encoder struct {
 	fixedWeights            *PredictionWeights
 	transform8              bool
 	scaling8                *[2][64]uint8
+	lookahead               int
+	pendingFrames           []*h264.Frame
+	lookaheadPrevious       *h264.Frame
 	sceneThreshold          int
 	frameQP, lastQP         int
 	vbvFullness             int64
@@ -128,6 +131,9 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	if (e.autoWeights || e.fixedWeights != nil) && (cfg.Profile == h264.ProfileBaseline || e.pcm) {
 		return nil, fmt.Errorf("encoder: weighted prediction requires Main/High compressed P slices: %w", h264.ErrUnsupported)
 	}
+	if e.lookahead > 0 && e.pcm {
+		return nil, fmt.Errorf("encoder: lookahead is not meaningful for all-PCM IDR: %w", h264.ErrUnsupported)
+	}
 	if err := e.parameters(); err != nil {
 		return nil, err
 	}
@@ -152,6 +158,13 @@ func (e *Encoder) SendFrame(f *h264.Frame) error {
 	if f.Width != e.cfg.Width || f.Height != e.cfg.Height || f.Format != e.cfg.PixelFormat {
 		return fmt.Errorf("encoder: frame differs from configuration: %w", h264.ErrInvalidData)
 	}
+	if e.lookahead > 0 {
+		return e.queueLookahead(f)
+	}
+	return e.encodeFrameNow(f, false)
+}
+
+func (e *Encoder) encodeFrameNow(f *h264.Frame, lookaheadScene bool) error {
 	if e.pcm && e.cfg.Profile != h264.ProfileHigh {
 		for comp := 0; comp < 3; comp++ {
 			w, h := f.Format.PlaneDimensions(comp, f.Width, f.Height)
@@ -180,7 +193,10 @@ func (e *Encoder) SendFrame(f *h264.Frame) error {
 			}
 		}
 	}
-	sceneChange := e.sceneChanged(pic)
+	sceneChange := lookaheadScene
+	if e.lookahead == 0 {
+		sceneChange = e.sceneChanged(pic)
+	}
 	isIDR := e.pcm || e.reference == nil || e.framesSinceIDR >= e.cfg.IDRInterval || f.KeyFrame || sceneChange
 	isIntra := isIDR || e.framesInGOP >= e.cfg.GOPSize
 	data, state, selectedQP, err := e.encodeRateControlled(pic, isIntra, isIDR)
@@ -221,6 +237,11 @@ func (e *Encoder) SendFrame(f *h264.Frame) error {
 
 // ReceivePacket 转交一个完整 Annex-B AU；Data 的所有权归调用方。
 func (e *Encoder) ReceivePacket() (h264.Packet, error) {
+	if e.out == nil && !e.closed && e.lookahead > 0 && (len(e.pendingFrames) > e.lookahead || e.flushed && len(e.pendingFrames) > 0) {
+		if err := e.encodeLookaheadHead(); err != nil {
+			return h264.Packet{}, err
+		}
+	}
 	if e.out != nil {
 		p := *e.out
 		e.out = nil
@@ -270,6 +291,7 @@ func (e *Encoder) Reset() error {
 	e.recon = nil
 	e.last = nil
 	e.reference = nil
+	e.releaseLookahead()
 	e.frameNum = 0
 	e.framesSinceIDR = 0
 	e.framesInGOP = 0
@@ -289,6 +311,7 @@ func (e *Encoder) Close() error {
 	e.recon = nil
 	e.last = nil
 	e.reference = nil
+	e.releaseLookahead()
 	e.closed = true
 	return nil
 }

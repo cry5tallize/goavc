@@ -134,8 +134,8 @@
 | CQP | Conformant | M4 固定 QP 与宏块 QP 回调，QP=0 仍为有损；无残差沿用前 QP |
 | ABR / CBR / VBV | Partial | M5d | ABR 120帧平均、CBR 2×30帧窗口均在 ±10%；VBV 60帧候选 AU fullness 上下界搜索；无 filler NAL/HRD，完整 M5 门禁未完成 |
 | GOP 结构 / IDR 间隔 | Partial | M5d | GOPSize 控制非 IDR I 刷新，IDRInterval 独立控制 IDR；MaxBFrames>0 仍拒绝 |
-| 场景切换检测 | Partial | M5d | `WithSceneChangeThreshold` 按全平面平均绝对采样变化触发 IDR；为当前帧/参考帧比较，不是 lookahead |
-| Lookahead | TODO | M5d | 未实现；当前无未来帧分析 |
+| 场景切换检测 | Conformant | M5d | 直接阈值比较或WithLookahead未来窗口确认/闪光抑制；实际IDR序列、PTS/DTS与三方Oracle |
+| Lookahead | Partial | M5d | WithLookahead(1..16)有界深拷贝窗口，未来帧参与场景/IDR决策；背压/Flush/Reset/Close/失败事务已测；B放置尚未接入 |
 | RD 模式决策（J = D + λR） | Conformant | M5b 定点 lambda、SSE/实际 CAVLC 比特、Skip/P/I4/I16/PCM 候选；整段质量门禁仍待执行 |
 | 自适应 QP | Conformant | M5b 活动度 QP 选项 0..6、QP 0..51 裁剪，默认关闭，显式回调/PCM 冲突拒绝 |
 | SSE2 / AVX2 / NEON | TODO | M8 |
