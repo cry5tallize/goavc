@@ -15,6 +15,8 @@ import (
 	"math"
 	"os"
 	"runtime"
+	"runtime/debug"
+	"runtime/pprof"
 	"sort"
 	"time"
 
@@ -42,6 +44,11 @@ type report struct {
 	QPSequence                       []int
 	MinVBVFullness, MaxVBVFullness   int64
 	PictureCounts                    map[string]int
+	DecoderVerified                  bool
+	Revision                         string
+	Modified                         bool
+	FrameBits                        []int64
+	WindowBitrateKbps                []float64
 }
 
 func main() {
@@ -62,12 +69,26 @@ func main() {
 	lookahead := flag.Int("lookahead", 0, "未来帧窗口，0关闭")
 	verify := flag.Bool("verify", false, "与自研解码逐帧比较")
 	reconPath := flag.String("recon", "", "显示顺序重建YUV输出路径")
+	cpuProfile := flag.String("cpu-profile", "", "可选CPU profile，仅供开发期测量")
 	frames := flag.Int("frames", 6, "帧数，图案按六类循环")
 	slices := flag.Int("slices", 1, "每帧 slice 数")
 	pcm := flag.Bool("pcm", false, "强制 I_PCM")
 	output := flag.String("output", "", "可选 Annex-B 输出文件")
 	inputPath := flag.String("input", "", "可选紧密 YUV420P 文件；未指定时生成六类图案")
 	flag.Parse()
+	if *cpuProfile != "" {
+		file, err := os.Create(*cpuProfile)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		if err = pprof.StartCPUProfile(file); err != nil {
+			file.Close()
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		defer func() { pprof.StopCPUProfile(); file.Close() }()
+	}
 	switch *rc {
 	case "cqp":
 		c.RateControl = h264.RateControlCQP
@@ -154,6 +175,16 @@ func measureConfigured(c h264.EncoderConfig, count, slices int, pcm bool, reader
 	defer e.Close()
 	r := report{Width: c.Width, Height: c.Height, Frames: count, QP: c.QP, FPS: c.FPSNum, SliceCount: slices, PCM: pcm, Go: runtime.Version(), GOPSize: c.GOPSize}
 	r.Profile = c.Profile
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, setting := range info.Settings {
+			switch setting.Key {
+			case "vcs.revision":
+				r.Revision = setting.Value
+			case "vcs.modified":
+				r.Modified = setting.Value == "true"
+			}
+		}
+	}
 	r.MaxBFrames = c.MaxBFrames
 	r.IDRInterval = c.IDRInterval
 	r.Bitrate = c.Bitrate
@@ -259,6 +290,7 @@ func measureConfigured(c h264.EncoderConfig, count, slices int, pcm bool, reader
 				return err
 			}
 			packets++
+			r.FrameBits = append(r.FrameBits, int64(len(p.Data))*8)
 			decoded, err := e.Reconstruction()
 			if err != nil {
 				return err
@@ -358,12 +390,21 @@ func measureConfigured(c h264.EncoderConfig, count, slices int, pcm bool, reader
 	if packets != count || nextRecon != int64(count) {
 		return r, nil, fmt.Errorf("incomplete drain: packets %d recon %d count %d", packets, nextRecon, count)
 	}
+	r.DecoderVerified = d != nil && decodedCount == count
 	elapsed := encodeElapsed
 	sort.Slice(durations, func(i, j int) bool { return durations[i] < durations[j] })
 	r.InputSHA256 = hex.EncodeToString(input.Sum(nil))
 	r.StreamSHA256 = hex.EncodeToString(output.Sum(nil))
 	r.ReconstructionSHA256 = hex.EncodeToString(recon.Sum(nil))
 	r.Bytes = len(stream)
+	for start := 0; start < len(r.FrameBits); start += 30 {
+		end := min(len(r.FrameBits), start+30)
+		var bits int64
+		for _, v := range r.FrameBits[start:end] {
+			bits += v
+		}
+		r.WindowBitrateKbps = append(r.WindowBitrateKbps, float64(bits)*float64(c.FPSNum)/(float64(end-start)*float64(c.FPSDen)*1000))
+	}
 	r.BitrateKbps = float64(len(stream)*8) * float64(c.FPSNum) / (float64(count) * float64(c.FPSDen)) / 1000
 	r.EncodeFPS = float64(count) / elapsed.Seconds()
 	r.MeanMillis = float64(elapsed) / float64(count) / 1e6

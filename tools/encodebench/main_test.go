@@ -60,11 +60,14 @@ func TestMeasure_DelayedBReconstructionAndVerification(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(recon.Bytes(), raw) || r.InputSHA256 != r.ReconstructionSHA256 || r.Bytes != len(stream) || len(r.QPSequence) != 12 {
+	if !r.DecoderVerified || !bytes.Equal(recon.Bytes(), raw) || r.InputSHA256 != r.ReconstructionSHA256 || r.Bytes != len(stream) || len(r.QPSequence) != 12 {
 		t.Fatalf("延迟测量错误：%+v", r)
 	}
 	if r.PictureCounts["B"] == 0 || r.PictureCounts["IDR"] == 0 {
 		t.Fatal("测量报告没有实际帧型统计", r.PictureCounts)
+	}
+	if len(r.FrameBits) != 12 || len(r.WindowBitrateKbps) != 1 || r.WindowBitrateKbps[0] != r.BitrateKbps {
+		t.Fatal("窗口码率统计错误", r.WindowBitrateKbps)
 	}
 }
 

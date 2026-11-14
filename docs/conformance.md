@@ -13,3 +13,24 @@ M5 开工时固定以下测量协议，结果不得通过放宽阈值或选择�
 
 M5a/b/c/d 分别记录独立验证证据；子阶段通过不等同 M5 总门禁通过。
 FFmpeg/x264 仅供开发期 Oracle 和质量测量，运行时仍为纯 Go、仅标准库。
+
+## 可复现的M5长门禁入口
+
+Windows PowerShell（结果目录须有足够原始YUV空间，建议至少25GiB）：
+
+```powershell
+.\scripts\verify_m5.ps1 -OutputDirectory C:\validation\m5 -Mode oracle
+.\scripts\verify_m5.ps1 -OutputDirectory C:\validation\m5 -Mode quality -Resume
+.\scripts\verify_m5.ps1 -OutputDirectory C:\validation\m5 -Mode rate -Resume
+```
+
+脚本固定720p/1080p各300帧、High/CABAC、B2、GOP/IDR60、4slice、8×8、
+P显式权重和Lookahead2。同QP x264额外固定`ipratio=pbratio=1.0`、b-adapt=0、
+b-pyramid=none、scenecut=0、ref=2、threads=1，避免I/P/B QP比例与帧型决策差异
+混入比较。所有QP测量均完成后统一返回门禁状态，保留失败项，不放宽1.5dB阈值。
+
+匹配码率按Go实测码率迭代x264目标（最多四次修正），报告实测误差；超过1%时不能
+称为等码率结果。文件存在不是验证证据：`-Resume`核对配置、完整帧数、输入/码流/
+重建SHA-256；需要Go Decoder验证的调用还必须存在`DecoderVerified=true`标记。
+该标记来自逐帧比较，不替代独立FFmpeg像素Oracle。Windows PowerShell的原生stderr
+重定向按FFmpeg真实退出码处理，日志保留用于审计。
