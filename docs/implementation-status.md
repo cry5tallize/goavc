@@ -193,15 +193,15 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 | h264probe语法树 | JSONL逐NAL展示共享SPS/PPS/VUI/ScalingList/SEI/slice结构，保留默认GOP JSON | Conformant | Baseline/Main/High与ffprobe尺寸/Profile/Level/图片数对照；参数集引用、多slice、严格尾部、限额、AVCC各前缀与输出失败测试 | 不解析宏块/残差，不把头部成功当作像素正确；输出错误前的行只代表局部已解析内容 |
 | 短时稳定性 | 同一对pipeline、io.Pipe、10FPS PCM持续传输30秒；RSS/GC后堆/帧积压/退出goroutine | Conformant | tools/streamcheck核对独立PCM常量解析值与预设资源阈值，退出0；取消后goroutine从3回到1；样本见gates/m6_smoke.json | 仅覆盖该输入与30秒窗口，不证明长期无泄漏，不替代M9混合输入验收 |
 
-## M7–M9
+## M7：高级 AVC 特性（WIP）
 
-后续里程碑的模块表在对应里程碑开工时补全；开工前这里只保留占位，
-避免出现"提前承诺、实际未实现"的记录失真。
+当前特性分支`feat/m7-high10`，按实施计划从共享内核到流水线逐项验收、独立提交。
+基础布局参数化不表示扩展Profile已接入，既有8-bit编解码路径保持不变。
 
-<!--
-模板：
+| 实施项 | 职责 | Status | 证据 | 缺口 |
+|---|---|---|---|---|
+| 1：共享图像布局参数化 | New/Pool.Get显式接收PixelFormat，平面几何复用公共布局，池按尺寸与格式分桶 | Conformant | 2026-11-15完整常规门禁通过：CGO=0 vet/build/非缓存全包test、depscheck34包、manifest27条、gofmt；既有布局/边缘复制/池复用回归及未支持布局拒绝测试通过 | 本项只接受8-bit420；10-bit存储与High10编解码尚未接入 |
 
-| Module | 规范条款 | Scope | Status | Tests | Known gaps |
-|---|---|---|---|---|---|
-| `cavlc.DecodeResidualBlock` | 9.2 | 4×4 亮度 AC/DC、色度 DC | Partial | cavlc/residual_test.go | 未覆盖 nC=-1 的色度 DC（见 #123） |
--->
+## M8–M9
+
+对应里程碑开工时补全模块表，不提前承诺尚未实现的能力。

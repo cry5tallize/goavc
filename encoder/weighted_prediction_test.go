@@ -43,8 +43,8 @@ func TestPredictionWeights_Validation(t *testing.T) {
 }
 
 func TestPredictionWeights_FitAnalyticGainOffset(t *testing.T) {
-	ref, _ := picture.New(2, 2)
-	src, _ := picture.New(2, 2)
+	ref, _ := picture.New(2, 2, h264.YUV420P)
+	src, _ := picture.New(2, 2, h264.YUV420P)
 	for comp := range ref.Planes {
 		for y := 0; y < ref.Planes[comp].Height; y++ {
 			for x := range ref.Planes[comp].Row(y) {
@@ -65,8 +65,8 @@ func TestPredictionWeights_FitAnalyticGainOffset(t *testing.T) {
 }
 
 func TestPredictionWeights_InterpolationBeforeClipping(t *testing.T) {
-	ref, _ := picture.New(1, 1)
-	dst, _ := picture.New(1, 1)
+	ref, _ := picture.New(1, 1, h264.YUV420P)
+	dst, _ := picture.New(1, 1, h264.YUV420P)
 	for comp := range ref.Planes {
 		for y := 0; y < ref.Planes[comp].Height; y++ {
 			for x := range ref.Planes[comp].Row(y) {

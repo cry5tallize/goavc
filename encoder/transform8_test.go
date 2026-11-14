@@ -58,8 +58,8 @@ func TestTransform8x8_ActualInterDecision(t *testing.T) {
 }
 
 func TestTransform8x8_PCMFallbackClearsCandidateFlags(t *testing.T) {
-	src, _ := picture.New(1, 1)
-	dst, _ := picture.New(1, 1)
+	src, _ := picture.New(1, 1, h264.YUV420P)
+	dst, _ := picture.New(1, 1, h264.YUV420P)
 	s := frameState{src: src, pic: dst, info: []mbInfo{{transform8: true, is16: true, inter: true, skip: true}}, nz: make([]uint8, 16)}
 	for c := range s.cnz {
 		s.cnz[c] = make([]uint8, 4)

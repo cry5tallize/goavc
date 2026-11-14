@@ -8,7 +8,7 @@ import (
 )
 
 func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
-	pic, err := picture.New(src.MBWidth, src.MBHeight)
+	pic, err := picture.New(src.MBWidth, src.MBHeight, src.Format)
 	if err != nil {
 		return nil, err
 	}

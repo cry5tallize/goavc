@@ -3,12 +3,13 @@ package prediction
 import (
 	"testing"
 
+	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/internal/picture"
 )
 
 func rampPicture(t *testing.T) *picture.Picture {
 	t.Helper()
-	p, err := picture.New(1, 1)
+	p, err := picture.New(1, 1, h264.YUV420P)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +56,7 @@ func TestLumaSample_LinearRamp(t *testing.T) {
 }
 
 func TestLumaSample_ConstantAllPhases(t *testing.T) {
-	p, err := picture.New(1, 1)
+	p, err := picture.New(1, 1, h264.YUV420P)
 	if err != nil {
 		t.Fatal(err)
 	}

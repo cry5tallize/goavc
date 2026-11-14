@@ -1,10 +1,14 @@
 package picture
 
-import "testing"
+import (
+	"testing"
+
+	h264 "github.com/goavc/h264"
+)
 
 func TestPool_ReuseAndStats(t *testing.T) {
 	pool := NewPool(2)
-	a, err := pool.Get(2, 2)
+	a, err := pool.Get(2, 2, h264.YUV420P)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,7 +26,7 @@ func TestPool_ReuseAndStats(t *testing.T) {
 		t.Fatalf("stats after release = %d/%d/%d, want 1/1/1", gets, puts, allocs)
 	}
 
-	b, err := pool.Get(2, 2)
+	b, err := pool.Get(2, 2, h264.YUV420P)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +40,7 @@ func TestPool_ReuseAndStats(t *testing.T) {
 	b.Release()
 
 	// 不同尺寸不能复用。
-	c, err := pool.Get(3, 2)
+	c, err := pool.Get(3, 2, h264.YUV420P)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +53,7 @@ func TestPool_ReuseAndStats(t *testing.T) {
 	pool.Trim()
 	pics := make([]*Picture, 0, 4)
 	for i := 0; i < 4; i++ {
-		p, err := pool.Get(2, 2)
+		p, err := pool.Get(2, 2, h264.YUV420P)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -59,7 +63,7 @@ func TestPool_ReuseAndStats(t *testing.T) {
 		p.Release()
 	}
 	pool.mu.Lock()
-	free := len(pool.free[key{2, 2}])
+	free := len(pool.free[key{2, 2, h264.YUV420P}])
 	pool.mu.Unlock()
 	if free != 2 {
 		t.Fatalf("free list length = %d, want 2", free)
@@ -74,7 +78,7 @@ func TestPool_ConcurrentGetPut(t *testing.T) {
 	for g := 0; g < goroutines; g++ {
 		go func() {
 			for i := 0; i < iterations; i++ {
-				p, err := pool.Get(1, 1)
+				p, err := pool.Get(1, 1, h264.YUV420P)
 				if err != nil {
 					done <- err
 					return

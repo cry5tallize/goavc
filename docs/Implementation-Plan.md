@@ -564,7 +564,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 
 | # | Commit | 内容 | 验证 |
 |---|---|---|---|
-| 1 | `refactor[picture]: parameterize pixel layout by bit depth and chroma format` | 位深/色度参数化（行为不变） | 全量测试不变 |
+| 1 | `refactor[picture]: parameterize pixel layout by bit depth and chroma format` | New/Pool.Get显式PixelFormat，平面几何与池分桶参数化（8-bit行为不变） | 2026-11-15完整常规门禁通过，见implementation-status.md M7第1项 |
 | 2 | `feat[picture]: add 10 bit plane storage and sample accessors` | int16/uint16 访问 | 边界/极值测试 |
 | 3 | `feat[transform]: add 10 bit transform and quantization depth` | 移位量随位深 | 解析解对比 |
 | 4 | `feat[decoder]: add high10 decoding` | profile 分支 | 10-bit 语料一致 |

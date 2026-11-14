@@ -17,7 +17,7 @@ func TestIntraSelection_AllModes(t *testing.T) {
 	// 对每种预测先用解析参考邻域生成唯一零 SAD 图案，再调用实际编码决策函数。
 	// 不用模式强制选项，避免只测到写出路径而绕过搜索。
 	a := prediction.Intra4x4Samples{Top: [4]byte{41, 193, 77, 11}, TopRight: [4]byte{222, 65, 118, 9}, Left: [4]byte{231, 32, 161, 93}, TopLeft: 124}
-	pic, _ := picture.New(1, 1)
+	pic, _ := picture.New(1, 1, h264.YUV420P)
 	for mode := 0; mode < 9; mode++ {
 		var pattern, chosen [16]byte
 		prediction.Intra4x4(pattern[:], 4, mode, a, true, true)
@@ -39,8 +39,8 @@ func TestIntraSelection_AllModes(t *testing.T) {
 	}
 	// 色度搜索通过实际宏块分析调用，两个分量使用同样边界以保证零 SAD 唯一。
 	for mode := 0; mode < 4; mode++ {
-		src, _ := picture.New(2, 2)
-		recon, _ := picture.New(2, 2)
+		src, _ := picture.New(2, 2, h264.YUV420P)
+		recon, _ := picture.New(2, 2, h264.YUV420P)
 		s := &frameState{src: src, pic: recon, info: make([]mbInfo, 4)}
 		s.info[3].qp = 0
 		for c := 1; c < 3; c++ {

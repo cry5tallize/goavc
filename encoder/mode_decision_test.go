@@ -30,7 +30,7 @@ func TestModeDecision_MatchesExhaustiveCandidateCosts(t *testing.T) {
 			reference[comp] = bytes.Clone(e.reference.Planes[comp].Data)
 		}
 		for kind := 0; kind < 4; kind++ {
-			src, _ := picture.New(1, 1)
+			src, _ := picture.New(1, 1, h264.YUV420P)
 			for comp := 0; comp < 3; comp++ {
 				p := &src.Planes[comp]
 				for y := 0; y < p.Height; y++ {
@@ -135,7 +135,7 @@ func TestModeDecision_HighToolsMatchUnpruned(t *testing.T) {
 		e.ReceivePacket()
 		for _, kind := range []int{1, 2, 4, 5} {
 			input := pattern.Frame(32, 32, kind)
-			src, _ := picture.New(2, 2)
+			src, _ := picture.New(2, 2, h264.YUV420P)
 			for comp := range src.Planes {
 				for y := 0; y < src.Planes[comp].Height; y++ {
 					copy(src.Planes[comp].Row(y), input.Planes[comp].Data[y*input.Planes[comp].Stride:])
@@ -224,8 +224,8 @@ func TestModeDecision_FlatPruningMatchesExhaustive(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ref, _ := picture.New(1, 1)
-		src, _ := picture.New(1, 1)
+		ref, _ := picture.New(1, 1, h264.YUV420P)
+		src, _ := picture.New(1, 1, h264.YUV420P)
 		for comp := 0; comp < 3; comp++ {
 			for y := 0; y < ref.Planes[comp].Height; y++ {
 				for x := 0; x < ref.Planes[comp].Width; x++ {
@@ -266,8 +266,8 @@ func TestUniformPrediction_IncludesInterpolationHalo(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer e.Close()
-	ref, _ := picture.New(2, 2)
-	src, _ := picture.New(2, 2)
+	ref, _ := picture.New(2, 2, h264.YUV420P)
+	src, _ := picture.New(2, 2, h264.YUV420P)
 	for comp := 0; comp < 3; comp++ {
 		for y := 0; y < ref.Planes[comp].Height; y++ {
 			for x := 0; x < ref.Planes[comp].Width; x++ {

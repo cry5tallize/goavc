@@ -111,7 +111,7 @@ func (s *frameState) applyPredictionWeights(x, y, width, height int) {
 }
 
 func weightedSearchReference(reference *picture.Picture, weights *PredictionWeights) (*picture.Picture, error) {
-	out, err := picture.New(reference.MBWidth, reference.MBHeight)
+	out, err := picture.New(reference.MBWidth, reference.MBHeight, reference.Format)
 	if err != nil {
 		return nil, err
 	}

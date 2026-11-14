@@ -1,6 +1,7 @@
 package search
 
 import (
+	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/internal/picture"
 	"github.com/goavc/h264/internal/prediction"
 	"testing"
@@ -25,8 +26,8 @@ func TestSAD_ExtremesAndUnalignedStride(t *testing.T) {
 }
 
 func TestSearch_TranslationAndSubpixel(t *testing.T) {
-	ref, _ := picture.New(4, 4)
-	src, _ := picture.New(4, 4)
+	ref, _ := picture.New(4, 4, h264.YUV420P)
+	src, _ := picture.New(4, 4, h264.YUV420P)
 	for y := 0; y < 64; y++ {
 		for x := 0; x < 64; x++ {
 			ref.Planes[0].SetPix(x, y, byte((x*x+3*y*y+x*y)%251))
@@ -42,8 +43,8 @@ func TestSearch_TranslationAndSubpixel(t *testing.T) {
 	}
 }
 func TestSearch_DiamondAndBounds(t *testing.T) {
-	ref, _ := picture.New(2, 2)
-	src, _ := picture.New(2, 2)
+	ref, _ := picture.New(2, 2, h264.YUV420P)
+	src, _ := picture.New(2, 2, h264.YUV420P)
 	for y := 0; y < 32; y++ {
 		for x := 0; x < 32; x++ {
 			ref.Planes[0].SetPix(x, y, byte(x*4+y*3))
@@ -64,8 +65,8 @@ func TestSearch_DiamondAndBounds(t *testing.T) {
 }
 
 func TestSearch_CostCallbackPreservesReportedSAD(t *testing.T) {
-	ref, _ := picture.New(2, 2)
-	src, _ := picture.New(2, 2)
+	ref, _ := picture.New(2, 2, h264.YUV420P)
+	src, _ := picture.New(2, 2, h264.YUV420P)
 	// 常量块所有位移的 SAD 都为 0；上层代价可以选择零之外的 MVP。
 	want := MV{X: 8, Y: 4}
 	got, sad := EstimateWithCost(&src.Planes[0], &ref.Planes[0], 8, 8, 8, 8, want, 4, true, func(m MV, sad int) uint64 {

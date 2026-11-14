@@ -199,7 +199,7 @@ func (e *Encoder) encodeFrameNow(f *h264.Frame, lookaheadScene bool) error {
 			}
 		}
 	}
-	pic, err := picture.New((f.Width+15)/16, (f.Height+15)/16)
+	pic, err := picture.New((f.Width+15)/16, (f.Height+15)/16, f.Format)
 	if err != nil {
 		return err
 	}

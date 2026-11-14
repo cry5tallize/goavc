@@ -8,7 +8,7 @@ import (
 )
 
 func TestNew_GeometryAndAlignment(t *testing.T) {
-	pic, err := New(4, 3)
+	pic, err := New(4, 3, h264.YUV420P)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -45,7 +45,7 @@ func TestNew_RejectsInvalidDimensions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := New(tt.w, tt.h)
+			_, err := New(tt.w, tt.h, h264.YUV420P)
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("err = %v, want %v", err, tt.want)
 			}
@@ -54,7 +54,7 @@ func TestNew_RejectsInvalidDimensions(t *testing.T) {
 }
 
 func TestPlane_ImageCoordinatesAndBorder(t *testing.T) {
-	pic, err := New(1, 1)
+	pic, err := New(1, 1, h264.YUV420P)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func TestPlane_ImageCoordinatesAndBorder(t *testing.T) {
 }
 
 func TestFillBorder_EdgeReplication(t *testing.T) {
-	pic, err := New(1, 1)
+	pic, err := New(1, 1, h264.YUV420P)
 	if err != nil {
 		t.Fatal(err)
 	}

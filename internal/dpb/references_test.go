@@ -10,7 +10,7 @@ import (
 
 func testReference(t *testing.T, d *DPB, pool *picture.Pool, fn uint32) *Reference {
 	t.Helper()
-	pic, err := pool.Get(1, 1)
+	pic, err := pool.Get(1, 1, h264.YUV420P)
 	if err != nil {
 		t.Fatal(err)
 	}

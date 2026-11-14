@@ -18,7 +18,7 @@ func TestBResidual_AdaptiveDeadZoneRetainsOriginalCandidate(t *testing.T) {
 			t.Fatal(err)
 		}
 		for pattern := 0; pattern < 16; pattern++ {
-			src, _ := picture.New(1, 1)
+			src, _ := picture.New(1, 1, h264.YUV420P)
 			for comp := range src.Planes {
 				p := &src.Planes[comp]
 				for y := 0; y < p.Height; y++ {

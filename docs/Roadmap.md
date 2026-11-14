@@ -272,7 +272,7 @@ M6/M7/M8 ───────────► M9 生产化与发布
 | M4 | Encoder Baseline | SPS/PPS Writer、IDR、I_PCM、I4×4/I16×16、CAVLC、CQP、本地重建、Annex-B | L | WIP（本地门禁通过，待 CI；见 gates/m4.md） |
 | M5 | Encoder Main/High | P Slice、ME/MC、亚像素、模式决策、RD、B Frame、CABAC、8×8、GOP、RC | XL | WIP（M5a/b/c/d本地门禁已关闭，待远端CI；见gates/m5c.md、gates/m5d.md） |
 | M6 | 完整流式处理 | 增量Reader/AU/YUV、同步有界pipeline、取消/背压/Flush、三个CLI | M | WIP（功能、常规门禁/全库race/六目标构建及30秒稳定性验收通过，待远端CI；见gates/m6.md） |
-| M7 | 高级 AVC 特性 | High10/422/444、Interlaced、MBAFF/PAFF、FMO、Data Partitioning 等 | XL | TODO |
+| M7 | 高级 AVC 特性 | High10/422/444、Interlaced、MBAFF/PAFF、FMO、Data Partitioning 等 | XL | WIP（feat/m7-high10从共享图像布局参数化开始；扩展Profile未接入，见implementation-status.md） |
 | M8 | SIMD 与并行 | SSE2/AVX2/NEON、dispatch、pool、slice 并行、pipeline、profile | L | TODO |
 | M9 | 生产化与发布 | 全量测试、Fuzz、race、多平台、稳定性、文档、v1.0 | M | TODO |
 

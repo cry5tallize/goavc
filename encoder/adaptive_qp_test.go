@@ -8,7 +8,7 @@ import (
 )
 
 func TestAdaptiveQP_ActivityAndClipping(t *testing.T) {
-	p, _ := picture.New(2, 1)
+	p, _ := picture.New(2, 1, h264.YUV420P)
 	for y := 0; y < 16; y++ {
 		for x := 0; x < 32; x++ {
 			value := byte(128)

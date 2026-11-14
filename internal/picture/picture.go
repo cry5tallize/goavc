@@ -5,8 +5,8 @@
 //   - Picture 是内部工作缓冲，使用宏块对齐尺寸并带四周边界扩展区，
 //     供运动补偿越界读取、边缘复制和 SIMD 越界读使用。
 //
-// 本包只实现 M2 需要的 8-bit 4:2:0 布局。其他色度格式属于后续里程碑，
-// 在这里显式返回错误，避免调用方误用未验证的内存布局。
+// 布局由公共 PixelFormat 显式指定；构造与池分桶共享相同的格式约束，
+// 不以布局参数化冒充扩展 Profile 已接入编解码流水线。
 package picture
 
 import (
@@ -32,11 +32,12 @@ const DefaultBorder = 32
 // 大于等于 Width/Height。Index 负责把图像坐标翻译到 Data 下标，因此
 // 所有访问都必须经过 Pix/SetPix/Row，不能直接按图像坐标切片 Data。
 type Plane struct {
-	Data   []byte
-	Stride int
-	Width  int
-	Height int
-	Border int
+	Data     []byte
+	Stride   int
+	Width    int
+	Height   int
+	Border   int
+	BitDepth int
 }
 
 // Index 返回图像坐标 (x, y) 在 Data 中的下标。
@@ -106,7 +107,7 @@ func (p *Plane) FillBorder() {
 	}
 }
 
-// Picture 是一帧内部图像，包含 4:2:0 的三个平面。
+// Picture 是一帧内部图像，格式与位深由 Format 唯一确定。
 //
 // 尺寸语义：Width/Height 是宏块对齐后的编码尺寸（16 的倍数）；
 // 显示尺寸与裁剪由调用方在输出阶段处理。
@@ -115,35 +116,30 @@ type Picture struct {
 	MBHeight int
 	Width    int
 	Height   int
+	Format   h264.PixelFormat
 	Planes   [3]Plane
 
 	pool *Pool
 }
 
-// New 分配一张编码尺寸为 mbWidth×mbHeight 个宏块的 4:2:0 图像。
+// New 按 format 分配编码尺寸为 mbWidth×mbHeight 个宏块的图像。
 //
 // 返回的 Picture 不归池管理；需要复用请使用 Pool.Get。
-func New(mbWidth, mbHeight int) (*Picture, error) {
-	if mbWidth <= 0 || mbHeight <= 0 {
-		return nil, fmt.Errorf("picture: invalid macroblock dimensions %dx%d: %w",
-			mbWidth, mbHeight, h264.ErrInvalidData)
-	}
-	// 上限与公共配置保持一致，防止由码流字段推导出巨大分配。
-	if mbWidth > h264.MaxFrameWidth/16 || mbHeight > h264.MaxFrameHeight/16 {
-		return nil, fmt.Errorf("picture: dimensions %dx%d MB exceed limit: %w",
-			mbWidth, mbHeight, h264.ErrResourceLimit)
+func New(mbWidth, mbHeight int, format h264.PixelFormat) (*Picture, error) {
+	if err := validateLayout(mbWidth, mbHeight, format); err != nil {
+		return nil, err
 	}
 	p := &Picture{
 		MBWidth:  mbWidth,
 		MBHeight: mbHeight,
 		Width:    mbWidth * 16,
 		Height:   mbHeight * 16,
+		Format:   format,
 	}
-	// 4:2:0：色度宽高各减半；宏块对齐后仍是整数。
-	cw, ch := mbWidth*8, mbHeight*8
-	p.Planes[0] = allocPlane(p.Width, p.Height, DefaultBorder)
-	p.Planes[1] = allocPlane(cw, ch, DefaultBorder)
-	p.Planes[2] = allocPlane(cw, ch, DefaultBorder)
+	for i := range p.Planes {
+		w, h := format.PlaneDimensions(i, p.Width, p.Height)
+		p.Planes[i] = allocPlane(w, h, DefaultBorder, format.BitDepth())
+	}
 	return p, nil
 }
 
@@ -153,16 +149,17 @@ func New(mbWidth, mbHeight int) (*Picture, error) {
 // 不保证 64 字节对齐，因此这里只保证行首相对分配起点对齐，而分配起点由
 // Go 运行时按 8/16 字节对齐。后续 SIMD 内核必须使用非对齐加载指令，
 // 或由 M8 的 buffer 包提供显式对齐分配。
-func allocPlane(width, height, border int) Plane {
+func allocPlane(width, height, border, bitDepth int) Plane {
 	stride := width + 2*border
 	stride = (stride + 63) &^ 63
 	rows := height + 2*border
 	return Plane{
-		Data:   make([]byte, stride*rows),
-		Stride: stride,
-		Width:  width,
-		Height: height,
-		Border: border,
+		Data:     make([]byte, stride*rows),
+		Stride:   stride,
+		Width:    width,
+		Height:   height,
+		Border:   border,
+		BitDepth: bitDepth,
 	}
 }
 
@@ -171,20 +168,20 @@ func (p *Picture) Validate() error {
 	if p == nil {
 		return fmt.Errorf("picture: nil picture: %w", h264.ErrInvalidData)
 	}
-	if p.MBWidth <= 0 || p.MBHeight <= 0 {
-		return fmt.Errorf("picture: invalid macroblock dimensions: %w", h264.ErrInvalidData)
+	if err := validateLayout(p.MBWidth, p.MBHeight, p.Format); err != nil {
+		return err
 	}
 	wantW, wantH := p.MBWidth*16, p.MBHeight*16
 	if p.Width != wantW || p.Height != wantH {
 		return fmt.Errorf("picture: coded size %dx%d, want %dx%d: %w",
 			p.Width, p.Height, wantW, wantH, h264.ErrInvalidData)
 	}
-	dims := [3][2]int{{p.Width, p.Height}, {p.MBWidth * 8, p.MBHeight * 8}, {p.MBWidth * 8, p.MBHeight * 8}}
 	for i := range p.Planes {
 		pl := &p.Planes[i]
-		if pl.Width != dims[i][0] || pl.Height != dims[i][1] {
-			return fmt.Errorf("picture: plane %d size %dx%d, want %dx%d: %w",
-				i, pl.Width, pl.Height, dims[i][0], dims[i][1], h264.ErrInvalidData)
+		w, h := p.Format.PlaneDimensions(i, p.Width, p.Height)
+		if pl.Width != w || pl.Height != h || pl.BitDepth != p.Format.BitDepth() {
+			return fmt.Errorf("picture: plane %d layout does not match %s: %w",
+				i, p.Format, h264.ErrInvalidData)
 		}
 		if pl.Border < 0 || pl.Stride < pl.Width+2*pl.Border {
 			return fmt.Errorf("picture: plane %d stride %d too small: %w",

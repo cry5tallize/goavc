@@ -93,11 +93,11 @@ func TestDPB_IDRMustUseFrameZero(t *testing.T) {
 
 func TestDPB_PutReferenceReleasesOld(t *testing.T) {
 	pool := picture.NewPool(2)
-	a, err := pool.Get(1, 1)
+	a, err := pool.Get(1, 1, h264.YUV420P)
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := pool.Get(1, 1)
+	b, err := pool.Get(1, 1, h264.YUV420P)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func TestDPB_PutReferenceReleasesOld(t *testing.T) {
 		t.Fatal("reference not replaced")
 	}
 	// a 应已归还：再次 Get 应拿到 a。
-	c, err := pool.Get(1, 1)
+	c, err := pool.Get(1, 1, h264.YUV420P)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +124,7 @@ func TestDPB_PutReferenceReleasesOld(t *testing.T) {
 		t.Fatal("Reset did not clear reference")
 	}
 	// b 应已归还。
-	e, err := pool.Get(1, 1)
+	e, err := pool.Get(1, 1, h264.YUV420P)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -33,6 +33,10 @@
 > High 8×8/ScalingMatrix、Main 渐进帧 I/P/B、direct、加权预测和重排均已验证。
 > Profile 整体保留 Partial，范围外的字段/高位深工具仍明确拒绝；本地门禁证据见 gates/m3.md。
 
+> **M7 已开工：** 分支`feat/m7-high10`。先参数化共享图像布局，再接入10-bit存储、
+> 变换量化与编解码流水线，逐项独立验收；High10/422/444 Profile仍未支持。
+> 图像构造与池已显式区分PixelFormat，本次布局重构不改变8-bit420输出。
+
 ## 1. Profile
 
 | Profile | profile_idc | 关键工具 | Decoder | Encoder | 目标里程碑 |

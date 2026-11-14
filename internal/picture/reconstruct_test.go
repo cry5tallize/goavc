@@ -1,9 +1,13 @@
 package picture
 
-import "testing"
+import (
+	"testing"
+
+	h264 "github.com/goavc/h264"
+)
 
 func TestAddResidual4x4_ClipAndStride(t *testing.T) {
-	p, _ := New(1, 1)
+	p, _ := New(1, 1, h264.YUV420P)
 	var residual [16]int32
 	for i := range residual {
 		p.Planes[0].SetPix(3+i%4, 5+i/4, 120)

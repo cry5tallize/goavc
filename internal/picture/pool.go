@@ -3,9 +3,11 @@ package picture
 import (
 	"fmt"
 	"sync"
+
+	h264 "github.com/goavc/h264"
 )
 
-// Pool 是按编码尺寸分桶的图像缓冲池。
+// Pool 是按编码尺寸和像素格式分桶的图像缓冲池。
 //
 // 设计目标：
 //   - 解码一帧只分配一次工作缓冲，后续帧复用；
@@ -25,7 +27,8 @@ type Pool struct {
 }
 
 type key struct {
-	w, h int
+	w, h   int
+	format h264.PixelFormat
 }
 
 // NewPool 创建一个空池。maxFreePerSize 是每种尺寸保留的空闲图像上限；
@@ -46,15 +49,18 @@ func NewPool(maxFreePerSize int) *Pool {
 // 缓冲；代价是尺寸不同的流各占一个桶，桶上限由 maxFree 控制。
 var DefaultPool = NewPool(4)
 
-// Get 取出一张 mbWidth×mbHeight 的图像。
+// Get 按 format 取出一张 mbWidth×mbHeight 的图像。
 //
 // 命中的缓冲不做清零；未命中时新分配。返回的 Picture 已绑定本池，
 // 用完必须调用 Release。
-func (p *Pool) Get(mbWidth, mbHeight int) (*Picture, error) {
-	if p == nil {
-		return New(mbWidth, mbHeight)
+func (p *Pool) Get(mbWidth, mbHeight int, format h264.PixelFormat) (*Picture, error) {
+	if err := validateLayout(mbWidth, mbHeight, format); err != nil {
+		return nil, err
 	}
-	k := key{mbWidth, mbHeight}
+	if p == nil {
+		return New(mbWidth, mbHeight, format)
+	}
+	k := key{mbWidth, mbHeight, format}
 	p.mu.Lock()
 	if list := p.free[k]; len(list) > 0 {
 		pic := list[len(list)-1]
@@ -70,7 +76,7 @@ func (p *Pool) Get(mbWidth, mbHeight int) (*Picture, error) {
 	p.gets++
 	p.mu.Unlock()
 
-	pic, err := New(mbWidth, mbHeight)
+	pic, err := New(mbWidth, mbHeight, format)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +88,7 @@ func (p *Pool) put(pic *Picture) {
 	if pic == nil {
 		return
 	}
-	k := key{pic.MBWidth, pic.MBHeight}
+	k := key{pic.MBWidth, pic.MBHeight, pic.Format}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.puts++

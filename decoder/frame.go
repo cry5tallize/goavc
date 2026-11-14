@@ -75,7 +75,7 @@ func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFrame bool) (*
 	}
 	mbW := int(sps.PicWidthInMbs())
 	mbH := int(sps.FrameHeightInMbs())
-	pic, err := d.pool.Get(mbW, mbH)
+	pic, err := d.pool.Get(mbW, mbH, h264.YUV420P)
 	if err != nil {
 		return nil, err
 	}
