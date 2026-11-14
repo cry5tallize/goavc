@@ -133,7 +133,7 @@
 | 特性 | 状态 | 目标里程碑 |
 |---|---|---|
 | CQP | Conformant | M4 固定 QP 与宏块 QP 回调，QP=0 仍为有损；无残差沿用前 QP |
-| ABR / CBR / VBV | Partial | M5d | ABR120帧平均、CBR2×30窗口±10%；VBV60帧上下界；静态CBR/VBV分数帧率filler60帧码率误差≤1%；完整大尺寸质量门禁待完成 |
+| ABR / CBR / VBV | Partial | M5d | ABR120帧平均、CBR2×30窗口±10%、VBV60帧上下界、静态filler误差≤1%；High/B2突变与闪光120帧Oracle。I/P/B分别利用已提交QP反馈，失败不污染历史；大尺寸完整矩阵待完成 |
 | GOP 结构 / IDR 间隔 | Partial | M5d | GOPSize/IDRInterval、连续1..16非参考B、强制IDR与场景边界；B需规则PTS与恒定Duration，完整长序列质量门禁未完成 |
 | 场景切换检测 | Conformant | M5d | 直接阈值比较或WithLookahead未来窗口确认/闪光抑制；实际IDR序列、PTS/DTS与三方Oracle |
 | Lookahead | Conformant | M5d | WithLookahead(1..16)有界深拷贝，未来确认场景/抑制闪光；B调度避免跨切换边界；背压/Flush/Reset/Close/失败事务已测 |

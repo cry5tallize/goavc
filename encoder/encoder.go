@@ -47,6 +47,8 @@ type Encoder struct {
 	lastFrameBits             int64
 	vbvBufferBits             int64
 	rcRemainder               int64
+	rateQP                    [3]int
+	rateQPKnown               [3]bool
 	reference                 *picture.Picture
 	frameNum                  uint32
 	framesSinceIDR            int
@@ -244,6 +246,10 @@ func (e *Encoder) encodeFrameNow(f *h264.Frame, lookaheadScene bool) error {
 	e.recon = pic
 	e.frameQP, e.lastQP = selectedQP, selectedQP
 	e.commitRateControl(len(data))
+	if e.cfg.RateControl != h264.RateControlCQP {
+		kind := e.ratePictureKind(isIntra)
+		e.rateQP[kind], e.rateQPKnown[kind] = e.frameQP, true
+	}
 	e.reconPTS, e.reconDuration = f.PTS, f.Duration
 	e.last = state
 	e.reconKeyFrame = isIDR
@@ -350,6 +356,7 @@ func (e *Encoder) Reset() error {
 	e.frameQP, e.lastQP = e.cfg.QP, e.cfg.QP
 	e.lastFrameBits = 0
 	e.rcRemainder = 0
+	e.rateQP, e.rateQPKnown = [3]int{}, [3]bool{}
 	if e.cfg.RateControl == h264.RateControlCBR || e.cfg.RateControl == h264.RateControlVBV {
 		e.vbvFullness = e.vbvBufferBits / 2
 	}

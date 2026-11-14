@@ -160,7 +160,7 @@ M5c/d已通过Main/High I/P288帧、P权重160帧、High8×8/矩阵320帧、非�
 | GOP / IDR 与场景变化 | 编码器策略 | GOPSize非IDR I刷新、独立IDRInterval、强制IDR、未来窗口确认、B边界调度 | Conformant | GOP ffprobe、Lookahead闪光/切换与B边界Oracle；B深度1/2/3/16实际slice/POC/PTS/DTS | B需规则PTS与恒定Duration；不生成B-pyramid |
 | B编码与重排 | 7.3.3 / 8.2.4 / 8.4 | 非参考spatial B_Direct/B_Skip、双锚点零MV、4×4压缩残差、POC type0、规则PTS/DTS、有界输入/尾部排空 | Conformant | Main/High14组1120帧三方Oracle，含B2 ABR/CBR/VBV和High8×8/P权重；实际Direct/Skip、失败事务、溢出与清理测试 | B零MV不做运动搜索；temporal/B-pyramid/B显式权重未生成；B+PCM拒绝 |
 | Lookahead窗口 | 输入所有权/帧类型分析 | 1..16帧未来窗口、深拷贝、闪光抑制、持续切换IDR、B边界与尾部排空 | Conformant | `Lookahead_BoundsResetAndFailedSend`、`LookaheadFlashSceneAndDrainOracle`含B0/B2 | 非并行；B组合输入上界MaxBFrames+depth+1，另有锚点与待输出B组；错误保留已接受队列 |
-| ABR / CBR / VBV | 编码器码率控制 | 帧QP候选、AU反馈、CBR fullness、VBV硬边界、filler NAL、分数帧率预算余数 | Partial | ABR120/CBR2×30/VBV60帧；静态CBR/VBV各60帧分数FPS码率≤1%且Oracle；填充字节/资源门禁解析解 | HRD参数信令未生成；大尺寸长序列与x264质量门禁仍待执行 |
+| ABR / CBR / VBV | 编码器码率控制 | 按I/P/B已提交QP局部夹紧、冷启动二分与不可行全QP回退；AU反馈、fullness硬边界、filler、分数帧率余数 | Partial | ABR120/CBR2×30/VBV60、静态分数FPS码率≤1%；High/B2/Lookahead/8×8/权重120帧平移、突变及闪光三方Oracle；反馈失败事务/Reset与QP边界测试 | HRD信令未生成；大尺寸完整码控矩阵待完成，不因搜索加速而跳过验证 |
 | CABAC 零字封装修复 | 7.4.1 / 9.3.4.6 | VCL 末尾00 00 03按已知 CABAC PPS 接受；CAVLC 仍拒绝 | Conformant | `EncapsulatedZeroWordPadding` 先失败后修复，FFmpeg 像素对照；CAVLC 终端转义拒绝 | 通用 EBSP 严格规则保持；不扩大参数集/未知 PPS 的截断容忍 |
 
 ## M6–M9

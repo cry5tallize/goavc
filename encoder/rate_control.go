@@ -41,7 +41,8 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 	if target < 1 {
 		target = 1
 	}
-	low, high := 0, 51
+	kind := e.ratePictureKind(intra)
+	search := newQPSearch(e.rateQP[kind], e.rateQPKnown[kind])
 	var best []byte
 	var bestState *frameState
 	bestQP := e.frameQP
@@ -49,14 +50,17 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 	feasible := false
 	unsupported, oversized := false, false
 	var tried [52]bool
-	for attempt := 0; attempt < 7 && low <= high; attempt++ {
-		qp := (low + high) / 2
+	for attempt := 0; attempt < 7; attempt++ {
+		qp, more := search.next()
+		if !more {
+			break
+		}
 		tried[qp] = true
 		data, state, err := e.encodeAtQP(src, intra, idr, qp)
 		if err != nil {
 			if errors.Is(err, h264.ErrUnsupported) {
 				unsupported = true
-				low = qp + 1
+				search.observe(true)
 				continue
 			}
 			return nil, nil, qp, err
@@ -65,12 +69,12 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 		data, err = e.padRateControlledAU(data, target)
 		if err != nil {
 			oversized = true
-			low = qp + 1
+			search.observe(true)
 			continue
 		}
 		if len(data) > e.maxAUBytes {
 			oversized = true
-			low = qp + 1
+			search.observe(true)
 			continue
 		}
 		ok, _ := e.vbvAccept(len(data))
@@ -85,11 +89,7 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 			feasible = true
 		}
 		// Filler只改变传输码量，不能掩盖VCL码量的QP搜索方向。
-		if codedBits > target {
-			low = qp + 1
-		} else {
-			high = qp - 1
-		}
+		search.observe(codedBits > target)
 	}
 	// QP 与实际码量及 Profile 合法性不保证严格单调。快速搜索未找到
 	// 可行候选时穷举未试过的 QP，确保拒绝前检查整个合法范围。
