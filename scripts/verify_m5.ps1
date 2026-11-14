@@ -16,6 +16,9 @@ $dir = (Resolve-Path $OutputDirectory).Path
 $exe = Join-Path $dir 'encodebench.exe'
 go build -o $exe ./tools/encodebench
 if ($LASTEXITCODE -ne 0) { throw '测量工具构建失败' }
+$probeExe = Join-Path $dir 'h264probe.exe'
+go build -o $probeExe ./cmd/h264probe
+if ($LASTEXITCODE -ne 0) { throw 'GOP探测工具构建失败' }
 $revision = (git rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0) { throw '无法记录源码版本' }
 foreach ($tool in @('ffmpeg','ffprobe')) {
@@ -24,6 +27,17 @@ foreach ($tool in @('ffmpeg','ffprobe')) {
 
 function Assert-Exit([string]$Description) {
     if ($LASTEXITCODE -ne 0) { throw "$Description 失败，退出码$LASTEXITCODE" }
+}
+
+function Assert-Probe([string]$Name,[string]$StreamPath) {
+    $probeReport = Join-Path $dir "$Name-probe.json"
+    & $probeExe -input $StreamPath -expect-frames $Frames -expect-max-b 2 -expect-idr-interval 60 |
+        Out-File $probeReport -Encoding utf8
+    Assert-Exit 'h264probe实际GOP断言'
+    $pictures = (Get-Content $probeReport -Raw | ConvertFrom-Json).Pictures
+    if (@($pictures | Where-Object { $_.Slices -ne 4 -or $_.Profile -ne 100 }).Count -ne 0) {
+        throw "$Name 的实际slice数量或Profile不符"
+    }
 }
 
 function Run-Go([string]$Name,[int]$Width,[int]$Height,[string]$InputPath,[int]$QP,[string]$RC,[int]$Rate,[bool]$Verify) {
@@ -46,6 +60,7 @@ function Run-Go([string]$Name,[int]$Width,[int]$Height,[string]$InputPath,[int]$
                 $saved.StreamSHA256 -eq (Get-FileHash $stream -Algorithm SHA256).Hash -and
                 $saved.ReconstructionSHA256 -eq (Get-FileHash $recon -Algorithm SHA256).Hash -and
                 (Get-Item $recon).Length -eq [int64]$Width*$Height*3/2*$Frames) {
+                Assert-Probe $Name $stream
                 return @{ Report=$report; Stream=$stream; Recon=$recon }
             }
         } catch { Write-Warning "不完整产物重新生成：$Name" }
@@ -60,6 +75,7 @@ function Run-Go([string]$Name,[int]$Width,[int]$Height,[string]$InputPath,[int]$
     $pending = "$report.pending"
     & $exe @argv | Out-File $pending -Encoding utf8
     Assert-Exit "Go编码$Name"
+    Assert-Probe $Name $stream
     Move-Item -LiteralPath $pending -Destination $report -Force
     return @{ Report=$report; Stream=$stream; Recon=$recon }
 }

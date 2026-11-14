@@ -42,3 +42,9 @@ b-pyramid=none、scenecut=0、ref=2、threads=1，避免I/P/B QP比例与帧型�
 完整轨迹吻合；成功退出后才将`.pending`报告发布为JSON。
 为缩短等待，可在不同结果目录分别用`-Sizes 720p`/`-Sizes 1080p`、
 `-RateModes abr`/`cbr`/`vbv`运行独立实例；完整验收仍须收齐全部矩阵。
+
+`cmd/h264probe`以标准库和共享syntax/NAL解析实际参数集、POC、帧型、
+每图slice数，支持`-expect-frames`、`-expect-max-b`和`-expect-idr-interval`
+失败即非零退出。长门禁脚本对新结果和Resume均执行该断言；探测仅校验
+头部，不代替像素Oracle。实际B1/2/3/16、独立GOP4/IDR7、多slice、
+资源上限与错误期望均有测试；全部12份长码流已执行探测并与ffprobe核对。
