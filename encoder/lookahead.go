@@ -111,7 +111,7 @@ func (e *Encoder) releaseLookahead() {
 }
 
 // copyQueuedFrame 只复制有效平面，避免外部stride填充放大延迟队列内存。
-// 调用前已验证几何和数据长度；队列单帧空间恰为显示尺寸YUV420的有效字节数。
+// 调用前已验证几何和数据长度；队列仅保留各格式显示尺寸的有效字节。
 func copyQueuedFrame(src *h264.Frame) *h264.Frame {
 	out := &h264.Frame{Width: src.Width, Height: src.Height, Format: src.Format, PTS: src.PTS, Duration: src.Duration, KeyFrame: src.KeyFrame}
 	for comp := range out.Planes {

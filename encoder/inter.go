@@ -69,7 +69,7 @@ func (e *Encoder) encodeP(src *picture.Picture) ([]byte, *frameState, error) {
 			if err != nil {
 				return nil, nil, err
 			}
-			if trial.BitsWritten() > uint64(384*s.pic.Planes[0].BitDepth) && s.pcmAllowed(addr) {
+			if trial.BitsWritten() > uint64(s.rawMBBits()) && s.pcmAllowed(addr) {
 				qp = previousQP
 				s.info[addr].inter = false
 				s.info[addr].skip = false
@@ -99,6 +99,9 @@ func (e *Encoder) pSliceHeader(w *bitstream.Writer, first int, weights *Predicti
 	w.WriteUE(uint32(first))
 	w.WriteUE(0)
 	w.WriteUE(0)
+	if e.separateColourPlane {
+		w.WriteBits(2, uint64(e.colourPlaneID))
+	}
 	w.WriteBits(4, uint64(e.frameNum))
 	if e.cfg.MaxBFrames > 0 {
 		w.WriteBits(16, uint64(e.currentPOC))
@@ -106,7 +109,7 @@ func (e *Encoder) pSliceHeader(w *bitstream.Writer, first int, weights *Predicti
 	w.WriteBit(0) // num_ref_idx_active_override_flag，单参考来自 PPS
 	w.WriteBit(0) // ref_pic_list_modification_flag_l0
 	if e.pps.WeightedPredFlag {
-		weights.writeTable(w)
+		weights.writeTable(w, !e.separateColourPlane)
 	}
 	w.WriteBit(0) // adaptive_ref_pic_marking_mode_flag，滑窗保留最近一个参考
 	if e.cabac {
@@ -144,12 +147,13 @@ func (s *frameState) mc(addr int, p partition, mv motion.MV) {
 	} else {
 		prediction.MCBlockLuma(pl.Data[pl.Index(x, y):], pl.Stride, &s.reference.Planes[0], x, y, p.w, p.h, int(mv.X), int(mv.Y))
 	}
-	for c := 1; c < 3; c++ {
+	subW, subH := s.pic.Format.ChromaSubsampling()
+	for c := 1; c < s.planeCount(); c++ {
 		pl = &s.pic.Planes[c]
 		if pl.BitDepth > 8 {
-			prediction.MCBlockChromaHigh(pl.Data16[pl.Index(x/2, y/2):], pl.Stride, &s.reference.Planes[c], x/2, y/2, p.w/2, p.h/2, int(mv.X), int(mv.Y))
+			prediction.MCBlockChromaFormatHigh(pl.Data16[pl.Index(x/subW, y/subH):], pl.Stride, &s.reference.Planes[c], x/subW, y/subH, p.w/subW, p.h/subH, int(mv.X), int(mv.Y), subW, subH)
 		} else {
-			prediction.MCBlockChroma(pl.Data[pl.Index(x/2, y/2):], pl.Stride, &s.reference.Planes[c], x/2, y/2, p.w/2, p.h/2, int(mv.X), int(mv.Y))
+			prediction.MCBlockChromaFormat(pl.Data[pl.Index(x/subW, y/subH):], pl.Stride, &s.reference.Planes[c], x/subW, y/subH, p.w/subW, p.h/subH, int(mv.X), int(mv.Y), subW, subH)
 		}
 	}
 	s.applyPredictionWeights(x, y, p.w, p.h)
@@ -160,11 +164,9 @@ func (s *frameState) interResidual(addr int) residual {
 	info := &s.info[addr]
 	quant4 := transform.Quant4x4WithScaling
 	quant8 := transform.Quant8x8WithScaling
-	quantDC := transform.QuantDCWithScaling
 	if info.interDeadZone {
 		quant4 = transform.QuantInter4x4WithScaling
 		quant8 = transform.QuantInter8x8WithScaling
-		quantDC = transform.QuantInterDCWithScaling
 	}
 	var res residual
 	for r := 0; r < 16; r++ {
@@ -193,26 +195,13 @@ func (s *frameState) interResidual(addr int) residual {
 			}
 		}
 	}
-	cbp := 0
-	qpc := s.chromaQP(info.qp)
-	for c := 0; c < 2; c++ {
-		var dc, had [4]int32
-		for r := 0; r < 4; r++ {
-			coeff := residualTransform(&s.src.Planes[c+1], &s.pic.Planes[c+1], x/2+r%2*4, y/2+r/2*4)
-			dc[r] = coeff[0]
-			coeff[0] = 0
-			quant4(&res.chroma[c][r], &coeff, qpc, s.matrix4(false, c+1))
-			if nonzero(res.chroma[c][r][:]) {
-				cbp = 2
-			}
-		}
-		transform.ForwardChromaDC(&had, &dc)
-		quantDC(res.chromaDC[c][:], had[:], qpc, scalingDC(s.matrix4(false, c+1)))
-		if cbp == 0 && nonzero(res.chromaDC[c][:]) {
-			cbp = 1
+	if !s.separate {
+		if s.chromaArrayType() == 3 {
+			s.chroma444(addr, &res, false)
+		} else {
+			s.subsampledChromaResidual(addr, &res, false, false)
 		}
 	}
-	info.cbp |= cbp << 4
 	return res
 }
 
@@ -235,12 +224,11 @@ func (s *frameState) reconstructInter(addr int, res *residual) {
 			reconstruct8(&s.pic.Planes[0], x+(block%2)*8, y+(block/2)*8, &res.luma8[block], s.lumaQP(qp), s.matrix8(false))
 		}
 	}
-	qpc := s.chromaQP(qp)
-	for c := 0; c < 2; c++ {
-		var dc [4]int32
-		transform.DequantChromaDCWithScaling(&dc, &res.chromaDC[c], qpc, scalingDC(s.matrix4(false, c+1)))
-		for r := 0; r < 4; r++ {
-			reconstructScaled(&s.pic.Planes[c+1], x/2+r%2*4, y/2+r/2*4, &res.chroma[c][r], qpc, &dc[r], s.matrix4(false, c+1))
+	if !s.separate {
+		if s.chromaArrayType() == 3 {
+			s.reconstructChroma444(addr, res)
+		} else {
+			s.reconstructSubsampledChroma(addr, res, false)
 		}
 	}
 }
@@ -273,10 +261,19 @@ func (s *frameState) writeInter(w *bitstream.Writer, addr int, qp *int, res *res
 // P与B_Direct共用CBP、QP差和CAVLC残差语法，运动头由各自调用方写出。
 func (s *frameState) writeInterResidual(w *bitstream.Writer, addr int, qp *int, res *residual) error {
 	info := &s.info[addr]
-	for code, cbp := range interCBP {
-		if cbp == info.cbp {
-			w.WriteUE(uint32(code))
-			break
+	if s.chromaArrayType() == 0 || s.chromaArrayType() == 3 {
+		for code, cbp := range monochromeInterCBP {
+			if cbp == info.cbp {
+				w.WriteUE(uint32(code))
+				break
+			}
+		}
+	} else {
+		for code, cbp := range interCBP {
+			if cbp == info.cbp {
+				w.WriteUE(uint32(code))
+				break
+			}
 		}
 	}
 	if s.allow8 && info.cbp&15 != 0 {

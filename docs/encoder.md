@@ -1,8 +1,8 @@
 # 编码 API
 
-`encoder.New(cfg, options...)` 创建非并发安全的编码器。M4 范围为串行、渐进式
-8-bit YUV420、偶数显示尺寸；M7已增加High10的10-bit YUV420压缩通道。支持
-CQP/ABR/CBR/VBV与双锚点B重排，默认Baseline用CAVLC、Main/High/High10用CABAC；Profile整体仍按支持矩阵限定。
+`encoder.New(cfg, options...)`创建非并发安全、串行渐进编码器。M7已支持8/10-bit
+YUV420/422/444真实压缩；420显示宽高须为偶数，422仅宽须为偶数，444宽高可为奇数。
+支持CQP/ABR/CBR/VBV与双锚点B重排，默认Baseline用CAVLC，其余已接入Profile用CABAC；Profile整体仍按支持矩阵限定。
 
 ```go
 cfg := h264.DefaultEncoderConfig()
@@ -96,3 +96,21 @@ QP=-12且未启用transform bypass时仍不承诺无损。`WithCABAC(false)`选�
 CLI示例：`h264enc -width 32 -height 32 -profile high10 -pixel-format yuv420p10le -qp -1 -entropy cavlc -input in.yuv -output out.264`。
 `-entropy auto|cavlc|cabac`分别沿用默认或显式选择；所有格式/预算预检仍在打开输出文件前完成。
 第4/5项的逐像素与完整常规门禁证据见[实现台账](implementation-status.md)。
+
+## High422 / High444 与独立色平面
+
+422使用`ProfileHigh422`及`YUV422P`/`YUV422P10LE`，444使用`ProfileHigh444`及
+`YUV444P`/`YUV444P10LE`。10-bit仍使用上面的LE/字节stride和语法QPY契约；
+共享预测、变换、重建和滤波内核不降采样、不丢低两位。
+
+`WithScalingMatrices8x8Chroma`按intraY/interY/intraCb/interCb/intraCr/interCr接收六个光栅矩阵；
+`WithScalingMatrices4x4`的顺序仍为intraY/Cb/Cr、interY/Cb/Cr。共同444的色度QP使用规范非线性映射，
+三平面去块共享亮度bS，不能以逐色度非零统计代替。
+
+`WithSeparateColourPlanes()`仅用于444，每个AU包含三个`colour_plane_id`的完整slice集合。
+各分量独立预测、熵状态和运动，使用各自分量矩阵及Y量化过程；AU限额按三集合总和计费，
+失败不发布部分AU。FFmpeg8明确不支持该原始封装：测试采用固定PCM规范向量及不重编码
+slice_data的单色投影Oracle，不据此承诺外部播放器可解独立平面。普通共同444已直接通过FFmpeg。
+
+422/444延续既有B工具边界：只生成非参考spatial-direct B，不生成隔行或transform bypass。
+四种格式实际`h264enc`/`h264dec`文件路径均已按原生格式与FFmpeg逐采样核对。

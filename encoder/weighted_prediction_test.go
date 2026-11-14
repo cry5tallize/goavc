@@ -54,11 +54,11 @@ func TestPredictionWeights_FitAnalyticGainOffset(t *testing.T) {
 			}
 		}
 	}
-	p := estimatePredictionWeights(src, ref)
+	p := estimatePredictionWeights(src, ref, 3)
 	if p.Weight != [3]int32{32, 32, 32} || p.Offset != [3]int32{11, 11, 11} {
 		t.Fatalf("拟合解析值错误：%+v", p)
 	}
-	p = estimatePredictionWeights(ref, ref)
+	p = estimatePredictionWeights(ref, ref, 3)
 	if p.Weight != [3]int32{64, 64, 64} || p.Offset != [3]int32{} {
 		t.Fatalf("恒等帧不应启用非恒等权重：%+v", p)
 	}

@@ -10,6 +10,14 @@ import (
 )
 
 func (e *Encoder) encodeAtQP(src *picture.Picture, intra, idr bool, qp int) ([]byte, *frameState, error) {
+	if e.separateColourPlane {
+		return e.encodeSeparate(src, intra, idr, qp)
+	}
+	return e.encodePlaneAtQP(src, intra, idr, qp)
+}
+
+// encodePlaneAtQP 是共享宏块通道；独立平面仅在调用前换入采样视图。
+func (e *Encoder) encodePlaneAtQP(src *picture.Picture, intra, idr bool, qp int) ([]byte, *frameState, error) {
 	old := e.frameQP
 	e.frameQP = qp
 	defer func() { e.frameQP = old }()
@@ -65,6 +73,11 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 				search.observe(true)
 				continue
 			}
+			if errors.Is(err, h264.ErrResourceLimit) {
+				oversized = true
+				search.observe(true)
+				continue
+			}
 			return nil, nil, qp, err
 		}
 		codedBits := int64(len(data)) * 8
@@ -104,6 +117,10 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 			if err != nil {
 				if errors.Is(err, h264.ErrUnsupported) {
 					unsupported = true
+					continue
+				}
+				if errors.Is(err, h264.ErrResourceLimit) {
+					oversized = true
 					continue
 				}
 				return nil, nil, qp, err
@@ -187,7 +204,7 @@ func (e *Encoder) commitRateControl(frameBytes int) {
 	}
 	qpDelta := int(math.Round(6 * math.Log2(float64(max(int64(1), e.lastFrameBits))/float64(target))))
 	qpDelta = max(-4, min(4, qpDelta))
-	e.frameQP = max(0, min(51, e.lastQP+qpDelta))
+	e.frameQP = max(-6*(e.cfg.PixelFormat.BitDepth()-8), min(51, e.lastQP+qpDelta))
 }
 
 func (e *Encoder) bitsPerFrame() int64 {

@@ -14,7 +14,7 @@ import (
 // 候选与4×4共享三平面RD代价；默认关闭，Baseline/Main不可使用。
 func WithTransform8x8() Option {
 	return func(e *Encoder) error {
-		if e.cfg.Profile != h264.ProfileHigh && e.cfg.Profile != h264.ProfileHigh10 {
+		if e.cfg.Profile != h264.ProfileHigh && e.cfg.Profile != h264.ProfileHigh10 && e.cfg.Profile != h264.ProfileHigh422 && e.cfg.Profile != h264.ProfileHigh444 {
 			return fmt.Errorf("encoder: 8x8 transform requires High profile: %w", h264.ErrUnsupported)
 		}
 		e.transform8 = true
@@ -29,7 +29,7 @@ func WithScalingMatrix8x8(intra, inter [64]uint8) Option {
 		if err := WithTransform8x8()(e); err != nil {
 			return err
 		}
-		matrices := [2][64]uint8{intra, inter}
+		matrices := [6][64]uint8{intra, inter, intra, inter, intra, inter}
 		for _, matrix := range matrices {
 			for _, value := range matrix {
 				if value == 0 {
@@ -42,14 +42,35 @@ func WithScalingMatrix8x8(intra, inter [64]uint8) Option {
 	}
 }
 
+// WithScalingMatrices8x8Chroma 按 intraY/interY/intraCb/interCb/intraCr/interCr
+// 顺序指定六个独立矩阵；仅 4:4:4 语法会携带全部列表。
+func WithScalingMatrices8x8Chroma(matrices [6][64]uint8) Option {
+	return func(e *Encoder) error {
+		if e.cfg.Profile != h264.ProfileHigh444 {
+			return fmt.Errorf("encoder: six 8x8 matrices require High444: %w", h264.ErrUnsupported)
+		}
+		for _, matrix := range matrices {
+			for _, value := range matrix {
+				if value == 0 {
+					return fmt.Errorf("encoder: zero 8x8 scaling entry: %w", h264.ErrInvalidData)
+				}
+			}
+		}
+		e.transform8 = true
+		e.scaling8 = &matrices
+		return nil
+	}
+}
+
 func (s *frameState) matrix8(intra bool) *[64]uint8 {
 	if s.scaling8 == nil {
 		return nil
 	}
-	if intra {
-		return &s.scaling8[0]
+	index := s.plane * 2
+	if !intra {
+		index++
 	}
-	return &s.scaling8[1]
+	return &s.scaling8[index]
 }
 
 // 显式写出六个flat 4×4列表，避免PPS fallback规则将默认JVT矩阵带入
@@ -59,7 +80,11 @@ func (e *Encoder) scalingParameters() {
 		return
 	}
 	e.pps.PicScalingMatrixPresentFlag = true
-	for i := 0; i < 8; i++ {
+	count := 8
+	if e.sps.ChromaFormatIDC == 3 {
+		count = 12
+	}
+	for i := range count {
 		size, scan := 4, transform.Zigzag4x4[:]
 		if i >= 6 {
 			size, scan = 8, transform.Zigzag8x8[:]
@@ -153,6 +178,9 @@ func (s *frameState) analyzeIntra8(addr int) residual {
 		var best [64]uint16
 		bestMode, bestCost := 2, int(^uint(0)>>1)
 		for mode := 0; mode < 9; mode++ {
+			if s.reuseModes {
+				break
+			}
 			if !prediction.Intra4x4ModeAvailable(mode, top, left, a.TopLeftAvailable) {
 				continue
 			}
@@ -164,6 +192,10 @@ func (s *frameState) analyzeIntra8(addr int) residual {
 			if cost < bestCost {
 				best, bestMode, bestCost = pred, mode, cost
 			}
+		}
+		if s.reuseModes {
+			bestMode = int(info.modes[by*8+bx*2])
+			_ = prediction.Intra8x8High(best[:], 8, bestMode, a, top, left, pl.BitDepth)
 		}
 		putBlock(pl, x+bx*8, y+by*8, 8, best[:])
 		r := by*8 + bx*2

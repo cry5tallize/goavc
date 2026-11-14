@@ -93,7 +93,12 @@ func Project(data []byte) ([3][]byte, error) {
 	ids := map[uint32]uint32{}
 	used := map[uint32]bool{}
 	for _, u := range units {
-		rb, err := bitstream.EBSPToRBSP(u.Payload)
+		payload := u.Payload
+		// Spec: 7.4.1，CABAC尾部00 00 03是合法的零字封装；不将末03当作截断。
+		if u.Header.IsVCL() && len(payload) >= 3 && payload[len(payload)-3] == 0 && payload[len(payload)-2] == 0 && payload[len(payload)-1] == 3 {
+			payload = payload[:len(payload)-1]
+		}
+		rb, err := bitstream.EBSPToRBSP(payload)
 		if err != nil {
 			return out, err
 		}

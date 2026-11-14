@@ -216,6 +216,7 @@ High10渐进420编解码及High422/High444渐进8/10-bit解码已接入，限定
 | 7：High422解码 | 渐进8/10-bit422双熵I/P/B、4×4/8×8/矩阵/权重、八DC与PCM、全高色度去块、原生LE及逐行裁剪 | Conformant | 两格式×九配置各八帧外部x264/FFmpeg逐采样一致；混合PCM/QP/去块规范Oracle、12×13裁剪解析解、420/422与8/10-bit切换/坏IDR恢复及单帧预算边界；独立提交快照完整常规门禁通过，manifest30条 | 仅渐进帧，444、隔行和transform bypass仍拒绝；422编码由第10项验收；动态生成语料尚未登记静态manifest，不替代M7最终语料门禁 |
 | 8：444图像与色度共享内核 | 8/10-bit444三平面16×16存储、边缘复制、裁剪重建与格式隔离池；444 CABAC十四类/1024模型及十二列表fallback | Conformant | 全平面几何/行共享/极值与六格式池隔离；ITU Amd.2表9-24d/e固定模型分段值、CBF/bin轨迹与范围；全部4096种列表presence组合×三种SPS/PPS来源；独立快照完整常规门禁通过 | 本项仅共享内核，不提前放开High444流水线；独立平面按colour_plane_id选择矩阵，QP仍用Y过程 |
 | 9：High444解码 | 共同444三平面全尺寸残差、十四类CABAC、逐分量矩阵/QP、亮度插值与共享bS；独立平面覆盖/运动/权重头隔离 | Conformant | 两格式×九配置各八帧x264/FFmpeg逐采样一致；独立平面PCM的13×11裁剪/LE固定采样、乱序平面/缺失/重复/恢复与预算边界；权重固定字节521e；独立提交完整CGO=0门禁（35包依赖、30条语料）及真实h264dec双帧10-bit像素比较通过 | 独立平面原始封装被FFmpeg8明确拒绝，使用规范固定采样与保持slice_data/对齐的单色投影Oracle，不宣称FFmpeg支持原始封装；隔行/transform bypass及编码另项验收，静态高级语料门禁仍待完成 |
+| 10：High422/High444编码 | 8/10-bit422/444双熵压缩与PCM、I/P/既有spatial-direct B、逐分量矩阵/QP、权重/AQ/前瞻/码控及独立平面 | Conformant | 六格式双熵QP极值、4/8×8矩阵、实际权重表、宏块QP、B与四种码控、PCM及三平面独立集合的三方像素Oracle；独立平面按保持slice_data对齐的单色投影逐平面FFmpeg比较；AU预算失败/重试及亮度bS/CBF规范回归；独立完整CGO=0门禁通过，四种422/444格式真实CLI各两帧与FFmpeg一致 | 仅渐进帧，B限既有非参考spatial-direct；不生成隔行与transform bypass；FFmpeg8不支持独立平面原始封装，投影不冒充原始封装互操作性；静态高级语料/race/六目标最终门禁另行完成 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。

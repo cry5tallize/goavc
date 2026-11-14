@@ -27,8 +27,9 @@ type residual struct {
 	luma8    [4][64]int32
 	luma     [16][16]int32
 	lumaDC   [16]int32
-	chroma   [2][4][16]int32
-	chromaDC [2][4]int32
+	chroma8  [2][4][64]int32
+	chroma   [2][16][16]int32
+	chromaDC [2][16]int32
 }
 type frameState struct {
 	src, pic        *picture.Picture
@@ -39,13 +40,17 @@ type frameState struct {
 	searchReference *picture.Picture
 	weights         *PredictionWeights
 	allow8          bool
-	scaling8        *[2][64]uint8
+	scaling8        *[6][64]uint8
 	scaling4        *[6][16]uint8
 	mv              *motion.Grid
 	allowZeroPCM    bool
 	maxLevelPrefix  int
 	dcCoded         [3][]bool
 	mvd             []motion.MV
+	separate        bool
+	independent     bool // 真正的独立色平面；separate也用于共同444的临时亮度视图。
+	plane           int
+	reuseModes      bool
 }
 
 // WithMacroblockQP 使用坐标回调覆盖 CQP；8位为0..51，10位为-12..51。
@@ -71,7 +76,7 @@ func (e *Encoder) encodeIntra(src *picture.Picture, idr bool) ([]byte, *frameSta
 	emit := func(typ nal.UnitType, rb []byte) error {
 		return out.Write(nal.Unit{Header: nal.Header{Type: typ, RefIDC: 3}, Payload: bitstream.RBSPToEBSP(rb)})
 	}
-	if idr {
+	if idr && (!e.separateColourPlane || e.colourPlaneID == 0) {
 		sr, err := e.sps.MarshalRBSP()
 		if err != nil {
 			return nil, nil, err
@@ -109,7 +114,7 @@ func (e *Encoder) encodeIntra(src *picture.Picture, idr bool) ([]byte, *frameSta
 			}
 			// CQP 的噪声极端情况下残差比原始像素更长；显式选择规范 I_PCM
 			// 保证每 MB 的大小上限，Level 自动选择据此给出保守保证。
-			if trial.BitsWritten() > uint64(384*s.pic.Planes[0].BitDepth) && s.pcmAllowed(addr) {
+			if trial.BitsWritten() > uint64(s.rawMBBits()) && s.pcmAllowed(addr) {
 				qp = previousQP
 				s.writePCM(w, addr)
 			} else {
@@ -162,19 +167,16 @@ func (s *frameState) writePCMSamples(w *bitstream.Writer, addr int) {
 		s.nz[addr*16+i] = 16
 	}
 	for c := range s.cnz {
-		for i := 0; i < 4; i++ {
-			s.cnz[c][addr*4+i] = 16
+		for i := range 16 {
+			s.cnz[c][addr*16+i] = 16
 		}
 	}
 	w.ByteAlign()
-	for c := 0; c < 3; c++ {
-		n := 16
-		if c > 0 {
-			n = 8
-		}
-		x, y := addr%s.pic.MBWidth*n, addr/s.pic.MBWidth*n
-		for j := 0; j < n; j++ {
-			for i := range n {
+	for c := range s.planeCount() {
+		width, height := s.planeMBSize(c)
+		x, y := addr%s.pic.MBWidth*width, addr/s.pic.MBWidth*height
+		for j := range height {
+			for i := range width {
 				v := s.src.Planes[c].Sample(x+i, y+j)
 				s.pic.Planes[c].SetSample(x+i, y+j, v)
 				w.WriteBits(uint(s.pic.Planes[c].BitDepth), uint64(v))
@@ -195,7 +197,14 @@ func (s *frameState) analyzeIntra(addr, family int) residual {
 	pl := &s.pic.Planes[0]
 	samples, top, left, tl := s.blockSamples(addr, 0)
 	var best16 [256]uint16
-	mode16, _ := select16(&best16, &s.src.Planes[0], x, y, samples, top, left, tl)
+	mode16 := info.mode16
+	if s.reuseModes {
+		if family == 2 {
+			_ = prediction.Intra16x16High(best16[:], 16, mode16, samples, top, left, pl.BitDepth)
+		}
+	} else {
+		mode16, _ = select16(&best16, &s.src.Planes[0], x, y, samples, top, left, tl)
+	}
 	var res residual
 	if family != 2 {
 		for n := 0; n < 16; n++ {
@@ -203,7 +212,12 @@ func (s *frameState) analyzeIntra(addr, family int) residual {
 			bx, by := r%4, r/4
 			a, t, l, corner := s.samples4(addr, bx, by)
 			var pred [16]uint16
-			mode, _ := select4(&pred, &s.src.Planes[0], x+bx*4, y+by*4, a, t, l, corner)
+			mode := int(info.modes[r])
+			if s.reuseModes {
+				_ = prediction.Intra4x4High(pred[:], 4, mode, a, t, l, pl.BitDepth)
+			} else {
+				mode, _ = select4(&pred, &s.src.Planes[0], x+bx*4, y+by*4, a, t, l, corner)
+			}
 			info.modes[r] = int8(mode)
 			putBlock(pl, x+bx*4, y+by*4, 4, pred[:])
 			coeff := residualTransform(&s.src.Planes[0], pl, x+bx*4, y+by*4)
@@ -244,58 +258,57 @@ func (s *frameState) analyzeIntra(addr, family int) residual {
 }
 
 func (s *frameState) chroma(addr int, res *residual) {
+	if s.separate {
+		return
+	}
+	if s.chromaArrayType() == 3 {
+		s.chroma444(addr, res, true)
+		return
+	}
 	info := &s.info[addr]
-	x, y := addr%s.pic.MBWidth*8, addr/s.pic.MBWidth*8
-	var best [2][64]uint16
+	width, height := s.planeMBSize(1)
+	x, y := addr%s.pic.MBWidth*width, addr/s.pic.MBWidth*height
+	var best [2][128]uint16
 	bestCost := int(^uint(0) >> 1)
-	for mode := 0; mode < 4; mode++ {
-		var pred [2][64]uint16
-		cost := 0
-		available := true
-		for c := 0; c < 2; c++ {
+	for mode := range 4 {
+		var pred [2][128]uint16
+		cost, available := 0, true
+		for c := range 2 {
 			a, t, l, tl := s.blockSamples(addr, c+1)
 			if mode == 3 && !tl {
 				available = false
 				break
 			}
-			if prediction.Chroma8x8High(pred[c][:], 8, mode, a, t, l, s.pic.Planes[c+1].BitDepth) != nil {
+			predict := prediction.Chroma8x8High
+			if height == 16 {
+				predict = prediction.Chroma422High
+			}
+			if predict(pred[c][:], width, mode, a, t, l, s.pic.Planes[c+1].BitDepth) != nil {
 				available = false
 				break
 			}
-			cost += blockSATD(&s.src.Planes[c+1], x, y, 8, pred[c][:])
-		}
-		if available && cost < bestCost {
-			bestCost = cost
-			info.chromaMode = mode
-			best = pred
-		}
-	}
-	cbp := 0
-	qpc := s.chromaQP(info.qp)
-	for c := 0; c < 2; c++ {
-		pl := &s.pic.Planes[c+1]
-		putBlock(pl, x, y, 8, best[c][:])
-		var dc, had [4]int32
-		for r := 0; r < 4; r++ {
-			coeff := residualTransform(&s.src.Planes[c+1], pl, x+r%2*4, y+r/2*4)
-			dc[r] = coeff[0]
-			coeff[0] = 0
-			transform.Quant4x4WithScaling(&res.chroma[c][r], &coeff, qpc, s.matrix4(true, c+1))
-			if nonzero(res.chroma[c][r][:]) {
-				cbp = 2
+			for by := 0; by < height; by += 4 {
+				for bx := 0; bx < width; bx += 4 {
+					var block [16]uint16
+					for j := range 4 {
+						copy(block[j*4:j*4+4], pred[c][(by+j)*width+bx:])
+					}
+					cost += blockSATD(&s.src.Planes[c+1], x+bx, y+by, 4, block[:])
+				}
 			}
 		}
-		transform.ForwardChromaDC(&had, &dc)
-		transform.QuantDCWithScaling(res.chromaDC[c][:], had[:], qpc, scalingDC(s.matrix4(true, c+1)))
-		if cbp == 0 && nonzero(res.chromaDC[c][:]) {
-			cbp = 1
-		}
-		transform.DequantChromaDCWithScaling(&dc, &res.chromaDC[c], qpc, scalingDC(s.matrix4(true, c+1)))
-		for r := 0; r < 4; r++ {
-			reconstructScaled(pl, x+r%2*4, y+r/2*4, &res.chroma[c][r], qpc, &dc[r], s.matrix4(true, c+1))
+		if available && cost < bestCost {
+			bestCost, info.chromaMode, best = cost, mode, pred
 		}
 	}
-	info.cbp |= cbp << 4
+	for c := range 2 {
+		for j := range height {
+			for i := range width {
+				s.pic.Planes[c+1].SetSample(x+i, y+j, best[c][j*width+i])
+			}
+		}
+	}
+	s.subsampledChromaResidual(addr, res, true, true)
 }
 
 func residualTransform(src, pred *picture.Plane, x, y int) [16]int32 {

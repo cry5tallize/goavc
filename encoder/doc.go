@@ -4,9 +4,12 @@
 // → 预测 → 残差 → 正变换 → 量化 → 熵编码 → NAL 写出
 // → 本地重建 → 去块滤波 → 参考帧入库。
 //
-// High10使用YUV420P10LE输入与输出，公共stride以字节计；内部始终保留10位
-// 采样。语法QPY允许-12..51，量化/重建显式转换为QP'，CABAC上下文仍用
-// 裁剪后的语法QPY。默认执行真实残差压缩；WithPCM才是显式全PCM通道。
+// 支持 8/10-bit 420、422、444；高位深公共输入和重建均为 LE，stride 以字节计。
+// 语法 QPY 在 10-bit 时允许 -12..51，量化/重建显式转换为 QP'；
+// CABAC 上下文仍用裁剪后的语法 QPY。422 使用八项 DC，444 三平面共享预测
+// 模式并独立变换、矩阵和非零统计；WithSeparateColourPlanes 则写出三个独立
+// colour_plane_id slice 集合，复用同一 I/P/B 内核。默认是真实残差压缩，
+// WithPCM 才是显式全 PCM 通道。
 //
 // 关键约束：
 //   - 本包不得 import decoder 包（单向依赖，见 docs/architecture.md R1）；

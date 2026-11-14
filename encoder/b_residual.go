@@ -5,17 +5,14 @@ package encoder
 func (s *frameState) bResidualRD(addr, previousQP int) (residual, error) {
 	base := rdCandidate{info: s.info[addr]}
 	offset := 0
-	for comp := 0; comp < 3; comp++ {
-		n := 16
-		if comp > 0 {
-			n = 8
-		}
-		x, y := addr%s.pic.MBWidth*n, addr/s.pic.MBWidth*n
-		for j := 0; j < n; j++ {
-			for i := range n {
+	for comp := range s.planeCount() {
+		mw, mh := s.pic.Format.PlaneDimensions(comp, 16, 16)
+		x, y := addr%s.pic.MBWidth*mw, addr/s.pic.MBWidth*mh
+		for j := range mh {
+			for i := range mw {
 				base.pixels[offset+i] = s.pic.Planes[comp].Sample(x+i, y+j)
 			}
-			offset += n
+			offset += mw
 		}
 	}
 	best := rdCandidate{cost: ^uint64(0)}
@@ -40,7 +37,7 @@ func (s *frameState) bResidualRD(addr, previousQP int) (residual, error) {
 	// captureRD的CAVLC统计不是已写出的CABAC统计，实际残差从零提交。
 	clear(s.nz[addr*16 : addr*16+16])
 	for comp := range s.cnz {
-		clear(s.cnz[comp][addr*4 : addr*4+4])
+		clear(s.cnz[comp][addr*16 : addr*16+16])
 	}
 	return best.res, nil
 }

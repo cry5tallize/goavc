@@ -72,15 +72,20 @@ func (p PredictionWeights) validate() error {
 	return nil
 }
 
-func (p *PredictionWeights) writeTable(w *bitstream.Writer) {
+func (p *PredictionWeights) writeTable(w *bitstream.Writer, hasChroma bool) {
 	// 即使本帧全为帧内宏块，P slice 的权重表仍不能省略。
 	w.WriteUE(p.LumaDenom)
-	w.WriteUE(p.ChromaDenom)
+	if hasChroma {
+		w.WriteUE(p.ChromaDenom)
+	}
 	luma := !p.defaultComponent(0)
 	w.WriteBit(uint8(flag(luma)))
 	if luma {
 		w.WriteSE(p.Weight[0])
 		w.WriteSE(p.Offset[0])
+	}
+	if !hasChroma {
+		return
 	}
 	chroma := !p.defaultComponent(1) || !p.defaultComponent(2)
 	w.WriteBit(uint8(flag(chroma)))
@@ -96,12 +101,13 @@ func (s *frameState) applyPredictionWeights(x, y, width, height int) {
 	if s.weights == nil {
 		return
 	}
-	for comp := 0; comp < 3; comp++ {
+	subW, subH := s.pic.Format.ChromaSubsampling()
+	for comp := range s.planeCount() {
 		px, py, w, h := x, y, width, height
 		if comp > 0 {
-			px, py, w, h = x/2, y/2, width/2, height/2
+			px, py, w, h = x/subW, y/subH, width/subW, height/subH
 		}
-		for row := 0; row < h; row++ {
+		for row := range h {
 			pl := &s.pic.Planes[comp]
 			for i := range w {
 				v := prediction.WeightSampleHigh(pl.Sample(px+i, py+row), s.weights.Weight[comp], s.weights.Offset[comp], s.weights.denom(comp), pl.BitDepth)
@@ -111,29 +117,33 @@ func (s *frameState) applyPredictionWeights(x, y, width, height int) {
 	}
 }
 
-func weightedSearchReference(reference *picture.Picture, weights *PredictionWeights) (*picture.Picture, error) {
-	out, err := picture.New(reference.MBWidth, reference.MBHeight, reference.Format)
-	if err != nil {
-		return nil, err
-	}
-	for comp := range out.Planes {
-		for y := 0; y < out.Planes[comp].Height; y++ {
-			for x := range out.Planes[comp].Width {
+func weightedSearchReference(reference *picture.Picture, weights *PredictionWeights, planes int) *picture.Picture {
+	// 独立平面视图只复制当前分量，其余平面保留只读引用。
+	out := *reference
+	for comp := range planes {
+		p := &out.Planes[comp]
+		if p.BitDepth > 8 {
+			p.Data16 = make([]uint16, len(p.Data16))
+		} else {
+			p.Data = make([]byte, len(p.Data))
+		}
+		for y := range p.Height {
+			for x := range p.Width {
 				value := reference.Planes[comp].Sample(x, y)
-				out.Planes[comp].SetSample(x, y, prediction.WeightSampleHigh(value, weights.Weight[comp], weights.Offset[comp], weights.denom(comp), out.Planes[comp].BitDepth))
+				p.SetSample(x, y, prediction.WeightSampleHigh(value, weights.Weight[comp], weights.Offset[comp], weights.denom(comp), p.BitDepth))
 			}
 		}
 	}
-	return out, nil
+	return &out
 }
 
 // estimatePredictionWeights 用整数最小二乘拟合 gain/offset，再以实际裁剪与
 // 舍入后的 SSE 检验收益。每平面独立；平坦参考只拟合 offset，避免方差为零。
 // 拟合网格每平面最多 128×128 点，covariance*64 也不越过 int64；
 // 验收 SSE 仍检查完整平面，不因采样漏掉裁剪带来的劣化。
-func estimatePredictionWeights(src, reference *picture.Picture) PredictionWeights {
+func estimatePredictionWeights(src, reference *picture.Picture, planes int) PredictionWeights {
 	p := PredictionWeights{LumaDenom: 6, ChromaDenom: 6, Weight: [3]int32{64, 64, 64}}
-	for comp := range src.Planes {
+	for comp := range planes {
 		var n, sumX, sumY, sumXX, sumXY int64
 		stepX, stepY := (src.Planes[comp].Width+127)/128, (src.Planes[comp].Height+127)/128
 		for y := 0; y < src.Planes[comp].Height; y += stepY {

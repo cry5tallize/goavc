@@ -12,7 +12,7 @@ import (
 	"github.com/goavc/h264/syntax"
 )
 
-// Encoder 是串行8/10-bit 4:2:0编码器；Main/High/High10可用双锚点非参考B与显示重排。
+// Encoder 是串行8/10-bit 4:2:0、4:2:2和4:4:4编码器，支持双锚点非参考B与显示重排。
 // 同一实例非并发安全；输入在SendFrame返回前消费或复制到有界内部队列。
 type Encoder struct {
 	cfg                       h264.EncoderConfig
@@ -25,8 +25,11 @@ type Encoder struct {
 	autoWeights               bool
 	fixedWeights              *PredictionWeights
 	transform8                bool
-	scaling8                  *[2][64]uint8
+	scaling8                  *[6][64]uint8
 	scaling4                  *[6][16]uint8
+	separateColourPlane       bool
+	colourPlaneID             int
+	planeReconstruction       *picture.Picture
 	lookahead                 int
 	pendingFrames             []*h264.Frame
 	lookaheadPrevious         *h264.Frame
@@ -73,6 +76,18 @@ type Option func(*Encoder) error
 // WithPCM 选择无损 I_PCM 通道，用于传输和互操作检查。
 func WithPCM() Option { return func(e *Encoder) error { e.pcm = true; return nil } }
 
+// WithSeparateColourPlanes 将4:4:4的三个分量编码为独立亮度平面。
+func WithSeparateColourPlanes() Option {
+	return func(e *Encoder) error {
+		subW, subH := e.cfg.PixelFormat.ChromaSubsampling()
+		if subW != 1 || subH != 1 {
+			return fmt.Errorf("encoder: separate colour planes require 444: %w", h264.ErrInvalidData)
+		}
+		e.separateColourPlane = true
+		return nil
+	}
+}
+
 // WithCABAC 选择CABAC或CAVLC；默认Baseline用CAVLC，其余Profile用CABAC。
 // Baseline禁止CABAC，选项在New中统一校验，不改变位深或预测工具。
 func WithCABAC(enabled bool) Option {
@@ -105,20 +120,32 @@ func WithSceneChangeThreshold(threshold int) Option {
 	}
 }
 
-// New 创建8/10-bit 4:2:0串行编码器。Baseline支持I/P，Main/High/High10可设置
+// New 创建8/10-bit 4:2:0、4:2:2或4:4:4串行编码器。Baseline支持I/P，其余Profile可设置
 // MaxBFrames启用非参考spatial B_Direct/B_Skip及POC/DTS重排。
 func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	cfg.SetDefaults()
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-	profile8 := cfg.Profile == h264.ProfileBaseline || cfg.Profile == h264.ProfileMain || cfg.Profile == h264.ProfileHigh
-	if !(profile8 && cfg.PixelFormat == h264.YUV420P || cfg.Profile == h264.ProfileHigh10 && cfg.PixelFormat == h264.YUV420P10LE) || cfg.Threads > 1 {
-		return nil, fmt.Errorf("encoder: only serial baseline/main/high/high10 420 is supported: %w", h264.ErrUnsupported)
+	subW, subH := cfg.PixelFormat.ChromaSubsampling()
+	depth := cfg.PixelFormat.BitDepth()
+	legal := false
+	switch cfg.Profile {
+	case h264.ProfileBaseline, h264.ProfileMain, h264.ProfileHigh:
+		legal = depth == 8 && subW == 2 && subH == 2
+	case h264.ProfileHigh10:
+		legal = depth <= 10 && subW == 2 && subH == 2
+	case h264.ProfileHigh422:
+		legal = depth <= 10 && subW == 2
+	case h264.ProfileHigh444:
+		legal = depth <= 10
 	}
-	// Spec: 7.4.2.1.1，4:2:0 渐进帧的 crop 单位为 2×2，不能无损表达奇数显示尺寸。
-	if cfg.Width%2 != 0 || cfg.Height%2 != 0 {
-		return nil, fmt.Errorf("encoder: 420 SPS crop requires even dimensions: %w", h264.ErrUnsupported)
+	if !legal || cfg.Threads > 1 {
+		return nil, fmt.Errorf("encoder: incompatible profile/format or nonserial configuration: %w", h264.ErrUnsupported)
+	}
+	// 渐进帧crop单位随色度采样变化；444允许奇数显示尺寸。
+	if cfg.Width%subW != 0 || cfg.Height%subH != 0 {
+		return nil, fmt.Errorf("encoder: dimensions are not representable by SPS crop units: %w", h264.ErrUnsupported)
 	}
 	if uint64(cfg.FPSNum) > uint64(^uint32(0))/2 || uint64(cfg.FPSDen) > uint64(^uint32(0)) {
 		return nil, fmt.Errorf("encoder: VUI timing overflows: %w", h264.ErrInvalidData)
@@ -411,19 +438,21 @@ func (e *Encoder) encodePCM(pic *picture.Picture) ([]byte, error) {
 	appendNAL := func(typ nal.UnitType, rbsp []byte) error {
 		return out.Write(nal.Unit{Header: nal.Header{Type: typ, RefIDC: 3}, Payload: bitstream.RBSPToEBSP(rbsp)})
 	}
-	s, err := e.sps.MarshalRBSP()
-	if err != nil {
-		return nil, err
-	}
-	p, err := e.pps.MarshalRBSP(e.sps)
-	if err != nil {
-		return nil, err
-	}
-	if err = appendNAL(nal.TypeSPS, s); err != nil {
-		return nil, err
-	}
-	if err = appendNAL(nal.TypePPS, p); err != nil {
-		return nil, err
+	if !e.separateColourPlane || e.colourPlaneID == 0 {
+		s, err := e.sps.MarshalRBSP()
+		if err != nil {
+			return nil, err
+		}
+		p, err := e.pps.MarshalRBSP(e.sps)
+		if err != nil {
+			return nil, err
+		}
+		if err = appendNAL(nal.TypeSPS, s); err != nil {
+			return nil, err
+		}
+		if err = appendNAL(nal.TypePPS, p); err != nil {
+			return nil, err
+		}
 	}
 	total := pic.MBWidth * pic.MBHeight
 	for slice := 0; slice < e.slices; slice++ {
@@ -433,21 +462,22 @@ func (e *Encoder) encodePCM(pic *picture.Picture) ([]byte, error) {
 		for addr := start; addr < end; addr++ {
 			w.WriteUE(25)
 			w.ByteAlign()
-			for c := range pic.Planes {
-				n := 16
-				if c > 0 {
-					n = 8
-				}
-				for y := 0; y < n; y++ {
-					for x := range n {
-						v := pic.Planes[c].Sample(addr%pic.MBWidth*n+x, addr/pic.MBWidth*n+y)
+			planes := 3
+			if e.separateColourPlane {
+				planes = 1
+			}
+			for c := range planes {
+				mw, mh := pic.Format.PlaneDimensions(c, 16, 16)
+				for y := range mh {
+					for x := range mw {
+						v := pic.Planes[c].Sample(addr%pic.MBWidth*mw+x, addr/pic.MBWidth*mh+y)
 						w.WriteBits(uint(pic.Planes[c].BitDepth), uint64(v))
 					}
 				}
 			}
 		}
 		bitstream.WriteRBSPTrailingBits(w)
-		if err = appendNAL(nal.TypeSliceIDR, w.Bytes()); err != nil {
+		if err := appendNAL(nal.TypeSliceIDR, w.Bytes()); err != nil {
 			return nil, err
 		}
 	}
@@ -459,6 +489,9 @@ func (e *Encoder) sliceHeader(w *bitstream.Writer, first int, disableFilter, idr
 	w.WriteUE(uint32(first))
 	w.WriteUE(2)
 	w.WriteUE(0)
+	if e.separateColourPlane {
+		w.WriteBits(2, uint64(e.colourPlaneID))
+	}
 	frameNum := e.frameNum
 	if idr {
 		frameNum = 0

@@ -7,23 +7,20 @@ func (s *frameState) available(addr, other int) bool {
 }
 
 func (s *frameState) blockSamples(addr, c int) (prediction.IntraBlockSamples16, bool, bool, bool) {
-	n := 16
-	if c > 0 {
-		n = 8
-	}
+	w, h := s.pic.Format.PlaneDimensions(c, 16, 16)
 	mw := s.pic.MBWidth
-	x, y := addr%mw*n, addr/mw*n
+	x, y := addr%mw*w, addr/mw*h
 	top, left := s.available(addr, addr-mw), addr%mw > 0 && s.available(addr, addr-1)
 	tl := x > 0 && s.available(addr, addr-mw-1)
-	a := prediction.IntraBlockSamples16{Top: make([]uint16, n), Left: make([]uint16, n)}
+	a := prediction.IntraBlockSamples16{Top: make([]uint16, w), Left: make([]uint16, h)}
 	p := &s.pic.Planes[c]
 	if top {
-		for i := 0; i < n; i++ {
+		for i := range w {
 			a.Top[i] = p.Sample(x+i, y-1)
 		}
 	}
 	if left {
-		for i := 0; i < n; i++ {
+		for i := range h {
 			a.Left[i] = p.Sample(x-1, y+i)
 		}
 	}
@@ -95,24 +92,25 @@ func (s *frameState) probable(addr, r int) int {
 }
 
 func (s *frameState) nc(addr, r, c int) int {
-	n := 4
+	w, h := 4, 4
 	grid := s.nz
 	if c > 0 {
-		n = 2
+		pw, ph := s.pic.Format.PlaneDimensions(c, 16, 16)
+		w, h = pw/4, ph/4
 		grid = s.cnz[c-1]
 	}
 	mw := s.pic.MBWidth
-	bx, by := r%n, r/n
+	bx, by := r%w, r/w
 	a, b := -1, -1
 	if bx > 0 {
-		a = int(grid[addr*n*n+r-1])
+		a = int(grid[addr*16+r-1])
 	} else if addr%mw > 0 && s.available(addr, addr-1) {
-		a = int(grid[(addr-1)*n*n+by*n+n-1])
+		a = int(grid[(addr-1)*16+by*w+w-1])
 	}
 	if by > 0 {
-		b = int(grid[addr*n*n+r-n])
+		b = int(grid[addr*16+r-w])
 	} else if s.available(addr, addr-mw) {
-		b = int(grid[(addr-mw)*n*n+(n-1)*n+bx])
+		b = int(grid[(addr-mw)*16+(h-1)*w+bx])
 	}
 	if a < 0 {
 		return max(0, b)

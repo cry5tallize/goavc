@@ -8,32 +8,35 @@ import (
 )
 
 func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
-	pic, err := picture.New(src.MBWidth, src.MBHeight, src.Format)
-	if err != nil {
-		return nil, err
+	pic := e.planeReconstruction
+	if pic == nil {
+		var err error
+		pic, err = picture.New(src.MBWidth, src.MBHeight, src.Format)
+		if err != nil {
+			return nil, err
+		}
 	}
 	total := src.MBWidth * src.MBHeight
 	s := &frameState{src: src, pic: pic, info: make([]mbInfo, total), nz: make([]uint8, total*16), mv: motion.NewGrid(src.MBWidth, src.MBHeight)}
-	s.allowZeroPCM = e.cfg.Profile == h264.ProfileHigh || e.cfg.Profile == h264.ProfileHigh10
+	s.allowZeroPCM = e.cfg.Profile != h264.ProfileBaseline && e.cfg.Profile != h264.ProfileMain
+	s.separate, s.plane = e.separateColourPlane, e.colourPlaneID
+	s.independent = e.separateColourPlane
 	s.allow8 = e.transform8
 	s.scaling8 = e.scaling8
 	s.scaling4 = e.scaling4
 	if !e.encodingB && e.reference != nil && (e.autoWeights || e.fixedWeights != nil) {
 		weights := e.fixedWeights
 		if e.autoWeights {
-			w := estimatePredictionWeights(src, e.reference)
+			w := estimatePredictionWeights(src, e.reference, s.planeCount())
 			weights = &w
 		}
 		s.weights = weights
 		// 该副本只用于整数/亚像素搜索启发式。真正 MC 必须先在原参考上插值，
 		// 再逐采样加权；裁剪与插值不可交换（Spec: 8.4.3.2）。
-		s.searchReference, err = weightedSearchReference(e.reference, weights)
-		if err != nil {
-			return nil, err
-		}
+		s.searchReference = weightedSearchReference(e.reference, weights, s.planeCount())
 	}
 	s.maxLevelPrefix = 15
-	if e.cabac || e.cfg.Profile == h264.ProfileHigh || e.cfg.Profile == h264.ProfileHigh10 {
+	if e.cabac || s.allowZeroPCM {
 		s.maxLevelPrefix = 28
 	}
 	for c := range s.dcCoded {
@@ -41,7 +44,7 @@ func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
 	}
 	s.mvd = make([]motion.MV, total*16)
 	for c := range s.cnz {
-		s.cnz[c] = make([]uint8, total*4)
+		s.cnz[c] = make([]uint8, total*16)
 	}
 	// 所有回调值在写入之前校验；失败不得更新参考帧、帧号和输出槽。
 	for addr := range s.info {

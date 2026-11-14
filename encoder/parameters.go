@@ -20,6 +20,19 @@ func (e *Encoder) parameters() error {
 	c := e.cfg
 	mw, mh := (c.Width+15)/16, (c.Height+15)/16
 	fs := int64(mw * mh)
+	subW, subH := c.PixelFormat.ChromaSubsampling()
+	chromaIDC := uint32(3)
+	if subW == 2 {
+		chromaIDC = 2
+		if subH == 2 {
+			chromaIDC = 1
+		}
+	}
+	peakRate := int64(max(c.Bitrate, c.MaxBitrate))
+	planeSets := 1
+	if e.separateColourPlane {
+		planeSets = 3
+	}
 	selected := 0
 	fallback := 0
 	for _, l := range levels {
@@ -32,13 +45,14 @@ func (e *Encoder) parameters() error {
 		if c.MaxBFrames > 0 && 3*fs > levelDPBMbs(l.id) {
 			continue
 		}
-		if int64(c.Bitrate) <= int64(l.br)*1000 {
+		maxRate := e.levelBitrate(l.br)
+		if peakRate <= maxRate {
 			fallback = l.id
 		}
-		// I_PCM 大小决策上限 + EBSP 最坏扩展，保守按每 MB 600 字节计算。
-		// 在 New 阶段即可拒绝不够的显式 Level；不依赖内容或 CQP 平均码率猜测。
-		bitsPerFrame := (fs*int64(600*c.PixelFormat.BitDepth()/8) + int64(e.slices)*64 + 256) * 8
-		if bitsPerFrame*int64(c.FPSNum) > int64(l.br)*1000*int64(c.FPSDen) || int64(c.Bitrate) > int64(l.br)*1000 {
+		// 按真实RawMbBits与EBSP最坏扩展预算，不把高采样格式当420计费。
+		bytesPerMB := ((e.rawMbBits()+7)/8 + 16*planeSets) * 3 / 2
+		bitsPerFrame := (fs*int64(bytesPerMB) + int64(e.slices*planeSets)*64 + 256) * 8
+		if bitsPerFrame*int64(c.FPSNum) > maxRate*int64(c.FPSDen) || peakRate > maxRate {
 			continue
 		}
 		selected = l.id
@@ -53,7 +67,11 @@ func (e *Encoder) parameters() error {
 	if selected == 0 {
 		return fmt.Errorf("encoder: dimensions/frame rate/bitrate exceed level %d: %w", c.Level, h264.ErrUnsupported)
 	}
-	e.sps = &syntax.SPS{ProfileIDC: 66, ConstraintSetFlags: [6]bool{true, true}, LevelIDC: uint8(selected), ChromaFormatIDC: 1, PicOrderCntType: 2, MaxNumRefFrames: 1, PicWidthInMbsMinus1: uint32(mw - 1), PicHeightInMapUnitsMinus1: uint32(mh - 1), FrameMbsOnlyFlag: true, Direct8x8InferenceFlag: true, FrameCroppingFlag: c.Width != mw*16 || c.Height != mh*16, FrameCropRightOffset: uint32((mw*16 - c.Width) / 2), FrameCropBottomOffset: uint32((mh*16 - c.Height) / 2), VUIParametersPresentFlag: true, VUI: &syntax.VUI{TimingInfoPresentFlag: true, NumUnitsInTick: uint32(c.FPSDen), TimeScale: uint32(c.FPSNum * 2), FixedFrameRateFlag: true, BitstreamRestrictionFlag: true, MotionVectorsOverPicBoundariesFlag: true, MaxDecFrameBuffering: 1}}
+	cropW, cropH := subW, subH
+	if e.separateColourPlane {
+		cropW, cropH = 1, 1
+	}
+	e.sps = &syntax.SPS{ProfileIDC: 66, ConstraintSetFlags: [6]bool{true, true}, LevelIDC: uint8(selected), ChromaFormatIDC: chromaIDC, SeparateColourPlaneFlag: e.separateColourPlane, PicOrderCntType: 2, MaxNumRefFrames: 1, PicWidthInMbsMinus1: uint32(mw - 1), PicHeightInMapUnitsMinus1: uint32(mh - 1), FrameMbsOnlyFlag: true, Direct8x8InferenceFlag: true, FrameCroppingFlag: c.Width != mw*16 || c.Height != mh*16, FrameCropRightOffset: uint32((mw*16 - c.Width) / cropW), FrameCropBottomOffset: uint32((mh*16 - c.Height) / cropH), VUIParametersPresentFlag: true, VUI: &syntax.VUI{TimingInfoPresentFlag: true, NumUnitsInTick: uint32(c.FPSDen), TimeScale: uint32(c.FPSNum * 2), FixedFrameRateFlag: true, BitstreamRestrictionFlag: true, MotionVectorsOverPicBoundariesFlag: true, MaxDecFrameBuffering: 1}}
 	// E.2.1：显式声明保守MV范围，不以结构零值错误地承诺仅零运动。
 	e.sps.VUI.Log2MaxMVLengthHorizontal, e.sps.VUI.Log2MaxMVLengthVertical = 15, 15
 	e.pps = &syntax.PPS{PicInitQPMinus26: int32(c.QP - 26), DeblockingFilterControlPresentFlag: true}
@@ -68,7 +86,18 @@ func (e *Encoder) parameters() error {
 	if c.Profile == h264.ProfileHigh10 {
 		e.sps.ProfileIDC = 110
 		e.sps.ConstraintSetFlags = [6]bool{}
-		e.sps.BitDepthLumaMinus8, e.sps.BitDepthChromaMinus8 = 2, 2
+	}
+	if c.Profile == h264.ProfileHigh422 {
+		e.sps.ProfileIDC = 122
+		e.sps.ConstraintSetFlags = [6]bool{}
+	}
+	if c.Profile == h264.ProfileHigh444 {
+		e.sps.ProfileIDC = 244
+		e.sps.ConstraintSetFlags = [6]bool{}
+	}
+	if c.PixelFormat.BitDepth() > 8 {
+		e.sps.BitDepthLumaMinus8 = uint32(c.PixelFormat.BitDepth() - 8)
+		e.sps.BitDepthChromaMinus8 = e.sps.BitDepthLumaMinus8
 	}
 	e.pps.EntropyCodingModeFlag = e.cabac
 	e.pps.WeightedPredFlag = e.autoWeights || e.fixedWeights != nil
@@ -86,7 +115,7 @@ func (e *Encoder) parameters() error {
 	e.scalingParameters()
 	for _, l := range levels {
 		if l.id == selected {
-			e.maxAUBytes = int(int64(l.br) * 1000 * int64(c.FPSDen) / (8 * int64(c.FPSNum)))
+			e.maxAUBytes = int(e.levelBitrate(l.br) * int64(c.FPSDen) / (8 * int64(c.FPSNum)))
 			break
 		}
 	}
@@ -121,4 +150,24 @@ func levelDPBMbs(level int) int64 {
 	default:
 		return 696320
 	}
+}
+
+// rawMbBits是整个图像宏块的原始位数；独立平面只改变slice组织，不减少AU预算。
+func (e *Encoder) rawMbBits() int {
+	w, h := e.cfg.PixelFormat.PlaneDimensions(1, 16, 16)
+	return (256 + 2*w*h) * e.cfg.PixelFormat.BitDepth()
+}
+
+// Annex A的VCL码率因子以Baseline/Main的1000为基准。
+func (e *Encoder) levelBitrate(baseKbps int) int64 {
+	factor := int64(1000)
+	switch e.cfg.Profile {
+	case h264.ProfileHigh:
+		factor = 1250
+	case h264.ProfileHigh10:
+		factor = 3000
+	case h264.ProfileHigh422, h264.ProfileHigh444:
+		factor = 4000
+	}
+	return int64(baseKbps) * factor
 }

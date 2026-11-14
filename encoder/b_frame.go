@@ -30,20 +30,19 @@ func (e *Encoder) encodeB(src *picture.Picture) ([]byte, *frameState, error) {
 		s.mv.BeginSlice(first)
 		w := bitstream.NewWriter()
 		e.bSliceHeader(w, first)
-		var c cabacWriter
+		var c *cabacWriter
 		if e.cabac {
 			for w.BitsWritten()%8 != 0 {
 				w.WriteBit(1)
-			}
-			ctx, err := cabac.InitContexts(false, 0, min(51, max(0, e.frameQP)))
-			if err != nil {
-				return nil, nil, err
 			}
 			ce, err := cabac.NewEncoder(w)
 			if err != nil {
 				return nil, nil, err
 			}
-			c = cabacWriter{e: ce, ctx: ctx}
+			c, err = newCABACWriter(ce, false, e.frameQP, s.chromaArrayType() == 3)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 		skipRun := uint32(0)
 		qp := e.frameQP
@@ -56,14 +55,12 @@ func (e *Encoder) encodeB(src *picture.Picture) ([]byte, *frameState, error) {
 			}
 			x, y := addr%src.MBWidth*16, addr/src.MBWidth*16
 			s.mv.SetRect(x/4, y/4, 4, 4, motion.MV{}, 0)
-			for comp := 0; comp < 3; comp++ {
-				n, px, py := 16, x, y
-				if comp > 0 {
-					n, px, py = 8, x/2, y/2
-				}
+			for comp := range s.planeCount() {
+				mw, mh := s.pic.Format.PlaneDimensions(comp, 16, 16)
+				px, py := addr%src.MBWidth*mw, addr/src.MBWidth*mh
 				pl := &s.pic.Planes[comp]
-				for yy := 0; yy < n; yy++ {
-					for xx := range n {
+				for yy := range mh {
+					for xx := range mw {
 						v := prediction.BiWeightSampleHigh(e.bPast.Planes[comp].Sample(px+xx, py+yy), e.bFuture.Planes[comp].Sample(px+xx, py+yy), 1, 1, 0, 0, 0, pl.BitDepth)
 						pl.SetSample(px+xx, py+yy, v)
 					}
@@ -109,7 +106,7 @@ func (e *Encoder) encodeB(src *picture.Picture) ([]byte, *frameState, error) {
 		}
 		var payload []byte
 		if e.cabac {
-			payload = cabacZeroWordPayload(w.Bytes(), c.e.BinCount(), last-first, src.Planes[0].BitDepth)
+			payload = cabacZeroWordPayloadFormat(w.Bytes(), c.e.BinCount(), last-first, s.rawMBBits())
 		} else {
 			if skipRun > 0 {
 				w.WriteUE(skipRun)
@@ -131,6 +128,9 @@ func (e *Encoder) bSliceHeader(w *bitstream.Writer, first int) {
 	w.WriteUE(uint32(first))
 	w.WriteUE(1)
 	w.WriteUE(0)
+	if e.separateColourPlane {
+		w.WriteBits(2, uint64(e.colourPlaneID))
+	}
 	w.WriteBits(4, uint64(e.frameNum))
 	w.WriteBits(16, uint64(e.currentPOC))
 	w.WriteBit(1) // direct_spatial_mv_pred_flag

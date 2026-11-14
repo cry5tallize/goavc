@@ -33,9 +33,9 @@
 > High 8×8/ScalingMatrix、Main 渐进帧 I/P/B、direct、加权预测和重排均已验证。
 > Profile 整体保留 Partial，范围外的字段/高位深工具仍明确拒绝；本地门禁证据见 gates/m3.md。
 
-> **M7 进展：** 当前分支`feat/m7-high422`。第1–9项及共享预测/滤波/运动前置已完成；
+> **M7 进展：** 当前分支`feat/m7-high422`。第1–10项及共享预测/滤波/运动前置已完成；
 > High10渐进420双熵I/P/B解码、原生LE输出与压缩编码通过独立Oracle，编码32配置共384帧三方逐采样一致。
-> CLI支持高位深与显式熵选项；High422/High444渐进8/10-bit解码已验收，422/444编码、隔行与transform bypass另项验收，不声明完整Profile支持。
+> High422/High444渐进8/10-bit双熵编解码、原生LE与实际CLI已验收；六格式QP/矩阵/权重/B/码控三方像素Oracle通过。隔行与transform bypass另项验收，不声明完整Profile支持。
 > 共享预测已提供byte/uint16类型实例：高位深帧内、六抽头/色度MC、权重以及422矩形色度预测。
 > 独立提交快照通过完整常规门禁；这些内核入口不单独扩大Profile或编解码组合的支持声明。
 > 共享去块已完成8/10-bit类型参数化，弱/强滤波解析解及独立提交完整常规门禁通过；流水线按后续条目验收。
@@ -55,8 +55,8 @@
 | Main | 77 | CABAC、B、隔行 | Partial | Partial | CABAC I/P/P显式权重、spatial B_Direct/B_Skip非参考与重排已验证；隔行M7 |
 | High | 100 | 8×8 变换、ScalingMatrix | Partial | Partial | CABAC I4/I8/I16/P 4×4/8×8、自定义8×8矩阵及spatial B_Direct/B_Skip已验证；字段/扩展M7 |
 | High 10 | 110 | 10 bit | Partial | Partial | M7第4/5项渐进420双熵I/P/B、矩阵/权重/负QP/码控/LE接口已通过Oracle；字段与transform bypass仍拒绝，B编码限既有spatial-direct工具 |
-| High 4:2:2 | 122 | 4:2:2、10 bit | Partial | TODO | M7第7项渐进8/10-bit422双熵I/P/B、矩阵/权重/PCM/裁剪通过Oracle；隔行、transform bypass仍拒绝，编码另项验收 |
-| High 4:4:4 Predictive | 244 | 4:4:4、独立色平面 | Partial | TODO | M7第9项渐进8/10-bit共同444双熵I/P/B外部Oracle通过；独立平面PCM固定解析解与投影Oracle通过，隔行/transform bypass拒绝，编码另验收 |
+| High 4:2:2 | 122 | 4:2:2、10 bit | Partial | Partial | M7第7/10项渐进8/10-bit422双熵I/P/B、矩阵/权重/PCM/裁剪与编码码控通过Oracle；隔行和transform bypass仍拒绝，B编码限既有spatial-direct |
+| High 4:4:4 Predictive | 244 | 4:4:4、独立色平面 | Partial | Partial | M7第9/10项共同444双熵I/P/B与编码码控外部Oracle通过；独立平面原始封装按规范验证，slice_data单色投影与FFmpeg一致；隔行/transform bypass拒绝，B编码限既有spatial-direct |
 
 ## 2. 容器与封装
 
@@ -102,8 +102,8 @@
 | Intra 8×8（High） | Conformant | Conformant | 共享九模式预测、规范邻域、实际Intra8决策、High320帧三方Oracle；编码需WithTransform8x8 |
 | Intra 16×16（4 模式） | Conformant | Conformant | M4 全模式实际选中、共享预测与 DC/AC 重建 Oracle |
 | Chroma 8×8（4:2:0） | Conformant | Conformant | M4 全模式实际选中、双平面 SAD、共享 DC/AC/滤波 Oracle |
-| Chroma 4:2:2 | Conformant | TODO | M7第6/7项8×16预测、2×4 DC、八DC双熵、MC与全高滤波通过规范解析解及外部压缩Oracle；编码第10项另验收 |
-| Chroma 4:4:4 | Conformant | TODO | M7第8/9项全尺寸预测/亮度插值、逐分量矩阵与QP、十四类CABAC、共享亮度bS及原生8/10-bit输出通过外部压缩Oracle；编码第10项另验收 |
+| Chroma 4:2:2 | Conformant | Conformant | M7第6/7/10项8×16预测、2×4 DC、八DC双熵、MC与全高滤波通过规范解析解和编解码三方Oracle；8/10-bit，水平偶数、垂直可奇数 |
+| Chroma 4:4:4 | Conformant | Conformant | M7第8/9/10项全尺寸预测/亮度插值、逐分量矩阵与QP、十四类CABAC、共享亮度bS及原生8/10-bit通过三方Oracle；显示宽高均可奇数 |
 | Inter 16×16 / 16×8 / 8×16 / 8×8 | Conformant | Conformant | M5a 四种分区实际选中；单参考 P，360+600 帧双解码器 Oracle |
 | 亚像素插值（1/2、1/4） | Conformant | Conformant | M5a 共享 MC、解析亚像素平移与完整 P 帧 Oracle |
 | Weighted Prediction（explicit / implicit） | Conformant | Partial | 编码 Main/High 单参考 P 显式权重已验证：自动分析/固定三平面权重、负权重、裁剪、隐含默认值、多 slice 与160帧三方 Oracle；B/implicit 编码待实现 |

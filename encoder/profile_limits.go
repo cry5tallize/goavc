@@ -10,14 +10,12 @@ func (s *frameState) pcmAllowed(addr int) bool {
 		return true
 	}
 	// Spec: Annex A.2.1/A.2.2，Baseline/Main 的 PCM 采样不可等于0。
-	for comp := 0; comp < 3; comp++ {
-		n := 16
-		if comp > 0 {
-			n = 8
-		}
-		x, y := addr%s.pic.MBWidth*n, addr/s.pic.MBWidth*n
-		for j := 0; j < n; j++ {
-			for _, v := range s.src.Planes[comp].Row(y + j)[x : x+n] {
+	for comp := range s.planeCount() {
+		mw, mh := s.pic.Format.PlaneDimensions(comp, 16, 16)
+		x, y := addr%s.pic.MBWidth*mw, addr/s.pic.MBWidth*mh
+		for j := range mh {
+			for i := range mw {
+				v := s.src.Planes[comp].Sample(x+i, y+j)
 				if v == 0 {
 					return false
 				}

@@ -12,10 +12,10 @@ import (
 type rdCandidate struct {
 	info                   mbInfo
 	res                    residual
-	pixels                 [384]uint16
+	pixels                 [768]uint16
 	vectors                [16]motion.MV
 	nz                     [16]uint8
-	cnz                    [2][4]uint8
+	cnz                    [2][16]uint8
 	distortion, rate, cost uint64
 }
 
@@ -35,7 +35,7 @@ func (s *frameState) decideRD(addr, previousQP, radius int, full, early bool) (r
 		s.clearMotion(addr)
 		clear(s.nz[addr*16 : addr*16+16])
 		for c := range s.cnz {
-			clear(s.cnz[c][addr*4 : addr*4+4])
+			clear(s.cnz[c][addr*16 : addr*16+16])
 		}
 	}
 	// PCM 提供有限上界，所有候选仍用同一个目标 QP 的 lambda。
@@ -151,24 +151,21 @@ func (s *frameState) uniformPrediction(addr, radius int) bool {
 		// 原证明依赖未加权的参考常量；裁剪后的加权域不能沿用该下界。
 		return false
 	}
-	for comp := 0; comp < 3; comp++ {
-		n, pad := 16, radius+4
-		if comp > 0 {
-			n = 8
-			pad = (radius+1)/2 + 2
-		}
-		x, y := addr%s.pic.MBWidth*n, addr/s.pic.MBWidth*n
+	for comp := range s.planeCount() {
+		width, height := s.planeMBSize(comp)
+		pad := radius + 4
+		x, y := addr%s.pic.MBWidth*width, addr/s.pic.MBWidth*height
 		source, reference, pred := &s.src.Planes[comp], &s.reference.Planes[comp], &s.pic.Planes[comp]
 		sv, pv := source.Sample(x, y), pred.Sample(x, y)
-		for j := 0; j < n; j++ {
-			for i := 0; i < n; i++ {
+		for j := range height {
+			for i := range width {
 				if source.Sample(x+i, y+j) != sv || pred.Sample(x+i, y+j) != pv {
 					return false
 				}
 			}
 		}
-		for j := max(0, y-pad); j < min(reference.Height, y+n+pad); j++ {
-			for i := max(0, x-pad); i < min(reference.Width, x+n+pad); i++ {
+		for j := max(0, y-pad); j < min(reference.Height, y+height+pad); j++ {
+			for i := max(0, x-pad); i < min(reference.Width, x+width+pad); i++ {
 				if reference.Sample(i, j) != pv {
 					return false
 				}
@@ -246,20 +243,17 @@ func (s *frameState) captureRD(addr, previousQP, qp int, res residual) (rdCandid
 	}
 	c := rdCandidate{info: *info, res: res, rate: rate}
 	offset := 0
-	for comp := 0; comp < 3; comp++ {
-		n := 16
-		if comp > 0 {
-			n = 8
-		}
-		x, y := addr%s.pic.MBWidth*n, addr/s.pic.MBWidth*n
-		for j := 0; j < n; j++ {
-			for i := range n {
+	for comp := range s.planeCount() {
+		width, height := s.planeMBSize(comp)
+		x, y := addr%s.pic.MBWidth*width, addr/s.pic.MBWidth*height
+		for j := range height {
+			for i := range width {
 				v := s.pic.Planes[comp].Sample(x+i, y+j)
 				c.pixels[offset+i] = v
 				d := int64(v) - int64(s.src.Planes[comp].Sample(x+i, y+j))
 				c.distortion += uint64(d * d)
 			}
-			offset += n
+			offset += width
 		}
 	}
 	x, y := addr%s.pic.MBWidth*4, addr/s.pic.MBWidth*4
@@ -268,7 +262,7 @@ func (s *frameState) captureRD(addr, previousQP, qp int, res residual) (rdCandid
 	}
 	copy(c.nz[:], s.nz[addr*16:addr*16+16])
 	for comp := range c.cnz {
-		copy(c.cnz[comp][:], s.cnz[comp][addr*4:addr*4+4])
+		copy(c.cnz[comp][:], s.cnz[comp][addr*16:addr*16+16])
 	}
 	c.cost = rdCost(s.lumaQP(qp), c.distortion, c.rate)
 	return c, nil
@@ -295,7 +289,7 @@ func (s *frameState) analyzeIntraRD(addr, previousQP int) (residual, error) {
 		s.info[addr] = base
 		clear(s.nz[addr*16 : addr*16+16])
 		for c := range s.cnz {
-			clear(s.cnz[c][addr*4 : addr*4+4])
+			clear(s.cnz[c][addr*16 : addr*16+16])
 		}
 		res := s.analyzeIntra(addr, family)
 		candidate, err := s.captureRD(addr, previousQP, qp, res)
@@ -319,22 +313,19 @@ func (s *frameState) analyzeIntraRD(addr, previousQP int) (residual, error) {
 func (s *frameState) restoreRD(addr int, c *rdCandidate) {
 	s.info[addr] = c.info
 	offset := 0
-	for comp := 0; comp < 3; comp++ {
-		n := 16
-		if comp > 0 {
-			n = 8
-		}
-		x, y := addr%s.pic.MBWidth*n, addr/s.pic.MBWidth*n
-		for j := 0; j < n; j++ {
-			for i := range n {
+	for comp := range s.planeCount() {
+		width, height := s.planeMBSize(comp)
+		x, y := addr%s.pic.MBWidth*width, addr/s.pic.MBWidth*height
+		for j := range height {
+			for i := range width {
 				s.pic.Planes[comp].SetSample(x+i, y+j, c.pixels[offset+i])
 			}
-			offset += n
+			offset += width
 		}
 	}
 	copy(s.nz[addr*16:addr*16+16], c.nz[:])
 	for comp := range c.cnz {
-		copy(s.cnz[comp][addr*4:addr*4+4], c.cnz[comp][:])
+		copy(s.cnz[comp][addr*16:addr*16+16], c.cnz[comp][:])
 	}
 	x, y := addr%s.pic.MBWidth*4, addr/s.pic.MBWidth*4
 	ref := int8(0)

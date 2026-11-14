@@ -12,11 +12,37 @@ import (
 type cabacWriter struct {
 	e             *cabac.Encoder
 	ctx           [cabac.ContextCount]cabac.Context
+	ctx444        *[cabac.ContextCount444]cabac.Context
 	lastDelta     bool
 	completedBins uint64
 }
 
-func (c *cabacWriter) bin(index, value int) { c.e.Bin(&c.ctx[index], uint8(value)) }
+func newCABACWriter(e *cabac.Encoder, intra bool, qp int, chroma444 bool) (*cabacWriter, error) {
+	c := &cabacWriter{e: e}
+	if chroma444 {
+		ctx, err := cabac.InitContexts444(intra, 0, min(51, max(0, qp)))
+		if err != nil {
+			return nil, err
+		}
+		c.ctx444 = &ctx
+	} else {
+		ctx, err := cabac.InitContexts(intra, 0, min(51, max(0, qp)))
+		if err != nil {
+			return nil, err
+		}
+		c.ctx = ctx
+	}
+	return c, nil
+}
+
+func (c *cabacWriter) bin(index, value int) {
+	if c.ctx444 != nil {
+		c.e.Bin(&c.ctx444[index], uint8(value))
+	} else {
+		c.e.Bin(&c.ctx[index], uint8(value))
+	}
+}
+
 func flag(v bool) int {
 	if v {
 		return 1
@@ -37,7 +63,7 @@ func (e *Encoder) encodeCABAC(src *picture.Picture, intra, idr bool) ([]byte, *f
 	emit := func(typ nal.UnitType, rbsp []byte) error {
 		return aw.Write(nal.Unit{Header: nal.Header{Type: typ, RefIDC: 3}, Payload: bitstream.RBSPToEBSP(rbsp)})
 	}
-	if idr {
+	if idr && (!e.separateColourPlane || e.colourPlaneID == 0) {
 		sps, err := e.sps.MarshalRBSP()
 		if err != nil {
 			return nil, nil, err
@@ -65,15 +91,14 @@ func (e *Encoder) encodeCABAC(src *picture.Picture, intra, idr bool) ([]byte, *f
 		for w.BitsWritten()%8 != 0 {
 			w.WriteBit(1)
 		}
-		ctx, err := cabac.InitContexts(intra, 0, min(51, max(0, e.frameQP)))
-		if err != nil {
-			return nil, nil, err
-		}
 		ce, err := cabac.NewEncoder(w)
 		if err != nil {
 			return nil, nil, err
 		}
-		c := cabacWriter{e: ce, ctx: ctx}
+		c, err := newCABACWriter(ce, intra, e.frameQP, s.chromaArrayType() == 3)
+		if err != nil {
+			return nil, nil, err
+		}
 		qp := e.frameQP
 		for addr := first; addr < last; addr++ {
 			s.info[addr].start = first
@@ -91,7 +116,7 @@ func (e *Encoder) encodeCABAC(src *picture.Picture, intra, idr bool) ([]byte, *f
 			// RD 的 NZ 不是已经写出的语法；当前块统计必须重新按扫描序提交。
 			clear(s.nz[addr*16 : addr*16+16])
 			for comp := range s.cnz {
-				clear(s.cnz[comp][addr*4 : addr*4+4])
+				clear(s.cnz[comp][addr*16 : addr*16+16])
 			}
 			if !intra {
 				c.skip(s, addr)
@@ -124,7 +149,7 @@ func (e *Encoder) encodeCABAC(src *picture.Picture, intra, idr bool) ([]byte, *f
 		if idr {
 			typ = nal.TypeSliceIDR
 		}
-		payload := cabacZeroWordPayload(w.Bytes(), c.completedBins+c.e.BinCount(), last-first, src.Planes[0].BitDepth)
+		payload := cabacZeroWordPayloadFormat(w.Bytes(), c.completedBins+c.e.BinCount(), last-first, s.rawMBBits())
 		if err = aw.Write(nal.Unit{Header: nal.Header{Type: typ, RefIDC: 3}, Payload: payload}); err != nil {
 			return nil, nil, err
 		}
@@ -195,6 +220,8 @@ func (c *cabacWriter) mbType(s *frameState, addr int, intra bool) {
 		base += 2
 	}
 	c.bin(base+1, flag(i.cbp&15 != 0))
+	// mb_type的I16二叉树不随ChromaArrayType缩短；即使没有
+	// 独立色度CBP语法，仍须写出其值为0的类型分支bin。
 	c.bin(base+2, flag(i.cbp>>4 != 0))
 	if i.cbp>>4 != 0 {
 		c.bin(base+2+flag(intra), flag(i.cbp>>4 == 2))
@@ -234,18 +261,20 @@ func (c *cabacWriter) macroblock(s *frameState, addr int, qp *int, res *residual
 				}
 			}
 		}
-		inc := 0
-		for _, n := range s.cabacNeighbors(addr) {
-			if n >= 0 && !s.info[n].inter && !s.info[n].pcm && s.info[n].chromaMode > 0 {
-				inc++
+		if chroma := s.chromaArrayType(); chroma == 1 || chroma == 2 {
+			inc := 0
+			for _, n := range s.cabacNeighbors(addr) {
+				if n >= 0 && !s.info[n].inter && !s.info[n].pcm && s.info[n].chromaMode > 0 {
+					inc++
+				}
 			}
-		}
-		c.bin(64+inc, flag(i.chromaMode > 0))
-		if i.chromaMode > 0 {
-			for v := 1; v < 3; v++ {
-				c.bin(67, flag(i.chromaMode > v))
-				if i.chromaMode == v {
-					break
+			c.bin(64+inc, flag(i.chromaMode > 0))
+			if i.chromaMode > 0 {
+				for v := 1; v < 3; v++ {
+					c.bin(67, flag(i.chromaMode > v))
+					if i.chromaMode == v {
+						break
+					}
 				}
 			}
 		}
@@ -300,6 +329,9 @@ func (c *cabacWriter) cbp(s *frameState, addr int) {
 	c.bin(73+flag(v&1 == 0)+2*flag(b&8 == 0), (v>>1)&1)
 	c.bin(73+flag(a&8 == 0)+2*flag(v&1 == 0), (v>>2)&1)
 	c.bin(73+flag(v&4 == 0)+2*flag(v&2 == 0), (v>>3)&1)
+	if chroma := s.chromaArrayType(); chroma != 1 && chroma != 2 {
+		return
+	}
 	ac, bc := a>>4, b>>4
 	c.bin(77+flag(ac > 0)+2*flag(bc > 0), flag(v>>4 > 0))
 	if v>>4 > 0 {
