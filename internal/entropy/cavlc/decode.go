@@ -12,7 +12,7 @@ import (
 //
 // 选择上下文会影响两件事：coeff_token VLC 的选择与最大系数个数。
 // LumaDC 与 Luma4x4 使用同一套 coeff_token 表，只是 nC 由调用方按
-// 亮度 DC 的邻块规则计算；色度 DC 则使用独立的 5 组表。
+// 亮度 DC 的邻块规则计算；420/422 色度 DC 分别使用 nC=-1/-2 的独立表。
 type BlockType uint8
 
 const (
@@ -24,15 +24,19 @@ const (
 	LumaAC
 	// ChromaDC 是色度 DC 块（4:2:0 下 2×2，共 4 个系数）。
 	ChromaDC
+	// ChromaDC422 是 4:2:2 的 2×4 色度 DC 块（8 个系数，nC=-2）。
+	ChromaDC422
 )
 
 // 预构造的直接查表。
 var (
-	coeffTokenVLC [4]vlcTable
-	chromaDCToken vlcTable
-	totalZerosVLC [15]vlcTable
-	chromaDCZeros [3]vlcTable
-	runVLC        [7]vlcTable
+	coeffTokenVLC    [4]vlcTable
+	chromaDCToken    vlcTable
+	totalZerosVLC    [15]vlcTable
+	chromaDCZeros    [3]vlcTable
+	chromaDC422Token vlcTable
+	chromaDC422Zeros [7]vlcTable
+	runVLC           [7]vlcTable
 )
 
 func init() {
@@ -47,11 +51,15 @@ func init() {
 		coeffTokenVLC[i] = mustBuild("coeff_token", coeffTokenLen[i][:], coeffTokenBits[i][:])
 	}
 	chromaDCToken = mustBuild("chroma_dc_coeff_token", chromaDCCoeffTokenLen[:], chromaDCCoeffTokenBits[:])
+	chromaDC422Token = mustBuild("chroma_dc_422_coeff_token", chromaDC422CoeffTokenLen[:], chromaDC422CoeffTokenBits[:])
 	for i := 0; i < 15; i++ {
 		totalZerosVLC[i] = mustBuild("total_zeros", totalZerosLen[i][:], totalZerosBits[i][:])
 	}
 	for i := 0; i < 3; i++ {
 		chromaDCZeros[i] = mustBuild("chroma_dc_total_zeros", chromaDCTotalZerosLen[i][:], chromaDCTotalZerosBits[i][:])
+	}
+	for i := range 7 {
+		chromaDC422Zeros[i] = mustBuild("chroma_dc_422_total_zeros", chromaDC422TotalZerosLen[i][:], chromaDC422TotalZerosBits[i][:])
 	}
 	for i := 0; i < 7; i++ {
 		runVLC[i] = mustBuild("run_before", runLen[i][:], runBits[i][:])
@@ -76,16 +84,16 @@ func coeffTokenTableIndex(nC int) int {
 
 // DecodeBlock 解码一个残差块，把 level 按扫描顺序写入 dst 的光栅位置。
 //
-// dst 长度至少 16；ChromaDC 只使用前 4 项。函数首先清零 dst，
+// dst 为光栅顺序；ChromaDC/ChromaDC422 只使用前 4/8 项。函数首先清零 dst，
 // 因此调用方不需要预先清理。返回值是 totalCoeff（非零系数个数），
 // 可直接用于 deblocking 的 non-zero count 与 nC 预测。
 //
-// nC 对 ChromaDC 无意义；对 LumaDC/Luma4x4/LumaAC，调用方必须按
+// nC 对 ChromaDC/ChromaDC422 无意义（类别隐含 -1/-2）；对亮度块，调用方必须按
 // 规范 9.2.1 的邻块规则计算后传入。传入 -1 表示“无邻块可用”，
 // 内部会按 nC=0 处理（与规范一致）。
 func DecodeBlock(r *bitstream.Reader, dst *[16]int32, typ BlockType, nC int) (int, error) {
-	if r == nil {
-		return 0, fmt.Errorf("cavlc: nil bit reader")
+	if r == nil || dst == nil || typ > ChromaDC422 {
+		return 0, fmt.Errorf("cavlc: invalid block: %w", h264.ErrInvalidData)
 	}
 	for i := range dst {
 		dst[i] = 0
@@ -95,6 +103,8 @@ func DecodeBlock(r *bitstream.Reader, dst *[16]int32, typ BlockType, nC int) (in
 	var err error
 	if typ == ChromaDC {
 		symbol, err = chromaDCToken.decode(r)
+	} else if typ == ChromaDC422 {
+		symbol, err = chromaDC422Token.decode(r)
 	} else {
 		if nC < 0 {
 			nC = 0
@@ -122,6 +132,9 @@ func DecodeBlock(r *bitstream.Reader, dst *[16]int32, typ BlockType, nC int) (in
 	case ChromaDC:
 		maxCoeff = 4
 		scan = transform.DC2x2Scan[:]
+	case ChromaDC422:
+		maxCoeff = 8
+		scan = transform.DC2x4Scan[:]
 	}
 	if totalCoeff > maxCoeff {
 		return 0, fmt.Errorf("cavlc: total_coeff %d exceeds max %d: %w",
@@ -172,6 +185,12 @@ func DecodeBlock(r *bitstream.Reader, dst *[16]int32, typ BlockType, nC int) (in
 			z, err := chromaDCZeros[totalCoeff-1].decode(r)
 			if err != nil {
 				return 0, fmt.Errorf("cavlc: chroma_dc_total_zeros: %w", err)
+			}
+			zerosLeft = int(z)
+		case ChromaDC422:
+			z, err := chromaDC422Zeros[totalCoeff-1].decode(r)
+			if err != nil {
+				return 0, fmt.Errorf("cavlc: chroma_dc_422_total_zeros: %w", err)
 			}
 			zerosLeft = int(z)
 		default:

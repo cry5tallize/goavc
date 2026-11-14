@@ -9,7 +9,7 @@ import (
 
 // EncodeBlock 写出光栅顺序的残差 level，返回 totalCoeff。
 // Spec: 9.2。直接复用规范 VLC 的码长/码字表，不另维护一份反向生成表。
-// LumaAC 跳过 DC；ChromaDC 使用 src 的前四项。nC 由调用方推导。
+// LumaAC 跳过 DC；ChromaDC/ChromaDC422 使用前四/八项；色度 DC 类别隐含 nC=-1/-2。
 func EncodeBlock(w *bitstream.Writer, src *[16]int32, typ BlockType, nC int) (int, error) {
 	return encodeBlock(w, src, typ, nC, 28)
 }
@@ -24,7 +24,7 @@ func EncodeBlockLimited(w *bitstream.Writer, src *[16]int32, typ BlockType, nC, 
 }
 
 func encodeBlock(w *bitstream.Writer, src *[16]int32, typ BlockType, nC, maxPrefix int) (int, error) {
-	if w == nil || src == nil || typ > ChromaDC {
+	if w == nil || src == nil || typ > ChromaDC422 {
 		return 0, fmt.Errorf("cavlc: invalid block: %w", h264.ErrInvalidData)
 	}
 	scan := transform.Zigzag4x4[:]
@@ -35,6 +35,8 @@ func encodeBlock(w *bitstream.Writer, src *[16]int32, typ BlockType, nC, maxPref
 		scan = transform.Zigzag4x4[1:]
 	case ChromaDC:
 		scan = transform.DC2x2Scan[:]
+	case ChromaDC422:
+		scan = transform.DC2x4Scan[:]
 	}
 	var levels [16]int32
 	var positions [16]int
@@ -58,6 +60,8 @@ func encodeBlock(w *bitstream.Writer, src *[16]int32, typ BlockType, nC, maxPref
 	symbol := total*4 + trailing
 	if typ == ChromaDC {
 		b.WriteBits(uint(chromaDCCoeffTokenLen[symbol]), uint64(chromaDCCoeffTokenBits[symbol]))
+	} else if typ == ChromaDC422 {
+		b.WriteBits(uint(chromaDC422CoeffTokenLen[symbol]), uint64(chromaDC422CoeffTokenBits[symbol]))
 	} else {
 		table := coeffTokenTableIndex(max(0, nC))
 		b.WriteBits(uint(coeffTokenLen[table][symbol]), uint64(coeffTokenBits[table][symbol]))
@@ -102,6 +106,8 @@ func encodeBlock(w *bitstream.Writer, src *[16]int32, typ BlockType, nC, maxPref
 		if total < len(scan) {
 			if typ == ChromaDC {
 				b.WriteBits(uint(chromaDCTotalZerosLen[total-1][zeros]), uint64(chromaDCTotalZerosBits[total-1][zeros]))
+			} else if typ == ChromaDC422 {
+				b.WriteBits(uint(chromaDC422TotalZerosLen[total-1][zeros]), uint64(chromaDC422TotalZerosBits[total-1][zeros]))
 			} else {
 				b.WriteBits(uint(totalZerosLen[total-1][zeros]), uint64(totalZerosBits[total-1][zeros]))
 			}

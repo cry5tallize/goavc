@@ -98,6 +98,32 @@ var chromaDCCoeffTokenBits = [20]uint8{
 	2, 3, 2, 0,
 }
 
+// chromaDC422CoeffTokenLen/Bits 来自规范表 9-5 的 nC=-2 列；
+// 8 个 DC 的 9 组符号不可用 nC>=0 的 16 系数表代替。
+var chromaDC422CoeffTokenLen = [36]uint8{
+	1, 0, 0, 0,
+	7, 2, 0, 0,
+	7, 7, 3, 0,
+	9, 7, 7, 5,
+	9, 9, 7, 6,
+	10, 10, 9, 7,
+	11, 11, 10, 7,
+	12, 12, 11, 10,
+	13, 12, 12, 11,
+}
+
+var chromaDC422CoeffTokenBits = [36]uint8{
+	1, 0, 0, 0,
+	15, 1, 0, 0,
+	14, 13, 1, 0,
+	7, 12, 11, 1,
+	6, 5, 10, 1,
+	7, 6, 4, 9,
+	7, 6, 5, 8,
+	7, 6, 5, 4,
+	7, 5, 4, 4,
+}
+
 // totalZerosLen/Bits 是表 9-7：行号 = totalCoeff-1，列号 = total_zeros。
 // 最后一行（totalCoeff=16）在规范中没有码字，保持全零。
 var totalZerosLen = [16][16]uint8{
@@ -148,6 +174,28 @@ var chromaDCTotalZerosBits = [3][4]uint8{
 	{1, 1, 1, 0},
 	{1, 1, 0, 0},
 	{1, 0, 0, 0},
+}
+
+// chromaDC422TotalZerosLen/Bits 来自规范的 2×4 色度 DC total_zeros 表。
+// 行为 totalCoeff-1，合法列数为 9-totalCoeff；零填充项不是码字。
+var chromaDC422TotalZerosLen = [7][8]uint8{
+	{1, 3, 3, 4, 4, 4, 5, 5},
+	{3, 2, 3, 3, 3, 3, 3},
+	{3, 3, 2, 2, 3, 3},
+	{3, 2, 2, 2, 3},
+	{2, 2, 2, 2},
+	{2, 2, 1},
+	{1, 1},
+}
+
+var chromaDC422TotalZerosBits = [7][8]uint8{
+	{1, 2, 3, 2, 3, 1, 1, 0},
+	{0, 1, 1, 4, 5, 6, 7},
+	{0, 1, 1, 2, 6, 7},
+	{6, 0, 1, 2, 7},
+	{0, 1, 2, 3},
+	{0, 1, 1},
+	{0, 1},
 }
 
 // runLen/Bits 是表 9-10：行号 = min(zerosLeft,7)-1，
