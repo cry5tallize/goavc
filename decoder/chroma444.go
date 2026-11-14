@@ -44,6 +44,17 @@ func (fs *frameState) componentQP(qp int) int {
 }
 
 func (fs *frameState) decodeResiduals(s *sliceEntry, addr, mbx, mby int, i16, lumaAC bool, cbp int, res *residual) error {
+	// category 2 的 mb_qp_delta 仍由 A 读取；这里只切换真正存在的残差。
+	// 非 I16 且 CBP=0 不含 category 3/4，不能因此要求 B/C 存在。
+	if s.partition != nil && (i16 || cbp != 0) {
+		r, err := s.residualReader(fs.info[addr].intra)
+		if err != nil {
+			return err
+		}
+		a := s.data
+		s.data = r
+		defer func() { s.data = a }()
+	}
 	first := fs.component
 	defer func() { fs.component = first }()
 	if fs.fullResidual != nil {

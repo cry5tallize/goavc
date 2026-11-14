@@ -249,8 +249,12 @@ func intra16Info(mbType int) (predMode int, lumaAC bool, chromaCBP int) {
 }
 
 func decodePCMMacroblock(fs *frameState, addr, mbx, mby int, s *sliceEntry) error {
-	for !s.data.ByteAligned() {
-		v, err := s.data.ReadBits(1)
+	r, err := s.residualReader(true)
+	if err != nil {
+		return err
+	}
+	for !r.ByteAligned() {
+		v, err := r.ReadBits(1)
 		if err != nil {
 			return err
 		}
@@ -268,7 +272,7 @@ func decodePCMMacroblock(fs *frameState, addr, mbx, mby int, s *sliceEntry) erro
 	for pi := firstPlane; pi < planeEnd; pi++ {
 		for y := 0; y < dims[pi][1]; y++ {
 			for x := 0; x < dims[pi][0]; x++ {
-				v, err := readBits(s.data, uint(8+fs.sps.BitDepthLumaMinus8))
+				v, err := readBits(r, uint(8+fs.sps.BitDepthLumaMinus8))
 				if err != nil {
 					return fmt.Errorf("i_pcm plane %d: %w", pi, err)
 				}
@@ -295,7 +299,7 @@ func decodePCMMacroblock(fs *frameState, addr, mbx, mby int, s *sliceEntry) erro
 		for i := range fs.dcCoded {
 			fs.dcCoded[i][addr] = true
 		}
-		engine, err := cabac.New(s.data)
+		engine, err := cabac.New(r)
 		if err != nil {
 			return err
 		}

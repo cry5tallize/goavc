@@ -118,14 +118,12 @@ func (t UnitType) IsParameterSet() bool {
 	}
 }
 
-// IsSupported 判断 M1 的语法层是否处理该 NAL 类型。
-//
-// 支持类型：普通/IDR slice、SEI、SPS、PPS、AUD、end of sequence/stream、
-// filler data。数据分区、SPS 扩展、prefix/subset SPS、辅助 slice、slice
-// extension 等属于 M7 或扩展项目范围，调用方应显式返回 ErrUnsupported。
+// IsSupported 判断核心语法层是否处理该 NAL 类型。
+// 支持普通/IDR slice、A/B/C分区、参数集与基础非VCL；SPS扩展、
+// prefix/subset SPS、辅助slice和slice扩展仍显式返回ErrUnsupported。
 func (t UnitType) IsSupported() bool {
 	switch t {
-	case TypeSlice, TypeSliceIDR, TypeSEI, TypeSPS, TypePPS,
+	case TypeSlice, TypeSliceIDR, TypeSlicePartitionA, TypeSlicePartitionB, TypeSlicePartitionC, TypeSEI, TypeSPS, TypePPS,
 		TypeAUD, TypeEndOfSequence, TypeEndOfStream, TypeFiller:
 		return true
 	default:

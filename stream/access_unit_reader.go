@@ -50,6 +50,7 @@ type AUReader struct {
 	lastInfo       *nal.SliceInfo
 	sps            map[uint32]*syntax.SPS
 	pps            map[uint32]*syntax.PPS
+	partitions     map[uint32]*partitionEntry
 	err            error
 }
 
@@ -105,7 +106,7 @@ func (r *AUReader) ReadAccessUnit() (h264.Packet, error) {
 		if r.hasVCL {
 			if u.IsVCL() {
 				boundary = r.closed || nal.DetectPictureBoundary(r.lastInfo, info) == nal.BoundaryNew ||
-					(r.cfg.BoundaryMode == BoundaryFirstMB && info.FirstMBInSlice == 0 && info.RedundantPicCnt == 0)
+					(r.cfg.BoundaryMode == BoundaryFirstMB && u.Header.Type != nal.TypeSlicePartitionB && u.Header.Type != nal.TypeSlicePartitionC && info.FirstMBInSlice == 0 && info.RedundantPicCnt == 0)
 			} else {
 				boundary = nal.DetectBoundary(r.lastUnit, u, nil, nil) == nal.BoundaryNew ||
 					(r.closed && u.Header.Type != nal.TypeEndOfSequence && u.Header.Type != nal.TypeEndOfStream)

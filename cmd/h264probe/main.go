@@ -108,7 +108,10 @@ func probeUnits(scanner unitReader, maxFrames int) (report, error) {
 	r := report{Counts: map[string]int{}}
 	state := newSyntaxState()
 	consecutive := 0
-	var lastMB uint32
+	var previousInfo *nal.SliceInfo
+	type sliceAddress struct{ count, first uint32 }
+	seen := make(map[sliceAddress]bool)
+	var lastCount uint32
 	for {
 		u, err := scanner.Next()
 		if errors.Is(err, io.EOF) {
@@ -117,20 +120,23 @@ func probeUnits(scanner unitReader, maxFrames int) (report, error) {
 		if err != nil {
 			return r, err
 		}
-		if u.Header.Type != nal.TypeSPS && u.Header.Type != nal.TypePPS && !u.IsVCL() {
+		if u.Header.Type != nal.TypeSPS && u.Header.Type != nal.TypePPS && u.Header.Type != nal.TypeAUD && u.Header.Type != nal.TypeEndOfSequence && u.Header.Type != nal.TypeEndOfStream && !u.IsVCL() {
 			continue
 		}
 		record, err := state.parse(u)
 		if err != nil {
 			return r, err
 		}
+		if u.Header.Type == nal.TypeAUD || u.Header.Type == nal.TypeEndOfSequence || u.Header.Type == nal.TypeEndOfStream {
+			previousInfo = nil
+		}
 		if record.SliceHeader != nil {
 			h := record.SliceHeader
 			id := h.PicParameterSetID
 			p := state.pps[id]
 			s := state.sps[p.SeqParameterSetID]
-			if !s.FrameMbsOnlyFlag || h.RedundantPicCnt != 0 {
-				return r, fmt.Errorf("h264probe: 字段/冗余slice尚未提供图片统计: %w", h264.ErrUnsupported)
+			if !s.FrameMbsOnlyFlag {
+				return r, fmt.Errorf("h264probe: 字段slice尚未提供图片统计: %w", h264.ErrUnsupported)
 			}
 			w, ew := s.DisplayWidth()
 			height, eh := s.DisplayHeight()
@@ -145,7 +151,10 @@ func probeUnits(scanner unitReader, maxFrames int) (report, error) {
 				kind = "IDR"
 			}
 			info := pictureInfo{Type: kind, FrameNum: h.FrameNum, POCLsb: h.PicOrderCntLsb, PPS: id, Reference: u.Header.RefIDC != 0, Profile: s.ProfileIDC, Width: w, Height: height}
-			if h.FirstMBInSlice == 0 {
+			infoSummary := probeSliceInfo(h, u.Header.RefIDC)
+			if previousInfo == nil || nal.DetectPictureBoundary(previousInfo, infoSummary) == nal.BoundaryNew {
+				clear(seen)
+				lastCount = h.RedundantPicCnt
 				if len(r.Pictures) >= maxFrames {
 					return r, fmt.Errorf("h264probe: 图片数超限: %w", h264.ErrResourceLimit)
 				}
@@ -159,23 +168,19 @@ func probeUnits(scanner unitReader, maxFrames int) (report, error) {
 					consecutive = 0
 				}
 				r.MaxConsecutiveB = max(r.MaxConsecutiveB, consecutive)
-			} else if len(r.Pictures) == 0 {
-				return r, fmt.Errorf("h264probe: 不支持首slice非零的ASO流: %w", h264.ErrUnsupported)
 			} else {
-				if h.FirstMBInSlice == lastMB {
-					return r, fmt.Errorf("h264probe: 重复slice地址: %w", h264.ErrInvalidData)
+				if h.RedundantPicCnt < lastCount {
+					return r, fmt.Errorf("h264probe: 冗余计数递减: %w", h264.ErrInvalidData)
 				}
-				if h.FirstMBInSlice < lastMB {
-					return r, fmt.Errorf("h264probe: 非递增slice地址尚不支持: %w", h264.ErrUnsupported)
-				}
-				previous := r.Pictures[len(r.Pictures)-1]
-				previous.Slices = 0
-				if previous != info {
-					return r, fmt.Errorf("h264probe: 多slice图片标识不一致: %w", h264.ErrInvalidData)
-				}
+				lastCount = h.RedundantPicCnt
 			}
 			r.Pictures[len(r.Pictures)-1].Slices++
-			lastMB = h.FirstMBInSlice
+			address := sliceAddress{h.RedundantPicCnt, h.FirstMBInSlice}
+			if seen[address] {
+				return r, fmt.Errorf("h264probe: 重复slice地址: %w", h264.ErrInvalidData)
+			}
+			seen[address] = true
+			previousInfo = infoSummary
 		}
 	}
 }

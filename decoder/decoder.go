@@ -138,8 +138,33 @@ func (d *Decoder) SendPacket(p h264.Packet) error {
 			d.pps[pp.PicParameterSetID] = pp
 		case nal.TypeSEI, nal.TypeAUD, nal.TypeEndOfSequence, nal.TypeEndOfStream:
 			// M2 忽略 SEI/AUD/EOS；它们不影响重建。
+		case nal.TypeSlicePartitionB, nal.TypeSlicePartitionC:
+			if d.waitingForIDR {
+				continue
+			}
+			rbsp, err := bitstream.EBSPToRBSP(u.Payload)
+			if err != nil {
+				return d.fail(err)
+			}
+			id, err := bitstream.NewReader(rbsp).ReadUE()
+			if err != nil {
+				return d.fail(err)
+			}
+			found := -1
+			for i := len(entries) - 1; i >= 0; i-- {
+				if entries[i].partition != nil && entries[i].partition.context.SliceID == id {
+					found = i
+					break
+				}
+			}
+			if found < 0 {
+				return d.fail(fmt.Errorf("decoder: orphan data partition: %w", h264.ErrInvalidData))
+			}
+			if err := attachPartition(&entries[found], u); err != nil {
+				return d.fail(err)
+			}
 		default:
-			if u.Header.Type != nal.TypeSlice && u.Header.Type != nal.TypeSliceIDR {
+			if u.Header.Type != nal.TypeSlice && u.Header.Type != nal.TypeSliceIDR && u.Header.Type != nal.TypeSlicePartitionA {
 				if err := u.Header.ValidateSupported(); err != nil {
 					return d.fail(err)
 				}
@@ -155,6 +180,13 @@ func (d *Decoder) SendPacket(p h264.Packet) error {
 			if len(entries) > 0 && !samePicture(entries[0], entry) {
 				if err := finish(); err != nil {
 					return d.fail(err)
+				}
+			}
+			if entry.partition != nil {
+				for _, previous := range entries {
+					if previous.partition != nil && previous.hdr.ColourPlaneID == entry.hdr.ColourPlaneID && previous.hdr.RedundantPicCnt == entry.hdr.RedundantPicCnt && previous.partition.context.SliceID == entry.partition.context.SliceID {
+						return d.fail(fmt.Errorf("decoder: duplicate partition A slice_id: %w", h264.ErrInvalidData))
+					}
 				}
 			}
 			if len(entries) >= d.cfg.MaxSliceCount {

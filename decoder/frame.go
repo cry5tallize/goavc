@@ -26,6 +26,7 @@ type sliceEntry struct {
 	frameRefs      [2][]*dpb.Reference
 	fieldRefs      [2][2][]*dpb.Reference
 	firstMB, endMB int
+	partition      *partitionedSlice
 }
 
 // mbInfo 是去块滤波与后续 MB 预测需要的宏块元数据。
@@ -227,18 +228,34 @@ func (d *Decoder) parseSlice(u nal.Unit) (sliceEntry, error) {
 	if sps == nil {
 		return sliceEntry{}, fmt.Errorf("decoder: unknown sps: %w", h264.ErrInvalidData)
 	}
-	hdr, err := syntax.ParseSliceHeaderEx(rbsp, sps, d.pps, u.Header.IsIDR(), u.Header.RefIDC)
-	if err != nil {
-		return sliceEntry{}, err
+	var hdr *syntax.SliceHeader
+	var partition *partitionedSlice
+	offset := uint64(0)
+	if u.Header.Type == nal.TypeSlicePartitionA {
+		if sps.ProfileIDC != 88 || pps.EntropyCodingModeFlag {
+			return sliceEntry{}, fmt.Errorf("decoder: partitions require Extended CAVLC: %w", h264.ErrInvalidData)
+		}
+		a, err := syntax.ParseDataPartitionA(syntax.DataPartitionInput{RBSP: rbsp, BitLength: uint64(len(rbsp)) * 8, Header: u.Header}, sps, d.pps)
+		if err != nil {
+			return sliceEntry{}, err
+		}
+		hdr, offset = a.SliceHeader, a.DataBitOffset
+		partition = &partitionedSlice{context: a.Context}
+	} else {
+		hdr, err = syntax.ParseSliceHeaderEx(rbsp, sps, d.pps, u.Header.IsIDR(), u.Header.RefIDC)
+		if err != nil {
+			return sliceEntry{}, err
+		}
+		offset = hdr.HeaderBits
 	}
 	if err := d.checkSupported(sps, pps, hdr); err != nil {
 		return sliceEntry{}, err
 	}
 	r := bitstream.NewReader(rbsp)
-	if err := r.SkipBits(uint(hdr.HeaderBits)); err != nil {
+	if err := r.SkipBits(uint(offset)); err != nil {
 		return sliceEntry{}, err
 	}
-	return sliceEntry{unit: u, hdr: hdr, sps: sps, pps: pps, rbsp: rbsp, data: r}, nil
+	return sliceEntry{unit: u, hdr: hdr, sps: sps, pps: pps, rbsp: rbsp, data: r, partition: partition}, nil
 }
 
 func samePicture(a, b sliceEntry) bool {
@@ -482,7 +499,7 @@ func decodeSlice(fs *frameState, s *sliceEntry, sliceID int, first, end int) err
 	if bits != uint64(1)<<(remaining-1) {
 		return fmt.Errorf("decoder: invalid slice trailing bits: %w", h264.ErrInvalidData)
 	}
-	return nil
+	return validatePartitionTrailing(s)
 }
 
 // peekSlicePPSID 读取 slice header 前三个 ue(v) 中的 pic_parameter_set_id。

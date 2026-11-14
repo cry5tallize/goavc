@@ -11,6 +11,7 @@ import (
 func TestUnitType_IsSupported(t *testing.T) {
 	supported := []UnitType{
 		TypeSlice, TypeSliceIDR, TypeSEI, TypeSPS, TypePPS,
+		TypeSlicePartitionA, TypeSlicePartitionB, TypeSlicePartitionC,
 		TypeAUD, TypeEndOfSequence, TypeEndOfStream, TypeFiller,
 	}
 	for _, typ := range supported {
@@ -19,7 +20,7 @@ func TestUnitType_IsSupported(t *testing.T) {
 		}
 	}
 	unsupported := []UnitType{
-		TypeUnspecified, TypeSlicePartitionA, TypeSlicePartitionB, TypeSlicePartitionC,
+		TypeUnspecified,
 		TypeSPSExtension, TypePrefix, TypeSubsetSPS,
 		TypeAuxiliarySlice, TypeSliceExtension, TypeSliceExtension3D,
 		TypeReserved16, TypeReserved22, TypeUnspecified31,
@@ -36,7 +37,7 @@ func TestHeader_ValidateSupported(t *testing.T) {
 	if err := (Header{Type: TypeSPS}).ValidateSupported(); err != nil {
 		t.Fatalf("SPS 应支持: %v", err)
 	}
-	err := (Header{Type: TypeSlicePartitionA}).ValidateSupported()
+	err := (Header{Type: TypeSliceExtension}).ValidateSupported()
 	if !errors.Is(err, h264.ErrUnsupported) {
 		t.Fatalf("错误 = %v，期望 ErrUnsupported", err)
 	}

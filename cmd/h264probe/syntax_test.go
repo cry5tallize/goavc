@@ -263,7 +263,7 @@ func TestSyntax_ErrorsTruncationAndLimits(t *testing.T) {
 		{"截断PPS", syntaxAnnexB([]nal.Unit{units[0], {Header: units[1].Header, Payload: []byte{0}}}), nil, h264.ErrInvalidData},
 		{"截断slice头", syntaxAnnexB(append(units[:2:2], nal.Unit{Header: units[3].Header, Payload: units[3].Payload[:2]})), nil, h264.ErrInvalidData},
 		{"截断SEI", syntaxAnnexB([]nal.Unit{{Header: nal.Header{Type: nal.TypeSEI}, Payload: []byte{5, 16, 1, 0x80}}}), nil, h264.ErrInvalidData},
-		{"不支持的数据分区", syntaxAnnexB([]nal.Unit{{Header: nal.Header{Type: nal.TypeSlicePartitionA}, Payload: []byte{0x80}}}), nil, h264.ErrUnsupported},
+		{"截断数据分区A头", syntaxAnnexB([]nal.Unit{{Header: nal.Header{Type: nal.TypeSlicePartitionA}, Payload: []byte{0x80}}}), nil, h264.ErrInvalidData},
 		{"AVCC前缀截断", []byte{0, 0}, []string{"-format", "avcc"}, h264.ErrInvalidData},
 		{"AVCC负载截断", []byte{0, 0, 0, 5, 0x67, 100}, []string{"-format", "avcc"}, h264.ErrInvalidData},
 		{"AVCC先限额", []byte{0xff, 0xff, 0xff, 0xff}, []string{"-format", "avcc", "-max-nal-size", "16"}, h264.ErrResourceLimit},
