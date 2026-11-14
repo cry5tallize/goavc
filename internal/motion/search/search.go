@@ -17,9 +17,18 @@ type Scorer func(MV, int) uint64
 // SAD 返回有效矩形的绝对差和。调用方须先验证缓冲/stride；只读有效像素，
 // 不读取行尾填充，所以支持奇数尺寸与非对齐 stride。
 func SAD(a []byte, as int, b []byte, bs, width, height int) int {
+	return sad(a, as, b, bs, width, height)
+}
+
+// sample 仅覆盖平面的两种原生存储；SAD 保留原位深，不缩放像素差。
+type sample interface {
+	byte | uint16
+}
+
+func sad[T sample](a []T, as int, b []T, bs, width, height int) int {
 	sum := 0
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
+	for y := range height {
+		for x := range width {
 			d := int(a[y*as+x]) - int(b[y*bs+x])
 			sum += max(d, -d)
 		}
@@ -27,8 +36,9 @@ func SAD(a []byte, as int, b []byte, bs, width, height int) int {
 	return sum
 }
 
-type window struct {
-	original, candidate [256]byte
+type window[T sample] struct {
+	original, candidate [256]T
+	reference           []T
 	ref                 *picture.Plane
 	x, y, w, h, radius  int
 	best                MV
@@ -37,15 +47,16 @@ type window struct {
 	scorer              Scorer
 }
 
-func newWindow(src, ref *picture.Plane, x, y, w, h, radius int) window {
-	s := window{ref: ref, x: x, y: y, w: w, h: h, radius: min(max(1, radius), 64, max(4, min(ref.Width, ref.Height)/4)), cost: ^uint64(0)}
-	for j := 0; j < h; j++ {
-		copy(s.original[j*16:j*16+w], src.Row(y + j)[x:x+w])
+func newWindow[T sample](src, ref []T, srcPlane, refPlane *picture.Plane, x, y, w, h, radius int) window[T] {
+	s := window[T]{reference: ref, ref: refPlane, x: x, y: y, w: w, h: h, radius: min(max(1, radius), 64, max(4, min(refPlane.Width, refPlane.Height)/4)), cost: ^uint64(0)}
+	for j := range h {
+		offset := srcPlane.Index(x, y+j)
+		copy(s.original[j*16:j*16+w], src[offset:offset+w])
 	}
 	return s
 }
 
-func (s *window) consider(m MV) {
+func (s *window[T]) consider(m MV) {
 	if m.X < int32(-s.radius*4) || m.X > int32(s.radius*4) || m.Y < int32(-s.radius*4) || m.Y > int32(s.radius*4) {
 		return
 	}
@@ -54,10 +65,16 @@ func (s *window) consider(m MV) {
 	if m.X%4 == 0 && m.Y%4 == 0 && rx >= 0 && ry >= 0 && rx+s.w <= s.ref.Width && ry+s.h <= s.ref.Height {
 		// 整像素代价直接比较原始采样；边界外推和亚像素仍只由共享 MC 定义。
 		offset := s.ref.Index(rx, ry)
-		cost = SAD(s.original[:], 16, s.ref.Data[offset:], s.ref.Stride, s.w, s.h)
+		cost = sad(s.original[:], 16, s.reference[offset:], s.ref.Stride, s.w, s.h)
 	} else {
-		prediction.MCBlockLuma(s.candidate[:], 16, s.ref, s.x, s.y, s.w, s.h, int(m.X), int(m.Y))
-		cost = SAD(s.original[:], 16, s.candidate[:], 16, s.w, s.h)
+		// 只在插值入口区分存储类型；搜索边界、SAD 与代价决策完全共享。
+		switch dst := any(s.candidate[:]).(type) {
+		case []byte:
+			prediction.MCBlockLuma(dst, 16, s.ref, s.x, s.y, s.w, s.h, int(m.X), int(m.Y))
+		case []uint16:
+			prediction.MCBlockLumaHigh(dst, 16, s.ref, s.x, s.y, s.w, s.h, int(m.X), int(m.Y))
+		}
+		cost = sad(s.original[:], 16, s.candidate[:], 16, s.w, s.h)
 	}
 	rank := uint64(cost)
 	if s.scorer != nil {
@@ -77,7 +94,14 @@ func Integer(src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, 
 }
 
 func integerWithCost(src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool, scorer Scorer) (MV, int) {
-	s := newWindow(src, ref, x, y, w, h, radius)
+	if src.Data16 != nil {
+		return integerSamples(src.Data16, ref.Data16, src, ref, x, y, w, h, predictor, radius, full, scorer)
+	}
+	return integerSamples(src.Data, ref.Data, src, ref, x, y, w, h, predictor, radius, full, scorer)
+}
+
+func integerSamples[T sample](srcSamples, refSamples []T, src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool, scorer Scorer) (MV, int) {
+	s := newWindow(srcSamples, refSamples, src, ref, x, y, w, h, radius)
 	s.scorer = scorer
 	s.consider(MV{})
 	s.consider(MV{X: int32(min(s.radius, max(-s.radius, int(predictor.X)/4)) * 4), Y: int32(min(s.radius, max(-s.radius, int(predictor.Y)/4)) * 4)})
@@ -108,7 +132,14 @@ func Refine(src, ref *picture.Plane, x, y, w, h int, base MV, radius int) (MV, i
 }
 
 func refineWithCost(src, ref *picture.Plane, x, y, w, h int, base MV, radius int, scorer Scorer) (MV, int) {
-	s := newWindow(src, ref, x, y, w, h, radius)
+	if src.Data16 != nil {
+		return refineSamples(src.Data16, ref.Data16, src, ref, x, y, w, h, base, radius, scorer)
+	}
+	return refineSamples(src.Data, ref.Data, src, ref, x, y, w, h, base, radius, scorer)
+}
+
+func refineSamples[T sample](srcSamples, refSamples []T, src, ref *picture.Plane, x, y, w, h int, base MV, radius int, scorer Scorer) (MV, int) {
+	s := newWindow(srcSamples, refSamples, src, ref, x, y, w, h, radius)
 	s.scorer = scorer
 	s.consider(base)
 	for _, step := range []int32{2, 1} {

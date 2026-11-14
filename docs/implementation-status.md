@@ -205,6 +205,7 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 | 3：10-bit变换与量化 | ScaleQP/ScaleChromaQP区分语法QPY与有效QP'，4×4/8×8/亮度与420色度DC的正反量化接受QP'0..63，Hadamard临时量使用int64 | Conformant | TestScale*与TestHigh10*的规范手算QP'52..63、负QPY、色度非线性、正负1023矩阵基、正负int32极值/溢出拒绝全部通过；与第2项整合后的同一代码树已通过完整常规门禁和既有8-bit FFmpeg Oracle回归 | 仅共享内核；不代表High10流水线可用；8-bit语法QPY上限仍为51，CABAC初始化QP域不扩展，逆变换归一化仍为>>6 |
 | 共享预测前置 | byte/uint16共用泛型帧内/MC/权重算术，默认DC与裁剪按位深；矩形422色度及采样格式相关MC供后续流水线接入 | Conformant | 暂存区独立快照通过CGO=0完整vet/build/非缓存全包test、depscheck34包、manifest27条及gofmt；高位深规范解析值和既有8-bit Oracle回归通过 | 新入口仅为共享核心，尚不单独声明扩展Profile或422/444流水线已支持 |
 | 共享滤波前置 | byte/uint16共用弱/强亮度与色度去块，按位深缩放alpha/beta/tc0，保留规范附加量与舍入常量 | Conformant | 独立暂存区快照通过CGO=0完整常规门禁；10-bit阈值、裁剪及正负边界解析向量、旧8-bit Oracle回归通过 | 高位深流水线另行验收；QP实参仍为去掉位深偏移的语法域 |
+| 共享运动搜索前置 | 8/10-bit复用整数/菱形/半与四像素搜索控制，uint16原始SAD与共享高位深MC，不降位深 | Conformant | 独立暂存区快照通过CGO=0完整常规门禁；低两位纹理平移、负MV、奇数stride、极值SAD与原8-bit Oracle回归通过 | 编码器High10接入另行验收；Scorer接收原位深SAD |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。
