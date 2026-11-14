@@ -137,9 +137,6 @@ func (r *AUReader) inspect(u nal.Unit) (*nal.SliceInfo, error) {
 	if h.FieldPicFlag {
 		return nil, fmt.Errorf("PAFF场图像访问单元尚未支持: %w", h264.ErrUnsupported)
 	}
-	if h.RedundantPicCnt != 0 {
-		return nil, fmt.Errorf("冗余slice尚未支持: %w", h264.ErrUnsupported)
-	}
 	mbCount := s.PicWidthInMbs() * s.FrameHeightInMbs()
 	if s.MbAdaptiveFrameFieldFlag {
 		mbCount /= 2

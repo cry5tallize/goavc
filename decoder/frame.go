@@ -278,9 +278,8 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 	if len(slices) == 0 {
 		return nil
 	}
-	groupMap, err := prepareSliceOrder(slices)
-	if err != nil {
-		return err
+	if len(slices) > d.cfg.MaxSliceCount {
+		return fmt.Errorf("decoder: slice count exceeds limit: %w", h264.ErrResourceLimit)
 	}
 	first := slices[0]
 	sps, pps := first.sps, first.pps
@@ -318,91 +317,18 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 		return err
 	}
 
-	bFrame := false
-	for _, entry := range slices {
-		if entry.hdr.Type == syntax.SliceTypeB {
-			bFrame = true
-		}
-	}
-	fs, err := newFrameState(d, sps, pps, bFrame)
+	states, planeCount, selected, err := d.reconstructRepresentations(slices, top, bottom, poc)
 	if err != nil {
 		return err
 	}
-	fs.poc, fs.framePOC, fs.fieldPOC = poc, poc, [2]int32{top, bottom}
+	first = selected
+	fs := states[0]
 	ok := false
 	defer func() {
 		if !ok {
 			fs.release()
 		}
 	}()
-	states := [3]*frameState{fs}
-	planeCount := 1
-	if sps.SeparateColourPlaneFlag {
-		planeCount = 3
-		for comp := 1; comp < planeCount; comp++ {
-			states[comp], err = newFrameStateForPicture(d, sps, pps, bFrame, fs.pic)
-			if err != nil {
-				return err
-			}
-			states[comp].component, states[comp].poc = comp, poc
-			states[comp].framePOC, states[comp].fieldPOC = poc, [2]int32{top, bottom}
-		}
-	}
-	if err := assignSliceOwnership(slices, states, planeCount, groupMap); err != nil {
-		return err
-	}
-
-	if len(slices) > d.cfg.MaxSliceCount {
-		return fmt.Errorf("decoder: slice count %d exceeds limit %d: %w",
-			len(slices), d.cfg.MaxSliceCount, h264.ErrResourceLimit)
-	}
-
-	// 每个slice沿本组地址遍历；所有权预检保证首址、组和覆盖完整。
-	for si := range slices {
-		s := &slices[si]
-		plane := int(s.hdr.ColourPlaneID)
-		fs := states[plane]
-		if fs == nil {
-			return fmt.Errorf("decoder: invalid colour plane %d: %w", plane, h264.ErrInvalidData)
-		}
-		if s.hdr.Type != syntax.SliceTypeI && s.hdr.Type != syntax.SliceTypeSI {
-			lists := d.dpb.Lists(s.hdr.FrameNum, poc, s.hdr.Type == syntax.SliceTypeB)
-			for list := 0; list < 1+boolToInt(s.hdr.Type == syntax.SliceTypeB); list++ {
-				n := int(s.hdr.NumRefIdxL0ActiveMinus1) + 1
-				if list == 1 {
-					n = int(s.hdr.NumRefIdxL1ActiveMinus1) + 1
-				}
-				var err error
-				s.refs[list], err = d.dpb.Modify(lists[list], s.hdr.FrameNum, s.hdr.RefListModifications[list], n)
-				if err != nil {
-					return err
-				}
-			}
-		}
-		s.frameRefs = s.refs
-		firstMB, end := s.firstMB, s.endMB
-		if err := decodeSlice(fs, s, si, firstMB, end); err != nil {
-			return err
-		}
-		// 末端由同组下一个slice首址决定，不以其他组首址截断。
-	}
-	for comp := 0; comp < planeCount; comp++ {
-		state := states[comp]
-		state.restoreFrame()
-		for i, okMB := range state.decoded {
-			if !okMB {
-				return fmt.Errorf("decoder: plane %d macroblock %d was not covered: %w", comp, i, h264.ErrInvalidData)
-			}
-		}
-		state.mv.BeginSlice(0)
-		if state.mv1 != nil {
-			state.mv1.BeginSlice(0)
-		}
-		if err := state.deblock(); err != nil {
-			return err
-		}
-	}
-	fs.pic.FillBorders()
 
 	frame, err := d.toFrame(fs.pic, sps, p, idr)
 	if err != nil {
@@ -463,9 +389,6 @@ func (d *Decoder) checkSupported(sps *syntax.SPS, pps *syntax.PPS, hdr *syntax.S
 	}
 	if hdr.SliceQP < -6*int(sps.BitDepthLumaMinus8) || hdr.SliceQP > 51 {
 		return fmt.Errorf("decoder: slice QP %d: %w", hdr.SliceQP, h264.ErrInvalidData)
-	}
-	if hdr.RedundantPicCnt > 0 {
-		return fmt.Errorf("decoder: redundant slices: %w", h264.ErrUnsupported)
 	}
 	return nil
 }

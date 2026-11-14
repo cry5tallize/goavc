@@ -166,7 +166,6 @@ func TestDecoder_UnsupportedTools(t *testing.T) {
 			s.BitDepthLumaMinus8 = 1
 			s.BitDepthChromaMinus8 = 1
 		},
-		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { h.RedundantPicCnt = 1 },
 	} {
 		ss, pp, hh := *s, *p, *h
 		mutate(&ss, &pp, &hh)

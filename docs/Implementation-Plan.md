@@ -583,7 +583,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 17 | `feat[syntax]: add data partition nal types` | 类型2/3/4前缀、关联快照、条件字段与数据位偏移 | 独立规范bit串、逐bit截断、错误/资源分类及完整独立常规门禁通过；重组见第18项 |
 | 18 | `feat[decoder]: add data partition reassembly` | A/B/C按slice_id关联、分类独立reader、AU与探测CLI | PCM/I16/P/混合非零规范像素、坏分区恢复、独立完整门禁及实际CLI两帧逐字节一致 |
 | 19 | `feat[decoder]: add sp and si slice support` | 8.6切换核心、QP/QS分域、SP Skip、SI宏块映射与逐块反馈 | 正负DC/AC/色度解析解、真实Annex-B整帧及独立完整常规门禁通过 |
-| 20 | `feat[decoder]: add redundant slice handling` | `redundant_pic_cnt` | 定向语料 |
+| 20 | `feat[decoder]: add redundant slice handling` | 独立表示、primary优先与最小完整备用、输出和DPB单次提交 | 重叠/ASO/不完整回退/非零MVD/坏覆盖恢复规范像素及独立完整门禁通过 |
 | 21 | `feat[syntax]: add hrd parameters parsing and writing` | `hrd_parameters` | round-trip |
 | 22 | `test[oracle]: add advanced profile corpus suite` | 全高级语料 | 一致 |
 | 23 | `docs[status]: publish advanced feature support matrix` | 逐项状态 | — |
