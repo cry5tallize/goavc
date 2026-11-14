@@ -1,17 +1,18 @@
 # 支持矩阵
 
-> **M5 当前进展：** M5a/b已有本地子阶段标签；M5c/d的CABAC、High8×8/矩阵、
-> P显式权重、非参考spatial B及重排、Lookahead、GOP和码控均已接入。
-> High两种大尺寸各300帧Oracle已通过；720p QP26质量门禁失败，1080p完整矩阵和
-> 大尺寸码控验证仍未齐。M5c/d保持未关闭，具体证据见 gates/m5cd.md。
+> **M5 当前进展：** M5a/b及M5c/d的本地门禁证据均已齐。
+> 两尺寸×QP18/26/34六项质量、ABR/CBR/VBV六项码控，每项300帧三方Oracle通过。
+> 六项绝对Y差均≤原1.5dB，ABR偏差均<1%，CBR窗口和VBV逐AU边界已核验。
+> 具体版本、完整数值和已知边界见 gates/m5c.md、gates/m5d.md；远端CI未执行。
+> 这是限定工具和配置的验收，完整Profile仍为Partial，等码率效率与标量吞吐仍待优化。
 
 > **M4 进展：** `encoder.New` 默认执行串行 Baseline CQP 的 I4/I16/色度压缩，
 > 每帧独立 IDR；支持 I_PCM 选项、1..64 slice、偶数显示尺寸裁剪和宏块 QP 覆盖。
 > 两条路径及混合 PCM 已通过 FFmpeg/自研解码/本地重建逐像素验证。
 > 本地门禁及性能记录已完成，证据见 gates/m4.md；远端 CI 尚待执行。
 > M5c 已接入Main/High CABAC I/P及非参考spatial B_Direct/B_Skip和重排。M5d已接入ABR/CBR/VBV，
-> CBR/VBV码量不足时输出filler NAL；HRD信令仍属后续扩展，M5总质量门禁未通过。LevelAuto新增AU预算门禁，
-> 1080p@30 已通过 300 帧三方像素验证。M5a 本地门禁见 gates/m5a.md；M5 整体未完成。
+> CBR/VBV码量不足时输出filler NAL；HRD信令仍属后续扩展。LevelAuto实施AU预算门禁，
+> 1080p@30已通过完整长矩阵三方像素验证。M5a本地门禁见gates/m5a.md，M5c/d见对应门禁页。
 
 > 状态图例：`TODO` 未开始 · `WIP` 进行中 · `Partial` 部分可用（有已知不支持路径）·
 > `Conformant` 通过规定验证 · `Unsupported` 明确拒绝并返回 `ErrUnsupported`
@@ -36,7 +37,7 @@
 
 | Profile | profile_idc | 关键工具 | Decoder | Encoder | 目标里程碑 |
 |---|---|---|---|---|---|
-| Baseline | 66 | CAVLC、I/P | Partial | Partial | M4 Encoder 仅独立 IDR I_PCM/I4/I16；P 在 M5a；高级工具 M7 |
+| Baseline | 66 | CAVLC、I/P | Partial | Partial | M4 I_PCM/I4/I16、M5 I/P/CAVLC及码控已验证；高级工具M7，禁止Baseline B |
 | Main | 77 | CABAC、B、隔行 | Partial | Partial | CABAC I/P/P显式权重、spatial B_Direct/B_Skip非参考与重排已验证；隔行M7 |
 | High | 100 | 8×8 变换、ScalingMatrix | Partial | Partial | CABAC I4/I8/I16/P 4×4/8×8、自定义8×8矩阵及spatial B_Direct/B_Skip已验证；字段/扩展M7 |
 | High 10 | 110 | 10 bit | TODO | TODO | M7 |
@@ -133,11 +134,12 @@
 | 特性 | 状态 | 目标里程碑 |
 |---|---|---|
 | CQP | Conformant | M4 固定 QP 与宏块 QP 回调，QP=0 仍为有损；无残差沿用前 QP |
-| ABR / CBR / VBV | Partial | M5d | ABR120帧平均、CBR2×30窗口±10%、VBV60帧上下界、静态filler误差≤1%；High/B2突变与闪光120帧Oracle。I/P/B分别利用已提交QP反馈，失败不污染历史；大尺寸完整矩阵待完成 |
-| GOP 结构 / IDR 间隔 | Partial | M5d | GOPSize/IDRInterval、连续1..16非参考B、强制IDR与场景边界；B需规则PTS与恒定Duration，完整长序列质量门禁未完成 |
+| ABR / CBR / VBV | Conformant | M5d | 两尺寸×三模式各300帧三方Oracle、ABR偏差<1%、CBR十窗口、VBV300步独立模型；另有分数FPS/filler和120帧突变压力。I/P/B反馈失败不污染历史；不含HRD信令 |
+| GOP 结构 / IDR 间隔 | Conformant | M5d | 独立GOP/IDR、连续1..16非参考B、强制IDR与场景边界；两尺寸长矩阵ffprobe帧型/关键帧正确；B需规则PTS与恒定Duration |
 | 场景切换检测 | Conformant | M5d | 直接阈值比较或WithLookahead未来窗口确认/闪光抑制；实际IDR序列、PTS/DTS与三方Oracle |
 | Lookahead | Conformant | M5d | WithLookahead(1..16)有界深拷贝，未来确认场景/抑制闪光；B调度避免跨切换边界；背压/Flush/Reset/Close/失败事务已测 |
-| RD 模式决策（J = D + λR） | Conformant | 定点lambda、三平面SSE、Skip/P/I4/I16/PCM；P/B两种死区保留原候选按J选优。CABAC率仍为CAVLC代理；整段质量门禁待执行 |
+| GOP头部探测与断言 | Conformant | M5d | cmd/h264probe有界解析实际参数集/POC/帧型/每图slice数，图片/B深度/IDR断言失败返回非零；12份长产物与ffprobe交叉核对，不替代像素Oracle |
+| RD 模式决策（J = D + λR） | Conformant | 定点lambda、三平面SSE、Skip/P/I4/I16/PCM；P/B两种死区保留原候选按J选优。完整长质量矩阵通过；CABAC率仍为CAVLC代理，不宣称全局最优 |
 | 自适应 QP | Conformant | M5b 活动度 QP 选项 0..6、QP 0..51 裁剪，默认关闭，显式回调/PCM 冲突拒绝 |
 | SSE2 / AVX2 / NEON | TODO | M8 |
 

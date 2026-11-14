@@ -93,7 +93,7 @@
 | 场景 | 初始目标（暂定） | 状态 |
 |---|---|---|
 | 1080p 8-bit YUV420 解码 | 30 FPS | TODO |
-| 720p 8-bit YUV420 编码 | 30 FPS | TODO |
+| 720p 8-bit YUV420 编码 | 30 FPS（M8优化目标） | M5复审：标量实测未达，不承诺实时；样本见performance.md§14 |
 | 1080p 8-bit YUV420 编码 | 后续优化目标（v1.x） | TODO |
 | 连续流式处理 | 长时运行，内存无持续增长 | TODO |
 | 核心 SIMD Kernel | 尽量零堆分配 | TODO |
@@ -270,7 +270,7 @@ M6/M7/M8 ───────────► M9 生产化与发布
 | M2 | Decoder Baseline | CAVLC + Intra + P + MC + 4×4 IDCT + Deblock + 基础 DPB，与 FFmpeg 逐像素一致 | L | WIP（本地门禁通过，待 CI；见 gates/m2.md） |
 | M3 | Decoder Main/High | CABAC、B Slice、POC、RefList、MMCO、8×8、ScalingMatrix、延迟输出 | L | WIP（本地门禁通过，待 CI；见 gates/m3.md） |
 | M4 | Encoder Baseline | SPS/PPS Writer、IDR、I_PCM、I4×4/I16×16、CAVLC、CQP、本地重建、Annex-B | L | WIP（本地门禁通过，待 CI；见 gates/m4.md） |
-| M5 | Encoder Main/High | P Slice、ME/MC、亚像素、模式决策、RD、B Frame、CABAC、8×8、GOP、RC | XL | WIP（M5a/b 子阶段本地门禁通过；M5c/d 部分实现、未关闭；见 gates/m5cd.md） |
+| M5 | Encoder Main/High | P Slice、ME/MC、亚像素、模式决策、RD、B Frame、CABAC、8×8、GOP、RC | XL | WIP（M5a/b/c/d本地门禁证据齐备，待远端CI；见gates/m5c.md、gates/m5d.md） |
 | M6 | 完整流式处理 | 增量 Reader、AU 组装、YUV I/O、Pipeline、背压、取消、Flush | M | TODO |
 | M7 | 高级 AVC 特性 | High10/422/444、Interlaced、MBAFF/PAFF、FMO、Data Partitioning 等 | XL | TODO |
 | M8 | SIMD 与并行 | SSE2/AVX2/NEON、dispatch、pool、slice 并行、pipeline、profile | L | TODO |
@@ -474,12 +474,12 @@ M6/M7/M8 ───────────► M9 生产化与发布
 **退出标准：**
 - [x] 720p/1080p 连续视频（≥ 300 帧）编码 → FFmpeg 与自研 Decoder 均可解码，无错误。High/B2/8×8/P权重/Lookahead，证据与哈希见`gates/m5cd.md`。
 - [x] 双解码器一致性：FFmpeg 输出与自研 Decoder 输出逐像素一致（同一码流），且与本地重建一致。上述各300帧逐帧/整段哈希通过，不等同全Profile认证。
-- [ ] 等 QP 下 PSNR 与 x264（`-preset veryfast -tune psnr` 同 QP）差距在预设阈值内（阈值在 M5 开始时写入 `docs/conformance.md`，例如 Y-PSNR 差值 ≤ 1.5 dB）。
-- [ ] 等码率下 PSNR 与 x264 差距记录并公开（不做选择性报告）。
-- [ ] ABR：目标码率 ±10% 内（长序列平均）；CBR：窗口内波动有记录；VBV 不越界。
-- [ ] GOP 参数变化（`GOPSize`、`MaxBFrames`、IDR 间隔）均正确反映在码流中（用 `h264probe` 断言）。局部证据：GOP/IDR ffprobe及MaxBFrames=1/2/3/16实际slice/POC/PTS/DTS、强制IDR和B+Lookahead边界已验证；完整大尺寸门禁待执行。
+- [x] 等 QP 下 PSNR 与 x264（`-preset veryfast -tune psnr` 同 QP）差距在预设阈值内（阈值在 M5 开始时写入 `docs/conformance.md`，例如 Y-PSNR 差值 ≤ 1.5 dB）。两尺寸×QP18/26/34全部通过，最大绝对Y差1.411639dB；历史失败与新RD取舍均保留，见performance.md§12/14。
+- [x] 等码率下 PSNR 与 x264 差距记录并公开（不做选择性报告）。六组实测匹配误差均≤1%，完整PSNR/SSIM与明显落后的压缩效率见performance.md§14。
+- [x] ABR：目标码率 ±10% 内（长序列平均）；CBR：窗口内波动有记录；VBV 不越界。两尺寸×三模式各300帧三方Oracle；ABR偏差+0.475360%/−0.769220%，CBR十窗口达目标，VBV300步独立充放水逐项核对，见gates/m5d.md。
+- [x] GOP 参数变化（`GOPSize`、`MaxBFrames`、IDR 间隔）均正确反映在码流中（用 `h264probe` 断言）。cmd/h264probe实际断言图片数、连续B、IDR间隔并记录POC/帧型/各图slice数；独立ffprobe及测试另覆盖GOP非IDR I、B1/2/3/16、PTS/DTS、强制IDR和Lookahead边界；大尺寸每组IDR5/P100/B195及0/60/120/180/240关键帧正确。
 - [x] 编码器 CPU profile 有记录，热点排名写入 `docs/performance.md`（为 M8 定向优化）。High/B2/8×8/权重/Lookahead 60帧profile及输入/输出哈希见§11；并发负载不作吞吐承诺。
-- [ ] `ErrUnsupported`：不支持的 Profile/Level/格式在 `NewEncoder` 阶段报错，而非产出坏码流。
+- [x] `ErrUnsupported`：不支持的 Profile/Level/格式在 `NewEncoder` 阶段报错，而非产出坏码流。encoder.New的Configuration、High矩阵/8×8选项校验及Level预算事务测试通过；完整Profile仍Partial，明确边界见支持矩阵。
 
 **风险：** 模式决策过早引入 RD 导致性能不达标 → 缓解：M5a 先出"可用非 RD 版本"，M5b 再加 RD，两者都有基准数据可回退。
 

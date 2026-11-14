@@ -511,7 +511,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 12 | `test[oracle]: add main and high decode compatibility suite` | 全 profile 差分 | I/P288、P权重160、High8×8/矩阵320、Main/High B+码控1120帧三方Oracle |
 | 13 | `bench[encoder]: add cabac and b frame benchmarks` | 性能记录 | CABAC与真实四帧B闭环各5次、分配与60帧CPU profile已记录performance.md §11；注明并发负载，不作加速承诺 |
 | 14 | `docs[status]: mark cabac and b slice modules conformant` | 状态 | 已登记CABAC I/P/High8×8、P权重、非参考spatial B_Direct/B_Skip及重排的具体支持边界 |
-| 15 | `chore[release]: close milestone m5c gate and tag v0.5.3` | 证据 | 未关闭；见 `docs/gates/m5cd.md` |
+| 15 | `chore[release]: close milestone m5c gate and tag v0.5.3` | 证据 | 本地证据齐备：两尺寸三QP长Oracle/质量、完整verify/race与六目标构建；见 `docs/gates/m5c.md`，远端CI未执行 |
 
 ### M5d — GOP 与码率控制（`feat/m5d-rate-control`，10）
 
@@ -519,14 +519,14 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 |---|---|---|---|
 | 1 | `feat[encoder]: add gop structure with idr interval and b placement` | `IBBP`/`IPPP` | 连续1/2/3/16个B、独立GOP/IDR、强制关键帧、规则PTS/DTS、尾部Flush与场景边界已验证 |
 | 2 | `feat[encoder]: add lookahead window for scene change detection` | 小窗口分析 | WithLookahead(1..16)窗口分析、未来帧确认切换/抑制闪光、输入深拷贝/背压/失败事务/Flush排空已测试 |
-| 3 | `feat[encoder]: add abr rate control` | 目标码率 → QP | ABR 120 帧平均 ±10% 通过 |
-| 4 | `feat[encoder]: add cbr rate control with buffer model` | 固定码率 | 30帧窗口±10%；静态filler与分数FPS60帧码率≤1%；大尺寸门禁待补 |
-| 5 | `feat[encoder]: add vbv constraint enforcement` | VBV 上下界 | 60 帧 fullness 与上下边界测试通过；长序列未完成 |
+| 3 | `feat[encoder]: add abr rate control` | 目标码率 → QP | 两尺寸各300帧平均偏差+0.475360%/−0.769220%，120帧短回归通过 |
+| 4 | `feat[encoder]: add cbr rate control with buffer model` | 固定码率 | 两尺寸各300帧十个窗口达目标；静态filler与分数FPS60帧码率≤1% |
+| 5 | `feat[encoder]: add vbv constraint enforcement` | VBV 上下界 | 两尺寸各300步独立充放水与边界核验；120帧High/B2突变压力、上下边界和失败事务通过 |
 | 6 | `feat[encoder]: add scene change triggered idr` | 自适应 IDR | 当前帧检测与Lookahead未来帧确认、闪光抑制、实际IDR序列和三方Oracle通过 |
-| 7 | `test[encoder]: add bitrate accuracy and vbv window tests` | 长序列 | 32×32 ABR 120帧、CBR 2×30窗口、VBV 60帧通过；720p/1080p 各 300 帧未运行 |
-| 8 | `bench[encoder]: add end to end encode benchmark for 720p` | 全参数矩阵 | ABR/CBR/CABAC/B2各5次与输入哈希已记performance.md §11；大尺寸自然视频码控矩阵在运行 |
-| 9 | `docs[performance]: publish encoder quality and bitrate report` | PSNR/SSIM/码率 vs x264 | 历史基线720p/1080p×QP18/26/34六组同QP/实测匹配码率PSNR/SSIM及哈希已公开；五过一失败，不替代后续量化版本验收 |
-| 10 | `chore[release]: close milestone m5d gate and tag v0.6.0` | 总证据 | 未关闭；见 `docs/gates/m5cd.md` |
+| 7 | `test[encoder]: add bitrate accuracy and vbv window tests` | 长序列 | 720p/1080p×ABR/CBR/VBV各300帧，三方Oracle、完整QP/AU/时钟/缓冲轨迹及ffprobe帧型通过 |
+| 8 | `bench[encoder]: add end to end encode benchmark for 720p` | 全参数矩阵 | §11五次基准、§13候选与反馈前后样本/300帧CPU profile、§14完整长测延迟/堆内存均公开；并发负载不作实时承诺 |
+| 9 | `docs[performance]: publish encoder quality and bitrate report` | PSNR/SSIM/码率 vs x264 | §12历史五过一失败保留；§14新六项同QP全部通过，实测匹配码率差距、PSNR/SSIM和哈希完整公开 |
+| 10 | `chore[release]: close milestone m5d gate and tag v0.6.0` | 总证据 | 本地证据齐备；见 `docs/gates/m5d.md` 和 `m5cd_results.json`，远端CI未执行 |
 
 ---
 
