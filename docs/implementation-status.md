@@ -172,7 +172,16 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 | CABAC 零字封装修复 | 7.4.1 / 9.3.4.6 | VCL 末尾00 00 03按已知 CABAC PPS 接受；CAVLC 仍拒绝 | Conformant | `EncapsulatedZeroWordPadding` 先失败后修复，FFmpeg 像素对照；CAVLC 终端转义拒绝 | 通用 EBSP 严格规则保持；不扩大参数集/未知 PPS 的截断容忍 |
 | h264probe GOP诊断 | 7.3.3 / 参数集与图片标识 | 有界Annex-B扫描、SPS/PPS/slice头部、帧型/POC/尺寸/slice数、图片/B/IDR断言 | Conformant | B1/2/3/16、独立GOP4/IDR7、多slice、资源与失败断言；12份长码流与ffprobe/实际POC显示位置相符 | 不解码残差，不替代像素Oracle；字段、冗余和ASO图片统计明确拒绝 |
 
-## M6–M9
+## M6：流式I/O（WIP）
+
+分支`feat/m6-streaming`。目前仅完成四个接口及所有权/EOF契约，
+具体适配器、取消、背压、自动Flush与长时稳定性门禁尚未完成。
+
+| Module | 职责 | Status | 证据 | 缺口 |
+|---|---|---|---|---|
+| 流接口 | FrameReader/Writer、AccessUnitReader/Writer，独立输出所有权与同步消费 | Partial | `stream/interfaces.go`编译通过 | AU适配器与pipeline待实现 |
+
+## M7–M9
 
 后续里程碑的模块表在对应里程碑开工时补全；开工前这里只保留占位，
 避免出现"提前承诺、实际未实现"的记录失真。
