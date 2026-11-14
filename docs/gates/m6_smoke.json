@@ -1,0 +1,73 @@
+{
+  "DurationSeconds": 30,
+  "WarmupSeconds": 5,
+  "RSSGrowthLimitBytes": 33554432,
+  "RSSRateLimitBytesPerMinute": 1048576,
+  "HeapGrowthLimitBytes": 8388608,
+  "Samples": [
+    {
+      "Seconds": 5.00025,
+      "RSS": 12935168,
+      "HeapAlloc": 887280,
+      "HeapSys": 8126464,
+      "Goroutines": 3,
+      "Encoded": 50,
+      "Decoded": 49
+    },
+    {
+      "Seconds": 10.0002198,
+      "RSS": 12906496,
+      "HeapAlloc": 820936,
+      "HeapSys": 8126464,
+      "Goroutines": 3,
+      "Encoded": 99,
+      "Decoded": 98
+    },
+    {
+      "Seconds": 15.000057,
+      "RSS": 13021184,
+      "HeapAlloc": 811576,
+      "HeapSys": 8126464,
+      "Goroutines": 3,
+      "Encoded": 149,
+      "Decoded": 148
+    },
+    {
+      "Seconds": 20.0004706,
+      "RSS": 12939264,
+      "HeapAlloc": 814904,
+      "HeapSys": 8093696,
+      "Goroutines": 3,
+      "Encoded": 199,
+      "Decoded": 198
+    },
+    {
+      "Seconds": 25.0005446,
+      "RSS": 13029376,
+      "HeapAlloc": 738400,
+      "HeapSys": 8093696,
+      "Goroutines": 3,
+      "Encoded": 249,
+      "Decoded": 248
+    },
+    {
+      "Seconds": 30.0002482,
+      "RSS": 13017088,
+      "HeapAlloc": 666600,
+      "HeapSys": 8093696,
+      "Goroutines": 1,
+      "Encoded": 299,
+      "Decoded": 298
+    },
+    {
+      "Seconds": 30.0002482,
+      "RSS": 13017088,
+      "HeapAlloc": 562464,
+      "HeapSys": 8093696,
+      "Goroutines": 1,
+      "Encoded": 299,
+      "Decoded": 298
+    }
+  ],
+  "Passed": true
+}
