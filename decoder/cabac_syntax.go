@@ -21,6 +21,9 @@ func (c *cabacSyntax) intraType(fs *frameState, addr, base int, intra bool) int 
 	inc := 0
 	if intra {
 		for side, other := range []int{addr - 1, addr - fs.mbW} {
+			if fs.mbaff {
+				other = fs.neighborMB(addr, side == 0)
+			}
 			if side == 0 && addr%fs.mbW == 0 {
 				continue
 			}
@@ -99,6 +102,9 @@ func (s *sliceEntry) readChromaMode(fs *frameState, addr int) (uint32, error) {
 	c := s.cabac
 	inc := 0
 	for i, other := range []int{addr - 1, addr - fs.mbW} {
+		if fs.mbaff {
+			other = fs.neighborMB(addr, i == 0)
+		}
 		if i == 0 && addr%fs.mbW == 0 {
 			continue
 		}
@@ -142,6 +148,9 @@ func (s *sliceEntry) readCBP(fs *frameState, addr int, intra bool) (int, error) 
 			return int(intraCBPMap[v]), nil
 		}
 		return int(interCBPMap[v]), nil
+	}
+	if fs.mbaff {
+		return s.readMBAFFCBP(fs, addr)
 	}
 	c := s.cabac
 	// 不可用邻块的 luma CBP 条件取 1，chroma CBP 条件取 0；

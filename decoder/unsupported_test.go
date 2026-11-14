@@ -3,15 +3,43 @@ package decoder
 import (
 	"errors"
 	h264 "github.com/goavc/h264"
+	"github.com/goavc/h264/bitstream"
 	"github.com/goavc/h264/nal"
+	"github.com/goavc/h264/syntax"
 	"os"
 	"testing"
 )
 
-func TestUnsupported_FieldsDoNotPolluteRecovery(t *testing.T) {
+func TestUnsupported_PAFFDoesNotPolluteRecovery(t *testing.T) {
 	field, err := os.ReadFile("../testdata/main/main_64x64_yuv420p_cabac_interlaced_013.264")
 	if err != nil {
 		t.Fatal(err)
+	}
+	// MBAFF已进入支持路径；此恢复契约仅覆盖仍未接入的PAFF序列。
+	units, err := nal.SplitAnnexB(field)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, u := range units {
+		if u.Header.Type != nal.TypeSPS {
+			continue
+		}
+		rb, err := bitstream.EBSPToRBSP(u.Payload)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s, err := syntax.ParseSPS(rb)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s.MbAdaptiveFrameFieldFlag = false
+		rb, err = s.MarshalRBSP()
+		if err != nil {
+			t.Fatal(err)
+		}
+		u.Payload = bitstream.RBSPToEBSP(rb)
+		field = annex(u)
+		break
 	}
 	good, err := os.ReadFile("../testdata/main/main_96x64_yuv420p_cabac_default_008.264")
 	if err != nil {

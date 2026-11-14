@@ -679,13 +679,13 @@
       "sliceCount": 1,
       "refFrames": 4,
       "tags": [
-        "unsupported",
+        "mbaff",
         "interlaced"
       ],
       "sha256": "a5f1bdeeb585eeb32c602e1084db3a65b0a866d915c69d82d15956df8d2f69af",
       "expectedYUVSha256": "9797520dcb4f2679b4b1975e143ae8b1b6ea4bdfbd3c5f6498f12139594989d1",
-      "status": "unsupported",
-      "notes": "Legal interlaced/MBAFF Main stream; M3 explicitly returns ErrUnsupported; M7 support planned."
+      "status": "conformant",
+      "notes": "M7已验证MBAFF帧宏块对；四帧与FFmpeg逐像素及登记YUV哈希一致。真实场与混合宏块对另由动态六格式Oracle覆盖。"
     },
     {
       "name": "high_192x128_yuv420p_cabac_multislice_007",

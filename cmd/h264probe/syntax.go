@@ -144,8 +144,14 @@ func (s *syntaxState) parse(u nal.Unit) (syntaxRecord, error) {
 			return r, fmt.Errorf("h264probe: slice缺少有效SPS: %w", h264.ErrInvalidData)
 		}
 		r.SliceHeader, err = syntax.ParseSliceHeaderEx(rbsp, parameter, s.pps, u.IsIDR(), u.Header.RefIDC)
-		if err == nil && (uint64(r.SliceHeader.FirstMBInSlice) >= parameter.PicWidthInMbs()*parameter.FrameHeightInMbs() || u.IsIDR() && u.Header.RefIDC == 0) {
-			err = fmt.Errorf("h264probe: slice地址或IDR参考标志无效: %w", h264.ErrInvalidData)
+		if err == nil {
+			mbCount := parameter.PicWidthInMbs() * parameter.FrameHeightInMbs()
+			if parameter.MbAdaptiveFrameFieldFlag || r.SliceHeader.FieldPicFlag {
+				mbCount /= 2
+			}
+			if uint64(r.SliceHeader.FirstMBInSlice) >= mbCount || u.IsIDR() && u.Header.RefIDC == 0 {
+				err = fmt.Errorf("h264probe: slice地址或IDR参考标志无效: %w", h264.ErrInvalidData)
+			}
 		}
 	}
 	return r, err

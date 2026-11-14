@@ -33,9 +33,9 @@
 > High 8×8/ScalingMatrix、Main 渐进帧 I/P/B、direct、加权预测和重排均已验证。
 > Profile 整体保留 Partial，范围外的字段/高位深工具仍明确拒绝；本地门禁证据见 gates/m3.md。
 
-> **M7 进展：** 当前分支`feat/m7-high422`。第1–12项及共享预测/滤波/运动前置已完成；
+> **M7 进展：** 当前分支`feat/m7-high422`。第1–13项及共享预测/滤波/运动前置已完成；
 > High10渐进420双熵I/P/B解码、原生LE输出与压缩编码通过独立Oracle，编码32配置共384帧三方逐采样一致。
-> High422/High444渐进8/10-bit双熵编解码、原生LE与实际CLI已验收；六格式QP/矩阵/权重/B/码控三方像素Oracle通过。隔行与transform bypass另项验收，不声明完整Profile支持。
+> High422/High444渐进8/10-bit双熵编解码、原生LE与实际CLI已验收；六格式QP/矩阵/权重/B/码控三方Oracle通过。MBAFF解码见下，PAFF与transform bypass仍拒绝，不声明完整Profile支持。
 > 共享预测已提供byte/uint16类型实例：高位深帧内、六抽头/色度MC、权重以及422矩形色度预测。
 > 独立提交快照通过完整常规门禁；这些内核入口不单独扩大Profile或编解码组合的支持声明。
 > 共享去块已完成8/10-bit类型参数化，弱/强滤波解析解及独立提交完整常规门禁通过；流水线按后续条目验收。
@@ -46,19 +46,19 @@
 > CAVLC八系数ChromaDC422的规范码字、固定比特串与独立完整门禁通过，保留420四系数路径。
 > PPS的六/八/十二个缩放列表由transform_8x8_mode_flag和色度共同确定；未开启8×8时不再误读写两个额外标志，固定规范RBSP及独立完整门禁通过。
 > High444共同编码双熵I/P/B两格式×九配置各八帧与FFmpeg一致；十四类CABAC、逐分量矩阵与QP、亮度插值及共享亮度bS已接入。独立平面PCM规范向量与单色投影通过；FFmpeg8不支持原始独立平面封装，投影不替代该工具能力声明。
-> 场/MBAFF的SPS与slice头语法已通过固定规范字节和真实隔行语料探测，条件字段不再被SPS解析提前拒绝；这不是场像素解码支持，Decoder及AUReader仍明确拒绝。
-> 场运动共享内核已完成MV/ref_idx帧场归一化、MBAFF列表奇偶、定向MVP及P_Skip规范向量和独立完整门禁；宏块对邻址、场参考及像素流水线仍由第13项接入，不提前声明隔行可解。
+> MBAFF解码已接入宏块对、帧场混合邻域、场参考/扫描与逐对滤波；六格式×双熵×两场顺序×I/P/B/矩阵×全场/真实混合192配置共1152帧与FFmpeg一致，独立完整门禁及实际六帧CLI通过。
+> 420对侧场色度MV的±2相位已由规范码流和FFmpeg锁定；已登记Main隔行语料改为conformant。PAFF场图片仍明确拒绝，隔行编码另由第14项验收。
 
 ## 1. Profile
 
 | Profile | profile_idc | 关键工具 | Decoder | Encoder | 目标里程碑 |
 |---|---|---|---|---|---|
 | Baseline | 66 | CAVLC、I/P | Partial | Partial | M4 I_PCM/I4/I16、M5 I/P/CAVLC及码控已验证；高级工具M7，禁止Baseline B |
-| Main | 77 | CABAC、B、隔行 | Partial | Partial | CABAC I/P/P显式权重、spatial B_Direct/B_Skip非参考与重排已验证；隔行M7 |
-| High | 100 | 8×8 变换、ScalingMatrix | Partial | Partial | CABAC I4/I8/I16/P 4×4/8×8、自定义8×8矩阵及spatial B_Direct/B_Skip已验证；字段/扩展M7 |
-| High 10 | 110 | 10 bit | Partial | Partial | M7第4/5项渐进420双熵I/P/B、矩阵/权重/负QP/码控/LE接口已通过Oracle；字段与transform bypass仍拒绝，B编码限既有spatial-direct工具 |
-| High 4:2:2 | 122 | 4:2:2、10 bit | Partial | Partial | M7第7/10项渐进8/10-bit422双熵I/P/B、矩阵/权重/PCM/裁剪与编码码控通过Oracle；隔行和transform bypass仍拒绝，B编码限既有spatial-direct |
-| High 4:4:4 Predictive | 244 | 4:4:4、独立色平面 | Partial | Partial | M7第9/10项共同444双熵I/P/B与编码码控外部Oracle通过；独立平面原始封装按规范验证，slice_data单色投影与FFmpeg一致；隔行/transform bypass拒绝，B编码限既有spatial-direct |
+| Main | 77 | CABAC、B、隔行 | Partial | Partial | 渐进I/P/B及M7 MBAFF解码通过Oracle；编码仍限既有spatial B工具，PAFF拒绝，隔行编码第14项另验收 |
+| High | 100 | 8×8 变换、ScalingMatrix | Partial | Partial | CABAC I4/I8/I16/P 4×4/8×8、矩阵与M7 MBAFF解码通过Oracle；PAFF拒绝，隔行编码第14项另验收 |
+| High 10 | 110 | 10 bit | Partial | Partial | 渐进420双熵编解码与MBAFF解码已通过Oracle；PAFF与transform bypass拒绝，编码B限既有spatial-direct，隔行编码另验收 |
+| High 4:2:2 | 122 | 4:2:2、10 bit | Partial | Partial | 渐进422双熵编解码与MBAFF解码通过Oracle；PAFF与transform bypass拒绝，编码B限既有spatial-direct，隔行编码另验收 |
+| High 4:4:4 Predictive | 244 | 4:4:4、独立色平面 | Partial | Partial | 共同444编解码与MBAFF解码外部Oracle通过；独立平面原始封装按规范与单色投影验证，PAFF/transform bypass拒绝，隔行编码另验收 |
 
 ## 2. 容器与封装
 
@@ -110,7 +110,8 @@
 | 亚像素插值（1/2、1/4） | Conformant | Conformant | M5a 共享 MC、解析亚像素平移与完整 P 帧 Oracle |
 | Weighted Prediction（explicit / implicit） | Conformant | Partial | 编码 Main/High 单参考 P 显式权重已验证：自动分析/固定三平面权重、负权重、裁剪、隐含默认值、多 slice 与160帧三方 Oracle；B/implicit 编码待实现 |
 | B Direct（temporal / spatial） | Conformant | Partial | 编码spatial-direct零MV双参考、B_Skip/B_Direct残差实际选中，1120帧三方Oracle；temporal与非Direct运动搜索未生成 |
-| 帧场自适应（MBAFF / PAFF） | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
+| MBAFF 宏块对 | Conformant | TODO | M7第13项六格式8/10-bit双熵、帧/场混合、实际B spatial/temporal及矩阵192配置共1152帧Oracle通过；编码第14项另验收 |
+| PAFF 场图像 | Unsupported | Unsupported | 场图片/非MBAFF隔行序列的参考管理和场对输出尚未接入，明确ErrUnsupported，不以MBAFF支持代替 |
 
 ## 6. 变换与量化
 
@@ -168,7 +169,7 @@
 | 8-bit YUV Writer | Conformant | 跳过stride填充、最小末行缓冲、写前完整校验、短写及I/O失败后停止追加；已知字节与三格式多帧往返验证。无原始流元数据头 |
 | 增量Annex-B NAL Reader | Conformant | 跨1/2/3/7/4096/整文件chunk，独立EBSP、默认8MiB单NAL限额、严格前导与残缺尾起始码处理；只切分NAL，不提供AU/帧/时间戳 |
 | 增量AVCC NAL Reader | Conformant | 1..4长度前缀、从提供的avcC取宽度并先交付复制的参数集，默认8MiB单NAL、分配前限额、截断/错误粘性；仅NAL，不解析MP4或提供AU/时间戳 |
-| 增量AU Reader | Conformant | 解析SPS/PPS/slice header，默认图像标识或可选first_mb规则；AUD/POC/filler/末AU测试及5份语料×6种chunk、ffprobe计数通过。独立Annex-B输出，默认32MiB/4096 NAL；时间戳均0，不验证残差，字段/FMO/冗余/分区等显式拒绝 |
+| 增量AU Reader | Conformant | 解析渐进8/10-bit及MBAFF SPS/PPS/slice头和宏块对首址；原分块/预算证据及MBAFF stream回归、实际CLI通过。独立Annex-B输出，默认32MiB/4096 NAL；时间戳均0，不验证残差，PAFF/FMO/冗余/分区仍拒绝 |
 | Annex-B AU Writer | Conformant | 完整封装/预算验证后写四字节起始码，坏尾部不提前写、短写/I/O错误后停止追加；固定字节及High多slice语料重扫一致。只接受调用方已分组的Annex-B AU，不验证slice或序列化时间戳；默认8MiB单NAL、32MiB输入及输出AU、4096 NAL |
 | AVCC AU Writer | Conformant | 已分组Annex-B AU转1..4字节大端前缀（默认4），与Annex-B Writer共享完整封装/限额验证；长度容量在扫描分配前收紧，坏尾部/后续NAL超限零写出，短写/I/O错误粘性。独立字节解析解及5份语料分块往返通过；默认8MiB单NAL、32MiB输入及输出AU、4096 NAL，不生成avcC/MP4或时间戳，不验证slice |
 | EncodeStream / DecodeStream | Conformant | 自有codec、同步背压、源EOF自动Flush到io.EOF；全部26份支持语料×Annex-B/AVCC×四种chunk对独立FFmpeg哈希，PCM/B/Lookahead尾部与时钟已测。MaxInputBuffer默认16MiB限制单输入，不是RSS总上限 |

@@ -2,16 +2,16 @@ package cavlc
 
 import (
 	"fmt"
+
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/transform"
 )
 
 // EncodeBlock 写出光栅顺序的残差 level，返回 totalCoeff。
 // Spec: 9.2。直接复用规范 VLC 的码长/码字表，不另维护一份反向生成表。
 // LumaAC 跳过 DC；ChromaDC/ChromaDC422 使用前四/八项；色度 DC 类别隐含 nC=-1/-2。
 func EncodeBlock(w *bitstream.Writer, src *[16]int32, typ BlockType, nC int) (int, error) {
-	return encodeBlock(w, src, typ, nC, 28)
+	return encodeBlock(w, src, typ, nC, 28, nil)
 }
 
 // EncodeBlockLimited 限制 level_prefix；Baseline/Main 的 Annex A 上限为15。
@@ -20,23 +20,15 @@ func EncodeBlockLimited(w *bitstream.Writer, src *[16]int32, typ BlockType, nC, 
 	if maxPrefix < 15 || maxPrefix > 28 {
 		return 0, fmt.Errorf("cavlc: invalid prefix limit: %w", h264.ErrInvalidData)
 	}
-	return encodeBlock(w, src, typ, nC, maxPrefix)
+	return encodeBlock(w, src, typ, nC, maxPrefix, nil)
 }
 
-func encodeBlock(w *bitstream.Writer, src *[16]int32, typ BlockType, nC, maxPrefix int) (int, error) {
+func encodeBlock(w *bitstream.Writer, src *[16]int32, typ BlockType, nC, maxPrefix int, scan []int) (int, error) {
 	if w == nil || src == nil || typ > ChromaDC422 {
 		return 0, fmt.Errorf("cavlc: invalid block: %w", h264.ErrInvalidData)
 	}
-	scan := transform.Zigzag4x4[:]
-	switch typ {
-	case LumaDC:
-		scan = transform.LumaDCScan[:]
-	case LumaAC:
-		scan = transform.Zigzag4x4[1:]
-	case ChromaDC:
-		scan = transform.DC2x2Scan[:]
-	case ChromaDC422:
-		scan = transform.DC2x4Scan[:]
+	if scan == nil {
+		scan = defaultBlockScan(typ)
 	}
 	var levels [16]int32
 	var positions [16]int

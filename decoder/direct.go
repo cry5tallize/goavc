@@ -13,6 +13,9 @@ type directMotion struct {
 }
 
 func (fs *frameState) colocated(s *sliceEntry, mbx, mby, bx, by int) (motion.MV, *dpb.Identity, int8) {
+	if fs.mbaff {
+		return fs.mbaffColocated(s, mbx, mby, bx, by)
+	}
 	col := s.refs[1][0]
 	grids, references := col.Motion, col.BlockReferences
 	if fs.sps.SeparateColourPlaneFlag && fs.component > 0 {
@@ -22,7 +25,7 @@ func (fs *frameState) colocated(s *sliceEntry, mbx, mby, bx, by int) (motion.MV,
 		bx = (bx / 2) * 3
 		by = (by / 2) * 3
 	}
-	x, y := mbx*4+bx, mby*4+by
+	x, y := mbx*4+bx, fs.motionY(mby)+by
 	for l := 0; l < 2; l++ {
 		grid := grids[l]
 		if grid == nil {
@@ -49,17 +52,32 @@ func (fs *frameState) deriveDirect(s *sliceEntry, mbx, mby int) (directMotion, e
 	if len(s.refs[0]) == 0 || len(s.refs[1]) == 0 {
 		return out, fmt.Errorf("decoder: direct without both reference lists: %w", h264.ErrInvalidData)
 	}
-	baseX, baseY := mbx*4, mby*4
+	baseX, baseY := mbx*4, fs.motionY(mby)
 	var refs [2]int8
 	var pred [2]motion.MV
 	if s.hdr.DirectSpatialMVPredFlag {
 		for l, grid := range []*motion.Grid{fs.mv, fs.mv1} {
 			refs[l] = -1
-			_, a, ao := grid.Get(baseX-1, baseY)
-			_, b, bo := grid.Get(baseX, baseY-1)
-			_, c, co := grid.Get(baseX+4, baseY-1)
-			if !co {
-				_, c, co = grid.Get(baseX-1, baseY-1)
+			var a, b, c int8
+			var ao, bo, co bool
+			if fs.mbaff {
+				addr := fs.mbAddress(mbx, mby)
+				n := fs.fieldNeighbors(grid, addr, baseX, baseY, 4)
+				if !n.C.Available {
+					n.C = n.D
+				}
+				n.A = motion.NormalizeFieldNeighbor(fs.structure(addr), n.A)
+				n.B = motion.NormalizeFieldNeighbor(fs.structure(addr), n.B)
+				n.C = motion.NormalizeFieldNeighbor(fs.structure(addr), n.C)
+				a, b, c = n.A.Ref, n.B.Ref, n.C.Ref
+				ao, bo, co = n.A.Available, n.B.Available, n.C.Available
+			} else {
+				_, a, ao = grid.Get(baseX-1, baseY)
+				_, b, bo = grid.Get(baseX, baseY-1)
+				_, c, co = grid.Get(baseX+4, baseY-1)
+				if !co {
+					_, c, co = grid.Get(baseX-1, baseY-1)
+				}
 			}
 			for _, n := range []struct {
 				r  int8
@@ -73,7 +91,11 @@ func (fs *frameState) deriveDirect(s *sliceEntry, mbx, mby int) (directMotion, e
 				if int(refs[l]) >= len(s.refs[l]) {
 					return out, fmt.Errorf("decoder: direct spatial reference exceeds active list: %w", h264.ErrInvalidData)
 				}
-				pred[l] = motion.Predict(grid, baseX, baseY, 4, refs[l])
+				if fs.mbaff {
+					pred[l] = fs.fieldPrediction(grid, fs.mbAddress(mbx, mby), baseX, baseY, 4, refs[l], motion.FieldMedian, false)
+				} else {
+					pred[l] = motion.Predict(grid, baseX, baseY, 4, refs[l])
+				}
 			}
 		}
 		if refs[0] < 0 && refs[1] < 0 {
@@ -100,7 +122,7 @@ func (fs *frameState) deriveDirect(s *sliceEntry, mbx, mby int) (directMotion, e
 				}
 				mapped := -1
 				for n, r := range s.refs[0] {
-					if r.ID == colID.ID {
+					if r.ID == colID.ID && (!fs.mbaff || (r.Frame == nil) == (colID.Frame == nil) && (r.Frame == nil || r.BottomField == colID.BottomField)) {
 						mapped = n
 						break
 					}

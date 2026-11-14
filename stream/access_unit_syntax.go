@@ -37,8 +37,8 @@ func (r *AUReader) inspect(u nal.Unit) (*nal.SliceInfo, error) {
 		if err != nil {
 			return nil, err
 		}
-		if !s.FrameMbsOnlyFlag {
-			return nil, fmt.Errorf("场/MBAFF访问单元尚未支持: %w", h264.ErrUnsupported)
+		if !s.FrameMbsOnlyFlag && !s.MbAdaptiveFrameFieldFlag {
+			return nil, fmt.Errorf("PAFF场图像访问单元尚未支持: %w", h264.ErrUnsupported)
 		}
 		if s.PicWidthInMbs() > h264.MaxFrameWidth/16 || s.FrameHeightInMbs() > h264.MaxFrameHeight/16 {
 			return nil, fmt.Errorf("编码尺寸超限: %w", h264.ErrResourceLimit)
@@ -89,10 +89,17 @@ func (r *AUReader) inspect(u nal.Unit) (*nal.SliceInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	if h.FieldPicFlag {
+		return nil, fmt.Errorf("PAFF场图像访问单元尚未支持: %w", h264.ErrUnsupported)
+	}
 	if h.RedundantPicCnt != 0 {
 		return nil, fmt.Errorf("冗余slice尚未支持: %w", h264.ErrUnsupported)
 	}
-	if uint64(h.FirstMBInSlice) >= s.PicWidthInMbs()*s.FrameHeightInMbs() {
+	mbCount := s.PicWidthInMbs() * s.FrameHeightInMbs()
+	if s.MbAdaptiveFrameFieldFlag {
+		mbCount /= 2
+	}
+	if uint64(h.FirstMBInSlice) >= mbCount {
 		return nil, fmt.Errorf("首宏块地址超出图像: %w", h264.ErrInvalidData)
 	}
 	return &nal.SliceInfo{FirstMBInSlice: h.FirstMBInSlice, FrameNum: h.FrameNum,

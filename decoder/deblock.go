@@ -18,50 +18,57 @@ import (
 func (fs *frameState) deblockPlane() error {
 	for mby := 0; mby < fs.mbH; mby++ {
 		for mbx := 0; mbx < fs.mbW; mbx++ {
-			info := &fs.info[mby*fs.mbW+mbx]
-			if info.deblockIDC == 1 {
+			if err := fs.deblockMB(mbx, mby); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (fs *frameState) deblockMB(mbx, mby int) error {
+	info := &fs.info[mby*fs.mbW+mbx]
+	if info.deblockIDC == 1 {
+		return nil
+	}
+	// 垂直边。
+	for _, edgeX := range []int{0, 4, 8, 12} {
+		boundary := edgeX == 0
+		if boundary {
+			if mbx == 0 || fs.skipSliceBoundary(mbx, mby, mbx-1, mby) {
 				continue
 			}
-			// 垂直边。
-			for _, edgeX := range []int{0, 4, 8, 12} {
-				boundary := edgeX == 0
-				if boundary {
-					if mbx == 0 || fs.skipSliceBoundary(mbx, mby, mbx-1, mby) {
-						continue
-					}
-				}
-				if !info.transform8 || edgeX%8 == 0 {
-					if err := fs.filterLumaVertical(mbx, mby, edgeX, boundary); err != nil {
-						return err
-					}
-				}
-				if fs.sps == nil || fs.sps.ChromaFormatIDC != 3 {
-					if edgeX%(4*fs.subW) == 0 {
-						if err := fs.filterChromaVertical(mbx, mby, edgeX, boundary); err != nil {
-							return err
-						}
-					}
+		}
+		if !info.transform8 || edgeX%8 == 0 {
+			if err := fs.filterLumaVertical(mbx, mby, edgeX, boundary); err != nil {
+				return err
+			}
+		}
+		if fs.sps == nil || fs.sps.ChromaFormatIDC != 3 {
+			if edgeX%(4*fs.subW) == 0 {
+				if err := fs.filterChromaVertical(mbx, mby, edgeX, boundary); err != nil {
+					return err
 				}
 			}
-			// 水平边。
-			for _, edgeY := range []int{0, 4, 8, 12} {
-				boundary := edgeY == 0
-				if boundary {
-					if mby == 0 || fs.skipSliceBoundary(mbx, mby, mbx, mby-1) {
-						continue
-					}
-				}
-				if !info.transform8 || edgeY%8 == 0 {
-					if err := fs.filterLumaHorizontal(mbx, mby, edgeY, boundary); err != nil {
-						return err
-					}
-				}
-				if fs.sps == nil || fs.sps.ChromaFormatIDC != 3 {
-					if edgeY%(4*fs.subH) == 0 {
-						if err := fs.filterChromaHorizontal(mbx, mby, edgeY, boundary); err != nil {
-							return err
-						}
-					}
+		}
+	}
+	// 水平边。
+	for _, edgeY := range []int{0, 4, 8, 12} {
+		boundary := edgeY == 0
+		if boundary {
+			if mby == 0 || fs.skipSliceBoundary(mbx, mby, mbx, mby-1) {
+				continue
+			}
+		}
+		if !info.transform8 || edgeY%8 == 0 {
+			if err := fs.filterLumaHorizontal(mbx, mby, edgeY, boundary); err != nil {
+				return err
+			}
+		}
+		if fs.sps == nil || fs.sps.ChromaFormatIDC != 3 {
+			if edgeY%(4*fs.subH) == 0 {
+				if err := fs.filterChromaHorizontal(mbx, mby, edgeY, boundary); err != nil {
+					return err
 				}
 			}
 		}
@@ -286,6 +293,10 @@ func (fs *frameState) lumaNonzero(addr, bx, by int) bool {
 // B 边界允许两侧参考列表互换；若两方向恰好引用同一图像，任一成对
 // 匹配即可，不能只比较 list0 或把不同 slice 的 ref_idx 视为图像身份。
 func (fs *frameState) bMotionStrength(px, py, qx, qy int) int {
+	return fs.bMotionStrengthLimit(px, py, qx, qy, 4)
+}
+
+func (fs *frameState) bMotionStrengthLimit(px, py, qx, qy, verticalLimit int) int {
 	pi, qi := py*fs.mv.BlockW+px, qy*fs.mv.BlockW+qx
 	pIDs := [2]*dpb.Identity{fs.referenceIDs[0][pi], fs.referenceIDs[1][pi]}
 	qIDs := [2]*dpb.Identity{fs.referenceIDs[0][qi], fs.referenceIDs[1][qi]}
@@ -302,7 +313,7 @@ func (fs *frameState) bMotionStrength(px, py, qx, qy int) int {
 				match = false
 				break
 			}
-			if pIDs[l] != nil && (absInt(int(pm[l].X-qm[other].X)) >= 4 || absInt(int(pm[l].Y-qm[other].Y)) >= 4) {
+			if pIDs[l] != nil && (absInt(int(pm[l].X-qm[other].X)) >= 4 || absInt(int(pm[l].Y-qm[other].Y)) >= verticalLimit) {
 				match = false
 				break
 			}

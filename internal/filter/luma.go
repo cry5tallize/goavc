@@ -16,15 +16,25 @@ import (
 // qp、alphaDiv2、betaDiv2 由调用方按宏块/切片给出；索引计算遵循
 // FFmpeg 的 qp + 52 + 2*div2 约定。
 func LumaEdge(data []byte, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2 int) {
-	lumaEdge(data, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2, 8)
+	lumaEdge(data, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2, 4, 8)
 }
 
 // LumaEdgeHigh 接收去掉 QpBdOffset 的语法域 QP；所有步长以采样计。
 func LumaEdgeHigh(data []uint16, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2, bitDepth int) {
-	lumaEdge(data, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2, bitDepth)
+	lumaEdge(data, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2, 4, bitDepth)
 }
 
-func lumaEdge[T sample](data []T, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2, bitDepth int) {
+// LumaEdgeSpan 供MBAFF混合边界按实际帧/场样点分段，仍复用同一滤波算术。
+func LumaEdgeSpan(data []byte, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2, lines int) {
+	lumaEdge(data, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2, lines, 8)
+}
+
+// LumaEdgeHighSpan 的步长和跨度以原生高位深采样计。
+func LumaEdgeHighSpan(data []uint16, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2, lines, bitDepth int) {
+	lumaEdge(data, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2, lines, bitDepth)
+}
+
+func lumaEdge[T sample](data []T, q0, lineStep, acrossStep, bS, qp, alphaDiv2, betaDiv2, lines, bitDepth int) {
 	if bS <= 0 {
 		return
 	}
@@ -37,7 +47,7 @@ func lumaEdge[T sample](data []T, q0, lineStep, acrossStep, bS, qp, alphaDiv2, b
 	alpha := int(alphaTable[indexA]) * scale
 	beta := int(betaTable[indexB]) * scale
 
-	for line := 0; line < 4; line++ {
+	for line := 0; line < lines; line++ {
 		q0i := q0 + line*lineStep
 		p0 := q0i - acrossStep
 		p1 := q0i - 2*acrossStep

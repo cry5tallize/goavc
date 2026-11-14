@@ -272,11 +272,8 @@ func (d *Decoder) activateSPS(s *syntax.SPS) error {
 
 // checkSPSLimits 在解析后立即校验资源上限，避免后续按恶意尺寸分配。
 func (d *Decoder) checkSPSLimits(s *syntax.SPS) error {
-	if !s.FrameMbsOnlyFlag {
-		return fmt.Errorf("decoder: interlaced sequences are not supported in M2: %w", h264.ErrUnsupported)
-	}
-	if s.MbAdaptiveFrameFieldFlag {
-		return fmt.Errorf("decoder: MBAFF is not supported: %w", h264.ErrUnsupported)
+	if !s.FrameMbsOnlyFlag && !s.MbAdaptiveFrameFieldFlag {
+		return fmt.Errorf("decoder: PAFF field pictures: %w", h264.ErrUnsupported)
 	}
 	w, h := uint64(s.PicWidthInMbs())*16, uint64(s.FrameHeightInMbs())*16
 	dw, err := s.DisplayWidth()

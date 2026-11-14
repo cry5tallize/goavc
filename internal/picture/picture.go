@@ -39,6 +39,9 @@ type Plane struct {
 	Height   int
 	Border   int
 	BitDepth int
+
+	// fieldView 表示借用帧中奇偶行；仅原始帧可以更新边界及管理生命周期。
+	fieldView bool
 }
 
 // Index 返回图像坐标 (x, y) 在对应采样缓冲中的下标。
@@ -71,7 +74,11 @@ func (p *Plane) Row(y int) []byte {
 //
 // 先填充左右边界，再整行复制到上下边界，这样四个角自然得到最近角像素，
 // 与 H.264 的“边缘像素重复”外推规则一致（8.4.2.1 的边缘扩展语义）。
+// FieldView 借用的平面不能单独扩展边界；误用会 panic，必须由原图统一维护。
 func (p *Plane) FillBorder() {
+	if p.fieldView {
+		panic("picture: cannot fill borders of a borrowed field view")
+	}
 	if p.BitDepth == 10 {
 		fillBorder(p.Data16, p.Stride, p.Width, p.Height, p.Border)
 	} else {
@@ -167,6 +174,11 @@ func (p *Picture) Validate() error {
 			return fmt.Errorf("picture: plane %d invalid stride %d: %w", i, pl.Stride, h264.ErrInvalidData)
 		}
 		need := pl.Stride * rows
+		if pl.fieldView {
+			// 场视图切片起点位于原帧首行内部，最后一行不拥有完整 Stride。
+			// Index 仅可读取该行的 Width+2*Border 个采样，不能要求行尾填充。
+			need = pl.Stride*(rows-1) + pl.Width + 2*pl.Border
+		}
 		if pl.BitDepth == 10 {
 			if len(pl.Data) != 0 || len(pl.Data16) < need {
 				return fmt.Errorf("picture: plane %d needs %d uint16 samples: %w", i, need, h264.ErrInvalidData)
@@ -182,6 +194,7 @@ func (p *Picture) Validate() error {
 //
 // 每帧重建完成后、作为参考帧使用前调用一次。当前帧内部的帧内预测不需要
 // 边界区，因此可以推迟到整帧解码结束，避免逐宏块填充的重复工作。
+// 借用的 FieldView 不可调用本方法；与 Plane.FillBorder 一样会 panic。
 func (p *Picture) FillBorders() {
 	for i := range p.Planes {
 		p.Planes[i].FillBorder()

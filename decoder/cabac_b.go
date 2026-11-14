@@ -3,6 +3,9 @@ package decoder
 func (c *cabacSyntax) bType(fs *frameState, addr int) int {
 	inc := 0
 	for side, other := range []int{addr - 1, addr - fs.mbW} {
+		if fs.mbaff {
+			other = fs.neighborMB(addr, side == 0)
+		}
 		if side == 0 && addr%fs.mbW == 0 {
 			continue
 		}

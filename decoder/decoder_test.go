@@ -161,7 +161,6 @@ func TestDecoder_UnsupportedTools(t *testing.T) {
 	h := &syntax.SliceHeader{Type: syntax.SliceTypeI}
 	for _, mutate := range []func(*syntax.SPS, *syntax.PPS, *syntax.SliceHeader){
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.FrameMbsOnlyFlag = false },
-		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.MbAdaptiveFrameFieldFlag = true },
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.ChromaFormatIDC = 0 },
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) {
 			s.BitDepthLumaMinus8 = 1

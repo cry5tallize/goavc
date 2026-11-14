@@ -5,7 +5,6 @@ import (
 
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/transform"
 )
 
 // BlockType 区分 CAVLC 残差块的语法上下文。
@@ -92,8 +91,15 @@ func coeffTokenTableIndex(nC int) int {
 // 规范 9.2.1 的邻块规则计算后传入。传入 -1 表示“无邻块可用”，
 // 内部会按 nC=0 处理（与规范一致）。
 func DecodeBlock(r *bitstream.Reader, dst *[16]int32, typ BlockType, nC int) (int, error) {
+	return decodeBlock(r, dst, typ, nC, nil)
+}
+
+func decodeBlock(r *bitstream.Reader, dst *[16]int32, typ BlockType, nC int, scan []int) (int, error) {
 	if r == nil || dst == nil || typ > ChromaDC422 {
 		return 0, fmt.Errorf("cavlc: invalid block: %w", h264.ErrInvalidData)
+	}
+	if scan == nil {
+		scan = defaultBlockScan(typ)
 	}
 	for i := range dst {
 		dst[i] = 0
@@ -120,22 +126,7 @@ func DecodeBlock(r *bitstream.Reader, dst *[16]int32, typ BlockType, nC int) (in
 	totalCoeff := int(symbol) >> 2
 	trailingOnes := int(symbol) & 3
 
-	maxCoeff := 16
-	scan := transform.Zigzag4x4[:]
-	switch typ {
-	case LumaDC:
-		// DC 保持规范光栅布局，由共享 Hadamard 内核消费。
-		scan = transform.LumaDCScan[:]
-	case LumaAC:
-		maxCoeff = 15
-		scan = transform.Zigzag4x4[1:]
-	case ChromaDC:
-		maxCoeff = 4
-		scan = transform.DC2x2Scan[:]
-	case ChromaDC422:
-		maxCoeff = 8
-		scan = transform.DC2x4Scan[:]
-	}
+	maxCoeff := len(scan)
 	if totalCoeff > maxCoeff {
 		return 0, fmt.Errorf("cavlc: total_coeff %d exceeds max %d: %w",
 			totalCoeff, maxCoeff, h264.ErrInvalidData)

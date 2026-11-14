@@ -12,6 +12,9 @@ func (s *sliceEntry) readTransformFlag(fs *frameState, addr int) (bool, error) {
 	}
 	ctx := 0
 	for side, other := range []int{addr - 1, addr - fs.mbW} {
+		if fs.mbaff {
+			other = fs.neighborMB(addr, side == 0)
+		}
 		if side == 0 && addr%fs.mbW == 0 {
 			continue
 		}
@@ -65,9 +68,12 @@ type intra8Neighborhood[T ~uint8 | ~uint16] struct {
 }
 
 func intra8Samples[T ~uint8 | ~uint16](fs *frameState, mbx, mby, bx, by int, data []T) (intra8Neighborhood[T], bool, bool) {
+	if fs.mbaff {
+		return mbaffIntra8Samples(fs, mbx, mby, bx, by, data)
+	}
 	var out intra8Neighborhood[T]
 	pl := &fs.pic.Planes[fs.component]
-	addr := mby*fs.mbW + mbx
+	addr := fs.mbAddress(mbx, mby)
 	x, y := mbx*16+bx*8, mby*16+by*8
 	top := by > 0 || fs.intraNeighbor(addr, addr-fs.mbW)
 	left := bx > 0 || (mbx > 0 && fs.intraNeighbor(addr, addr-1))
@@ -130,7 +136,7 @@ func (fs *frameState) addLuma8Block(mbx, mby, block, qp int, levels *[64]int32, 
 }
 
 func (fs *frameState) reconstructPlane8(mbx, mby, cbp, qp int, res *planeResidual) error {
-	info := &fs.info[mby*fs.mbW+mbx]
+	info := &fs.info[fs.mbAddress(mbx, mby)]
 	for block := 0; block < 4; block++ {
 		bx, by := block%2, block/2
 		x, y := mbx*16+bx*8, mby*16+by*8

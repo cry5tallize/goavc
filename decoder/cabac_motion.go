@@ -18,13 +18,34 @@ func (c *cabacSyntax) readMVDForList(fs *frameState, bx, by, component, list int
 		grid, differences = fs.mv1, fs.mvd1
 	}
 	sum := 0
-	for _, p := range [][2]int{{bx - 1, by}, {bx, by - 1}} {
-		if grid.Available(p[0], p[1]) {
-			m := differences[p[1]*grid.BlockW+p[0]]
+	if fs.mbaff {
+		for _, p := range [][2]int{{bx - 1, by}, {bx, by - 1}} {
+			other, index := fs.locateMotionQuery(fs.activeMB, p[0], p[1])
+			if other < 0 || !grid.Available(index%grid.BlockW, index/grid.BlockW) {
+				continue
+			}
+			m := differences[index]
 			if component == 0 {
 				sum += absInt(int(m.X))
 			} else {
-				sum += absInt(int(m.Y))
+				v := m.Y
+				if fs.fieldAt(fs.activeMB) && !fs.fieldAt(other) {
+					v /= 2
+				} else if !fs.fieldAt(fs.activeMB) && fs.fieldAt(other) {
+					v *= 2
+				}
+				sum += absInt(int(v))
+			}
+		}
+	} else {
+		for _, p := range [][2]int{{bx - 1, by}, {bx, by - 1}} {
+			if grid.Available(p[0], p[1]) {
+				m := differences[p[1]*grid.BlockW+p[0]]
+				if component == 0 {
+					sum += absInt(int(m.X))
+				} else {
+					sum += absInt(int(m.Y))
+				}
 			}
 		}
 	}

@@ -12,34 +12,46 @@ func (fs *frameState) cbfNeighbor(addr, mbx, mby, bx, by, comp int, dc, eight bo
 	for side := 0; side < 2; side++ {
 		x, y := bx, by
 		other := addr
-		if dc {
-			if side == 0 {
-				other--
-				if mbx == 0 {
-					other = -1
-				}
+		if fs.mbaff {
+			if dc {
+				other = fs.neighborMB(addr, side == 0)
 			} else {
-				other -= fs.mbW
+				plane := comp + 1
+				if comp < 0 {
+					plane = 0
+				}
+				other, x, y = fs.blockNeighbor(addr, plane, bx, by, side == 0)
 			}
 		} else {
-			w, h := 4, 4
-			if comp >= 0 {
-				w, h = fs.chromaW/4, fs.chromaH/4
-			}
-			if side == 0 {
-				x--
-				if x < 0 {
-					x = w - 1
+			if dc {
+				if side == 0 {
 					other--
 					if mbx == 0 {
 						other = -1
 					}
+				} else {
+					other -= fs.mbW
 				}
 			} else {
-				y--
-				if y < 0 {
-					y = h - 1
-					other -= fs.mbW
+				w, h := 4, 4
+				if comp >= 0 {
+					w, h = fs.chromaW/4, fs.chromaH/4
+				}
+				if side == 0 {
+					x--
+					if x < 0 {
+						x = w - 1
+						other--
+						if mbx == 0 {
+							other = -1
+						}
+					}
+				} else {
+					y--
+					if y < 0 {
+						y = h - 1
+						other -= fs.mbW
+					}
 				}
 			}
 		}
@@ -88,10 +100,7 @@ func (fs *frameState) cabacBlock(s *sliceEntry, addr, mbx, mby, cat, bx, by, com
 	if c.bin(base+boolToInt(a)+2*boolToInt(b)) == 0 {
 		return 0, c.d.Err()
 	}
-	if fs.sps.ChromaFormatIDC == 3 && !fs.sps.SeparateColourPlaneFlag {
-		return c.d.Residual444(&c.ctx, cat, dst, scan, false)
-	}
-	return c.d.Residual((*[cabac.ContextCount]cabac.Context)(c.ctx[:cabac.ContextCount]), cat, dst, scan)
+	return fs.cabacResidual(c, cat, dst, scan)
 }
 
 func (fs *frameState) decodeCABACPlane(s *sliceEntry, addr, mbx, mby int, i16, lumaAC bool, cbp int, res *planeResidual) error {
@@ -106,7 +115,7 @@ func (fs *frameState) decodeCABACPlane(s *sliceEntry, addr, mbx, mby int, i16, l
 	}
 	grid := fs.planeNZ()
 	if i16 {
-		n, err := fs.cabacBlock(s, addr, mbx, mby, catDC, 0, 0, -1, true, res.lumaDC[:], transform.LumaDCScan[:])
+		n, err := fs.cabacBlock(s, addr, mbx, mby, catDC, 0, 0, -1, true, res.lumaDC[:], fs.scanDC())
 		if err != nil {
 			return err
 		}
@@ -124,9 +133,9 @@ func (fs *frameState) decodeCABACPlane(s *sliceEntry, addr, mbx, mby int, i16, l
 			var count int
 			var err error
 			if full {
-				count, err = fs.cabacBlock(s, addr, mbx, mby, cat8, block%2*2, block/2*2, -1, false, res.luma8[block][:], transform.Zigzag8x8[:])
+				count, err = fs.cabacBlock(s, addr, mbx, mby, cat8, block%2*2, block/2*2, -1, false, res.luma8[block][:], fs.scan8())
 			} else {
-				count, err = c.d.Residual((*[cabac.ContextCount]cabac.Context)(c.ctx[:cabac.ContextCount]), cat8, res.luma8[block][:], transform.Zigzag8x8[:])
+				count, err = fs.cabacResidual(c, cat8, res.luma8[block][:], fs.scan8())
 			}
 			if err != nil {
 				return err
@@ -141,7 +150,7 @@ func (fs *frameState) decodeCABACPlane(s *sliceEntry, addr, mbx, mby int, i16, l
 			if i16 && !lumaAC || !i16 && cbp&(1<<(n/4)) == 0 {
 				continue
 			}
-			cat, scan := cat4, transform.Zigzag4x4[:]
+			cat, scan := cat4, fs.scan4()
 			if i16 {
 				cat, scan = catAC, scan[1:]
 			}
@@ -173,7 +182,7 @@ func (fs *frameState) decodeCABACChroma(s *sliceEntry, addr, mbx, mby, cbp int, 
 	if chroma == 2 {
 		for comp := 0; comp < 2; comp++ {
 			for b := 0; b < fs.chromaBlocks; b++ {
-				count, err := fs.cabacBlock(s, addr, mbx, mby, cabac.ChromaAC, b%2, b/2, comp, false, res.chroma[comp][b][:], transform.Zigzag4x4[1:])
+				count, err := fs.cabacBlock(s, addr, mbx, mby, cabac.ChromaAC, b%2, b/2, comp, false, res.chroma[comp][b][:], fs.scan4()[1:])
 				if err != nil {
 					return err
 				}

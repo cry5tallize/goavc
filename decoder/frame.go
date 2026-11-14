@@ -15,14 +15,16 @@ import (
 
 // sliceEntry 是解析后的一个 slice：header 与定位好的 slice data reader。
 type sliceEntry struct {
-	unit  nal.Unit
-	hdr   *syntax.SliceHeader
-	sps   *syntax.SPS
-	pps   *syntax.PPS
-	rbsp  []byte
-	data  *bitstream.Reader
-	cabac *cabacSyntax
-	refs  [2][]*dpb.Reference
+	unit      nal.Unit
+	hdr       *syntax.SliceHeader
+	sps       *syntax.SPS
+	pps       *syntax.PPS
+	rbsp      []byte
+	data      *bitstream.Reader
+	cabac     *cabacSyntax
+	refs      [2][]*dpb.Reference
+	frameRefs [2][]*dpb.Reference
+	fieldRefs [2][2][]*dpb.Reference
 }
 
 // mbInfo 是去块滤波与后续 MB 预测需要的宏块元数据。
@@ -61,6 +63,14 @@ type frameState struct {
 	chromaBlocks     int
 	component        int               // 444共享全尺寸内核当前处理的平面；其余路径保持0。
 	fullResidual     *[2]planeResidual // 仅共同编码444分配，每帧复用，420/422不增加宏块清零量。
+	framePic         *picture.Picture
+	fieldPics        *[2]picture.Picture
+	mbaff, field     bool
+	parity           int
+	activeMB         int
+	fieldFlags       []bool
+	framePOC         int32
+	fieldPOC         [2]int32
 	decoded          []bool
 	info             []mbInfo
 	lumaNZ           []uint8
@@ -104,6 +114,7 @@ func newFrameStateForPicture(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFram
 	subW, subH := format.ChromaSubsampling()
 	chromaW, chromaH := format.PlaneDimensions(1, 16, 16)
 	chromaBlocks := chromaW * chromaH / 16
+	ownedPicture := pic == nil
 	if pic == nil {
 		pic, err = d.pool.Get(mbW, mbH, format)
 		if err != nil {
@@ -112,20 +123,35 @@ func newFrameStateForPicture(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFram
 	}
 	total := mbW * mbH
 	fs := &frameState{
-		scaling: scaling,
-		d:       d,
-		pic:     pic,
-		sps:     sps,
-		pps:     pps,
-		mbW:     mbW,
-		mbH:     mbH,
-		total:   total,
-		subW:    subW, subH: subH,
+		scaling:  scaling,
+		d:        d,
+		pic:      pic,
+		framePic: pic,
+		mbaff:    sps.MbAdaptiveFrameFieldFlag,
+		sps:      sps,
+		pps:      pps,
+		mbW:      mbW,
+		mbH:      mbH,
+		total:    total,
+		subW:     subW, subH: subH,
 		chromaW: chromaW, chromaH: chromaH, chromaBlocks: chromaBlocks,
 		decoded: make([]bool, total),
 		info:    make([]mbInfo, total),
 		lumaNZ:  make([]uint8, total*16),
 		mv:      motion.NewGrid(mbW, mbH),
+	}
+	if fs.mbaff {
+		fs.fieldPics = new([2]picture.Picture)
+		fs.fieldFlags = make([]bool, total)
+		for i := range 2 {
+			fs.fieldPics[i], err = picture.FieldView(pic, i != 0)
+			if err != nil {
+				if ownedPicture {
+					pic.Release()
+				}
+				return nil, err
+			}
+		}
 	}
 	if sps.ChromaFormatIDC == 3 && !sps.SeparateColourPlaneFlag {
 		fs.fullResidual = new([2]planeResidual)
@@ -159,8 +185,9 @@ func newFrameStateForPicture(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFram
 
 // release 把图像归还缓冲池；仅用于解码失败路径。
 func (fs *frameState) release() {
-	if fs != nil && fs.pic != nil {
-		fs.pic.Release()
+	if fs != nil && fs.framePic != nil {
+		fs.framePic.Release()
+		fs.framePic = nil
 		fs.pic = nil
 	}
 }
@@ -269,7 +296,7 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 		return fmt.Errorf("decoder: non-IDR picture without reference: %w", h264.ErrInvalidData)
 	}
 
-	top, _, poc, err := d.poc.ComputeFrame(sps, first.hdr, ref)
+	top, bottom, poc, err := d.poc.ComputeFrame(sps, first.hdr, ref)
 	if err != nil {
 		return err
 	}
@@ -284,7 +311,7 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 	if err != nil {
 		return err
 	}
-	fs.poc = poc
+	fs.poc, fs.framePOC, fs.fieldPOC = poc, poc, [2]int32{top, bottom}
 	ok := false
 	defer func() {
 		if !ok {
@@ -301,6 +328,7 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 				return err
 			}
 			states[comp].component, states[comp].poc = comp, poc
+			states[comp].framePOC, states[comp].fieldPOC = poc, [2]int32{top, bottom}
 		}
 	}
 
@@ -332,11 +360,17 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 				}
 			}
 		}
-		if s.hdr.FirstMBInSlice >= uint32(fs.total) {
+		s.frameRefs = s.refs
+		factor := 1
+		if fs.mbaff {
+			factor = 2
+		}
+		if uint64(s.hdr.FirstMBInSlice)*uint64(factor) >= uint64(fs.total) {
 			return fmt.Errorf("decoder: first_mb_in_slice %d exceeds picture: %w",
 				s.hdr.FirstMBInSlice, h264.ErrInvalidData)
 		}
-		if int(s.hdr.FirstMBInSlice) < lastEnd[plane] {
+		firstMB := int(s.hdr.FirstMBInSlice) * factor
+		if firstMB < lastEnd[plane] {
 			return fmt.Errorf("decoder: overlapping slices at first_mb %d: %w",
 				s.hdr.FirstMBInSlice, h264.ErrInvalidData)
 		}
@@ -347,20 +381,25 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 		end := fs.total
 		for next := si + 1; next < len(slices); next++ {
 			if slices[next].hdr.ColourPlaneID == s.hdr.ColourPlaneID {
-				end = int(slices[next].hdr.FirstMBInSlice)
+				limit := uint64(slices[next].hdr.FirstMBInSlice) * uint64(factor)
+				if limit > uint64(fs.total) {
+					return fmt.Errorf("decoder: slice end exceeds picture: %w", h264.ErrInvalidData)
+				}
+				end = int(limit)
 				break
 			}
 		}
-		if end <= int(s.hdr.FirstMBInSlice) || end > fs.total {
+		if end <= firstMB || end > fs.total {
 			return fmt.Errorf("decoder: invalid slice interval: %w", h264.ErrInvalidData)
 		}
-		if err := decodeSlice(fs, s, si, int(s.hdr.FirstMBInSlice), end); err != nil {
+		if err := decodeSlice(fs, s, si, firstMB, end); err != nil {
 			return err
 		}
 		lastEnd[plane] = end
 	}
 	for comp := 0; comp < planeCount; comp++ {
 		state := states[comp]
+		state.restoreFrame()
 		for i, okMB := range state.decoded {
 			if !okMB {
 				return fmt.Errorf("decoder: plane %d macroblock %d was not covered: %w", comp, i, h264.ErrInvalidData)
@@ -385,18 +424,23 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 		r.Motion[0] = fs.mv
 		r.Motion[1] = fs.mv1
 		r.BlockReferences = fs.referenceIDs
+		r.FieldPOC, r.MBField = [2]int32{top, bottom}, fs.fieldFlags
 		for comp := 1; comp < planeCount; comp++ {
 			r.ChromaMotion[comp-1] = [2]*motion.Grid{states[comp].mv, states[comp].mv1}
 			r.ChromaBlockReferences[comp-1] = states[comp].referenceIDs
+			r.ChromaMBField[comp-1] = states[comp].fieldFlags
 		}
 		if err := d.dpb.Store(r, idr, first.hdr.LongTermReferenceFlag, first.hdr.AdaptiveRefPicMarking, first.hdr.MemoryManagement); err != nil {
 			frame.Release()
 			return err
 		}
 		fs.pic = nil
+		fs.framePic = nil
 		for _, m := range first.hdr.MemoryManagement {
 			if m.Operation == 5 {
 				d.poc.AfterMMCO5(top - poc)
+				r.FieldPOC[0] -= poc
+				r.FieldPOC[1] -= poc
 				r.POC = 0
 				poc = 0
 				d.outputBoundary(false)
@@ -416,8 +460,8 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 
 // checkSupported 在进入宏块解码前拒绝 M3 范围外的工具。
 func (d *Decoder) checkSupported(sps *syntax.SPS, pps *syntax.PPS, hdr *syntax.SliceHeader) error {
-	if !sps.FrameMbsOnlyFlag || sps.MbAdaptiveFrameFieldFlag || hdr.FieldPicFlag {
-		return fmt.Errorf("decoder: field/MBAFF coding: %w", h264.ErrUnsupported)
+	if hdr.FieldPicFlag || !sps.FrameMbsOnlyFlag && !sps.MbAdaptiveFrameFieldFlag {
+		return fmt.Errorf("decoder: PAFF field pictures: %w", h264.ErrUnsupported)
 	}
 	if pps.NumSliceGroupsMinus1 != 0 {
 		return fmt.Errorf("decoder: FMO slice groups: %w", h264.ErrUnsupported)
@@ -445,38 +489,44 @@ func decodeSlice(fs *frameState, s *sliceEntry, sliceID int, first, end int) err
 	if s.pps.EntropyCodingModeFlag {
 		return decodeCABACSlice(fs, s, sliceID, first, end)
 	}
-	fs.mv.BeginSlice(first)
-	if fs.mv1 != nil {
-		fs.mv1.BeginSlice(first)
-	}
-	qscale := s.hdr.SliceQP
-	for addr := first; addr < end; addr++ {
-		if fs.decoded[addr] {
-			return fmt.Errorf("decoder: macroblock %d decoded twice: %w", addr, h264.ErrInvalidData)
+	if fs.mbaff {
+		if err := decodeMBAFFCAVLC(fs, s, sliceID, first, end); err != nil {
+			return err
 		}
-		if s.hdr.Type == syntax.SliceTypeP || s.hdr.Type == syntax.SliceTypeB {
-			run, err := s.data.ReadUE()
-			if err != nil {
-				return fmt.Errorf("decoder: mb_skip_run at mb %d: %w", addr, err)
+	} else {
+		fs.mv.BeginSlice(first)
+		if fs.mv1 != nil {
+			fs.mv1.BeginSlice(first)
+		}
+		qscale := s.hdr.SliceQP
+		for addr := first; addr < end; addr++ {
+			if fs.decoded[addr] {
+				return fmt.Errorf("decoder: macroblock %d decoded twice: %w", addr, h264.ErrInvalidData)
 			}
-			if run > uint32(end-addr) {
-				return fmt.Errorf("decoder: mb_skip_run %d overruns slice: %w", run, h264.ErrInvalidData)
-			}
-			for i := uint32(0); i < run; i++ {
-				if err := decodeSkipMacroblock(fs, addr+int(i), s, qscale, sliceID); err != nil {
-					return err
+			if s.hdr.Type == syntax.SliceTypeP || s.hdr.Type == syntax.SliceTypeB {
+				run, err := s.data.ReadUE()
+				if err != nil {
+					return fmt.Errorf("decoder: mb_skip_run at mb %d: %w", addr, err)
 				}
-				fs.decoded[addr+int(i)] = true
+				if run > uint32(end-addr) {
+					return fmt.Errorf("decoder: mb_skip_run %d overruns slice: %w", run, h264.ErrInvalidData)
+				}
+				for i := uint32(0); i < run; i++ {
+					if err := decodeSkipMacroblock(fs, addr+int(i), s, qscale, sliceID); err != nil {
+						return err
+					}
+					fs.decoded[addr+int(i)] = true
+				}
+				addr += int(run)
+				if addr >= end {
+					break
+				}
 			}
-			addr += int(run)
-			if addr >= end {
-				break
+			if err := decodeMacroblock(fs, addr, s, sliceID, &qscale); err != nil {
+				return fmt.Errorf("decoder: mb %d: %w", addr, err)
 			}
+			fs.decoded[addr] = true
 		}
-		if err := decodeMacroblock(fs, addr, s, sliceID, &qscale); err != nil {
-			return fmt.Errorf("decoder: mb %d: %w", addr, err)
-		}
-		fs.decoded[addr] = true
 	}
 	// CAVLC slice_data 后必须恰好是 rbsp_trailing_bits。
 	remaining := s.data.BitsRemaining()

@@ -19,7 +19,7 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 	if len(s.refs[0]) == 0 {
 		return fmt.Errorf("decoder: P macroblock without reference list: %w", h264.ErrInvalidData)
 	}
-	baseX, baseY := mbx*4, mby*4
+	baseX, baseY := mbx*4, fs.motionY(mby)
 	var groups []pGroup
 	switch pType {
 	case 0:
@@ -87,11 +87,32 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 	for gi, g := range groups {
 		for _, p := range g.parts {
 			x, y := baseX+p.x, baseY+p.y
-			pred := motion.Predict(fs.mv, x, y, p.w, g.ref)
-			if pType == 1 {
-				pred = motion.Predict16x8(fs.mv, x, y, gi == 1, g.ref)
-			} else if pType == 2 {
-				pred = motion.Predict8x16(fs.mv, x, y, gi == 1, g.ref)
+			var pred motion.MV
+			if !fs.mbaff {
+				switch pType {
+				case 1:
+					pred = motion.Predict16x8(fs.mv, x, y, gi == 1, g.ref)
+				case 2:
+					pred = motion.Predict8x16(fs.mv, x, y, gi == 1, g.ref)
+				default:
+					pred = motion.Predict(fs.mv, x, y, p.w, g.ref)
+				}
+			}
+			if fs.mbaff {
+				partition := motion.FieldMedian
+				if pType == 1 {
+					partition = motion.Field16x8Top
+					if gi == 1 {
+						partition = motion.Field16x8Bottom
+					}
+				}
+				if pType == 2 {
+					partition = motion.Field8x16Left
+					if gi == 1 {
+						partition = motion.Field8x16Right
+					}
+				}
+				pred = fs.fieldPrediction(fs.mv, addr, x, y, p.w, g.ref, partition, false)
 			}
 			var diff motion.MV
 			var err error
@@ -126,7 +147,7 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 			}
 			r := s.refs[0][g.ref]
 			fs.setReferenceIdentity(0, x, y, p.w, p.h, r.Identity)
-			fs.mcPartition(r.Picture, mbx, mby, p.x*4, p.y*4, p.w*4, p.h*4, mv)
+			fs.mcPartition(r, mbx, mby, p.x*4, p.y*4, p.w*4, p.h*4, mv)
 			s.applyPWeights(fs, mbx, mby, p.x*4, p.y*4, p.w*4, p.h*4, int(g.ref))
 		}
 	}

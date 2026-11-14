@@ -50,7 +50,7 @@ func blockRaster(n int) int {
 }
 
 func decodeSkipMacroblock(fs *frameState, addr int, s *sliceEntry, qp int, sliceID int) error {
-	mbx, mby := addr%fs.mbW, addr/fs.mbW
+	mbx, mby := fs.mbCoordinates(addr)
 	if s.hdr.Type == syntax.SliceTypeB {
 		info := &fs.info[addr]
 		*info = mbInfo{skip: true, direct: true, qp: qp, sliceID: sliceID, deblockIDC: uint8(s.hdr.DisableDeblockingFilterIDC), alphaDiv2: int8(s.hdr.SliceAlphaC0OffsetDiv2), betaDiv2: int8(s.hdr.SliceBetaOffsetDiv2), chromaMode: -1}
@@ -62,13 +62,18 @@ func decodeSkipMacroblock(fs *frameState, addr int, s *sliceEntry, qp int, slice
 	if len(s.refs[0]) == 0 {
 		return fmt.Errorf("decoder: P_Skip without reference: %w", h264.ErrInvalidData)
 	}
-	ref := s.refs[0][0].Picture
-	mv := motion.PredictSkip(fs.mv, mbx*4, mby*4, 0)
+	ref := s.refs[0][0]
+	var mv motion.MV
+	if fs.mbaff {
+		mv = fs.fieldPrediction(fs.mv, addr, mbx*4, fs.motionY(mby), 4, 0, motion.FieldMedian, true)
+	} else {
+		mv = motion.PredictSkip(fs.mv, mbx*4, fs.motionY(mby), 0)
+	}
 	if err := mv.Validate(); err != nil {
 		return err
 	}
-	fs.mv.SetRect(mbx*4, mby*4, 4, 4, mv, 0)
-	fs.setReferenceIdentity(0, mbx*4, mby*4, 4, 4, s.refs[0][0].Identity)
+	fs.mv.SetRect(mbx*4, fs.motionY(mby), 4, 4, mv, 0)
+	fs.setReferenceIdentity(0, mbx*4, fs.motionY(mby), 4, 4, s.refs[0][0].Identity)
 	fs.mcPartition(ref, mbx, mby, 0, 0, 16, 16, mv)
 	s.applyPWeights(fs, mbx, mby, 0, 0, 16, 16, 0)
 	info := &fs.info[addr]
@@ -82,7 +87,7 @@ func decodeSkipMacroblock(fs *frameState, addr int, s *sliceEntry, qp int, slice
 }
 
 func decodeMacroblock(fs *frameState, addr int, s *sliceEntry, sliceID int, qscale *int) error {
-	mbx, mby := addr%fs.mbW, addr/fs.mbW
+	mbx, mby := fs.mbCoordinates(addr)
 	info := &fs.info[addr]
 	info.sliceID = sliceID
 	info.qp = *qscale
@@ -116,9 +121,9 @@ func decodeMacroblock(fs *frameState, addr int, s *sliceEntry, sliceID int, qsca
 func decodeIntraMacroblock(fs *frameState, addr, mbx, mby, mbType int, s *sliceEntry, qscale *int) error {
 	info := &fs.info[addr]
 	info.intra = true
-	fs.mv.SetRect(mbx*4, mby*4, 4, 4, motion.MV{}, -1)
+	fs.mv.SetRect(mbx*4, fs.motionY(mby), 4, 4, motion.MV{}, -1)
 	if fs.mv1 != nil {
-		fs.mv1.SetRect(mbx*4, mby*4, 4, 4, motion.MV{}, -1)
+		fs.mv1.SetRect(mbx*4, fs.motionY(mby), 4, 4, motion.MV{}, -1)
 	}
 
 	if mbType == 25 {
@@ -285,7 +290,7 @@ func decodePCMMacroblock(fs *frameState, addr, mbx, mby int, s *sliceEntry) erro
 		fs.chromaNZ[0][cb+i] = 16
 		fs.chromaNZ[1][cb+i] = 16
 	}
-	fs.mv.SetRect(mbx*4, mby*4, 4, 4, motion.MV{}, -1)
+	fs.mv.SetRect(mbx*4, fs.motionY(mby), 4, 4, motion.MV{}, -1)
 	if s.cabac != nil {
 		for i := range fs.dcCoded {
 			fs.dcCoded[i][addr] = true

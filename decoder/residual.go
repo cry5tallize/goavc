@@ -2,6 +2,8 @@ package decoder
 
 import (
 	"fmt"
+
+	"github.com/goavc/h264/internal/dpb"
 	"github.com/goavc/h264/internal/entropy/cavlc"
 	"github.com/goavc/h264/internal/motion"
 	"github.com/goavc/h264/internal/picture"
@@ -16,7 +18,7 @@ func (fs *frameState) decodeCAVLCLuma(s *sliceEntry, addr, mbx, mby int, i16, lu
 	if i16 {
 		bx, by := 0, 0
 		nC := fs.lumaNC(mbx, mby, bx, by)
-		if _, err := cavlc.DecodeBlock(r, &res.lumaDC, cavlc.LumaDC, nC); err != nil {
+		if _, err := fs.decodeBlock(r, &res.lumaDC, cavlc.LumaDC, nC); err != nil {
 			return fmt.Errorf("luma dc: %w", err)
 		}
 		if lumaAC {
@@ -24,7 +26,7 @@ func (fs *frameState) decodeCAVLCLuma(s *sliceEntry, addr, mbx, mby int, i16, lu
 				for i4 := 0; i4 < 4; i4++ {
 					raster := blockRaster(i4 + 4*i8)
 					nC := fs.lumaNC(mbx, mby, raster%4, raster/4)
-					n, err := cavlc.DecodeBlock(r, &res.luma[raster], cavlc.LumaAC, nC)
+					n, err := fs.decodeBlock(r, &res.luma[raster], cavlc.LumaAC, nC)
 					if err != nil {
 						return fmt.Errorf("luma ac block %d: %w", raster, err)
 					}
@@ -45,14 +47,14 @@ func (fs *frameState) decodeCAVLCLuma(s *sliceEntry, addr, mbx, mby int, i16, lu
 				if fs.info[addr].transform8 {
 					target = &stream
 				}
-				n, err := cavlc.DecodeBlock(r, target, cavlc.Luma4x4, nC)
+				n, err := fs.decodeBlock(r, target, cavlc.Luma4x4, nC)
 				if err != nil {
 					return fmt.Errorf("luma block %d: %w", raster, err)
 				}
 				grid[addr*16+raster] = uint8(n)
 				if fs.info[addr].transform8 {
 					for k := 0; k < 16; k++ {
-						res.luma8[i8][transform.Zigzag8x8[4*k+i4]] = stream[transform.Zigzag4x4[k]]
+						res.luma8[i8][fs.scan8()[4*k+i4]] = stream[fs.scan4()[k]]
 					}
 				}
 			}
@@ -86,7 +88,7 @@ func (fs *frameState) decodeCAVLCChroma(s *sliceEntry, addr, mbx, mby, cbp int, 
 	for comp := 0; comp < 2; comp++ {
 		for b := 0; b < fs.chromaBlocks; b++ {
 			nC := fs.chromaNC(comp, mbx, mby, b%2, b/2)
-			n, err := cavlc.DecodeBlock(r, &res.chroma[comp][b], cavlc.LumaAC, nC)
+			n, err := fs.decodeBlock(r, &res.chroma[comp][b], cavlc.LumaAC, nC)
 			if err != nil {
 				return fmt.Errorf("chroma ac comp %d block %d: %w", comp, b, err)
 			}
@@ -99,7 +101,7 @@ func (fs *frameState) decodeCAVLCChroma(s *sliceEntry, addr, mbx, mby, cbp int, 
 // reconstructIntra4x4 按规范块序预测并重建，右上样本不得提前可用。
 func (fs *frameState) reconstructPlane4(mbx, mby, cbp, qp int, res *planeResidual) error {
 	plane := &fs.pic.Planes[fs.component]
-	info := &fs.info[mby*fs.mbW+mbx]
+	info := &fs.info[fs.mbAddress(mbx, mby)]
 	for n := 0; n < 16; n++ {
 		raster := blockRaster(n)
 		bx, by := raster%4, raster/4
@@ -166,7 +168,7 @@ func (fs *frameState) addPlaneResidual(mbx, mby, cbp int, i16 bool, qp int, res 
 	if i16 {
 		return nil
 	}
-	if fs.info[mby*fs.mbW+mbx].transform8 {
+	if fs.info[fs.mbAddress(mbx, mby)].transform8 {
 		for block := 0; block < 4; block++ {
 			if cbp&(1<<block) != 0 {
 				if err := fs.addLuma8Block(mbx, mby, block, qp, &res.luma8[block], false); err != nil {
@@ -204,7 +206,7 @@ func (fs *frameState) addChromaResidual(mbx, mby, chromaCBP, qp int, res *residu
 		if err != nil {
 			return err
 		}
-		matrix := fs.matrix4(fs.info[mby*fs.mbW+mbx].intra, comp+1)
+		matrix := fs.matrix4(fs.info[fs.mbAddress(mbx, mby)].intra, comp+1)
 		var dc [8]int32
 		if fs.chromaBlocks == 8 {
 			if err := transform.DequantChromaDC422WithScaling(&dc, &res.chromaDC[comp], qpc, dcScale(matrix)); err != nil {
@@ -261,7 +263,8 @@ func addResidual4x4(pl *picture.Plane, x, y int, levels *[16]int32, qp int, alre
 }
 
 // mcPartition 做一次亮度+色度运动补偿并写入当前图像。
-func (fs *frameState) mcPartition(ref *picture.Picture, mbx, mby, xOff, yOff, w, h int, mv motion.MV) {
+func (fs *frameState) mcPartition(r *dpb.Reference, mbx, mby, xOff, yOff, w, h int, mv motion.MV) {
+	ref := r.Picture
 	lx, ly := mbx*16+xOff, mby*16+yOff
 	comp := 0
 	if fs.sps.SeparateColourPlaneFlag {
@@ -277,6 +280,7 @@ func (fs *frameState) mcPartition(ref *picture.Picture, mbx, mby, xOff, yOff, w,
 		return
 	}
 	cx, cy := mbx*fs.chromaW+xOff/fs.subW, mby*fs.chromaH+yOff/fs.subH
+	chromaY := int(mv.Y) + fs.chromaFieldOffset(r)
 	for comp := 0; comp < 2; comp++ {
 		if fs.sps.ChromaFormatIDC == 3 {
 			cpl := &fs.pic.Planes[comp+1]
@@ -289,9 +293,9 @@ func (fs *frameState) mcPartition(ref *picture.Picture, mbx, mby, xOff, yOff, w,
 		}
 		cpl := &fs.pic.Planes[comp+1]
 		if cpl.BitDepth == 10 {
-			prediction.MCBlockChromaFormatHigh(cpl.Data16[cpl.Index(cx, cy):], cpl.Stride, &ref.Planes[comp+1], cx, cy, w/fs.subW, h/fs.subH, int(mv.X), int(mv.Y), fs.subW, fs.subH)
+			prediction.MCBlockChromaFormatHigh(cpl.Data16[cpl.Index(cx, cy):], cpl.Stride, &ref.Planes[comp+1], cx, cy, w/fs.subW, h/fs.subH, int(mv.X), chromaY, fs.subW, fs.subH)
 		} else {
-			prediction.MCBlockChromaFormat(cpl.Data[cpl.Index(cx, cy):], cpl.Stride, &ref.Planes[comp+1], cx, cy, w/fs.subW, h/fs.subH, int(mv.X), int(mv.Y), fs.subW, fs.subH)
+			prediction.MCBlockChromaFormat(cpl.Data[cpl.Index(cx, cy):], cpl.Stride, &ref.Planes[comp+1], cx, cy, w/fs.subW, h/fs.subH, int(mv.X), chromaY, fs.subW, fs.subH)
 		}
 	}
 }

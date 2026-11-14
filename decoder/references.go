@@ -21,6 +21,22 @@ func (fs *frameState) refIndexNeighbor(addr, bx, by int, which ...int) int {
 	if len(which) > 0 && which[0] == 1 {
 		grid = fs.mv1
 	}
+	if fs.mbaff {
+		other, index := fs.locateMotionQuery(addr, bx, by)
+		if other < 0 || fs.directBlocks != nil && fs.directBlocks[index] {
+			return -1
+		}
+		ref := int(grid.Ref[index])
+		if ref < 0 {
+			return -1
+		}
+		if fs.fieldAt(addr) && !fs.fieldAt(other) {
+			ref *= 2
+		} else if !fs.fieldAt(addr) && fs.fieldAt(other) {
+			ref /= 2
+		}
+		return ref
+	}
 	if bx < 0 || by < 0 || bx >= fs.mv.BlockW || by >= fs.mv.BlockH {
 		return -1
 	}
@@ -61,7 +77,7 @@ func (s *sliceEntry) readReferenceIndex(fs *frameState, addr, bx, by int, which 
 	} else {
 		neighbor := func(x, y int) int {
 			v := fs.refIndexNeighbor(addr, x, y, list)
-			if fs.directBlocks != nil && x >= 0 && y >= 0 && x < fs.mv.BlockW && y < fs.mv.BlockH && fs.directBlocks[y*fs.mv.BlockW+x] {
+			if !fs.mbaff && fs.directBlocks != nil && x >= 0 && y >= 0 && x < fs.mv.BlockW && y < fs.mv.BlockH && fs.directBlocks[y*fs.mv.BlockW+x] {
 				return -1
 			}
 			return v

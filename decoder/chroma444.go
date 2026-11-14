@@ -132,6 +132,9 @@ func (fs *frameState) deblock() error {
 	if fs.sps == nil {
 		return fs.deblockPlane()
 	}
+	if fs.mbaff {
+		return fs.deblockMBAFF()
+	}
 	first := fs.component
 	defer func() { fs.component = first }()
 	for i := 0; i < fs.fullPlaneCount(); i++ {

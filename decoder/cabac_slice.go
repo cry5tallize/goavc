@@ -36,6 +36,9 @@ func decodeCABACSlice(fs *frameState, s *sliceEntry, sliceID, first, end int) er
 		}
 		copy(s.cabac.ctx[:], ctx[:])
 	}
+	if fs.mbaff {
+		return decodeMBAFFCABAC(fs, s, sliceID, first, end)
+	}
 	fs.mv.BeginSlice(first)
 	if fs.mv1 != nil {
 		fs.mv1.BeginSlice(first)

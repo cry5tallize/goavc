@@ -17,6 +17,9 @@ type Identity struct {
 	POC         int32
 	LongTerm    bool
 	LongTermIdx uint32
+	// Frame指向所属帧的轻量身份，不保留图像；场参考用于帧场混合匹配。
+	Frame       *Identity
+	BottomField bool
 }
 
 type Reference struct {
@@ -27,6 +30,11 @@ type Reference struct {
 	// 独立色平面的Cb/Cr运动及块引用；共同编码444只使用上面的共享网格。
 	ChromaMotion          [2][2]*motion.Grid
 	ChromaBlockReferences [2][2][]*Identity
+	FieldPOC              [2]int32
+	MBField               []bool     // MBAFF的光栅MB结构，借用重建后的独占元数据。
+	ChromaMBField         [2][]bool  // 独立色平面允许采用各自的帧/场宏块结构。
+	FrameReference        *Reference // 派生场视图的原帧；不用于共位块身份链。
+	fields                [2]*Reference
 }
 
 func (d *DPB) SetCapacity(n int) error {

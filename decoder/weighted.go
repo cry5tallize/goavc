@@ -10,6 +10,9 @@ func (s *sliceEntry) applyPWeights(fs *frameState, mbx, mby, x, y, w, h, ref int
 		return
 	}
 	t := s.hdr.PredictionWeights
+	if fs.field {
+		ref /= 2
+	}
 	weight := t.Lists[0][ref]
 	first, end := 0, 3
 	if fs.sps.SeparateColourPlaneFlag {
@@ -78,18 +81,22 @@ func mcBPartitionSamples[T ~uint8 | ~uint16](fs *frameState, s *sliceEntry, mbx,
 			}
 			r := s.refs[l][refs[l]]
 			mv := mvs[l]
+			chromaY := int(mv.Y)
+			if c > 0 {
+				chromaY += fs.chromaFieldOffset(r)
+			}
 			switch dst := any(samples[l][:]).(type) {
 			case []byte:
 				if c == 0 || fs.sps.ChromaFormatIDC == 3 {
 					prediction.MCBlockLuma(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
 				} else {
-					prediction.MCBlockChromaFormat(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y), fs.subW, fs.subH)
+					prediction.MCBlockChromaFormat(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), chromaY, fs.subW, fs.subH)
 				}
 			case []uint16:
 				if c == 0 || fs.sps.ChromaFormatIDC == 3 {
 					prediction.MCBlockLumaHigh(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
 				} else {
-					prediction.MCBlockChromaFormatHigh(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y), fs.subW, fs.subH)
+					prediction.MCBlockChromaFormatHigh(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), chromaY, fs.subW, fs.subH)
 				}
 			}
 		}
@@ -105,7 +112,11 @@ func mcBPartitionSamples[T ~uint8 | ~uint16](fs *frameState, s *sliceEntry, mbx,
 			}
 			for l := 0; l < 2; l++ {
 				if refs[l] >= 0 {
-					v := t.Lists[l][refs[l]]
+					index := int(refs[l])
+					if fs.field {
+						index /= 2
+					}
+					v := t.Lists[l][index]
 					wi := c
 					if fs.sps.SeparateColourPlaneFlag {
 						wi = 0

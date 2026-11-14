@@ -75,11 +75,12 @@ decoder              encoder
 ## 4. 尺寸与裁剪
 
 - `Frame.Width/Height` 是**显示尺寸**，可以是奇数（例如 641×361）。
-- 内部 `picture` 缓冲使用**编码尺寸**：宽高按 16 对齐，并用边缘复制填充。
-- 解码输出前按 SPS 的裁剪窗口裁到显示尺寸；编码输入时按 16 对齐补齐。
+- 内部`picture`缓冲使用编码尺寸：逐行宽高按16对齐，MBAFF高度按32对齐，显示裁剪仍由SPS决定。
+- 解码输出按SPS裁剪；MBAFF完整帧元数据保持光栅MB索引，语法按宏块对扫描，像素访问按当前MB帧/场结构映射。
 - 因此 `PixelFormat.PlaneDimensions` 一律使用向上取整，不假设偶数。
 - 内部`picture.Plane`的Stride/Border/Index均以采样计数：8-bit使用`[]byte`，10-bit使用`[]uint16`，两种缓冲互斥；公共`Frame.Plane.Stride`仍以字节计数。内部uint16是本机数值，公共10-bit格式的LE打包由I/O边界负责，禁止把两者直接复用为同一字节视图。
 - `picture.Pool`按编码尺寸和PixelFormat共同分桶，不得跨位深复用像素存储；共享边缘复制与残差裁剪按采样类型实例化，不保留两套算法。
+- `picture.FieldView`只借用原帧的奇偶行，Stride加倍、高度减半，不分配像素、不归池，生命周期不得超过原帧。禁止单独扩边；共享MC按场Width/Height钳位，不得读到另一场或把两场边缘混用。
 
 这样上层永远只看到真实画面，不需要自己处理 Crop；内部算法又始终面对对齐尺寸，
 可以安全使用 SIMD 的越界读。

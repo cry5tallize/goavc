@@ -23,7 +23,7 @@ func decodeBMacroblock(fs *frameState, addr, mbx, mby, typ int, s *sliceEntry, q
 	if fs.mv1 == nil {
 		return fmt.Errorf("decoder: missing B motion grid: %w", h264.ErrInvalidData)
 	}
-	baseX, baseY := mbx*4, mby*4
+	baseX, baseY := mbx*4, fs.motionY(mby)
 	var groups []bGroup
 	switch {
 	case typ == 0:
@@ -160,13 +160,34 @@ func decodeBMacroblock(fs *frameState, addr, mbx, mby, typ int, s *sliceEntry, q
 				x, y := baseX+p.x, baseY+p.y
 				r := p.refs[l]
 				if !g.direct && r >= 0 {
-					pred := motion.Predict(grid, x, y, p.w, r)
-					if typ >= 4 && typ <= 21 {
-						if typ%2 == 0 {
-							pred = motion.Predict16x8(grid, x, y, gi == 1, r)
+					var pred motion.MV
+					if !fs.mbaff {
+						if typ >= 4 && typ <= 21 {
+							if typ%2 == 0 {
+								pred = motion.Predict16x8(grid, x, y, gi == 1, r)
+							} else {
+								pred = motion.Predict8x16(grid, x, y, gi == 1, r)
+							}
 						} else {
-							pred = motion.Predict8x16(grid, x, y, gi == 1, r)
+							pred = motion.Predict(grid, x, y, p.w, r)
 						}
+					}
+					if fs.mbaff {
+						partition := motion.FieldMedian
+						if typ >= 4 && typ <= 21 {
+							if typ%2 == 0 {
+								partition = motion.Field16x8Top
+								if gi == 1 {
+									partition = motion.Field16x8Bottom
+								}
+							} else {
+								partition = motion.Field8x16Left
+								if gi == 1 {
+									partition = motion.Field8x16Right
+								}
+							}
+						}
+						pred = fs.fieldPrediction(grid, addr, x, y, p.w, r, partition, false)
 					}
 					var diff motion.MV
 					var err error

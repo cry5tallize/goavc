@@ -31,10 +31,13 @@ type intraBlockNeighborhood[T ~uint8 | ~uint16] struct {
 
 // intra4Samples 从当前图像读取 4x4 预测邻域。
 func intra4Samples[T ~uint8 | ~uint16](fs *frameState, mbx, mby, bx, by int, data []T) (intra4Neighborhood[T], bool, bool) {
+	if fs.mbaff {
+		return mbaffIntra4Samples(fs, mbx, mby, bx, by, data)
+	}
 	var s intra4Neighborhood[T]
 	pl := &fs.pic.Planes[fs.component]
 	x, y := mbx*16+bx*4, mby*16+by*4
-	addr := mby*fs.mbW + mbx
+	addr := fs.mbAddress(mbx, mby)
 	topAvail := by > 0 || fs.intraNeighbor(addr, addr-fs.mbW)
 	leftAvail := bx > 0 || (mbx > 0 && fs.intraNeighbor(addr, addr-1))
 	if topAvail {
@@ -72,6 +75,9 @@ func intra4Samples[T ~uint8 | ~uint16](fs *frameState, mbx, mby, bx, by int, dat
 }
 
 func intraBlockSamples[T ~uint8 | ~uint16](fs *frameState, mbx, mby, component int, data []T) (intraBlockNeighborhood[T], bool, bool) {
+	if fs.mbaff {
+		return mbaffIntraBlockSamples(fs, mbx, mby, component, data)
+	}
 	var s intraBlockNeighborhood[T]
 	pl := &fs.pic.Planes[component]
 	w, h := 16, 16
@@ -79,7 +85,7 @@ func intraBlockSamples[T ~uint8 | ~uint16](fs *frameState, mbx, mby, component i
 		w, h = fs.chromaW, fs.chromaH
 	}
 	x, y := mbx*w, mby*h
-	addr := mby*fs.mbW + mbx
+	addr := fs.mbAddress(mbx, mby)
 	topAvail := fs.intraNeighbor(addr, addr-fs.mbW)
 	leftAvail := mbx > 0 && fs.intraNeighbor(addr, addr-1)
 	if topAvail {
@@ -101,7 +107,10 @@ func intraBlockSamples[T ~uint8 | ~uint16](fs *frameState, mbx, mby, component i
 func (fs *frameState) mostProbableMode(mbx, mby, raster int) int {
 	bx, by := raster%4, raster/4
 	left, top := -1, -1
-	addr := mby*fs.mbW + mbx
+	addr := fs.mbAddress(mbx, mby)
+	if fs.mbaff {
+		return fs.mbaffMostProbableMode(addr, bx, by)
+	}
 	if bx > 0 {
 		if fs.info[addr].intraModes[by*4+bx-1] >= 0 {
 			left = int(fs.info[addr].intraModes[by*4+bx-1])
@@ -143,8 +152,11 @@ func (fs *frameState) neighborIntraMode(addr, modeIndex int) int {
 }
 
 func (fs *frameState) lumaNC(mbx, mby, bx, by int) int {
-	addr := mby*fs.mbW + mbx
+	addr := fs.mbAddress(mbx, mby)
 	grid := fs.planeNZ()
+	if fs.mbaff {
+		return fs.mbaffNC(addr, 0, bx, by, 4, 16, grid)
+	}
 	var a, b int
 	leftAvail, topAvail := true, true
 	if bx > 0 {
@@ -165,8 +177,11 @@ func (fs *frameState) lumaNC(mbx, mby, bx, by int) int {
 }
 
 func (fs *frameState) chromaNC(comp, mbx, mby, bx, by int) int {
-	addr := mby*fs.mbW + mbx
+	addr := fs.mbAddress(mbx, mby)
 	grid := fs.chromaNZ[comp]
+	if fs.mbaff {
+		return fs.mbaffNC(addr, comp+1, bx, by, fs.chromaW/4, fs.chromaBlocks, grid)
+	}
 	var a, b int
 	leftAvail, topAvail := true, true
 	if bx > 0 {
