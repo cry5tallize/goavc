@@ -150,7 +150,8 @@ M5b 本地门禁已通过（`v0.5.2`，远端 CI 待执行）：SATD/RD、全候
 | RD 剪枝与状态回滚 | 候选事务 | 按 D>=0/语法下界提前终止；常量运动窗口支配 P 候选；恢复完整状态 | Conformant | 全部未剪枝候选对照、平坦块完整候选结构相等、插值 halo 拒绝、逐4×4 MV、参考 fuzz 和 Oracle | 非并行；未采用近似像素或降低质量换速度；等价剪枝前后基准见性能记录 |
 | 活动度 QP | 编码分析 / mb_qp_delta | AQ strength 0..6、方差分档、QP 0..51 裁剪 | Conformant | 平坦/棋盘解析活动度、实际 QP=23/29、0/26/51 的 36 帧双解码器 Oracle | 默认关闭；与显式宏块 QP 或 PCM 通道冲突时拒绝 |
 | Profile 编码约束 | Annex A.2.1/A.2.2 | Baseline/Main 禁止零 PCM 采样与 level_prefix>15，非法候选排除、失败不更新状态 | Conformant | 明确 PCM 零样本拒绝、限长 CAVLC 无部分写入、极低 QP 极端色度拒绝后有效输入恢复 | 极低 QP 且无合法压缩/PCM 候选时 ErrUnsupported；这是配置与内容组合边界，未篡改输入/切换 Profile |
-| CABAC 编码基础 | 9.3.3 / 9.3.4 | 位精确算术、E3 延迟位、bypass/terminate/PCM restart、六类残差 | Partial | 三组规范区间码点、全部64状态混合流、六类残差含百万 level 转义 | 待接入 Main/High slice 与独立整帧 Oracle；仅自往返不宣称完整支持 |
+| CABAC 编码基础 | 9.3.3 / 9.3.4 | 位精确算术、E3 延迟位、bypass/terminate/PCM restart、4×4/DC/AC 残差 | Conformant | 规范区间码点、64状态混合流、残差转义；Main/High 12组288帧独立 FFmpeg Oracle | 8×8/B slice 编码待接入；RD 位数仍使用 CAVLC 代理 |
+| CABAC I/P slice | 7.3.4 / 9.3.3 | I4/I16/PCM、P 四分区/Skip、MVD、CBP、QP、邻域 CBF、多 slice | Conformant | `tests/codec/cabac_test.go` QP 0/26/51、1/3 slice、宏块 QP 变化、帧号回绕及场景变化，三方像素一致 | 单参考、POC type2，无 B；Main/High 整体门禁尚未完成 |
 | CABAC 零字封装修复 | 7.4.1 / 9.3.4.6 | VCL 末尾00 00 03按已知 CABAC PPS 接受；CAVLC 仍拒绝 | Conformant | `EncapsulatedZeroWordPadding` 先失败后修复，FFmpeg 像素对照；CAVLC 终端转义拒绝 | 通用 EBSP 严格规则保持；不扩大参数集/未知 PPS 的截断容忍 |
 
 ## M6–M9

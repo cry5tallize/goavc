@@ -8,7 +8,7 @@
 > 每帧独立 IDR；支持 I_PCM 选项、1..64 slice、偶数显示尺寸裁剪和宏块 QP 覆盖。
 > 两条路径及混合 PCM 已通过 FFmpeg/自研解码/本地重建逐像素验证。
 > 本地门禁及性能记录已完成，证据见 gates/m4.md；远端 CI 尚待执行。
-> Main/High、B、ABR/CBR 明确拒绝。M5a 已接入单参考 P；LevelAuto 新增实际 AU 预算门禁，
+> M5c 已接入 Main/High CABAC I/P；B、ABR/CBR 仍明确拒绝。LevelAuto 新增实际 AU 预算门禁，
 > 1080p@30 已通过 300 帧三方像素验证。M5a 本地门禁见 gates/m5a.md；M5 整体未完成。
 
 > 状态图例：`TODO` 未开始 · `WIP` 进行中 · `Partial` 部分可用（有已知不支持路径）·
@@ -35,8 +35,8 @@
 | Profile | profile_idc | 关键工具 | Decoder | Encoder | 目标里程碑 |
 |---|---|---|---|---|---|
 | Baseline | 66 | CAVLC、I/P | Partial | Partial | M4 Encoder 仅独立 IDR I_PCM/I4/I16；P 在 M5a；高级工具 M7 |
-| Main | 77 | CABAC、B、隔行 | Partial | TODO | M3 渐进帧 I/P/B、MMCO、权重与显示重排已验证；隔行 M7 |
-| High | 100 | 8×8 变换、ScalingMatrix | Partial | TODO | M3 渐进式 8-bit 4:2:0 已验证；字段/扩展 M7；Encoder M5c |
+| Main | 77 | CABAC、B、隔行 | Partial | Partial | 编码 CABAC I/P 已通过288帧三方 Oracle；B/权重/重排待接入，隔行 M7 |
+| High | 100 | 8×8 变换、ScalingMatrix | Partial | Partial | 编码 CABAC 4×4 I/P 已验证；8×8/矩阵/B 待接入，字段/扩展 M7 |
 | High 10 | 110 | 10 bit | TODO | TODO | M7 |
 | High 4:2:2 | 122 | 4:2:2、10 bit | TODO | TODO | M7 |
 | High 4:4:4 Predictive | 244 | 4:4:4、残差预测 | TODO | TODO | M7 |
@@ -72,10 +72,10 @@
 | CAVLC：coeff_token / trailing ones | Conformant | Conformant | M4 规范码字、极端系数、完整 Intra Oracle |
 | CAVLC：total_zeros / run_before | Conformant | Conformant | M4 亮度 DC/AC、色度 DC、长游程与整帧 Oracle |
 | CAVLC：level prefix / suffix / 转义 | Conformant | Conformant | M4 suffix 0/1..6、百万 level 转义、14,400 组往返及 Oracle |
-| CABAC：算术编解码器 | Conformant | TODO | M3 解码 MPS/LPS/bypass/terminate 解析解与 Oracle；编码 M5 |
-| CABAC：上下文初始化与状态转移 | Conformant | TODO | M3 4:2:0 使用的 460 个上下文、64 状态已验证；4:4:4 M7 |
-| CABAC：宏块/MV/残差上下文 | Conformant | TODO | M3 多参考 I/P/B、双列表、ref_idx、4×4/8×8 Oracle |
-| CABAC：terminate / cabac_zero_word | Conformant | TODO | M3 停止位、PCM 重启、Annex-B zero-word 与 Oracle 已验证 |
+| CABAC：算术编解码器 | Conformant | Conformant | 编码区间解析解、64状态与 Main/High I/P 整帧 FFmpeg Oracle |
+| CABAC：上下文初始化与状态转移 | Conformant | Conformant | I/PB0..2、QP 0..51 共用初始化表；编码 slice 使用 idc=0 |
+| CABAC：宏块/MV/残差上下文 | Conformant | Partial | 编码 I/P 单参考、四分区、4×4/DC/AC、QP/CBP 及多 slice Oracle；B/8×8 待接入 |
+| CABAC：terminate / cabac_zero_word | Conformant | Partial | 停止位与 PCM 重启已验证；密集 bin 的零字预算待补 |
 
 ## 5. 预测
 

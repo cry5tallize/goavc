@@ -3,7 +3,6 @@ package encoder
 import (
 	"errors"
 	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/decoder"
 	"testing"
 )
 
@@ -151,37 +150,5 @@ func TestEncoder_Configuration(t *testing.T) {
 	}
 	if err = e.SendFrame(&h264.Frame{}); !errors.Is(err, h264.ErrInvalidData) {
 		t.Fatal(err)
-	}
-}
-
-func TestEncoder_CABACPCM_RoundTrip(t *testing.T) {
-	c := h264.DefaultEncoderConfig()
-	c.Width, c.Height = 16, 16
-	c.Profile = h264.ProfileMain
-	e, err := New(c)
-	if err != nil {
-		t.Fatal(err)
-	}
-	de, err := decoder.New(h264.DefaultDecoderConfig())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = e.SendFrame(pcmFrame(c.Width, c.Height)); err != nil {
-		t.Fatal(err)
-	}
-	p, err := e.ReceivePacket()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = de.SendPacket(p); err != nil {
-		t.Fatal(err)
-	}
-	f, err := de.ReceiveFrame()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer f.Release()
-	if f.Width != c.Width || f.Height != c.Height || f.Planes[0].Data[0] != 1 {
-		t.Fatalf("decoded frame mismatch: %dx%d first=%d", f.Width, f.Height, f.Planes[0].Data[0])
 	}
 }
