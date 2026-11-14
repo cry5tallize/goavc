@@ -2,7 +2,6 @@ package transform
 
 import (
 	"fmt"
-	"math"
 
 	h264 "github.com/goavc/h264"
 )
@@ -18,30 +17,54 @@ var Zigzag8x8 = [64]int{
 var levelScale8 = [6][6]int64{{20, 18, 32, 19, 25, 24}, {22, 19, 35, 21, 28, 26}, {26, 23, 42, 24, 33, 31}, {28, 25, 45, 26, 35, 33}, {32, 28, 51, 30, 40, 38}, {36, 32, 58, 34, 46, 43}}
 var scale8Class = [16]int{0, 3, 4, 3, 3, 1, 5, 1, 4, 5, 2, 5, 3, 1, 5, 1}
 
-// Forward8x8 以可分离的未归一化 DCT-II 分析残差，输入输出均按光栅顺序。
-// 前向分析与量化是编码器策略，不定义码流重建；重建仍由规范逆变换完成。
+// inverse8Basis64 是 Spec: 8.5.13 逆变换单轴基底放大64的整数值。
+// 行为频率、列为空间采样；行两两正交，平方范数见 inverse8Norm。
+var inverse8Basis64 = [8][8]int64{
+	{64, 64, 64, 64, 64, 64, 64, 64},
+	{96, 80, 48, 24, -24, -48, -80, -96},
+	{64, 32, -32, -64, -64, -32, 32, 64},
+	{80, -24, -96, -48, 48, 96, 24, -80},
+	{64, -64, -64, 64, 64, -64, -64, 64},
+	{48, -96, 24, 80, -80, -24, 96, -48},
+	{32, -64, 64, -32, -32, 64, -64, 32},
+	{24, -48, 80, -96, 96, -80, 48, -24},
+}
+var inverse8Norm = [8]int64{32768, 36992, 20480, 36992, 32768, 36992, 20480, 36992}
+
+// Forward8x8 将[-255,255]的8-bit残差投影到规范逆变换的正交基。
+// 输入输出按光栅顺序，可原地调用；不使用浮点近似或另一份逆变换。
+// IDCT输出为 A*C*Aᵀ/64，故 C=64*Aᵀ*src*A/(各轴平方范数)。
+// 基底放大64后分子系数为2^18；合法残差的全部中间量在int64范围内。
 func Forward8x8(dst, src *[64]int32) {
-	var basis [8][8]float64
-	for k := range basis {
-		for n := range basis[k] {
-			basis[k][n] = math.Cos(math.Pi * float64((2*n+1)*k) / 16)
+	var temp [64]int64
+	for y := 0; y < 8; y++ {
+		for k := 0; k < 8; k++ {
+			for x := 0; x < 8; x++ {
+				temp[y*8+k] += int64(src[y*8+x]) * inverse8Basis64[k][x]
+			}
 		}
 	}
 	for ky := 0; ky < 8; ky++ {
 		for kx := 0; kx < 8; kx++ {
-			var sum float64
+			var sum int64
 			for y := 0; y < 8; y++ {
-				for x := 0; x < 8; x++ {
-					sum += float64(src[y*8+x]) * basis[ky][y] * basis[kx][x]
-				}
+				sum += temp[y*8+kx] * inverse8Basis64[ky][y]
 			}
-			if sum < 0 {
-				dst[ky*8+kx] = int32(math.Ceil(sum - 0.5))
-			} else {
-				dst[ky*8+kx] = int32(math.Floor(sum + 0.5))
+			numerator, denominator := sum*(1<<18), inverse8Norm[ky]*inverse8Norm[kx]
+			value := (absForward(numerator) + denominator/2) / denominator
+			if numerator < 0 {
+				value = -value
 			}
+			dst[ky*8+kx] = int32(value)
 		}
 	}
+}
+
+func absForward(value int64) int64 {
+	if value < 0 {
+		return -value
+	}
+	return value
 }
 
 // Quant8x8WithScaling 以解码器的逆量化矩阵为基准选择量化级。

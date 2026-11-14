@@ -93,6 +93,14 @@ func (s *frameState) decideRD(addr, previousQP, radius int, full, early bool) (r
 		if err = evaluate(res); err != nil {
 			return residual{}, err
 		}
+		if s.allow8 {
+			reset()
+			s.info[addr].transform8 = true
+			res = s.interCandidate(addr, kind, radius, full)
+			if err = evaluate(res); err != nil {
+				return residual{}, err
+			}
+		}
 		// 后续两分区/I16 至少 9 bit；等代价保留先前候选。
 		if early && kind == 0 && best.distortion == 0 && best.rate <= 9 {
 			break
@@ -100,7 +108,11 @@ func (s *frameState) decideRD(addr, previousQP, radius int, full, early bool) (r
 	}
 	// 若零失真胜者已达到所有剩余帧内候选的最小位数，可安全省去其变换。
 	if !early || !(best.distortion == 0 && best.rate <= 9) {
-		for _, family := range []int{1, 2} {
+		families := []int{1, 2}
+		if s.allow8 {
+			families = append(families, 3)
+		}
+		for _, family := range families {
 			reset()
 			res := s.analyzeIntra(addr, family)
 			s.mv.SetRect(x, y, 4, 4, motion.MV{}, -1)
@@ -173,6 +185,9 @@ func (s *frameState) interCandidate(addr, kind, radius int, full bool) residual 
 		s.mv.SetRect(x/4+p.x/4, y/4+p.y/4, p.w/4, p.h/4, mv, 0)
 	}
 	res := s.interResidual(addr)
+	if info.cbp&15 == 0 {
+		info.transform8 = false
+	}
 	s.reconstructInter(addr, &res)
 	return res
 }
@@ -248,7 +263,11 @@ func (s *frameState) analyzeIntraRD(addr, previousQP int) (residual, error) {
 		}
 		best = rdCandidate{cost: ^uint64(0)}
 	}
-	for _, family := range []int{1, 2} {
+	families := []int{1, 2}
+	if s.allow8 {
+		families = append(families, 3)
+	}
+	for _, family := range families {
 		s.info[addr] = base
 		clear(s.nz[addr*16 : addr*16+16])
 		for c := range s.cnz {

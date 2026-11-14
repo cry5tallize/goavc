@@ -14,6 +14,9 @@ func (s *frameState) deblock() {
 		mx, my := addr%mw, addr/mw
 		for dir := 0; dir < 2; dir++ {
 			for edge := 0; edge < 16; edge += 4 {
+				if info.transform8 && edge%8 != 0 {
+					continue
+				}
 				if edge == 0 && (dir == 0 && mx == 0 || dir == 1 && my == 0) {
 					continue
 				}

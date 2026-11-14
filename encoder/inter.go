@@ -149,10 +149,29 @@ func (s *frameState) interResidual(addr int) residual {
 	info := &s.info[addr]
 	var res residual
 	for r := 0; r < 16; r++ {
+		if info.transform8 {
+			break
+		}
 		coeff := residualTransform(&s.src.Planes[0], &s.pic.Planes[0], x+r%4*4, y+r/4*4)
 		transform.Quant4x4(&res.luma[r], &coeff, info.qp)
 		if nonzero(res.luma[r][:]) {
 			info.cbp |= 1 << ((r/4/2)*2 + r%4/2)
+		}
+	}
+	if info.transform8 {
+		for block := 0; block < 4; block++ {
+			bx, by := x+(block%2)*8, y+(block/2)*8
+			var input, coeff [64]int32
+			for j := 0; j < 8; j++ {
+				for i := 0; i < 8; i++ {
+					input[j*8+i] = int32(s.src.Planes[0].Pix(bx+i, by+j)) - int32(s.pic.Planes[0].Pix(bx+i, by+j))
+				}
+			}
+			transform.Forward8x8(&coeff, &input)
+			transform.Quant8x8WithScaling(&res.luma8[block], &coeff, info.qp, s.matrix8(false))
+			if nonzero(res.luma8[block][:]) {
+				info.cbp |= 1 << block
+			}
 		}
 	}
 	cbp := 0
@@ -187,7 +206,15 @@ func (s *frameState) reconstructInter(addr int, res *residual) {
 	x, y := addr%s.pic.MBWidth*16, addr/s.pic.MBWidth*16
 	qp := s.info[addr].qp
 	for r := 0; r < 16; r++ {
+		if s.info[addr].transform8 {
+			break
+		}
 		reconstruct(&s.pic.Planes[0], x+r%4*4, y+r/4*4, &res.luma[r], qp, nil)
+	}
+	if s.info[addr].transform8 {
+		for block := 0; block < 4; block++ {
+			reconstruct8(&s.pic.Planes[0], x+(block%2)*8, y+(block/2)*8, &res.luma8[block], qp, s.matrix8(false))
+		}
 	}
 	qpc := transform.ChromaQP(qp, 0)
 	for c := 0; c < 2; c++ {
@@ -226,6 +253,9 @@ func (s *frameState) writeInter(w *bitstream.Writer, addr int, qp *int, res *res
 			w.WriteUE(uint32(code))
 			break
 		}
+	}
+	if s.allow8 && info.cbp&15 != 0 {
+		w.WriteBit(uint8(flag(info.transform8)))
 	}
 	if info.cbp != 0 {
 		delta := info.qp - *qp

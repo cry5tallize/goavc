@@ -37,7 +37,7 @@
 |---|---|---|---|---|---|
 | Baseline | 66 | CAVLC、I/P | Partial | Partial | M4 Encoder 仅独立 IDR I_PCM/I4/I16；P 在 M5a；高级工具 M7 |
 | Main | 77 | CABAC、B、隔行 | Partial | Partial | 编码 CABAC I/P 已通过288帧三方 Oracle；B/权重/重排待接入，隔行 M7 |
-| High | 100 | 8×8 变换、ScalingMatrix | Partial | Partial | 编码 CABAC 4×4 I/P 已验证；8×8/矩阵/B 待接入，字段/扩展 M7 |
+| High | 100 | 8×8 变换、ScalingMatrix | Partial | Partial | 编码CABAC I4/I8/I16/P 4×4/8×8、8×8自定义矩阵已验证；B待接入，字段/扩展M7 |
 | High 10 | 110 | 10 bit | TODO | TODO | M7 |
 | High 4:2:2 | 122 | 4:2:2、10 bit | TODO | TODO | M7 |
 | High 4:4:4 Predictive | 244 | 4:4:4、残差预测 | TODO | TODO | M7 |
@@ -75,7 +75,7 @@
 | CAVLC：level prefix / suffix / 转义 | Conformant | Conformant | M4 suffix 0/1..6、百万 level 转义、14,400 组往返及 Oracle |
 | CABAC：算术编解码器 | Conformant | Conformant | 编码区间解析解、64状态与 Main/High I/P 整帧 FFmpeg Oracle |
 | CABAC：上下文初始化与状态转移 | Conformant | Conformant | I/PB0..2、QP 0..51 共用初始化表；编码 slice 使用 idc=0 |
-| CABAC：宏块/MV/残差上下文 | Conformant | Partial | 编码 I/P 单参考、四分区、4×4/DC/AC、QP/CBP 及多 slice Oracle；B/8×8 待接入 |
+| CABAC：宏块/MV/残差上下文 | Conformant | Partial | 编码 I/P 单参考、四分区、4×4/8×8/DC/AC、QP/CBP及多slice Oracle；B待接入 |
 | CABAC：terminate / cabac_zero_word | Conformant | Conformant | 停止位/PCM重启、逐slice bin密度预算、终端03封装、阈值解析解与5000个MPS密集流读回；现有整帧Oracle回归通过 |
 
 ## 5. 预测
@@ -83,7 +83,7 @@
 | 特性 | Decoder | Encoder | 备注 |
 |---|---|---|---|
 | Intra 4×4（9 模式） | Conformant | Conformant | M4 全模式 SAD 实际选中，MPM/边界与 60 帧六类图案 Oracle |
-| Intra 8×8（High） | Conformant | TODO | M3 滤波邻域、九方向解析向量及七份 High Oracle |
+| Intra 8×8（High） | Conformant | Conformant | 共享九模式预测、规范邻域、实际Intra8决策、High320帧三方Oracle；编码需WithTransform8x8 |
 | Intra 16×16（4 模式） | Conformant | Conformant | M4 全模式实际选中、共享预测与 DC/AC 重建 Oracle |
 | Chroma 8×8（4:2:0） | Conformant | Conformant | M4 全模式实际选中、双平面 SAD、共享 DC/AC/滤波 Oracle |
 | Chroma 4:2:2 | Unsupported | TODO | 当前 SPS 显式拒绝；M7 实现 |
@@ -101,9 +101,9 @@
 | 4×4 逆/正整数变换 | Conformant | Conformant | M4 正向独立矩阵基底与完整 Oracle；编码重建共享逆内核 |
 | 4×4 亮度 DC Hadamard | Conformant | Conformant | M4 常量/基底解析解及 I16 Oracle |
 | 2×2 色度 DC Hadamard | Conformant | Conformant | M4 常量解析解及完整 Intra Oracle |
-| 8×8 逆/正变换 | Conformant | Partial | M3 逆变换 Oracle；M5c 有 DCT-II 前向分析与缩放量化内核，尚未接入宏块/码流 |
+| 8×8 逆/正变换 | Conformant | Conformant | 规范逆基定点分析、解析空间基；High Intra8/P 8×8候选/信令/共享逆变换/去块，320帧三方Oracle |
 | 量化 / 反量化 | Conformant | Conformant | M4 平坦矩阵 QP 0..51；编码重建共享反量化；非平坦正向 M5c |
-| ScalingMatrix 应用 | Conformant | Partial | M3 解码器 4×4/8×8/DC Oracle；编码器 8×8 缩放量化内核未接入 residual slice |
+| ScalingMatrix 应用 | Conformant | Partial | 编码器8×8 intra/inter矩阵PPS/量化/重建与320帧Oracle；4×4/DC编码仅flat=16，自定义4×4/DC属后续完整矩阵范围 |
 | 10 bit 变换路径 | TODO | TODO | M7 |
 
 ## 7. 滤波

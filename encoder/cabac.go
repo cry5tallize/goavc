@@ -209,8 +209,19 @@ func (c *cabacWriter) macroblock(s *frameState, addr int, qp *int, res *residual
 		c.motion(s, addr)
 	} else {
 		if !i.is16 {
-			for n := 0; n < 16; n++ {
-				r := raster(n)
+			if s.allow8 {
+				c.transformFlag(s, addr)
+			}
+			count := 16
+			if i.transform8 {
+				count = 4
+			}
+			for n := 0; n < count; n++ {
+				index := n
+				if i.transform8 {
+					index = n * 4
+				}
+				r := raster(index)
 				mode, mpm := int(i.modes[r]), s.probable(addr, r)
 				c.bin(68, flag(mode == mpm))
 				if mode != mpm {
@@ -241,6 +252,9 @@ func (c *cabacWriter) macroblock(s *frameState, addr int, qp *int, res *residual
 	}
 	if !i.is16 {
 		c.cbp(s, addr)
+	}
+	if s.allow8 && i.inter && i.cbp&15 != 0 {
+		c.transformFlag(s, addr)
 	}
 	if i.is16 || i.cbp != 0 {
 		delta := i.qp - *qp

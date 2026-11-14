@@ -116,7 +116,7 @@ Main I/P 回归保持通过。最终清单共 27 条，26 条支持样本 217 �
 |---|---|---|---|---|---|
 | Annex-B Writer | B.1 | 四字节起始码、EBSP NAL、短写错误 | Conformant | `nal/annexb_writer_test.go` 固定字节与重扫 | — |
 | CAVLC 编码 | 9.2 | token、尾随符号、level 转义、zeros/run、4 种块类型 | Conformant | 固定规范码字、14,400 组极端/随机往返、完整 Intra FFmpeg Oracle、fuzz 入口 | 复用现有规范码长/码字表，不生成重复编码表；4:2:2 DC 属 M7 |
-| 正向变换与量化 | 8.5（逆路径契约） | 编码路径使用 4×4/DC 平坦矩阵；另有 8×8 正向变换与缩放量化内核 | Partial | `forward_test.go` 解析基底与完整 Oracle；`eight_test.go` 8×8 脉冲解析解、QP/矩阵边界 | 8×8 尚未接入宏块决策与码流；4×4 非平坦正向矩阵待接入；QP=0 不承诺无损 |
+| 正向变换与量化 | 8.5（逆路径契约） | 编码路径4×4/DC平坦矩阵与High 8×8自定义矩阵 | Partial | `forward_test.go`、`eight_test.go`解析基与完整Oracle；High320帧8×8闭环 | 4×4/DC非平坦正向矩阵待接入；QP=0不承诺无损 |
 | Encoder 状态与 I_PCM | 7.3.3 / 7.3.5 | 单槽背压、Flush/Reset/Close、独立 IDR、裁剪、1..64 slice、参数集/VUI | Conformant | `encoder/encoder_test.go`、`tests/codec` 自解码与 FFmpeg 逐像素 | 4:2:0 奇数显示尺寸不能用 SPS crop 表达，显式拒绝；无 P/B、GOP 和重排 |
 | Intra 编码与本地重建 | 8.3 / 8.5 / 8.7 | I4 九模式、I16/色度各四模式、SAD、MPM、共享预测/反量化/IDCT/相加/滤波、PCM 大小决策 | Conformant | `intra_test.go` 全模式实际决策覆盖；`tests/codec` 27 组尺寸/QP/slice + 120 帧六类图案双解码器 Oracle | 仅渐进式 8-bit 4:2:0，QP=0 仍为有损变换，不等同 PCM |
 | CQP / 宏块 QP | 7.3.5 / 表 7-13 | QP 0..51、回调覆盖、delta 回绕、无残差沿用 QP | Conformant | 0↔51/25↔26 等宏块变化与混合 PCM 的双解码器/FFmpeg Oracle | ABR/CBR/VBV、自适应活动度决策在 M5 |
@@ -138,12 +138,12 @@ M5b 本地门禁已通过（`v0.5.2`，远端 CI 待执行）：SATD/RD、全候
 等价剪枝、600帧长Oracle与第一项x264质量比较已记录；Profile边界已补充显式拒绝。
 证据见 `docs/gates/m5b.md`。M5 整体的 Main/High 工具、B 帧与全参数质量/性能门禁仍未完成。
 
-M5c/d 已有部分本地验证，不能视为子阶段关闭：CABAC Main/High I/P 288 帧三方像素 Oracle、ABR/CBR 目标窗口、VBV fullness、I/P GOP 与 IDR 结构已验证；新增单参考 P 显式权重160帧三方 Oracle。正向 8×8 仍为未接入码流的内核。此前 Race 与六目标交叉构建通过。B slice/重排、Lookahead、HRD filler、x264 等 QP/等码率和 720p/1080p 长序列门禁未完成。证据见 `docs/gates/m5cd.md`。
+M5c/d 已有部分本地验证，不能视为子阶段关闭：CABAC Main/High I/P 288帧、P显式权重160帧、High I/P 8×8与矩阵320帧三方Oracle；ABR/CBR目标窗口、VBV fullness、I/P GOP与IDR结构已验证。此前Race与六目标交叉构建通过。B slice/重排、Lookahead、x264等QP/等码率和720p/1080p长序列门禁未完成。证据见 `docs/gates/m5cd.md`。
 
 | Module | 规范条款/职责 | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|---|
 | `motion/search` | 编码分析；MC 契约 8.4.2 | SAD、穷举、菱形、范围自适应、半/四像素细化 | Conformant | SAD 解析值、已知整数/亚像素平移、边界与局部搜索差值 | 菱形非全局最优承诺；独立子包避免 prediction→motion 的依赖环 |
-| P 帧单参考闭环 | 7.3.3 / 8.4 / 8.7 | P16/16×8/8×16/8×8、MV/MVD、CAVLC 残差、P_Skip、混合 PCM、共享 MC/重建/滤波 | Conformant | 九组共 360 帧 + 720p/1080p 各300帧；裁剪/多 slice/frame_num 回绕/场景变化；四种分区实际选中 | RD比较已接入；非默认 entropy/profile 仍拒绝；M5 总门禁未过 |
+| P 帧单参考闭环 | 7.3.3 / 8.4 / 8.7 | P16/16×8/8×16/8×8、MV/MVD、CAVLC/CABAC残差、P_Skip、混合PCM、共享MC/重建/滤波 | Conformant | Baseline360+600帧；Main/High CABAC288帧、权重160帧、8×8/矩阵320帧；四种分区实际选中 | M5总门禁未过；B/重排未接入 |
 | P 早期 Skip / 搜索策略 | 编码分析 | 规范 Skip MV 的三平面量化残差全零时提前选择；整像素分区选择后做亚像素细化 | Conformant | 全部双解码器 Oracle、分区/静态 Skip 实际选择、搜索解析向量 | SAD 启发式可能选择不同分区，不宣称与旧搜索逐比特相同；质量待 M5 整体门禁 |
 | I/P 状态与参考更新 | 公共 API / POC type2 | GOPSize 周期非 IDR I 刷新、独立 IDRInterval、输入 KeyFrame/场景阈值触发 IDR、无重排 PTS=DTS | Conformant | 40 帧序列三方像素；`IndependentGOPAndSceneChangeIDR` + ffprobe I/P/key_frame 检查 | 无 B/重排；场景阈值直比参考帧；PCM 选项仍为全 IDR |
 | CQP AU 资源门禁 | Annex A / 事务边界 | Auto 几何/帧率校验，实际 AU 上限检查，1080p30 不再因最坏预算在 New 拒绝 | Conformant | `LevelBudgetIsTransactional` 注入超限、已有 Oracle 回归 | 超限返回 ErrResourceLimit 且不发布输出；仍非 HRD/VBV 保证；显式 Level 与 PCM 保留保守初始化检查 |
@@ -152,10 +152,11 @@ M5c/d 已有部分本地验证，不能视为子阶段关闭：CABAC Main/High I
 | RD 剪枝与状态回滚 | 候选事务 | 按 D>=0/语法下界提前终止；常量运动窗口支配 P 候选；恢复完整状态 | Conformant | 全部未剪枝候选对照、平坦块完整候选结构相等、插值 halo 拒绝、逐4×4 MV、参考 fuzz 和 Oracle | 非并行；未采用近似像素或降低质量换速度；等价剪枝前后基准见性能记录 |
 | 活动度 QP | 编码分析 / mb_qp_delta | AQ strength 0..6、方差分档、QP 0..51 裁剪 | Conformant | 平坦/棋盘解析活动度、实际 QP=23/29、0/26/51 的 36 帧双解码器 Oracle | 默认关闭；与显式宏块 QP 或 PCM 通道冲突时拒绝 |
 | Profile 编码约束 | Annex A.2.1/A.2.2 | Baseline/Main 禁止零 PCM 采样与 level_prefix>15，非法候选排除、失败不更新状态 | Conformant | 明确 PCM 零样本拒绝、限长 CAVLC 无部分写入、极低 QP 极端色度拒绝后有效输入恢复 | 极低 QP 且无合法压缩/PCM 候选时 ErrUnsupported；这是配置与内容组合边界，未篡改输入/切换 Profile |
-| CABAC 编码基础 | 9.3.3 / 9.3.4 | 位精确算术、E3 延迟位、bypass/terminate/PCM restart、I/P 4×4/DC/AC 残差与零字预算 | Partial | 规范区间码点、64状态混合流、残差转义、bin密度阈值与密集MPS读回；Main/High I/P 12组288帧独立 FFmpeg Oracle | CABAC RD 位数仍用 CAVLC 代理；B/8×8 slice 未完成 |
+| CABAC 编码基础 | 9.3.3 / 9.3.4 | 位精确算术、E3延迟位、bypass/terminate/PCM restart、I/P 4×4/8×8/DC/AC与零字预算 | Partial | 规范区间码点、64状态、残差转义、bin密度与密集MPS读回；Main/High I/P及High8×8 Oracle | CABAC RD位数仍用CAVLC代理；B slice未完成 |
 | CABAC I/P slice | 7.3.4 / 9.3.3 | Main/High I4/I16/PCM、P 四分区/Skip、MVD、CBP、QP、邻域 CBF、多 slice | Conformant | `tests/codec/cabac_test.go` QP 0/26/51、1/3 slice、宏块 QP 变化、帧号回绕及场景变化，三方像素一致 | 单参考、POC type2，无 B；Main/High 整体门禁尚未完成 |
 | P 显式加权预测编码 | 7.3.3.2 / 8.4.3.2 | 固定三平面权重、整数最小二乘自动分析、PPS/slice 信令、共享 MC 后加权、P_Skip | Conformant | 权重/偏移解析拟合、插值先于裁剪、实际 Skip、失败事务；Main/High 160帧权重表与三方 Oracle | 单参考 P；搜索使用加权参考代理估计 MV，最终 RD/重建使用原参考插值后加权；B/implicit 待接入 |
-| 正向 8×8 变换与缩放量化 | 8.5.13 | DCT-II 前向分析、QP 0..51、scale matrix 反推量化级 | Partial | `eight_test.go` 常量/单位脉冲解析值、平坦矩阵等价及逆量化符号/溢出边界 | 分析内核未接入 Intra8/P 宏块选择或 CABAC/CAVLC residual slice |
+| High 8×8 编码闭环 | 8.3.2 / 8.5.13 / 9.3 | 规范逆基定点投影、QP0..51、Intra8九模式与P 8×8残差RD候选、CABAC/代理CAVLC扫描、共享逆变换与滤波 | Conformant | 常量/脉冲/非DC解析基、实际I/P 8×8决策；QP0/18/26/51×1/3slice×flat/custom的320帧三方Oracle | 默认关闭，通过WithTransform8x8启用；RD仍借用CAVLC候选比特代理，不宣称CABAC最优 |
+| 8×8 ScalingMatrix编码 | 7.3.2.2 / 8.5.13 | intra/inter亮度光栅矩阵配置、PPS扫描/delta、正量化与共享重建 | Conformant | PPS解析与矩阵选择核对、delta回绕、零项拒绝、flat/custom320帧三方Oracle | 4×4/DC编码列表显式flat=16；自定义4×4/DC未接入 |
 | GOP / IDR 与场景变化 | 编码器策略 | GOPSize 非 IDR I 刷新、独立 IDRInterval、强制 IDR、显式阈值全平面变化检测 | Partial | `IndependentGOPAndSceneChangeIDR` KeyFrame 序列断言；InterPictureTypes ffprobe I/P 类型 | 无 B-frame placement 与 DTS 重排；场景检测直接比较当前帧/参考帧 |
 | ABR / CBR / VBV | 编码器码率控制 | 帧 QP 候选搜索、AU 比特反馈、CBR fullness 平滑、VBV 候选硬边界 | Partial | 120 帧 ABR ±10% + FFmpeg Oracle；2×30 帧 CBR 窗口 ±10%；60 帧 VBV fullness/Oracle 与失败事务测试 | 无 filler NAL/HRD CBR 恒定传输；暂无 720p/1080p 300 帧门禁、x264 质量比较 |
 | CABAC 零字封装修复 | 7.4.1 / 9.3.4.6 | VCL 末尾00 00 03按已知 CABAC PPS 接受；CAVLC 仍拒绝 | Conformant | `EncapsulatedZeroWordPadding` 先失败后修复，FFmpeg 像素对照；CAVLC 终端转义拒绝 | 通用 EBSP 严格规则保持；不扩大参数集/未知 PPS 的截断容忍 |

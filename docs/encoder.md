@@ -52,6 +52,8 @@ if err != nil {
 | WithAdaptiveQP(n) | 按亮度活动度对基准 QP 加减 0..6，裁剪到0..51；默认关闭，不与显式 QP 回调或 PCM 共用 |
 | WithWeightedPrediction() | 自动分析 Main/High P slice 的三平面显式权重；默认关闭，Baseline/PCM 拒绝 |
 | WithPredictionWeights(weights) | 固定单参考 P 的三平面显式权重，与自动分析互斥；denom 0..7，显式 weight/offset -128..127 |
+| WithTransform8x8() | High增加Intra8与P 8×8残差候选，按RD与原4×4比较；默认关闭，Baseline/Main拒绝 |
+| WithScalingMatrix8x8(intra, inter) | 两个光栅顺序[64]uint8矩阵，项为1..255；按值复制、隐式开启8×8，4×4/DC列表显式flat=16 |
 | WithSceneChangeThreshold(n) | 全平面平均绝对采样变化达到 1..100% 时触发 IDR；直接比较当前输入与已重建参考，不做 lookahead |
 
 QP=0 仍为有损变换，不等同 PCM。无残差的 I4 不携带 mb_qp_delta，滤波沿用前一宏块 QP。

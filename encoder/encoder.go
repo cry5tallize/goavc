@@ -23,6 +23,8 @@ type Encoder struct {
 	cabac                   bool
 	autoWeights             bool
 	fixedWeights            *PredictionWeights
+	transform8              bool
+	scaling8                *[2][64]uint8
 	sceneThreshold          int
 	frameQP, lastQP         int
 	vbvFullness             int64

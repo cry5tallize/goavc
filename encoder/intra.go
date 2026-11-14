@@ -16,12 +16,14 @@ import (
 type mbInfo struct {
 	start, qp, cbp, mode16, chromaMode int
 	is16                               bool
+	transform8                         bool
 	pcm                                bool
 	inter, skip                        bool
 	partition                          int
 	modes                              [16]int8
 }
 type residual struct {
+	luma8    [4][64]int32
 	luma     [16][16]int32
 	lumaDC   [16]int32
 	chroma   [2][4][16]int32
@@ -35,6 +37,8 @@ type frameState struct {
 	reference       *picture.Picture
 	searchReference *picture.Picture
 	weights         *PredictionWeights
+	allow8          bool
+	scaling8        *[2][64]uint8
 	mv              *motion.Grid
 	allowZeroPCM    bool
 	maxLevelPrefix  int
@@ -176,6 +180,9 @@ func (s *frameState) writePCMSamples(w *bitstream.Writer, addr int) {
 // analyzeIntra 用重建邻块做 SATD 搜索；family=1/2 分别为 RD 候选 I4/I16。
 // I4 按规范扫描边预测边重建，不影响已经重建的邻宏块或熵上下文。
 func (s *frameState) analyzeIntra(addr, family int) residual {
+	if family == 3 {
+		return s.analyzeIntra8(addr)
+	}
 	info := &s.info[addr]
 	mw := s.pic.MBWidth
 	x, y := addr%mw*16, addr/mw*16

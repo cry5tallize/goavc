@@ -10,7 +10,7 @@
 | CABAC Main/High I/P 编码 | `tests/codec/cabac_test.go` 覆盖 12 组配置、288 帧：QP 0/26/51、1/3 slice、宏块 QP 变化、帧号回绕与场景切换；FFmpeg、自研 Decoder、本地重建逐像素一致 |
 | CABAC PCM | `TestEncoder_CABACPCM_RoundTrip`，输入与解码输出逐像素一致 |
 | P 显式权重 | `tests/codec/weighted_prediction_test.go` Main/High 各4组共160帧三方 Oracle：三平面不同 weight/offset、负/零权重、裁剪、denom=7 隐含128、自动分析、3 slice、34×18 crop、非 IDR I/IDR/帧号回绕；另有实际加权 Skip、插值/裁剪顺序与失败事务单测 |
-| 8×8 正向变换/量化内核 | `internal/transform/eight_test.go` 常量 DC 与单位脉冲解析向量、QP 0..51 flat/scaling parity、逆量化符号和溢出边界；尚未接入宏块/码流 |
+| High 8×8 与矩阵闭环 | `TestEncoder_Transform8x8Oracle` QP0/18/26/51×1/3slice×flat/custom共320帧三方Oracle；规范逆基定点投影有常量/脉冲/非DC解析基；I/P实际选中8×8；PPS矩阵扫描/delta与4×4 flat不变量有测试 |
 | GOP / IDR | `TestEncoder_IndependentGOPAndSceneChangeIDR` 断言场景切换与 IDR 间隔；ffprobe 断言 GOPSize 产生非 IDR I picture，且剩余帧数正确 |
 | ABR | `TestEncoder_ABRLongSequenceAccuracy`：32×32、120 帧，实测平均码率在目标 ±10% 内，FFmpeg 与本地重建逐像素一致 |
 | CBR feedback | `TestEncoder_CBRWindowRate`：32×32、两个 30 帧窗口均在目标 ±10% 内；FFmpeg 与本地重建逐像素一致。无 filler NAL，不宣称恒定传输 |
@@ -21,7 +21,7 @@
 
 - B slice 编码、B Direct、参考列表、IBBP 放置、DTS/POC 重排均未实现；`MaxBFrames>0` 在 New 阶段明确返回 `ErrUnsupported`。
 - P 单参考显式权重编码已验证；B 显式/隐式权重编码待 B slice 接入。
-- 8×8 正变换及缩放量化尚未接入 Intra8/P 宏块决策、残差扫描和码流；High 编码仍只覆盖 CABAC 4×4 I/P。
+- High Intra8/P 8×8与自定义8×8矩阵已接入CABAC闭环；自定义4×4/DC矩阵编码仍未接入，现有路径保持flat=16。
 - CABAC 整帧率估算仍借用 CAVLC 候选代理；zero-word 已实施逐slice bin密度约束，计入PCM restart前的bin数，并在封装后进入AU资源门禁。解析阈值与5000个MPS密集流读回测试通过。
 - Lookahead 未实现；场景检测为当前帧相对参考帧的全平面平均绝对差阈值。
 - VBV 长序列/溢出压力语料、HRD 参数与 filler NAL 未实现。

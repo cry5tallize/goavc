@@ -3,7 +3,6 @@ package transform
 import (
 	"errors"
 	h264 "github.com/goavc/h264"
-	"math"
 	"testing"
 )
 
@@ -108,14 +107,44 @@ func TestForward8x8_AnalyticConstantAndImpulse(t *testing.T) {
 	src = [64]int32{}
 	src[0] = 1
 	Forward8x8(&got, &src)
-	basis := [8]float64{1, 0.9807852804032304, 0.9238795325112867, 0.8314696123025452, 0.7071067811865476, 0.5555702330196023, 0.38268343236508984, 0.19509032201612833}
+	// 逆变换单轴在空间采样0的值及平方范数，独立展开Spec:8.5.13。
+	basis := [8]int64{64, 96, 64, 80, 64, 48, 32, 24}
+	norm := [8]int64{32768, 36992, 20480, 36992, 32768, 36992, 20480, 36992}
 	for y := 0; y < 8; y++ {
 		for x := 0; x < 8; x++ {
-			want := int32(math.Floor(basis[x]*basis[y] + 0.5))
+			den := norm[x] * norm[y]
+			want := int32(((1<<18)*basis[x]*basis[y] + den/2) / den)
 			if got[y*8+x] != want {
 				t.Fatalf("unit impulse coefficient (%d,%d)=%d want %d", x, y, got[y*8+x], want)
 			}
 		}
+	}
+}
+
+func TestForward8x8_OrthogonalSpatialBases(t *testing.T) {
+	// 单轴频率1的空间基为{12,10,6,3,-3,-6,-10,-12}/8。
+	// 残差矩阵为此整数向量的外积时，只有C[1,1]=4096非零。
+	basis := [8]int32{12, 10, 6, 3, -3, -6, -10, -12}
+	var src, got [64]int32
+	for y := 0; y < 8; y++ {
+		for x := 0; x < 8; x++ {
+			src[y*8+x] = basis[y] * basis[x]
+		}
+	}
+	Forward8x8(&got, &src)
+	for i, v := range got {
+		want := int32(0)
+		if i == 9 {
+			want = 4096
+		}
+		if v != want {
+			t.Fatalf("非DC空间基系数%d=%d，期望%d", i, v, want)
+		}
+	}
+	alias := src
+	Forward8x8(&alias, &alias)
+	if alias != got {
+		t.Fatal("原地变换不一致")
 	}
 }
 

@@ -3,6 +3,7 @@ package encoder
 import (
 	"github.com/goavc/h264/bitstream"
 	"github.com/goavc/h264/internal/entropy/cavlc"
+	"github.com/goavc/h264/internal/transform"
 )
 
 // Spec: table 9-4 的 Intra CBP 映射；值是 luma 位图 | chroma<<4。
@@ -22,8 +23,19 @@ func (s *frameState) writeMB(w *bitstream.Writer, addr int, qp *int, res *residu
 		w.WriteUE(uint32(typ + offset))
 	} else {
 		w.WriteUE(uint32(offset))
-		for n := 0; n < 16; n++ {
-			r := raster(n)
+		if s.allow8 {
+			w.WriteBit(uint8(flag(info.transform8)))
+		}
+		count := 16
+		if info.transform8 {
+			count = 4
+		}
+		for n := 0; n < count; n++ {
+			index := n
+			if info.transform8 {
+				index = n * 4
+			}
+			r := raster(index)
 			mode := int(info.modes[r])
 			mpm := s.probable(addr, r)
 			if mode == mpm {
@@ -81,7 +93,16 @@ func (s *frameState) writeResidual(w *bitstream.Writer, addr int, res *residual)
 		if info.is16 {
 			typ = cavlc.LumaAC
 		}
-		count, err := s.encodeResidualBlock(w, &res.luma[r], typ, s.nc(addr, r, 0))
+		levels := &res.luma[r]
+		var stream [16]int32
+		if info.transform8 {
+			// Spec: 8.5，CAVLC把一个8×8扫描交织为四个4×4子流。
+			for k := 0; k < 16; k++ {
+				stream[transform.Zigzag4x4[k]] = res.luma8[i8][transform.Zigzag8x8[4*k+n%4]]
+			}
+			levels = &stream
+		}
+		count, err := s.encodeResidualBlock(w, levels, typ, s.nc(addr, r, 0))
 		if err != nil {
 			return err
 		}

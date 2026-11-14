@@ -74,6 +74,9 @@ func (c *cabacWriter) residual(s *frameState, addr int, res *residual) {
 		s.dcCoded[0][addr] = block(cabac.LumaDC, 0, 0, -1, true, res.lumaDC[:], transform.LumaDCScan[:]) != 0
 	}
 	for n := 0; n < 16; n++ {
+		if i.transform8 {
+			break
+		}
 		r := raster(n)
 		if i.cbp&(1<<(n/4)) == 0 {
 			continue
@@ -83,6 +86,17 @@ func (c *cabacWriter) residual(s *frameState, addr int, res *residual) {
 			cat, scan = cabac.LumaAC, scan[1:]
 		}
 		s.nz[addr*16+r] = block(cat, r%4, r/4, -1, false, res.luma[r][:], scan)
+	}
+	if i.transform8 {
+		for b := 0; b < 4; b++ {
+			if i.cbp&(1<<b) == 0 {
+				continue
+			}
+			count, _ := c.e.Residual(&c.ctx, cabac.Luma8x8, res.luma8[b][:], transform.Zigzag8x8[:])
+			for k := 0; k < 4; k++ {
+				s.nz[addr*16+raster(b*4+k)] = uint8(count)
+			}
+		}
 	}
 	if i.cbp>>4 != 0 {
 		for comp := 0; comp < 2; comp++ {
