@@ -32,7 +32,7 @@ type intraBlockNeighborhood[T ~uint8 | ~uint16] struct {
 // intra4Samples 从当前图像读取 4x4 预测邻域。
 func intra4Samples[T ~uint8 | ~uint16](fs *frameState, mbx, mby, bx, by int, data []T) (intra4Neighborhood[T], bool, bool) {
 	var s intra4Neighborhood[T]
-	pl := &fs.pic.Planes[0]
+	pl := &fs.pic.Planes[fs.component]
 	x, y := mbx*16+bx*4, mby*16+by*4
 	addr := mby*fs.mbW + mbx
 	topAvail := by > 0 || fs.intraNeighbor(addr, addr-fs.mbW)
@@ -144,19 +144,20 @@ func (fs *frameState) neighborIntraMode(addr, modeIndex int) int {
 
 func (fs *frameState) lumaNC(mbx, mby, bx, by int) int {
 	addr := mby*fs.mbW + mbx
+	grid := fs.planeNZ()
 	var a, b int
 	leftAvail, topAvail := true, true
 	if bx > 0 {
-		a = int(fs.lumaNZ[addr*16+by*4+bx-1])
+		a = int(grid[addr*16+by*4+bx-1])
 	} else if mbx > 0 && fs.neighborAvailable(addr, addr-1) {
-		a = int(fs.lumaNZ[(addr-1)*16+by*4+3])
+		a = int(grid[(addr-1)*16+by*4+3])
 	} else {
 		leftAvail = false
 	}
 	if by > 0 {
-		b = int(fs.lumaNZ[addr*16+(by-1)*4+bx])
+		b = int(grid[addr*16+(by-1)*4+bx])
 	} else if fs.neighborAvailable(addr, addr-fs.mbW) {
-		b = int(fs.lumaNZ[(addr-fs.mbW)*16+3*4+bx])
+		b = int(grid[(addr-fs.mbW)*16+3*4+bx])
 	} else {
 		topAvail = false
 	}

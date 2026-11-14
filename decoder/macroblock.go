@@ -24,13 +24,18 @@ var interCBPMap = [48]uint8{
 	17, 18, 20, 24, 19, 21, 26, 28, 23, 27, 29, 30, 22, 25, 38, 41,
 }
 
+// planeResidual 保存全尺寸平面的变换系数；444复用亮度内核，不复制系数。
+type planeResidual struct {
+	luma   [16][16]int32
+	lumaDC [16]int32
+	luma8  [4][64]int32
+}
+
 // residual 保存两种熵模式共用的宏块 level（尚未反量化）。
 type residual struct {
-	luma     [16][16]int32 // 光栅块顺序
+	planeResidual
 	chroma   [2][8][16]int32
-	lumaDC   [16]int32
 	chromaDC [2][8]int32
-	luma8    [4][64]int32
 }
 
 // blockRaster 把比特流中的 4x4 块序号（8x8 分组）映射为光栅下标。
@@ -251,7 +256,11 @@ func decodePCMMacroblock(fs *frameState, addr, mbx, mby int, s *sliceEntry) erro
 	planes := [3]*picture.Plane{&fs.pic.Planes[0], &fs.pic.Planes[1], &fs.pic.Planes[2]}
 	dims := [3][2]int{{16, 16}, {fs.chromaW, fs.chromaH}, {fs.chromaW, fs.chromaH}}
 	origins := [3][2]int{{mbx * 16, mby * 16}, {mbx * fs.chromaW, mby * fs.chromaH}, {mbx * fs.chromaW, mby * fs.chromaH}}
-	for pi := 0; pi < 3; pi++ {
+	firstPlane, planeEnd := 0, 3
+	if fs.sps.SeparateColourPlaneFlag {
+		firstPlane, planeEnd = fs.component, fs.component+1
+	}
+	for pi := firstPlane; pi < planeEnd; pi++ {
 		for y := 0; y < dims[pi][1]; y++ {
 			for x := 0; x < dims[pi][0]; x++ {
 				v, err := readBits(s.data, uint(8+fs.sps.BitDepthLumaMinus8))
@@ -272,7 +281,7 @@ func decodePCMMacroblock(fs *frameState, addr, mbx, mby int, s *sliceEntry) erro
 		fs.lumaNZ[base+i] = 16
 	}
 	cb := addr * fs.chromaBlocks
-	for i := 0; i < fs.chromaBlocks; i++ {
+	for i := 0; !fs.sps.SeparateColourPlaneFlag && i < fs.chromaBlocks; i++ {
 		fs.chromaNZ[0][cb+i] = 16
 		fs.chromaNZ[1][cb+i] = 16
 	}

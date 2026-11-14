@@ -22,11 +22,20 @@ func decodeCABACSlice(fs *frameState, s *sliceEntry, sliceID, first, end int) er
 		return err
 	}
 	// CABAC上下文初始化使用语法QPY裁剪域，不使用变换的QP'。
-	ctx, err := cabac.InitContexts(s.hdr.Type == syntax.SliceTypeI, s.hdr.CabacInitIDC, max(0, min(51, s.hdr.SliceQP)))
-	if err != nil {
-		return err
+	s.cabac = &cabacSyntax{d: engine}
+	if fs.sps.ChromaFormatIDC == 3 && !fs.sps.SeparateColourPlaneFlag {
+		ctx, err := cabac.InitContexts444(s.hdr.Type == syntax.SliceTypeI, s.hdr.CabacInitIDC, max(0, min(51, s.hdr.SliceQP)))
+		if err != nil {
+			return err
+		}
+		s.cabac.ctx = ctx
+	} else {
+		ctx, err := cabac.InitContexts(s.hdr.Type == syntax.SliceTypeI, s.hdr.CabacInitIDC, max(0, min(51, s.hdr.SliceQP)))
+		if err != nil {
+			return err
+		}
+		copy(s.cabac.ctx[:], ctx[:])
 	}
-	s.cabac = &cabacSyntax{d: engine, ctx: ctx}
 	fs.mv.BeginSlice(first)
 	if fs.mv1 != nil {
 		fs.mv1.BeginSlice(first)

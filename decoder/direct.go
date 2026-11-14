@@ -14,13 +14,17 @@ type directMotion struct {
 
 func (fs *frameState) colocated(s *sliceEntry, mbx, mby, bx, by int) (motion.MV, *dpb.Identity, int8) {
 	col := s.refs[1][0]
+	grids, references := col.Motion, col.BlockReferences
+	if fs.sps.SeparateColourPlaneFlag && fs.component > 0 {
+		grids, references = col.ChromaMotion[fs.component-1], col.ChromaBlockReferences[fs.component-1]
+	}
 	if fs.sps.Direct8x8InferenceFlag {
 		bx = (bx / 2) * 3
 		by = (by / 2) * 3
 	}
 	x, y := mbx*4+bx, mby*4+by
 	for l := 0; l < 2; l++ {
-		grid := col.Motion[l]
+		grid := grids[l]
 		if grid == nil {
 			continue
 		}
@@ -29,10 +33,10 @@ func (fs *frameState) colocated(s *sliceEntry, mbx, mby, bx, by int) (motion.MV,
 			continue
 		}
 		i := y*grid.BlockW + x
-		if i >= len(col.BlockReferences[l]) {
+		if i >= len(references[l]) {
 			continue
 		}
-		id := col.BlockReferences[l][i]
+		id := references[l][i]
 		if id != nil {
 			return mv, id, index
 		}

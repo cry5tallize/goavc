@@ -27,6 +27,9 @@ func (fs *frameState) matrix4(intra bool, component int) *[16]uint8 {
 		return nil
 	}
 	i := component
+	if component == 0 {
+		i = fs.component
+	}
 	if !intra {
 		i += 3
 	}
@@ -40,6 +43,9 @@ func (fs *frameState) matrix8(intra bool) *[64]uint8 {
 	i := 1
 	if intra {
 		i = 0
+	}
+	if fs.sps.ChromaFormatIDC == 3 {
+		i += 2 * fs.component
 	}
 	return &fs.scaling.Eight[i]
 }
@@ -60,7 +66,7 @@ type intra8Neighborhood[T ~uint8 | ~uint16] struct {
 
 func intra8Samples[T ~uint8 | ~uint16](fs *frameState, mbx, mby, bx, by int, data []T) (intra8Neighborhood[T], bool, bool) {
 	var out intra8Neighborhood[T]
-	pl := &fs.pic.Planes[0]
+	pl := &fs.pic.Planes[fs.component]
 	addr := mby*fs.mbW + mbx
 	x, y := mbx*16+bx*8, mby*16+by*8
 	top := by > 0 || fs.intraNeighbor(addr, addr-fs.mbW)
@@ -118,12 +124,12 @@ func (fs *frameState) addLuma8Block(mbx, mby, block, qp int, levels *[64]int32, 
 		return err
 	}
 	x, y := mbx*16+(block%2)*8, mby*16+(block/2)*8
-	pl := &fs.pic.Planes[0]
+	pl := &fs.pic.Planes[fs.component]
 	picture.AddResidual8x8(pl, x, y, &residual)
 	return nil
 }
 
-func (fs *frameState) reconstructIntra8x8(mbx, mby, cbp, qp int, res *residual) error {
+func (fs *frameState) reconstructPlane8(mbx, mby, cbp, qp int, res *planeResidual) error {
 	info := &fs.info[mby*fs.mbW+mbx]
 	for block := 0; block < 4; block++ {
 		bx, by := block%2, block/2

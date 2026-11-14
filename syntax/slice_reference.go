@@ -54,7 +54,7 @@ func parsePredWeightTable(r *bitstream.Reader, sps *SPS, typ SliceType, l0, l1 u
 	if err != nil {
 		return nil, err
 	}
-	if sps.effectiveChromaFormatIDC() != 0 {
+	if !sps.SeparateColourPlaneFlag && sps.effectiveChromaFormatIDC() != 0 {
 		t.ChromaDenom, err = readUE(r, "chroma_log2_weight_denom")
 		if err != nil {
 			return nil, err
@@ -103,7 +103,7 @@ func parsePredWeightTable(r *bitstream.Reader, sps *SPS, typ SliceType, l0, l1 u
 					return nil, err
 				}
 			}
-			if sps.effectiveChromaFormatIDC() != 0 {
+			if !sps.SeparateColourPlaneFlag && sps.effectiveChromaFormatIDC() != 0 {
 				flag, e = readFlag(r, "chroma_weight_flag")
 				if e != nil {
 					return nil, e

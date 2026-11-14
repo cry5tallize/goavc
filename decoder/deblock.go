@@ -15,7 +15,7 @@ import (
 // 顺序与规范一致：按宏块光栅顺序，先左边界（若存在）再内部垂直边，
 // 然后上边界与内部水平边；每条边按 4x4 段计算独立 bS。这样后续
 // 边界看到的是已经过滤过的像素，与参考实现一致。
-func (fs *frameState) deblock() error {
+func (fs *frameState) deblockPlane() error {
 	for mby := 0; mby < fs.mbH; mby++ {
 		for mbx := 0; mbx < fs.mbW; mbx++ {
 			info := &fs.info[mby*fs.mbW+mbx]
@@ -35,9 +35,11 @@ func (fs *frameState) deblock() error {
 						return err
 					}
 				}
-				if edgeX%(4*fs.subW) == 0 {
-					if err := fs.filterChromaVertical(mbx, mby, edgeX, boundary); err != nil {
-						return err
+				if fs.sps == nil || fs.sps.ChromaFormatIDC != 3 {
+					if edgeX%(4*fs.subW) == 0 {
+						if err := fs.filterChromaVertical(mbx, mby, edgeX, boundary); err != nil {
+							return err
+						}
 					}
 				}
 			}
@@ -54,9 +56,11 @@ func (fs *frameState) deblock() error {
 						return err
 					}
 				}
-				if edgeY%(4*fs.subH) == 0 {
-					if err := fs.filterChromaHorizontal(mbx, mby, edgeY, boundary); err != nil {
-						return err
+				if fs.sps == nil || fs.sps.ChromaFormatIDC != 3 {
+					if edgeY%(4*fs.subH) == 0 {
+						if err := fs.filterChromaHorizontal(mbx, mby, edgeY, boundary); err != nil {
+							return err
+						}
 					}
 				}
 			}
@@ -76,7 +80,7 @@ func (fs *frameState) skipSliceBoundary(mbx, mby, nbx, nby int) bool {
 }
 
 func (fs *frameState) filterLumaVertical(mbx, mby, edgeX int, boundary bool) error {
-	pl := &fs.pic.Planes[0]
+	pl := &fs.pic.Planes[fs.component]
 	baseX := mbx * 16
 	for r := 0; r < 4; r++ {
 		pbx, pby := mbx*4+edgeX/4-1, mby*4+r
@@ -101,7 +105,7 @@ func (fs *frameState) filterLumaVertical(mbx, mby, edgeX int, boundary bool) err
 }
 
 func (fs *frameState) filterLumaHorizontal(mbx, mby, edgeY int, boundary bool) error {
-	pl := &fs.pic.Planes[0]
+	pl := &fs.pic.Planes[fs.component]
 	for c := 0; c < 4; c++ {
 		pbx, pby := mbx*4+c, mby*4+edgeY/4-1
 		qbx, qby := pbx, pby+1
@@ -213,6 +217,9 @@ func (fs *frameState) edgeChromaQP(mbx, mby int, boundary, left bool, comp int) 
 // edgeQP 返回边界使用的 QP。MB 边界取两侧宏块 QP 的平均，内部边取当前 MB。
 func (fs *frameState) edgeQP(mbx, mby int, boundary, left bool) int {
 	cur := fs.info[mby*fs.mbW+mbx].qp
+	if fs.sps != nil && fs.sps.ChromaFormatIDC == 3 {
+		cur = fs.componentQP(cur)
+	}
 	if !boundary {
 		return cur
 	}
@@ -221,6 +228,9 @@ func (fs *frameState) edgeQP(mbx, mby int, boundary, left bool) int {
 		other = fs.info[mby*fs.mbW+mbx-1].qp
 	} else {
 		other = fs.info[(mby-1)*fs.mbW+mbx].qp
+	}
+	if fs.sps != nil && fs.sps.ChromaFormatIDC == 3 {
+		other = fs.componentQP(other)
 	}
 	return (cur + other + 1) >> 1
 }
@@ -265,11 +275,12 @@ func (fs *frameState) bSAtBlocks(pbx, pby, qbx, qby int, boundary bool) int {
 }
 
 func (fs *frameState) lumaNonzero(addr, bx, by int) bool {
+	grid := fs.lumaNZ
 	if !fs.info[addr].transform8 {
-		return fs.lumaNZ[addr*16+by*4+bx] != 0
+		return grid[addr*16+by*4+bx] != 0
 	}
 	base := addr*16 + (by/2)*8 + (bx/2)*2
-	return fs.lumaNZ[base] != 0 || fs.lumaNZ[base+1] != 0 || fs.lumaNZ[base+4] != 0 || fs.lumaNZ[base+5] != 0
+	return grid[base] != 0 || grid[base+1] != 0 || grid[base+4] != 0 || grid[base+5] != 0
 }
 
 // B 边界允许两侧参考列表互换；若两方向恰好引用同一图像，任一成对

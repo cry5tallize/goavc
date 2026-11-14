@@ -11,7 +11,7 @@ import (
 // 编解码共享的数值内核仍由 residual.go 调用。
 type cabacSyntax struct {
 	d         *cabac.Decoder
-	ctx       [cabac.ContextCount]cabac.Context
+	ctx       [cabac.ContextCount444]cabac.Context
 	lastDelta bool
 }
 
@@ -90,6 +90,9 @@ func (s *sliceEntry) readIntraMode(pred int) (int, error) {
 }
 
 func (s *sliceEntry) readChromaMode(fs *frameState, addr int) (uint32, error) {
+	if fs.sps.ChromaFormatIDC == 3 {
+		return 0, nil
+	}
 	if s.cabac == nil {
 		return s.data.ReadUE()
 	}
@@ -115,6 +118,19 @@ func (s *sliceEntry) readChromaMode(fs *frameState, addr int) (uint32, error) {
 
 func (s *sliceEntry) readCBP(fs *frameState, addr int, intra bool) (int, error) {
 	if s.cabac == nil {
+		if fs.sps.ChromaFormatIDC == 3 {
+			v, err := s.data.ReadUE()
+			if err != nil {
+				return 0, err
+			}
+			if v > 15 {
+				return 0, fmt.Errorf("decoder: full-plane coded_block_pattern %d: %w", v, h264.ErrInvalidData)
+			}
+			if intra {
+				return int([16]uint8{15, 0, 7, 11, 13, 14, 3, 5, 10, 12, 1, 2, 4, 8, 6, 9}[v]), nil
+			}
+			return int([16]uint8{0, 1, 2, 4, 8, 3, 5, 10, 12, 15, 7, 11, 13, 14, 6, 9}[v]), nil
+		}
 		v, err := s.data.ReadUE()
 		if err != nil {
 			return 0, err
@@ -142,6 +158,9 @@ func (s *sliceEntry) readCBP(fs *frameState, addr int, intra bool) (int, error) 
 	cbp |= c.bin(73+not(cbp&1)+2*not(b&8)) << 1
 	cbp |= c.bin(73+not(a&8)+2*not(cbp&1)) << 2
 	cbp |= c.bin(73+not(cbp&4)+2*not(cbp&2)) << 3
+	if fs.sps.ChromaFormatIDC == 3 {
+		return cbp, c.d.Err()
+	}
 	ac, bc := (a>>4)&3, (b>>4)&3
 	if c.bin(77+boolToInt(ac > 0)+2*boolToInt(bc > 0)) != 0 {
 		cbp |= (1 + c.bin(81+boolToInt(ac == 2)+2*boolToInt(bc == 2))) << 4

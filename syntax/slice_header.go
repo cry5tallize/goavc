@@ -48,6 +48,8 @@ type SliceHeader struct {
 	SliceTypeCode     uint32
 	Type              SliceType
 	PicParameterSetID uint32
+	// ColourPlaneID 仅 separate_colour_plane_flag 时存在，合法值为0..2。
+	ColourPlaneID uint8
 
 	FrameNum        uint32
 	FieldPicFlag    bool
@@ -166,6 +168,16 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 	if pps.SeqParameterSetID != sps.SeqParameterSetID {
 		return nil, fmt.Errorf("syntax: pps %d references sps %d, got sps %d: %w",
 			pps.PicParameterSetID, pps.SeqParameterSetID, sps.SeqParameterSetID, h264.ErrInvalidData)
+	}
+	if sps.SeparateColourPlaneFlag {
+		plane, err := readBits(r, 2, "colour_plane_id")
+		if err != nil {
+			return nil, err
+		}
+		if plane > 2 {
+			return nil, fmt.Errorf("syntax: colour_plane_id exceeds 2: %w", h264.ErrInvalidData)
+		}
+		h.ColourPlaneID = uint8(plane)
 	}
 
 	frameNumBits := uint(sps.Log2MaxFrameNumMinus4) + 4

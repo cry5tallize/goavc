@@ -11,10 +11,18 @@ func (s *sliceEntry) applyPWeights(fs *frameState, mbx, mby, x, y, w, h, ref int
 	}
 	t := s.hdr.PredictionWeights
 	weight := t.Lists[0][ref]
-	for c := 0; c < 3; c++ {
+	first, end := 0, 3
+	if fs.sps.SeparateColourPlaneFlag {
+		first, end = fs.component, fs.component+1
+	}
+	for c := first; c < end; c++ {
+		wi := c
+		if fs.sps.SeparateColourPlaneFlag {
+			wi = 0
+		}
 		px, py, pw, ph := (mbx*16 + x), (mby*16 + y), w, h
 		denom := t.LumaDenom
-		if c > 0 {
+		if c > 0 && !fs.sps.SeparateColourPlaneFlag {
 			px /= fs.subW
 			py /= fs.subH
 			pw /= fs.subW
@@ -26,14 +34,14 @@ func (s *sliceEntry) applyPWeights(fs *frameState, mbx, mby, x, y, w, h, ref int
 			for yy := range ph {
 				row := pl.Row16(py + yy)[px : px+pw]
 				for i, v := range row {
-					row[i] = prediction.WeightSampleHigh(v, weight.Weight[c], weight.Offset[c], denom, pl.BitDepth)
+					row[i] = prediction.WeightSampleHigh(v, weight.Weight[wi], weight.Offset[wi], denom, pl.BitDepth)
 				}
 			}
 		} else {
 			for yy := range ph {
 				row := pl.Row(py + yy)[px : px+pw]
 				for i, v := range row {
-					row[i] = prediction.WeightSample(v, weight.Weight[c], weight.Offset[c], denom)
+					row[i] = prediction.WeightSample(v, weight.Weight[wi], weight.Offset[wi], denom)
 				}
 			}
 		}
@@ -51,9 +59,13 @@ func (fs *frameState) mcBPartition(s *sliceEntry, mbx, mby int, p pPartition, re
 }
 
 func mcBPartitionSamples[T ~uint8 | ~uint16](fs *frameState, s *sliceEntry, mbx, mby int, p pPartition, refs [2]int8, mvs [2]motion.MV) {
-	for c := 0; c < 3; c++ {
+	first, end := 0, 3
+	if fs.sps.SeparateColourPlaneFlag {
+		first, end = fs.component, fs.component+1
+	}
+	for c := first; c < end; c++ {
 		x, y, w, h := mbx*16+p.x*4, mby*16+p.y*4, p.w*4, p.h*4
-		if c > 0 {
+		if c > 0 && !fs.sps.SeparateColourPlaneFlag {
 			x /= fs.subW
 			y /= fs.subH
 			w /= fs.subW
@@ -68,13 +80,13 @@ func mcBPartitionSamples[T ~uint8 | ~uint16](fs *frameState, s *sliceEntry, mbx,
 			mv := mvs[l]
 			switch dst := any(samples[l][:]).(type) {
 			case []byte:
-				if c == 0 {
+				if c == 0 || fs.sps.ChromaFormatIDC == 3 {
 					prediction.MCBlockLuma(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
 				} else {
 					prediction.MCBlockChromaFormat(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y), fs.subW, fs.subH)
 				}
 			case []uint16:
-				if c == 0 {
+				if c == 0 || fs.sps.ChromaFormatIDC == 3 {
 					prediction.MCBlockLumaHigh(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
 				} else {
 					prediction.MCBlockChromaFormatHigh(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y), fs.subW, fs.subH)
@@ -88,13 +100,17 @@ func mcBPartitionSamples[T ~uint8 | ~uint16](fs *frameState, s *sliceEntry, mbx,
 		if explicit {
 			t := s.hdr.PredictionWeights
 			denom = t.LumaDenom
-			if c > 0 {
+			if c > 0 && !fs.sps.SeparateColourPlaneFlag {
 				denom = t.ChromaDenom
 			}
 			for l := 0; l < 2; l++ {
 				if refs[l] >= 0 {
 					v := t.Lists[l][refs[l]]
-					weights[l], offsets[l] = v.Weight[c], v.Offset[c]
+					wi := c
+					if fs.sps.SeparateColourPlaneFlag {
+						wi = 0
+					}
+					weights[l], offsets[l] = v.Weight[wi], v.Offset[wi]
 				}
 			}
 		}

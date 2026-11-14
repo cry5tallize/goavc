@@ -290,14 +290,14 @@ func usesHighProfileSyntax(profile uint8) bool {
 // validateSupported 限制已经接入共享内核与流水线的工具组合。
 func (s *SPS) validateSupported() error {
 	switch s.ProfileIDC {
-	case 66, 77, 100, 110, 122:
+	case 66, 77, 100, 110, 122, 244:
 	default:
 		return fmt.Errorf("syntax: profile_idc %d is not supported: %w",
 			s.ProfileIDC, h264.ErrUnsupported)
 	}
 	if usesHighProfileSyntax(s.ProfileIDC) {
-		if s.SeparateColourPlaneFlag {
-			return fmt.Errorf("syntax: separate_colour_plane_flag is not supported: %w", h264.ErrUnsupported)
+		if s.SeparateColourPlaneFlag && s.ChromaFormatIDC != 3 {
+			return fmt.Errorf("syntax: separate colour planes require chroma_format_idc=3: %w", h264.ErrInvalidData)
 		}
 		if s.QPPPrimeYZeroTransformBypassFlag {
 			return fmt.Errorf("syntax: qpprime_y_zero_transform_bypass_flag is not supported: %w", h264.ErrUnsupported)
@@ -306,11 +306,14 @@ func (s *SPS) validateSupported() error {
 		if s.ProfileIDC == 122 {
 			maxChroma = 2
 		}
+		if s.ProfileIDC == 244 {
+			maxChroma = 3
+		}
 		if s.ChromaFormatIDC < 1 || s.ChromaFormatIDC > maxChroma {
 			return fmt.Errorf("syntax: chroma_format_idc %d is not supported for profile %d: %w",
 				s.ChromaFormatIDC, s.ProfileIDC, h264.ErrUnsupported)
 		}
-		high10 := (s.ProfileIDC == 110 || s.ProfileIDC == 122) && s.BitDepthLumaMinus8 == 2 && s.BitDepthChromaMinus8 == 2
+		high10 := (s.ProfileIDC == 110 || s.ProfileIDC == 122 || s.ProfileIDC == 244) && s.BitDepthLumaMinus8 == 2 && s.BitDepthChromaMinus8 == 2
 		if !high10 && (s.BitDepthLumaMinus8 != 0 || s.BitDepthChromaMinus8 != 0) {
 			return fmt.Errorf("syntax: unsupported bit depth %d/%d for profile %d: %w",
 				s.BitDepthLumaMinus8+8, s.BitDepthChromaMinus8+8, s.ProfileIDC, h264.ErrUnsupported)

@@ -9,12 +9,10 @@ import (
 	"github.com/goavc/h264/internal/transform"
 )
 
-// decodeResiduals 按语法顺序解码一个宏块的亮度/色度 level。
-func (fs *frameState) decodeResiduals(s *sliceEntry, addr, mbx, mby int, i16, lumaAC bool, cbp int, res *residual) error {
-	if s.cabac != nil {
-		return fs.decodeCABACResidual(s, addr, mbx, mby, i16, lumaAC, cbp, res)
-	}
+// decodeCAVLCLuma 同时服务亮度与444全尺寸色度，nC按当前平面独立维护。
+func (fs *frameState) decodeCAVLCLuma(s *sliceEntry, addr, mbx, mby int, i16, lumaAC bool, cbp int, res *planeResidual) error {
 	r := s.data
+	grid := fs.planeNZ()
 	if i16 {
 		bx, by := 0, 0
 		nC := fs.lumaNC(mbx, mby, bx, by)
@@ -30,7 +28,7 @@ func (fs *frameState) decodeResiduals(s *sliceEntry, addr, mbx, mby int, i16, lu
 					if err != nil {
 						return fmt.Errorf("luma ac block %d: %w", raster, err)
 					}
-					fs.lumaNZ[addr*16+raster] = uint8(n)
+					grid[addr*16+raster] = uint8(n)
 				}
 			}
 		}
@@ -51,7 +49,7 @@ func (fs *frameState) decodeResiduals(s *sliceEntry, addr, mbx, mby int, i16, lu
 				if err != nil {
 					return fmt.Errorf("luma block %d: %w", raster, err)
 				}
-				fs.lumaNZ[addr*16+raster] = uint8(n)
+				grid[addr*16+raster] = uint8(n)
 				if fs.info[addr].transform8 {
 					for k := 0; k < 16; k++ {
 						res.luma8[i8][transform.Zigzag8x8[4*k+i4]] = stream[transform.Zigzag4x4[k]]
@@ -60,6 +58,11 @@ func (fs *frameState) decodeResiduals(s *sliceEntry, addr, mbx, mby int, i16, lu
 			}
 		}
 	}
+	return nil
+}
+
+func (fs *frameState) decodeCAVLCChroma(s *sliceEntry, addr, mbx, mby, cbp int, res *residual) error {
+	r := s.data
 
 	chromaCBP := (cbp >> 4) & 3
 	if chromaCBP == 0 {
@@ -94,8 +97,8 @@ func (fs *frameState) decodeResiduals(s *sliceEntry, addr, mbx, mby int, i16, lu
 }
 
 // reconstructIntra4x4 按规范块序预测并重建，右上样本不得提前可用。
-func (fs *frameState) reconstructIntra4x4(mbx, mby, cbp, qp int, res *residual) error {
-	plane := &fs.pic.Planes[0]
+func (fs *frameState) reconstructPlane4(mbx, mby, cbp, qp int, res *planeResidual) error {
+	plane := &fs.pic.Planes[fs.component]
 	info := &fs.info[mby*fs.mbW+mbx]
 	for n := 0; n < 16; n++ {
 		raster := blockRaster(n)
@@ -116,8 +119,8 @@ func (fs *frameState) reconstructIntra4x4(mbx, mby, cbp, qp int, res *residual) 
 }
 
 // reconstructI16 预测 16x16，并加入 DC/AC 残差。
-func (fs *frameState) reconstructI16(mbx, mby, predMode, chromaMode int, lumaAC bool, qp int, res *residual) error {
-	plane := &fs.pic.Planes[0]
+func (fs *frameState) reconstructPlane16(mbx, mby, predMode int, lumaAC bool, qp int, res *planeResidual) error {
+	plane := &fs.pic.Planes[fs.component]
 	qp, err := transform.ScaleQP(qp, 8+int(fs.sps.BitDepthLumaMinus8))
 	if err != nil {
 		return err
@@ -142,15 +145,14 @@ func (fs *frameState) reconstructI16(mbx, mby, predMode, chromaMode int, lumaAC 
 			return err
 		}
 	}
-	// 色度预测。
-	if err := fs.predictChroma(mbx, mby, chromaMode); err != nil {
-		return err
-	}
 	return nil
 }
 
 // predictChroma 按采样格式预测两个色度平面。
 func (fs *frameState) predictChroma(mbx, mby, mode int) error {
+	if fs.sps.ChromaFormatIDC == 3 {
+		return nil
+	}
 	for comp := 0; comp < 2; comp++ {
 		if err := fs.predictIntraBlock(mbx, mby, comp+1, mode); err != nil {
 			return err
@@ -160,7 +162,7 @@ func (fs *frameState) predictChroma(mbx, mby, mode int) error {
 }
 
 // addLumaResidual 把非 I16x16 的亮度残差加到已预测像素上。
-func (fs *frameState) addLumaResidual(mbx, mby, cbp int, i16 bool, qp int, res *residual) error {
+func (fs *frameState) addPlaneResidual(mbx, mby, cbp int, i16 bool, qp int, res *planeResidual) error {
 	if i16 {
 		return nil
 	}
@@ -174,7 +176,7 @@ func (fs *frameState) addLumaResidual(mbx, mby, cbp int, i16 bool, qp int, res *
 		}
 		return nil
 	}
-	plane := &fs.pic.Planes[0]
+	plane := &fs.pic.Planes[fs.component]
 	for raster := 0; raster < 16; raster++ {
 		bx, by := raster%4, raster/4
 		i8 := (by/2)*2 + bx/2
@@ -190,6 +192,9 @@ func (fs *frameState) addLumaResidual(mbx, mby, cbp int, i16 bool, qp int, res *
 
 // addChromaResidual 反量化色度 DC/AC 并加到预测像素。
 func (fs *frameState) addChromaResidual(mbx, mby, chromaCBP, qp int, res *residual) error {
+	if fs.sps.ChromaFormatIDC == 3 {
+		return nil
+	}
 	if chromaCBP == 0 {
 		return nil
 	}
@@ -258,14 +263,30 @@ func addResidual4x4(pl *picture.Plane, x, y int, levels *[16]int32, qp int, alre
 // mcPartition 做一次亮度+色度运动补偿并写入当前图像。
 func (fs *frameState) mcPartition(ref *picture.Picture, mbx, mby, xOff, yOff, w, h int, mv motion.MV) {
 	lx, ly := mbx*16+xOff, mby*16+yOff
-	pl := &fs.pic.Planes[0]
+	comp := 0
+	if fs.sps.SeparateColourPlaneFlag {
+		comp = fs.component
+	}
+	pl := &fs.pic.Planes[comp]
 	if pl.BitDepth == 10 {
-		prediction.MCBlockLumaHigh(pl.Data16[pl.Index(lx, ly):], pl.Stride, &ref.Planes[0], lx, ly, w, h, int(mv.X), int(mv.Y))
+		prediction.MCBlockLumaHigh(pl.Data16[pl.Index(lx, ly):], pl.Stride, &ref.Planes[comp], lx, ly, w, h, int(mv.X), int(mv.Y))
 	} else {
-		prediction.MCBlockLuma(pl.Data[pl.Index(lx, ly):], pl.Stride, &ref.Planes[0], lx, ly, w, h, int(mv.X), int(mv.Y))
+		prediction.MCBlockLuma(pl.Data[pl.Index(lx, ly):], pl.Stride, &ref.Planes[comp], lx, ly, w, h, int(mv.X), int(mv.Y))
+	}
+	if fs.sps.SeparateColourPlaneFlag {
+		return
 	}
 	cx, cy := mbx*fs.chromaW+xOff/fs.subW, mby*fs.chromaH+yOff/fs.subH
 	for comp := 0; comp < 2; comp++ {
+		if fs.sps.ChromaFormatIDC == 3 {
+			cpl := &fs.pic.Planes[comp+1]
+			if cpl.BitDepth == 10 {
+				prediction.MCBlockLumaHigh(cpl.Data16[cpl.Index(cx, cy):], cpl.Stride, &ref.Planes[comp+1], cx, cy, w, h, int(mv.X), int(mv.Y))
+			} else {
+				prediction.MCBlockLuma(cpl.Data[cpl.Index(cx, cy):], cpl.Stride, &ref.Planes[comp+1], cx, cy, w, h, int(mv.X), int(mv.Y))
+			}
+			continue
+		}
 		cpl := &fs.pic.Planes[comp+1]
 		if cpl.BitDepth == 10 {
 			prediction.MCBlockChromaFormatHigh(cpl.Data16[cpl.Index(cx, cy):], cpl.Stride, &ref.Planes[comp+1], cx, cy, w/fs.subW, h/fs.subH, int(mv.X), int(mv.Y), fs.subW, fs.subH)

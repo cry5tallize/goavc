@@ -64,8 +64,12 @@ func makeHigh422Oracle(t *testing.T, ff string, format h264.PixelFormat, qp int,
 	if err := os.WriteFile(input, raw, 0600); err != nil {
 		t.Fatal(err)
 	}
+	profile := "high422"
+	if subW, _ := format.ChromaSubsampling(); subW == 1 {
+		profile = "high444"
+	}
 	args := []string{"-v", "error", "-y", "-f", "rawvideo", "-pixel_format", format.String(), "-video_size", fmt.Sprintf("%dx%d", width, height), "-framerate", "12", "-i", input,
-		"-frames:v", strconv.Itoa(frames), "-c:v", "libx264", "-profile:v", "high422", "-preset", "medium", "-qp", strconv.Itoa(qp),
+		"-frames:v", strconv.Itoa(frames), "-c:v", "libx264", "-profile:v", profile, "-preset", "medium", "-qp", strconv.Itoa(qp),
 		"-x264-params", "threads=1:lookahead-threads=1:sync-lookahead=0:scenecut=0:aud=1:repeat-headers=1:" + params, "-f", "h264", output}
 	if out, err := exec.Command(ff, args...).CombinedOutput(); err != nil {
 		t.Fatalf("encode %v High422: %v\n%s", format, err, out)

@@ -24,6 +24,9 @@ type Reference struct {
 	Picture         *picture.Picture
 	Motion          [2]*motion.Grid
 	BlockReferences [2][]*Identity
+	// 独立色平面的Cb/Cr运动及块引用；共同编码444只使用上面的共享网格。
+	ChromaMotion          [2][2]*motion.Grid
+	ChromaBlockReferences [2][2][]*Identity
 }
 
 func (d *DPB) SetCapacity(n int) error {

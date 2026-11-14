@@ -59,6 +59,8 @@ type frameState struct {
 	subW, subH       int
 	chromaW, chromaH int
 	chromaBlocks     int
+	component        int               // 444共享全尺寸内核当前处理的平面；其余路径保持0。
+	fullResidual     *[2]planeResidual // 仅共同编码444分配，每帧复用，420/422不增加宏块清零量。
 	decoded          []bool
 	info             []mbInfo
 	lumaNZ           []uint8
@@ -73,6 +75,10 @@ type frameState struct {
 }
 
 func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFrame bool) (*frameState, error) {
+	return newFrameStateForPicture(d, sps, pps, bFrame, nil)
+}
+
+func newFrameStateForPicture(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFrame bool, pic *picture.Picture) (*frameState, error) {
 	scaling, err := syntax.SelectScalingMatrices(sps, pps)
 	if err != nil {
 		return nil, err
@@ -89,12 +95,20 @@ func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFrame bool) (*
 			format = h264.YUV422P10LE
 		}
 	}
+	if sps.ChromaFormatIDC == 3 {
+		format = h264.YUV444P
+		if sps.BitDepthLumaMinus8 == 2 {
+			format = h264.YUV444P10LE
+		}
+	}
 	subW, subH := format.ChromaSubsampling()
 	chromaW, chromaH := format.PlaneDimensions(1, 16, 16)
 	chromaBlocks := chromaW * chromaH / 16
-	pic, err := d.pool.Get(mbW, mbH, format)
-	if err != nil {
-		return nil, err
+	if pic == nil {
+		pic, err = d.pool.Get(mbW, mbH, format)
+		if err != nil {
+			return nil, err
+		}
 	}
 	total := mbW * mbH
 	fs := &frameState{
@@ -113,8 +127,13 @@ func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFrame bool) (*
 		lumaNZ:  make([]uint8, total*16),
 		mv:      motion.NewGrid(mbW, mbH),
 	}
-	fs.chromaNZ[0] = make([]uint8, total*chromaBlocks)
-	fs.chromaNZ[1] = make([]uint8, total*chromaBlocks)
+	if sps.ChromaFormatIDC == 3 && !sps.SeparateColourPlaneFlag {
+		fs.fullResidual = new([2]planeResidual)
+	}
+	if !sps.SeparateColourPlaneFlag {
+		fs.chromaNZ[0] = make([]uint8, total*chromaBlocks)
+		fs.chromaNZ[1] = make([]uint8, total*chromaBlocks)
+	}
 	fs.referenceIDs[0] = make([]*dpb.Identity, total*16)
 	if bFrame {
 		fs.mv1 = motion.NewGrid(mbW, mbH)
@@ -212,10 +231,13 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 		return nil
 	}
 	first := slices[0]
-	for i := 1; i < len(slices); i++ {
-		if slices[i].hdr.FirstMBInSlice < slices[i-1].hdr.FirstMBInSlice {
+	var previous [3]uint32
+	for i := range slices {
+		plane := int(slices[i].hdr.ColourPlaneID)
+		if slices[i].hdr.FirstMBInSlice < previous[plane] {
 			return fmt.Errorf("decoder: arbitrary slice order: %w", h264.ErrUnsupported)
 		}
+		previous[plane] = slices[i].hdr.FirstMBInSlice
 	}
 	sps, pps := first.sps, first.pps
 	if err := d.checkSupported(sps, pps, first.hdr); err != nil {
@@ -269,6 +291,18 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 			fs.release()
 		}
 	}()
+	states := [3]*frameState{fs}
+	planeCount := 1
+	if sps.SeparateColourPlaneFlag {
+		planeCount = 3
+		for comp := 1; comp < planeCount; comp++ {
+			states[comp], err = newFrameStateForPicture(d, sps, pps, bFrame, fs.pic)
+			if err != nil {
+				return err
+			}
+			states[comp].component, states[comp].poc = comp, poc
+		}
+	}
 
 	if len(slices) > d.cfg.MaxSliceCount {
 		return fmt.Errorf("decoder: slice count %d exceeds limit %d: %w",
@@ -276,9 +310,14 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 	}
 
 	// 校验 slice 覆盖范围：first_mb 必须递增且首 slice 从 0 开始。
-	lastEnd := 0
+	var lastEnd [3]int
 	for si := range slices {
 		s := &slices[si]
+		plane := int(s.hdr.ColourPlaneID)
+		fs := states[plane]
+		if fs == nil {
+			return fmt.Errorf("decoder: invalid colour plane %d: %w", plane, h264.ErrInvalidData)
+		}
 		if s.hdr.Type != syntax.SliceTypeI {
 			lists := d.dpb.Lists(s.hdr.FrameNum, poc, s.hdr.Type == syntax.SliceTypeB)
 			for list := 0; list < 1+boolToInt(s.hdr.Type == syntax.SliceTypeB); list++ {
@@ -297,17 +336,20 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 			return fmt.Errorf("decoder: first_mb_in_slice %d exceeds picture: %w",
 				s.hdr.FirstMBInSlice, h264.ErrInvalidData)
 		}
-		if int(s.hdr.FirstMBInSlice) < lastEnd {
+		if int(s.hdr.FirstMBInSlice) < lastEnd[plane] {
 			return fmt.Errorf("decoder: overlapping slices at first_mb %d: %w",
 				s.hdr.FirstMBInSlice, h264.ErrInvalidData)
 		}
-		if si == 0 && s.hdr.FirstMBInSlice != 0 {
+		if lastEnd[plane] == 0 && s.hdr.FirstMBInSlice != 0 {
 			return fmt.Errorf("decoder: first slice starts at mb %d: %w",
 				s.hdr.FirstMBInSlice, h264.ErrInvalidData)
 		}
 		end := fs.total
-		if si+1 < len(slices) {
-			end = int(slices[si+1].hdr.FirstMBInSlice)
+		for next := si + 1; next < len(slices); next++ {
+			if slices[next].hdr.ColourPlaneID == s.hdr.ColourPlaneID {
+				end = int(slices[next].hdr.FirstMBInSlice)
+				break
+			}
 		}
 		if end <= int(s.hdr.FirstMBInSlice) || end > fs.total {
 			return fmt.Errorf("decoder: invalid slice interval: %w", h264.ErrInvalidData)
@@ -315,21 +357,22 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 		if err := decodeSlice(fs, s, si, int(s.hdr.FirstMBInSlice), end); err != nil {
 			return err
 		}
-		lastEnd = end
+		lastEnd[plane] = end
 	}
-	for i, okMB := range fs.decoded {
-		if !okMB {
-			return fmt.Errorf("decoder: macroblock %d was not covered by any slice: %w",
-				i, h264.ErrInvalidData)
+	for comp := 0; comp < planeCount; comp++ {
+		state := states[comp]
+		for i, okMB := range state.decoded {
+			if !okMB {
+				return fmt.Errorf("decoder: plane %d macroblock %d was not covered: %w", comp, i, h264.ErrInvalidData)
+			}
 		}
-	}
-
-	fs.mv.BeginSlice(0)
-	if fs.mv1 != nil {
-		fs.mv1.BeginSlice(0)
-	}
-	if err := fs.deblock(); err != nil {
-		return err
+		state.mv.BeginSlice(0)
+		if state.mv1 != nil {
+			state.mv1.BeginSlice(0)
+		}
+		if err := state.deblock(); err != nil {
+			return err
+		}
 	}
 	fs.pic.FillBorders()
 
@@ -342,6 +385,10 @@ func (d *Decoder) decodeFrame(slices []sliceEntry, p h264.Packet) error {
 		r.Motion[0] = fs.mv
 		r.Motion[1] = fs.mv1
 		r.BlockReferences = fs.referenceIDs
+		for comp := 1; comp < planeCount; comp++ {
+			r.ChromaMotion[comp-1] = [2]*motion.Grid{states[comp].mv, states[comp].mv1}
+			r.ChromaBlockReferences[comp-1] = states[comp].referenceIDs
+		}
 		if err := d.dpb.Store(r, idr, first.hdr.LongTermReferenceFlag, first.hdr.AdaptiveRefPicMarking, first.hdr.MemoryManagement); err != nil {
 			frame.Release()
 			return err
@@ -372,8 +419,11 @@ func (d *Decoder) checkSupported(sps *syntax.SPS, pps *syntax.PPS, hdr *syntax.S
 	if !sps.FrameMbsOnlyFlag || sps.MbAdaptiveFrameFieldFlag || hdr.FieldPicFlag {
 		return fmt.Errorf("decoder: field/MBAFF coding: %w", h264.ErrUnsupported)
 	}
-	if (sps.ChromaFormatIDC != 1 && sps.ChromaFormatIDC != 2) || sps.BitDepthLumaMinus8 != sps.BitDepthChromaMinus8 || (sps.BitDepthLumaMinus8 != 0 && sps.BitDepthLumaMinus8 != 2) {
-		return fmt.Errorf("decoder: only 8/10-bit 4:2:0/4:2:2: %w", h264.ErrUnsupported)
+	if pps.NumSliceGroupsMinus1 != 0 {
+		return fmt.Errorf("decoder: FMO slice groups: %w", h264.ErrUnsupported)
+	}
+	if sps.ChromaFormatIDC < 1 || sps.ChromaFormatIDC > 3 || sps.BitDepthLumaMinus8 != sps.BitDepthChromaMinus8 || (sps.BitDepthLumaMinus8 != 0 && sps.BitDepthLumaMinus8 != 2) {
+		return fmt.Errorf("decoder: only 8/10-bit 4:2:0/4:2:2/4:4:4: %w", h264.ErrUnsupported)
 	}
 	if hdr.Type == syntax.SliceTypeSP || hdr.Type == syntax.SliceTypeSI {
 		return fmt.Errorf("decoder: SP/SI slices: %w", h264.ErrUnsupported)
