@@ -34,3 +34,11 @@ b-pyramid=none、scenecut=0、ref=2、threads=1，避免I/P/B QP比例与帧型�
 重建SHA-256；需要Go Decoder验证的调用还必须存在`DecoderVerified=true`标记。
 该标记来自逐帧比较，不替代独立FFmpeg像素Oracle。Windows PowerShell的原生stderr
 重定向按FFmpeg真实退出码处理，日志保留用于审计。
+
+当前测量器还记录逐AU的PTS/DTS、比特数、VBV fullness与实际缓冲大小。
+码控脚本从初始半满缓冲和累计恒定排空量独立重算每一步VBV，逐项核对报告，
+不只检查生产代码提供的最小/最大值。所有质量项也执行三方像素检查。
+`-Resume`还要求源码revision、clean构建、8×8/权重/Lookahead/FPS/slice配置及
+完整轨迹吻合；成功退出后才将`.pending`报告发布为JSON。
+为缩短等待，可在不同结果目录分别用`-Sizes 720p`/`-Sizes 1080p`、
+`-RateModes abr`/`cbr`/`vbv`运行独立实例；完整验收仍须收齐全部矩阵。

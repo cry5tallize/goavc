@@ -49,6 +49,12 @@ type report struct {
 	Modified                         bool
 	FrameBits                        []int64
 	WindowBitrateKbps                []float64
+	FPSDen                           int
+	Transform8x8, WeightedPrediction bool
+	Lookahead                        int
+	VBVBufferBits                    int64
+	VBVFullnessSequence              []int64
+	PacketPTS, PacketDTS             []int64
 }
 
 func main() {
@@ -135,6 +141,7 @@ func main() {
 		input = f
 	}
 	result, stream, err := measureConfigured(c, *frames, *slices, *pcm, input, options, reconWriter, *verify)
+	result.Transform8x8, result.WeightedPrediction, result.Lookahead = *t8, *weight, *lookahead
 	if err == nil && *output != "" {
 		err = os.WriteFile(*output, stream, 0644)
 	}
@@ -175,6 +182,8 @@ func measureConfigured(c h264.EncoderConfig, count, slices int, pcm bool, reader
 	defer e.Close()
 	r := report{Width: c.Width, Height: c.Height, Frames: count, QP: c.QP, FPS: c.FPSNum, SliceCount: slices, PCM: pcm, Go: runtime.Version(), GOPSize: c.GOPSize}
 	r.Profile = c.Profile
+	r.FPSDen = c.FPSDen
+	r.VBVBufferBits = e.RateControlStats().VBVBufferBits
 	if info, ok := debug.ReadBuildInfo(); ok {
 		for _, setting := range info.Settings {
 			switch setting.Key {
@@ -290,6 +299,8 @@ func measureConfigured(c h264.EncoderConfig, count, slices int, pcm bool, reader
 				return err
 			}
 			packets++
+			r.PacketPTS = append(r.PacketPTS, p.PTS)
+			r.PacketDTS = append(r.PacketDTS, p.DTS)
 			r.FrameBits = append(r.FrameBits, int64(len(p.Data))*8)
 			decoded, err := e.Reconstruction()
 			if err != nil {
@@ -315,6 +326,7 @@ func measureConfigured(c h264.EncoderConfig, count, slices int, pcm bool, reader
 			reconstructions[p.PTS] = decoded
 			r.QPSequence = append(r.QPSequence, e.LastQP())
 			stats := e.RateControlStats()
+			r.VBVFullnessSequence = append(r.VBVFullnessSequence, stats.VBVFullness)
 			if packets == 1 {
 				r.MinVBVFullness = stats.VBVFullness
 			}

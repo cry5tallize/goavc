@@ -88,6 +88,41 @@ func TestMeasure_FractionalFrameRate(t *testing.T) {
 	}
 }
 
+func TestMeasure_VBVTraceAndDecodeOrder(t *testing.T) {
+	c := h264.DefaultEncoderConfig()
+	c.Width, c.Height = 32, 32
+	c.Profile, c.MaxBFrames = h264.ProfileHigh, 2
+	c.RateControl, c.Bitrate, c.VBVBufferSize = h264.RateControlVBV, 9000, 9000
+	c.FPSNum, c.FPSDen = 30000, 1001
+	const frames = 40
+	raw := bytes.Repeat([]byte{128}, 32*32*3/2*frames)
+	r, _, err := measureConfigured(c, frames, 2, false, bytes.NewReader(raw), nil, nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.VBVFullnessSequence) != frames || len(r.FrameBits) != frames || r.VBVBufferBits != 9000 || r.FPSDen != 1001 {
+		t.Fatal("逐AU缓冲轨迹不完整", r)
+	}
+	fullness, remainder, total := int64(4500), int64(0), int64(0)
+	seen := map[int64]bool{}
+	for i, bits := range r.FrameBits {
+		numerator := int64(c.Bitrate*c.FPSDen) + remainder
+		fullness += bits - numerator/int64(c.FPSNum)
+		remainder = numerator % int64(c.FPSNum)
+		total += bits
+		if fullness != r.VBVFullnessSequence[i] || fullness < 0 || fullness > 9000 {
+			t.Fatalf("第%d个AU缓冲与独立充放水解析解不符：%d/%d", i, r.VBVFullnessSequence[i], fullness)
+		}
+		if seen[r.PacketPTS[i]] || r.PacketPTS[i] < 0 || r.PacketPTS[i] >= frames || i > 0 && r.PacketDTS[i] <= r.PacketDTS[i-1] {
+			t.Fatal("实际包时间戳不满足重排契约", r.PacketPTS, r.PacketDTS)
+		}
+		seen[r.PacketPTS[i]] = true
+	}
+	if total != int64(r.Bytes)*8 || !r.DecoderVerified {
+		t.Fatal("逐AU总码量或解码验证标记错误", r)
+	}
+}
+
 type shortReconWriter struct{}
 
 func (shortReconWriter) Write(p []byte) (int, error) { return len(p) - 1, nil }
