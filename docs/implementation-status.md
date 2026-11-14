@@ -174,7 +174,7 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 
 ## M6：流式I/O（WIP）
 
-分支`feat/m6-streaming`。四个接口、8-bit原始YUV Reader/Writer及增量Annex-B NAL Reader已实现；
+分支`feat/m6-streaming`。四个接口、8-bit原始YUV Reader/Writer及增量Annex-B/AVCC NAL Reader已实现；
 AU适配器、取消、背压、自动Flush与长时稳定性门禁尚未完成。接手记录见`docs/gates/m6.md`。
 
 | Module | 职责 | Status | 证据 | 缺口 |
@@ -183,6 +183,7 @@ AU适配器、取消、背压、自动Flush与长时稳定性门禁尚未完成�
 | YUV Reader | 8-bit420/422/444、奇数尺寸、紧密Y/U/V、独立帧与序号时间戳 | Conformant | 3×3已知17/21/27字节解析解、单字节分块、每处截断、EOF/所有权/错误/资源限界测试 | 仅原始I/O，非422/444编码支持；高位深待M7，不中断底层阻塞Read |
 | YUV Writer | 8-bit420/422/444，忽略stride填充，最小末行缓冲，全帧验证后同步写出 | Conformant | 已知紧密字节、三格式多帧往返、晚平面错误无输出、短写/底层错误及粘性状态测试 | 原始流无尺寸/格式/时间戳头；不关闭底层Writer，不提供取消/重试传输 |
 | Annex-B NAL Reader | 复用有界Scanner，3/4字节起始码、EBSP独立所有权、严格前导/尾部、错误粘性 | Conformant | 固定字节向量×1/2/3/7/4096/整文件，EOF前边界交付、EOF同次数据/包装EOF、超限/错误/所有权测试 | 仅字节封装与header，不组装AU或验证残差；默认8MiB单NAL及64KiB读缓冲，非pipeline的MaxInputBuffer |
+| AVCC NAL Reader | 复用长度解析器，1..4前缀及avcC取宽度，参数集快照先于样本交付、分配前NAL限额 | Conformant | 固定前缀×分块矩阵、逐处截断、零长度/坏header、超大长度不读载荷、配置拷贝/版本/类型/限额与I/O测试 | 仅NAL封装；不读取MP4 box、不推断时间戳、不组装AU；avcC/MP4整体兼容性仍Partial |
 
 ## M7–M9
 

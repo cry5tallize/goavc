@@ -151,6 +151,7 @@
 | 8-bit YUV Reader | Conformant | 420/422/444、奇数尺寸、独立帧所有权、序号PTS/Duration1、帧边界EOF和尾帧截断；已知字节布局验证。原始I/O不扩大编码器格式支持 |
 | 8-bit YUV Writer | Conformant | 跳过stride填充、最小末行缓冲、写前完整校验、短写及I/O失败后停止追加；已知字节与三格式多帧往返验证。无原始流元数据头 |
 | 增量Annex-B NAL Reader | Conformant | 跨1/2/3/7/4096/整文件chunk，独立EBSP、默认8MiB单NAL限额、严格前导与残缺尾起始码处理；只切分NAL，不提供AU/帧/时间戳 |
+| 增量AVCC NAL Reader | Conformant | 1..4长度前缀、从提供的avcC取宽度并先交付复制的参数集，默认8MiB单NAL、分配前限额、截断/错误粘性；仅NAL，不解析MP4或提供AU/时间戳 |
 
 ## 11. 明确不支持（第一版）
 

@@ -94,6 +94,7 @@ decoder              encoder
 | `stream.FrameReader.ReadFrame()` | 成功帧归调用方，后续读取不覆盖；YUVReader每帧独立缓冲，用完Release |
 | `stream.FrameWriter.WriteFrame()` | 同步消费且不保留输入引用，不转移Release责任；底层I/O对象关闭权仍属调用方 |
 | `stream.AnnexBReader.ReadNAL()` | 返回的EBSP独立归调用方，后续读取不覆盖；不组装AU或推断时间戳，底层Reader仍由调用方关闭 |
+| `stream.AVCCReader.ReadNAL()` | 独立EBSP；FromConfig先交付构造时复制的SPS/PPS/扩展再读样本，不保留原avcC引用；不组装AU或推断时间戳 |
 | `Frame.Clone()` | 独立内存，不参与池管理，调用方负责释放（GC 回收即可） |
 | `Frame.Release()` | 幂等；调用后帧失效，`Validate` 返回 `ErrInvalidData` |
 

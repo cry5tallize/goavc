@@ -40,7 +40,16 @@ func (c *AVCDecoderConfig) LengthSize() int { return int(c.LengthSizeMinusOne) +
 // 未消费字节。非版本 1 的记录返回 ErrUnsupported（协议版本边界），
 // 其余结构错误返回 ErrInvalidData。
 func ParseAVCDecoderConfig(data []byte) (*AVCDecoderConfig, error) {
-	r := &configReader{data: data}
+	return ParseAVCDecoderConfigWithLimit(data, 0)
+}
+
+// ParseAVCDecoderConfigWithLimit在复制参数集之前校验每个NAL的大小（含header）。
+// 0保持原解析器的无额外限制语义；流适配器应传入明确的正上限。
+func ParseAVCDecoderConfigWithLimit(data []byte, maxNALSize int) (*AVCDecoderConfig, error) {
+	if maxNALSize < 0 {
+		return nil, fmt.Errorf("nal: negative avcC NAL limit: %w", h264.ErrInvalidData)
+	}
+	r := &configReader{data: data, maxNALSize: maxNALSize}
 	version, err := r.byte()
 	if err != nil {
 		return nil, err
@@ -165,8 +174,9 @@ func isHighProfile(profile uint8) bool {
 
 // configReader 是 avcC 字节游标。
 type configReader struct {
-	data []byte
-	off  int
+	data       []byte
+	off        int
+	maxNALSize int
 }
 
 func (r *configReader) remaining() int { return len(r.data) - r.off }
@@ -204,6 +214,9 @@ func (r *configReader) lengthPrefixed() ([]byte, error) {
 	length := int(hi)<<8 | int(lo)
 	if length == 0 {
 		return nil, fmt.Errorf("nal: avcC contains a zero-length NAL: %w", h264.ErrInvalidData)
+	}
+	if r.maxNALSize > 0 && length > r.maxNALSize {
+		return nil, fmt.Errorf("nal: avcC parameter set length %d exceeds %d: %w", length, r.maxNALSize, h264.ErrResourceLimit)
 	}
 	nal, err := r.bytes(length)
 	if err != nil {
