@@ -580,7 +580,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 14 | `feat[encoder]: add interlaced encoding with field order option` | WithInterlaced及-field-order，真实全场MBAFF、场预测/扫描/重建/滤波与pic_timing | 六格式双熵/场序/多slice/B/矩阵/权重/负QP/PCM三方Oracle、跨行双Skip回归、独立完整门禁及实际CLI逐帧场序通过 |
 | 15 | `feat[syntax]: add fmo slice group map parsing` | PPS type0–6、动态cycle、map-unit/帧场宏块映射与NextMBAddress | 规范固定字节/七类手算/坏表与分配前限额及独立完整常规门禁通过；像素解码见第16项 |
 | 16 | `feat[decoder]: add fmo and aso macroblock ordering` | 组内地址遍历、覆盖所有权、双类邻域隔离和ASO排序 | 七类PCM/I4/P-MVD/skip规范像素、坏覆盖恢复、独立完整门禁及实际CLI逐字节比较通过 |
-| 17 | `feat[syntax]: add data partition nal types` | type 2/3/4 | 定向语料 |
+| 17 | `feat[syntax]: add data partition nal types` | 类型2/3/4前缀、关联快照、条件字段与数据位偏移 | 独立规范bit串、逐bit截断、错误/资源分类及完整独立常规门禁通过；重组见第18项 |
 | 18 | `feat[decoder]: add data partition reassembly` | A/B/C 重组 | 语料一致 |
 | 19 | `feat[decoder]: add sp and si slice support` | SP/SI 语法 | 定向语料 |
 | 20 | `feat[decoder]: add redundant slice handling` | `redundant_pic_cnt` | 定向语料 |

@@ -40,7 +40,7 @@ func sliceTypeFromCode(code uint32) (SliceType, bool) {
 
 // SliceHeader 是 slice header 的解析结果（规范 7.3.3）。
 //
-// 保留 I/P/B 参考列表、MMCO 和加权预测的完整值，供 M3 图像管理与预测消费。
+// 保留参考列表、MMCO、加权预测及 SP/SI 切换量化参数，供流水线显式消费。
 //
 // Has* 标志用于区分"字段不存在"与"字段值为 0"。
 type SliceHeader struct {
@@ -48,7 +48,7 @@ type SliceHeader struct {
 	SliceTypeCode     uint32
 	Type              SliceType
 	PicParameterSetID uint32
-	// ColourPlaneID 仅 separate_colour_plane_flag 时存在，合法值为0..2。
+	// ColourPlaneID 仅 separate_colour_plane_flag 时存在，合法值为 0..2。
 	ColourPlaneID uint8
 
 	FrameNum        uint32
@@ -100,13 +100,19 @@ type SliceHeader struct {
 	SliceQPDelta int32
 	SliceQP      int
 
+	// SPForSwitchFlag 仅 SP 出现；SliceQSDelta/SliceQS 仅 SP/SI 出现。
+	// QSY 始终限制为 0..51，不随 luma bit depth 扩展负数下限。
+	SPForSwitchFlag bool
+	SliceQSDelta    int32
+	SliceQS         int
+
 	// 去块参数。PPS 未携带 deblocking_filter_control_present_flag 时，
 	// DisableDeblockingFilterIDC 保持 0（滤波开启）。
 	DisableDeblockingFilterIDC uint32
 	SliceAlphaC0OffsetDiv2     int32
 	SliceBetaOffsetDiv2        int32
 
-	// SliceGroupChangeCycle 仅动态FMO类型3..5携带，决定当前图片的映射。
+	// SliceGroupChangeCycle 仅 FMO map type 3..5 时存在。
 	SliceGroupChangeCycle uint32
 
 	// HeaderBits 是 slice header 占用的比特数，slice data 从该位置开始。
@@ -132,10 +138,17 @@ func ParseSliceHeader(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool) 
 // AU 边界与语法层测试；解码器必须使用本函数。
 func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool, nalRefIDC uint8) (*SliceHeader, error) {
 	if sps == nil {
-		return nil, fmt.Errorf("syntax: parse slice header requires an sps")
+		return nil, fmt.Errorf("syntax: parse slice header requires an sps: %w", h264.ErrInvalidData)
 	}
 	if ppsByID == nil {
-		return nil, fmt.Errorf("syntax: parse slice header requires a pps lookup")
+		return nil, fmt.Errorf("syntax: parse slice header requires a pps lookup: %w", h264.ErrInvalidData)
+	}
+	if nalRefIDC > 3 || (idr && nalRefIDC == 0) {
+		return nil, fmt.Errorf("syntax: invalid slice nal_ref_idc %d for IDR=%t: %w", nalRefIDC, idr, h264.ErrInvalidData)
+	}
+	if sps.Log2MaxFrameNumMinus4 > 12 || sps.PicOrderCntType > 2 ||
+		(sps.PicOrderCntType == 0 && sps.Log2MaxPicOrderCntLsbMinus4 > 12) {
+		return nil, fmt.Errorf("syntax: invalid slice SPS bit widths/POC type: %w", h264.ErrInvalidData)
 	}
 	r := bitstream.NewReader(rbsp)
 	h := &SliceHeader{IDR: idr}
@@ -152,8 +165,8 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 		return nil, fmt.Errorf("syntax: slice_type = %d exceeds 9: %w", h.SliceTypeCode, h264.ErrInvalidData)
 	}
 	h.Type = typ
-	if typ == SliceTypeSP || typ == SliceTypeSI {
-		return nil, fmt.Errorf("syntax: slice type %s is not supported in M1: %w", typ, h264.ErrUnsupported)
+	if idr && typ != SliceTypeI && typ != SliceTypeSI {
+		return nil, fmt.Errorf("syntax: IDR slice type must be I or SI, got %s: %w", typ, h264.ErrInvalidData)
 	}
 
 	if h.PicParameterSetID, err = readUE(r, "pic_parameter_set_id"); err != nil {
@@ -168,9 +181,15 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 		return nil, fmt.Errorf("syntax: slice references unknown pps id %d: %w",
 			h.PicParameterSetID, h264.ErrInvalidData)
 	}
+	if pps.PicParameterSetID != h.PicParameterSetID {
+		return nil, fmt.Errorf("syntax: slice pps lookup id mismatch: %w", h264.ErrInvalidData)
+	}
 	if pps.SeqParameterSetID != sps.SeqParameterSetID {
 		return nil, fmt.Errorf("syntax: pps %d references sps %d, got sps %d: %w",
 			pps.PicParameterSetID, pps.SeqParameterSetID, sps.SeqParameterSetID, h264.ErrInvalidData)
+	}
+	if err := pps.validateFMO(sps); err != nil {
+		return nil, err
 	}
 	if sps.SeparateColourPlaneFlag {
 		plane, err := readBits(r, 2, "colour_plane_id")
@@ -256,7 +275,7 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 			return nil, err
 		}
 	}
-	if typ == SliceTypeP || typ == SliceTypeB {
+	if typ == SliceTypeP || typ == SliceTypeSP || typ == SliceTypeB {
 		if h.NumRefIdxActiveOverrideFlag, err = readFlag(r, "num_ref_idx_active_override_flag"); err != nil {
 			return nil, err
 		}
@@ -295,7 +314,7 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 	}
 
 	// pred_weight_table()：保留默认值、显式权重和偏移供预测消费。
-	if (pps.WeightedPredFlag && typ == SliceTypeP) ||
+	if (pps.WeightedPredFlag && (typ == SliceTypeP || typ == SliceTypeSP)) ||
 		(pps.WeightedBipredIDC == 1 && typ == SliceTypeB) {
 		h.HasPredWeightTable = true
 		if h.PredictionWeights, err = parsePredWeightTable(r, sps, typ, h.NumRefIdxL0ActiveMinus1, h.NumRefIdxL1ActiveMinus1); err != nil {
@@ -343,6 +362,22 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 		return nil, fmt.Errorf("syntax: slice QPY %d out of range: %w", qp, h264.ErrInvalidData)
 	}
 	h.SliceQP = int(qp)
+
+	if typ == SliceTypeSP || typ == SliceTypeSI {
+		if typ == SliceTypeSP {
+			if h.SPForSwitchFlag, err = readFlag(r, "sp_for_switch_flag"); err != nil {
+				return nil, err
+			}
+		}
+		if h.SliceQSDelta, err = readSE(r, "slice_qs_delta"); err != nil {
+			return nil, err
+		}
+		qs := int64(26) + int64(pps.PicInitQSMinus26) + int64(h.SliceQSDelta)
+		if qs < 0 || qs > 51 {
+			return nil, fmt.Errorf("syntax: slice QSY %d out of range 0..51: %w", qs, h264.ErrInvalidData)
+		}
+		h.SliceQS = int(qs)
+	}
 
 	if pps.DeblockingFilterControlPresentFlag {
 		if h.DisableDeblockingFilterIDC, err = readUE(r, "disable_deblocking_filter_idc"); err != nil {

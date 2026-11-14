@@ -8,17 +8,17 @@ import (
 	"github.com/goavc/h264/bitstream"
 )
 
-// TestUnsupportedSliceTypes 验证 SP/SI slice 在 M1 显式拒绝。
-func TestUnsupportedSliceTypes(t *testing.T) {
+// SP/SI 类型本身合法；不完整的头必须报告截断，而不是工具未实现。
+func TestSwitchSliceTruncatedPrefix(t *testing.T) {
 	sps := testSPSForSlice()
 	pps := testPPSForSlice()
 	for _, code := range []uint32{3, 4, 8, 9} {
 		w := bitstream.NewWriter()
 		writeUEOrFail(t, w, 0)
 		writeUEOrFail(t, w, code)
-		_, err := ParseSliceHeader(w.Bytes(), sps, ppsMap(pps), false)
-		if !errors.Is(err, h264.ErrUnsupported) {
-			t.Fatalf("slice_type=%d 错误 = %v，期望 ErrUnsupported", code, err)
+		h, err := ParseSliceHeader(w.Bytes(), sps, ppsMap(pps), false)
+		if !errors.Is(err, h264.ErrInvalidData) || errors.Is(err, h264.ErrUnsupported) || h != nil {
+			t.Fatalf("slice_type=%d 截断错误 = %v，期望 ErrInvalidData", code, err)
 		}
 	}
 }
