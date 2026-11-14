@@ -28,14 +28,14 @@
 | Module | 规范/职责 | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|---|
 | 公共错误模型 | — | 5 个哨兵错误 + 分类 | WIP | `errors_test.go` | — |
-| `Frame` 类型与几何 | — | 6 种像素格式、平面几何、深拷贝、释放 | WIP | `frame_test.go` | 高位深取值范围校验待 M7 |
+| `Frame` 类型与几何 | — | 6种8/10-bit格式、平面几何、深拷贝、释放与采样范围 | WIP | `frame_test.go`及M7格式/低位Oracle | M0 CI状态保留；高位深能力已由M7验收 |
 | `Frame.Validate` | — | 结构自洽 + 溢出检测 | WIP | `frame_validate_test.go` | 不施加分辨率上限（属策略层） |
 | `Packet` | — | AU 载荷、时间戳、深拷贝 | WIP | `packet_test.go` | Side Data 待 M6 |
-| `EncoderConfig` / `DecoderConfig` | — | 默认值 + 校验 | WIP | `config_defaults_test.go`、`config_validate_test.go` | 高 bit depth 的 QP 上限 63 待 M7 |
+| `EncoderConfig` / `DecoderConfig` | — | 默认值、资源预算及格式/QPY校验 | WIP | 原配置测试及M7格式/负QPY组合回归 | 公共QPY与有效QP'分域见M7；M0 CI状态保留 |
 | 依赖规则检查 | 架构 R1/R2/R3/R5 | AST 级 import 图 | WIP | `importgraph/graph_test.go` | R4/R6 靠 review |
 | 语料清单校验 | — | 结构 + 枚举 + 哈希 | WIP | `manifest/manifest_test.go` | — |
 | YUV 差分 | — | 逐平面逐采样精确比较 | WIP | `yuvdiff/yuvdiff_test.go` | 仅支持紧密布局（约定） |
-| Oracle 工具 | — | FFmpeg 解码 + 差分 CLI | WIP | 人工验证 | 尚无真实语料（M1 接入） |
+| Oracle 工具 | — | FFmpeg开发期解码与原生YUV差分 | WIP | 当前55条登记语料及M7外部/解析解来源 | M0 CI状态保留；实际证据见M7，不将解析解冒充FFmpeg互操作 |
 
 ## M1：Bitstream Foundation
 
@@ -54,11 +54,11 @@
 | AVCC / avcC | ISO/IEC 14496-15 | 1..4 字节长度、8 MiB 上限、avcC 解析与序列化 | Partial | `avcc_test.go`、`avcc_writer_test.go`、`avcconfig_test.go`、`avcconfig_writer_test.go` | 尚无真实 MP4/avcC 语料，目前只有合成记录 |
 | Access Unit 组装 | 7.4.1.2.3 | AUD/前缀/后缀、first_mb/frame_num/POC 等判定、显式 hint | Conformant | `accessunit_test.go`、`assembler_test.go`、`corpus_test.go` | 多 slice 且无 AUD 时依赖 SliceInfo hint；suffix SEI 归类保守 |
 | SPS 解析与序列化 | 7.3.2.1 | Baseline/Main/High、High10/422/444的8/10-bit、独立色平面、帧/场与MBAFF语法、VUI/ScalingList与裁剪 | Conformant | 原语法/ffprobe及扩展Profile像素Oracle、场/MBAFF固定字节与真实隔行语法探测通过 | qpprime仍拒绝；MBAFF像素重建见第13项，PAFF场图像及单色解码仍拒绝 |
-| PPS 解析与序列化 | 7.3.2.2 | 核心字段、可选8×8/scaling扩展、FMO 0–6参数及尺寸校验 | Partial | 原pps/corpus回归；M7 FMO固定规范字节、七类映射、坏表与分配前限额测试 | FMO语法证据见第15项，不代表FMO宏块流水线已接入；完整组合限制另行验收 |
+| PPS 解析与序列化 | 7.3.2.2 | 核心字段、4/8×8缩放扩展、FMO 0–6、引用与Profile组合校验 | Conformant | 固定规范字节、完整矩阵/七类映射、x264字节回写与真实像素Oracle；M7独立完整门禁 | 语法API不代表编码器生成全部工具；FMO像素见第16项 |
 | VUI / HRD | E.1/E.2、Annex A | 完整条件语法、NAL/VCL CPB替代调度、profile/level声明与显式资源预算 | Conformant | M7第21项固定非字节对齐VUI/HRD字节、尺度/计数/32项/顺序/截断、level/profile倍率与DPB边界；完整独立门禁通过 | 参数集验证不代替实际AU码率、SEI时序与MV范围的运行时证明 |
 | ScalingList / ScalingMatrix | 7.3.2.1.1.1、7.4.2.1/2 | SPS/PPS 4×4/8×8、444十二列表、fallback A/B与写前原子校验 | Conformant | 原4096 presence组合×SPS/PPS来源、444/独立平面Oracle；尾部delta/缓存分裂/最终列表失败无部分输出、真实反量化固定数值；完整独立门禁通过 | 语法支持不放开Profile禁止的PPS扩展，不表示transform bypass或单色流水线已接入 |
 | SEI 基础 | 7.3.2.3 | payloadType/Size 扩展、user_data_unregistered | Partial | `sei_test.go`、`corpus_test.go` | 仅框架与 user_data；recovery point 等语义消息在 M2/M3 |
-| Slice Header（最小） | 7.3.3 | AU 判定字段、POC type 0/1、field flags、redundant_pic_cnt | Partial | `slice_header_test.go`、`corpus_test.go` | 参考列表/加权预测/去块等字段在 M2 扩展；SP/SI 返回 `ErrUnsupported`（M7） |
+| Slice Header | 7.3.3 | 完整I/P/B/SP/SI、POC0/1/2、帧场、权重/参考标记、FMO cycle与冗余计数 | Conformant | 固定规范bit串/边界、真实Oracle语料、27份High10保工具投影及完整门禁 | PAFF仅语法可解析，像素拒绝；头部成功不证明残差完整 |
 
 ## M2：Decoder Baseline
 
@@ -71,7 +71,7 @@
 | Module | 规范条款 | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|---|
 | `decoder` 状态机 | 公共 API 契约 | Send/Receive、Flush、Reset、Close、参数集按序生效、错误后等待 IDR | Conformant | `decoder_test.go` | 单实例串行；输入须为完整 Annex-B AU，M6 接入 AVCC/增量输入 |
-| Macroblock / I_PCM | 7.3.4 / 7.3.5 | I4×4、I16×16、PCM、P16×16/16×8/8×16/8×8 及子分区、Skip | Conformant | PCM 解析解、真实语料 Oracle | FMO/ASO、冗余 slice 在 M7；当前显式拒绝 |
+| Macroblock / I_PCM | 7.3.4 / 7.3.5 | I4/I8/I16/PCM、P/B分区与Skip、FMO遍历及分类残差 | Conformant | 规范解析像素、真实外部语料、M7六格式及跨slice隔离 | 高级组合和明确拒绝边界见M7第13–20项 |
 | `entropy/cavlc` | 9.2 | token、level、zeros/run、亮度 DC/AC、nC=-1 色度 DC | Conformant | `decode_test.go`、`tables_test.go`、整帧 Oracle | 4:2:2 色度 DC 在 M7 |
 | `prediction` | 8.3 / 8.4.2 | 九种 I4×4、四种 I16×16/色度模式、亚像素 MC、越界复制 | Conformant | 非均匀解析解、`PCMAndEdgeMotionOracle`、真实语料 | 加权预测、B Direct 在 M3 |
 | `transform` | 8.5 | 4×4 反量化/IDCT、光栅 DC Hadamard、色度 QP | Conformant | `dc_test.go` 空间基底、极值 IDCT、Oracle | 正变换在 M4；8×8/ScalingMatrix 在 M3 |
@@ -170,7 +170,7 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 | Lookahead窗口 | 输入所有权/帧类型分析 | 1..16帧未来窗口、深拷贝、闪光抑制、持续切换IDR、B边界与尾部排空 | Conformant | `Lookahead_BoundsResetAndFailedSend`、`LookaheadFlashSceneAndDrainOracle`含B0/B2 | 非并行；B组合输入上界MaxBFrames+depth+1，另有锚点与待输出B组；错误保留已接受队列 |
 | ABR / CBR / VBV | 编码器码率控制 | 按I/P/B已提交QP局部夹紧、冷启动二分与不可行全QP回退；AU反馈、fullness硬边界、filler、分数帧率余数 | Conformant | 两尺寸×三模式各300帧三方Oracle；ABR±10%、CBR十窗口、VBV300步独立模型；静态分数FPS≤1%、120帧突变/闪光；失败事务/Reset与QP边界 | 验收配置和完整窗口见performance.md§14；未生成HRD信令，不作HRD时序认证或任意内容恒定画质保证 |
 | CABAC 零字封装修复 | 7.4.1 / 9.3.4.6 | VCL 末尾00 00 03按已知 CABAC PPS 接受；CAVLC 仍拒绝 | Conformant | `EncapsulatedZeroWordPadding` 先失败后修复，FFmpeg 像素对照；CAVLC 终端转义拒绝 | 通用 EBSP 严格规则保持；不扩大参数集/未知 PPS 的截断容忍 |
-| h264probe GOP诊断 | 7.3.3 / 参数集与图片标识 | 有界Annex-B扫描、SPS/PPS/slice头部、帧型/POC/尺寸/slice数、图片/B/IDR断言 | Conformant | B1/2/3/16、独立GOP4/IDR7、多slice、资源与失败断言；12份长码流与ffprobe/实际POC显示位置相符 | 不解码残差，不替代像素Oracle；字段、冗余和ASO图片统计明确拒绝 |
+| h264probe GOP诊断 | 7.3.3 / 图片标识 | 参数集、POC、slice计数与图片/B/IDR断言；ASO/FMO/冗余/分区统计 | Conformant | 原长码流/ffprobe回归与M7规范头测试、实际分区CLI通过 | 不解码残差；非逐行图片的GOP统计仍Unsupported，-syntax可展示MBAFF头 |
 
 ## M6：流式I/O（WIP）
 
@@ -180,11 +180,11 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 | Module | 职责 | Status | 证据 | 缺口 |
 |---|---|---|---|---|
 | 流接口 | FrameReader/Writer、AccessUnitReader/Writer，独立输出所有权与同步消费 | Conformant | 四接口均有具体实现和编译断言；各适配器所有权/错误契约测试 | 此状态仅接口与同步I/O，不包含pipeline、取消或背压 |
-| YUV Reader | 8-bit420/422/444、奇数尺寸、紧密Y/U/V、独立帧与序号时间戳 | Conformant | 3×3已知17/21/27字节解析解、单字节分块、每处截断、EOF/所有权/错误/资源限界测试 | 仅原始I/O，非422/444编码支持；高位深待M7，不中断底层阻塞Read |
+| YUV Reader | 8/10-bit420/422/444、LE与字节stride、奇数尺寸、独立帧与序号时间戳 | Conformant | 原字节/错误/资源边界及M7六格式原生LE实际CLI像素通过 | 不中断底层阻塞Read，不推断编码器可表达的裁剪几何 |
 | YUV Writer | 8-bit420/422/444，忽略stride填充，最小末行缓冲，全帧验证后同步写出 | Conformant | 已知紧密字节、三格式多帧往返、晚平面错误无输出、短写/底层错误及粘性状态测试 | 原始流无尺寸/格式/时间戳头；不关闭底层Writer，不提供取消/重试传输 |
 | Annex-B NAL Reader | 复用有界Scanner，3/4字节起始码、EBSP独立所有权、严格前导/尾部、错误粘性 | Conformant | 固定字节向量×1/2/3/7/4096/整文件，EOF前边界交付、EOF同次数据/包装EOF、超限/错误/所有权测试 | 仅字节封装与header，不组装AU或验证残差；默认8MiB单NAL及64KiB读缓冲，非pipeline的MaxInputBuffer |
 | AVCC NAL Reader | 复用长度解析器，1..4前缀及avcC取宽度，参数集快照先于样本交付、分配前NAL限额 | Conformant | 固定前缀×分块矩阵、逐处截断、零长度/坏header、超大长度不读载荷、配置拷贝/版本/类型/限额与I/O测试 | 仅NAL封装；不读取MP4 box、不推断时间戳、不组装AU；avcC/MP4整体兼容性仍Partial |
-| AU Reader | SPS/PPS按序解析、AUD/图像标识/可选first_mb规则、POC0/1/2、MBAFF宏块对首址、filler/EOS归属、独立Annex-B Packet | Conformant | 原字节/预算/所有权/分块证据；M7加入已登记MBAFF语料的stream完整回归及真实六帧场解码CLI逐像素验证 | 解析渐进8/10-bit420/422/444与MBAFF头部；PAFF/FMO/冗余/分区仍Unsupported，不验证残差或恢复时间戳；默认32MiB/4096 NAL，不代替pipeline预算 |
+| AU Reader | 参数集按序、图片标识与可选first_mb边界、MBAFF/FMO/ASO/冗余/分区头关联 | Conformant | 原分块/预算/所有权回归、M7六格式/场/规范高级工具实际CLI | 不验证残差或恢复时间戳；PAFF仍Unsupported；默认32MiB/4096 NAL，不替代pipeline预算 |
 | Annex-B AU Writer | 完整输入封装验证后复用NAL Writer，规范化四字节起始码、独立单NAL/AU/数量限额 | Conformant | 固定字节解析解、重扫与High CABAC多slice语料一致；坏尾部无输出、输入/输出预算、重试校验、每个写入位置短写/I/O失败粘性及所有权 | 仅接受Annex-B Packet；调用方保证单AU分组，未验证slice/RBSP；默认8MiB单NAL/32MiB输入和输出AU/4096 NAL，不序列化时间戳，不提供传输回滚或取消 |
 | AVCC AU Writer | Annex-B AU重封装为1..4字节大端长度前缀，写前共享封装验证、前缀容量限制及NAL/AU/数量预算 | Conformant | 独立固定字节解析解、1/2字节255/65535边界与多字节长度；坏尾部/后续NAL超限零写出、所有权/短写/I/O粘性；5份语料×2/3/4宽度×6种chunk逐AU一致 | 输入仅已分组Annex-B，默认4字节前缀/8MiB单NAL/32MiB输入和输出AU/4096 NAL；单NAL还受前缀容量限制，不生成avcC/MP4或时间戳，不验证slice，不提供取消 |
 | EncodeStream / DecodeStream | 同步单输入、有界载荷、排空后继续生产、EOF自动Flush、内部codec清理 | Conformant | 全部26份受支持语料×Annex-B/AVCC×1/7/4096/整文件chunk核对独立FFmpeg输出哈希；PCM解析值、B/Lookahead尾组与时钟、限额/截断/错误释放测试 | MaxInputBuffer默认16MiB，仅单个输入；NAL源/codec/Writer内存各自限额，不是RSS总上限 |
@@ -193,10 +193,10 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 | h264probe语法树 | JSONL逐NAL展示共享SPS/PPS/VUI/ScalingList/SEI/slice结构，保留默认GOP JSON | Conformant | Baseline/Main/High与ffprobe尺寸/Profile/Level/图片数对照；参数集引用、多slice、严格尾部、限额、AVCC各前缀与输出失败测试 | 不解析宏块/残差，不把头部成功当作像素正确；输出错误前的行只代表局部已解析内容 |
 | 短时稳定性 | 同一对pipeline、io.Pipe、10FPS PCM持续传输30秒；RSS/GC后堆/帧积压/退出goroutine | Conformant | tools/streamcheck核对独立PCM常量解析值与预设资源阈值，退出0；取消后goroutine从3回到1；样本见gates/m6_smoke.json | 仅覆盖该输入与30秒窗口，不证明长期无泄漏，不替代M9混合输入验收 |
 
-## M7：高级 AVC 特性（WIP）
+## M7：高级 AVC 特性（常规门禁通过，发布核验中）
 
 当前特性分支`feat/m7-high422`，按实施计划从共享内核到流水线逐项验收、独立提交。
-High10渐进420编解码及High422/High444渐进8/10-bit解码已接入，限定工具与证据逐项列于下表；既有8-bit编解码回归保持通过，不据基础内核进度承诺完整Profile。
+六格式8/10-bit编解码、MBAFF/TFF-BFF及限定FMO/ASO/分区/SP/SI/冗余已接入，VUI/HRD与完整矩阵已验收。表内前置条目描述其独立提交时的证明范围；当前有效组合以支持矩阵为准，不据此宣称完整Profile认证。
 
 | 实施项 | 职责 | Status | 证据 | 缺口 |
 |---|---|---|---|---|
@@ -230,6 +230,7 @@ High10渐进420编解码及High422/High444渐进8/10-bit解码已接入，限定
 | 21：VUI/HRD参数解析生成及校验 | 安全派生bitrate/CPB、替代调度、延迟位宽、完整SPS写前/解析后Annex A/E校验和资源错误分类 | Conformant | 独立固定字节、双HRD/多CPB/非零尺度、全部已支持profile/level边界与原子拒绝；隔行Auto排除非法level；旧weighted-b VUI声明16→15由生成器重建，FFmpeg输出哈希仍41e461eb…f864236；独立完整CGO=0门禁通过 | 不把VUI/HRD声明等同实际码流HRD时序合规；编码流水线仍未自动生成buffering_period/完整HRD调度，API可读写并严格校验参数 |
 | ScalingMatrix与组合级约束 | 列表全范围预检、解析缓存与真实矩阵一致；已知Profile的SPS/PPS/slice/分区组合限制 | Conformant | 十二列表/既有4096 fallback组合、解析矩阵到反量化固定数值、写前无污染、Profile工具矩阵与错误分类；旧Baseline B/场/CABAC及High冗余等非法夹具迁为合法上下文，完整独立CGO=0门禁通过 | 规范禁止组合返回ErrInvalidData；合法但未实现的9/12/14-bit、单色、PAFF或transform bypass仍ErrUnsupported，不以拒绝路径宣称完整Profile支持 |
 | 22：高级Profile Oracle语料套件 | 25份新增高级码流/76帧、原生位深/显示顺序哈希、Oracle来源与帧数清单、跨里程碑High10投影 | Conformant | 55条清单；八份422/444外部x264与一份真实HRD、十六份规范工具向量全部实际CLI匹配；11份新增可用FFmpeg像素证据，14份明确解析解；原M2/M3全部27份保留预测/残差/参考工具投影至High10（PCM扩至10位）与严格FFmpeg逐采样一致；完整独立CGO=0门禁通过，详见gates/m7_corpus.json | FFmpeg对FMO/ASO/分区/secondary SP/SI存在拒绝或差异；不篡改期望，不计作外部Oracle通过；独立平面互操作仍按单色投影与规范证据限定 |
+| 23：逐项支持矩阵与门禁文档 | 公开Profile/工具/组合限制、Oracle来源、原生I/O与发布边界 | Conformant | supported-features、README、stream与gates/m7.md同步；相对文档链接核对，功能证据指向独立测试/固定哈希，不把历史前置快照当当前拒绝范围 | 本地证据不冒充远端CI或完整Profile认证；最终发布检查见第24项 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。

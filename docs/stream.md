@@ -3,6 +3,9 @@
 `stream` 连接原始帧、完整 AU 与同步编解码器；不实现 MP4、RTP、网络重试或 RGB 转换。
 运行时仅标准库、`CGO_ENABLED=0`。完整 Profile 的支持边界仍见[支持矩阵](supported-features.md)。
 
+M7已接入六格式原生样本、MBAFF、FMO/ASO、冗余及A/B/C分区头；默认`BoundaryPicture`适用于乱序slice。
+`BoundaryFirstMB`只适用于事先约定顺序的流，不能拿首址0拆分合法ASO图像。字节封装、AU头与像素支持是不同层次，PAFF仍明确拒绝。
+
 ## 编解码入口
 
 ```go
@@ -116,12 +119,12 @@ h264probe -syntax -input out.264 > syntax.jsonl
   GOP/B/DTS 在该帧时间基调度。`-rate cqp|abr|cbr|vbv` 与 bitrate/VBV 参数原样交 codec 校验。
 - 配置先校验，再创建/截断输出；禁止输入输出为同一个普通文件，包括硬链接和路径别名。
   文件输出会覆盖原内容，传输或编码失败可能留下部分文件，不提供文件事务回滚。
-- 原始 YUV Reader/Writer 支持 8-bit 420/422/444，不扩大当前 codec 的渐进 8-bit 420 支持。
-  `-pcm` 的 Baseline/Main 输入采样必须在 1..255，零采样按 Annex A 显式拒绝。
-- `h264probe -syntax` 每个 NAL 输出一行 JSON，打印共享解析器的 NAL 头、SPS/PPS、
-  VUI/ScalingList、SEI 和 slice header。保留单个有界 NAL 与有界参数集，不缓存整条流。
+- 原始YUV Reader/Writer支持六种8/10-bit420/422/444格式，10-bit为LE采样、stride仍按字节。
+  codec支持范围与显示裁剪几何见M7矩阵；隔行编码用`-field-order tff|bff`产生真实MBAFF场宏块。
+  `-pcm`的Baseline/Main输入采样仍须1..255，零采样按Annex A显式拒绝。
+- `h264probe -syntax`逐NAL输出共享SPS/PPS、VUI/ScalingList、SEI、slice头及A/B/C条件前缀。
   不解析宏块/残差；后续错误使进程非零退出，此前输出只是已成功解析的局部记录。
-  语法模式不接受 `-expect-*` GOP 断言；默认模式仍输出原 GOP JSON。
+  语法模式不接受`-expect-*`。默认GOP按图片标识处理ASO/FMO/冗余，不把B/C计为额外slice，非逐行GOP统计仍拒绝。
 
 ## 验证与短时稳定性
 
