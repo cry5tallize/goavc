@@ -28,11 +28,16 @@ const (
 // Top 是上方 A..D，TopRight 是右上方 E..H，Left 是左侧 I..L，
 // TopLeft 是左上 M。调用方负责在右上不可用时用 Top[3] 复制填充，
 // 这是规范 8.3.1.2 的边界外推规则。
-type Intra4x4Samples struct {
-	Top      [4]byte
-	TopRight [4]byte
-	Left     [4]byte
-	TopLeft  byte
+type Intra4x4Samples = intra4x4Samples[byte]
+
+// Intra4x4Samples16 保留完整高位深邻域，不进行降位深转换。
+type Intra4x4Samples16 = intra4x4Samples[uint16]
+
+type intra4x4Samples[T sample] struct {
+	Top      [4]T
+	TopRight [4]T
+	Left     [4]T
+	TopLeft  T
 }
 
 // Intra4x4 计算一个 4×4 帧内预测块并写入 dst（stride 为字节跨度）。
@@ -40,6 +45,18 @@ type Intra4x4Samples struct {
 // topAvail/leftAvail 只影响 DC 模式；其他模式要求对应方向可用，
 // 不可用时返回 ErrInvalidData，由调用方按规范回退到 DC 模式。
 func Intra4x4(dst []byte, stride, mode int, s Intra4x4Samples, topAvail, leftAvail bool) error {
+	return intra4x4(dst, stride, mode, s, topAvail, leftAvail, 8)
+}
+
+// Intra4x4High 的 stride 以采样计，缺少上下文时的 DC 为 1<<(bitDepth-1)。
+func Intra4x4High(dst []uint16, stride, mode int, s Intra4x4Samples16, topAvail, leftAvail bool, bitDepth int) error {
+	if err := checkBitDepth(bitDepth); err != nil {
+		return err
+	}
+	return intra4x4(dst, stride, mode, s, topAvail, leftAvail, bitDepth)
+}
+
+func intra4x4[T sample](dst []T, stride, mode int, s intra4x4Samples[T], topAvail, leftAvail bool, bitDepth int) error {
 	if len(dst) < 3*stride+4 || stride < 4 {
 		return fmt.Errorf("prediction: intra4x4 destination too small: %w", h264.ErrInvalidData)
 	}
@@ -61,13 +78,13 @@ func Intra4x4(dst []byte, stride, mode int, s Intra4x4Samples, topAvail, leftAva
 		if !leftAvail {
 			return fmt.Errorf("prediction: horizontal mode without left samples: %w", h264.ErrInvalidData)
 		}
-		vals := [4]byte{i0, j, k, l}
+		vals := [4]T{i0, j, k, l}
 		for y := 0; y < 4; y++ {
 			row := dst[y*stride : y*stride+4]
 			row[0], row[1], row[2], row[3] = vals[y], vals[y], vals[y], vals[y]
 		}
 	case Intra4x4DC:
-		dc := intraDC4(s, topAvail, leftAvail)
+		dc := intraDC4(s, topAvail, leftAvail, bitDepth)
 		for y := 0; y < 4; y++ {
 			row := dst[y*stride : y*stride+4]
 			row[0], row[1], row[2], row[3] = dc, dc, dc, dc
@@ -76,7 +93,7 @@ func Intra4x4(dst []byte, stride, mode int, s Intra4x4Samples, topAvail, leftAva
 		if !topAvail {
 			return fmt.Errorf("prediction: diagonal down-left without top samples: %w", h264.ErrInvalidData)
 		}
-		p := [16]byte{
+		p := [16]T{
 			avg3(a, b, c), avg3(b, c, d), avg3(c, d, e), avg3(d, e, f),
 			avg3(b, c, d), avg3(c, d, e), avg3(d, e, f), avg3(e, f, g),
 			avg3(c, d, e), avg3(d, e, f), avg3(e, f, g), avg3(f, g, h),
@@ -89,7 +106,7 @@ func Intra4x4(dst []byte, stride, mode int, s Intra4x4Samples, topAvail, leftAva
 		}
 		// 与 libavcodec 的 pred4x4_down_right 逐行对应：
 		// 对角线以上用左上/上侧样本，以下用左侧样本。
-		p := [16]byte{
+		p := [16]T{
 			avg3(i0, m, a), avg3(m, a, b), avg3(a, b, c), avg3(b, c, d),
 			avg3(j, i0, m), avg3(i0, m, a), avg3(m, a, b), avg3(a, b, c),
 			avg3(k, j, i0), avg3(j, i0, m), avg3(i0, m, a), avg3(m, a, b),
@@ -102,7 +119,7 @@ func Intra4x4(dst []byte, stride, mode int, s Intra4x4Samples, topAvail, leftAva
 		}
 		// 与 pred4x4_vertical_right 对应：上半部分沿垂直方向，
 		// 下半部分转向左侧样本。
-		p := [16]byte{
+		p := [16]T{
 			avg2(m, a), avg2(a, b), avg2(b, c), avg2(c, d),
 			avg3(i0, m, a), avg3(m, a, b), avg3(a, b, c), avg3(b, c, d),
 			avg3(m, i0, j), avg2(m, a), avg2(a, b), avg2(b, c),
@@ -115,7 +132,7 @@ func Intra4x4(dst []byte, stride, mode int, s Intra4x4Samples, topAvail, leftAva
 		}
 		// 与 pred4x4_horizontal_down 对应：左上三角从左侧样本过渡到
 		// 上方样本，右下半部分重复左侧插值。
-		p := [16]byte{
+		p := [16]T{
 			avg2(m, i0), avg3(i0, m, a), avg3(m, a, b), avg3(a, b, c),
 			avg2(i0, j), avg3(m, i0, j), avg2(m, i0), avg3(i0, m, a),
 			avg2(j, k), avg3(i0, j, k), avg2(i0, j), avg3(m, i0, j),
@@ -128,7 +145,7 @@ func Intra4x4(dst []byte, stride, mode int, s Intra4x4Samples, topAvail, leftAva
 		}
 		// 与 pred4x4_vertical_left 对应：奇数列取半像素，偶数列取
 		// 三抽头；两者交替，不是简单的 2×2 重复。
-		p := [16]byte{
+		p := [16]T{
 			avg2(a, b), avg2(b, c), avg2(c, d), avg2(d, e),
 			avg3(a, b, c), avg3(b, c, d), avg3(c, d, e), avg3(d, e, f),
 			avg2(b, c), avg2(c, d), avg2(d, e), avg2(e, f),
@@ -139,7 +156,7 @@ func Intra4x4(dst []byte, stride, mode int, s Intra4x4Samples, topAvail, leftAva
 		if !leftAvail {
 			return fmt.Errorf("prediction: horizontal-up without left samples: %w", h264.ErrInvalidData)
 		}
-		p := [16]byte{
+		p := [16]T{
 			avg2(i0, j), avg3(i0, j, k), avg2(j, k), avg3(j, k, l),
 			avg2(j, k), avg3(j, k, l), avg2(k, l), avg3(k, l, l),
 			avg2(k, l), avg3(k, l, l), l, l,
@@ -152,31 +169,31 @@ func Intra4x4(dst []byte, stride, mode int, s Intra4x4Samples, topAvail, leftAva
 	return nil
 }
 
-func intraDC4(s Intra4x4Samples, topAvail, leftAvail bool) byte {
+func intraDC4[T sample](s intra4x4Samples[T], topAvail, leftAvail bool, bitDepth int) T {
 	switch {
 	case topAvail && leftAvail:
 		sum := int(s.Top[0]) + int(s.Top[1]) + int(s.Top[2]) + int(s.Top[3]) +
 			int(s.Left[0]) + int(s.Left[1]) + int(s.Left[2]) + int(s.Left[3])
-		return byte((sum + 4) >> 3)
+		return T((sum + 4) >> 3)
 	case topAvail:
 		sum := int(s.Top[0]) + int(s.Top[1]) + int(s.Top[2]) + int(s.Top[3])
-		return byte((sum + 2) >> 2)
+		return T((sum + 2) >> 2)
 	case leftAvail:
 		sum := int(s.Left[0]) + int(s.Left[1]) + int(s.Left[2]) + int(s.Left[3])
-		return byte((sum + 2) >> 2)
+		return T((sum + 2) >> 2)
 	default:
-		return 128
+		return T(1 << (bitDepth - 1))
 	}
 }
 
-func write4x4(dst []byte, stride int, p [16]byte) {
+func write4x4[T sample](dst []T, stride int, p [16]T) {
 	copy(dst[0*stride:0*stride+4], p[0:4])
 	copy(dst[1*stride:1*stride+4], p[4:8])
 	copy(dst[2*stride:2*stride+4], p[8:12])
 	copy(dst[3*stride:3*stride+4], p[12:16])
 }
 
-func avg2(a, b byte) byte { return byte((int(a) + int(b) + 1) >> 1) }
-func avg3(a, b, c byte) byte {
-	return byte((int(a) + 2*int(b) + int(c) + 2) >> 2)
+func avg2[T sample](a, b T) T { return T((int(a) + int(b) + 1) >> 1) }
+func avg3[T sample](a, b, c T) T {
+	return T((int(a) + 2*int(b) + int(c) + 2) >> 2)
 }

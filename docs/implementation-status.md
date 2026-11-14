@@ -203,6 +203,7 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 | 1：共享图像布局参数化 | New/Pool.Get显式接收PixelFormat，平面几何复用公共布局，池按尺寸与格式分桶 | Conformant | 2026-11-15完整常规门禁通过：CGO=0 vet/build/非缓存全包test、depscheck34包、manifest27条、gofmt；既有布局/边缘复制/池复用回归及未支持布局拒绝测试通过 | 本项只证明8-bit行为不变；高位深证据见后续实施项 |
 | 2：10-bit平面存储 | uint16采样、Sample/SetSample/Row16、采样单位stride、共享边缘复制与Clip1重建、格式隔离池 | Conformant | TestNew_High10Storage先因ErrUnsupported失败、实现后通过；奇数stride/0与1023/四角边缘/行填充/极端残差/损坏容量与溢出/8与10-bit池隔离测试通过；CGO=0完整常规门禁及8-bit FFmpeg Oracle回归通过 | 仅内部8/10-bit420存储；不表示High10解码/编码或公共Frame LE输入输出已接入 |
 | 3：10-bit变换与量化 | ScaleQP/ScaleChromaQP区分语法QPY与有效QP'，4×4/8×8/亮度与420色度DC的正反量化接受QP'0..63，Hadamard临时量使用int64 | Conformant | TestScale*与TestHigh10*的规范手算QP'52..63、负QPY、色度非线性、正负1023矩阵基、正负int32极值/溢出拒绝全部通过；与第2项整合后的同一代码树已通过完整常规门禁和既有8-bit FFmpeg Oracle回归 | 仅共享内核；不代表High10流水线可用；8-bit语法QPY上限仍为51，CABAC初始化QP域不扩展，逆变换归一化仍为>>6 |
+| 共享预测前置 | byte/uint16共用泛型帧内/MC/权重算术，默认DC与裁剪按位深；矩形422色度及采样格式相关MC供后续流水线接入 | Conformant | 暂存区独立快照通过CGO=0完整vet/build/非缓存全包test、depscheck34包、manifest27条及gofmt；高位深规范解析值和既有8-bit Oracle回归通过 | 新入口仅为共享核心，尚不单独声明扩展Profile或422/444流水线已支持 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。

@@ -5,16 +5,37 @@ import "github.com/goavc/h264/internal/motion"
 // WeightSample 实现 Spec: 8.4.3.2 的单向显式加权，先按分母舍入，再加
 // offset 并 Clip1。调用方只传入已完成插值和裁剪的 8-bit 样本。
 func WeightSample(sample byte, weight, offset int32, denom uint32) byte {
+	return weightSample(sample, weight, offset, denom, 8)
+}
+
+// WeightSampleHigh 的 offset 保持码流的 8-bit 标度，在此乘 2^(bitDepth-8)。
+func WeightSampleHigh(sample uint16, weight, offset int32, denom uint32, bitDepth int) uint16 {
+	return weightSample(sample, weight, offset, denom, bitDepth)
+}
+
+func weightSample[T sample](value T, weight, offset int32, denom uint32, bitDepth int) T {
 	round := int64(0)
 	if denom > 0 {
 		round = int64(1) << (denom - 1)
 	}
-	return clip8(int(((int64(sample)*int64(weight) + round) >> denom) + int64(offset)))
+	scaledOffset := int64(offset) << (bitDepth - 8)
+	return clipSample[T](int(((int64(value)*int64(weight)+round)>>denom)+scaledOffset), bitDepth)
 }
 
 func BiWeightSample(a, b byte, w0, w1, o0, o1 int32, denom uint32) byte {
+	return biWeightSample(a, b, w0, w1, o0, o1, denom, 8)
+}
+
+// BiWeightSampleHigh 同时服务显式权重与 denom=5、offset=0 的隐式权重。
+func BiWeightSampleHigh(a, b uint16, w0, w1, o0, o1 int32, denom uint32, bitDepth int) uint16 {
+	return biWeightSample(a, b, w0, w1, o0, o1, denom, bitDepth)
+}
+
+func biWeightSample[T sample](a, b T, w0, w1, o0, o1 int32, denom uint32, bitDepth int) T {
 	sum := int64(a)*int64(w0) + int64(b)*int64(w1) + (int64(1) << denom)
-	return clip8(int((sum >> (denom + 1)) + ((int64(o0) + int64(o1) + 1) >> 1)))
+	// 必须先缩放两个 offset 再求平均；先平均再缩放会损失半个 offset。
+	offset := (((int64(o0) + int64(o1)) << (bitDepth - 8)) + 1) >> 1
+	return clipSample[T](int((sum>>(denom+1))+offset), bitDepth)
 }
 
 // ImplicitWeights 的权重总和为 64，配合 BiWeightSample 的 denom=5。

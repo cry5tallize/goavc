@@ -5,10 +5,15 @@ import (
 	h264 "github.com/goavc/h264"
 )
 
-type Intra8x8Samples struct {
-	Top              [16]byte
-	Left             [8]byte
-	TopLeft          byte
+type Intra8x8Samples = intra8x8Samples[byte]
+
+// Intra8x8Samples16 是高位深 8×8 邻域，保留独立左上可用性。
+type Intra8x8Samples16 = intra8x8Samples[uint16]
+
+type intra8x8Samples[T sample] struct {
+	Top              [16]T
+	Left             [8]T
+	TopLeft          T
 	TopLeftAvailable bool
 }
 
@@ -16,6 +21,18 @@ type Intra8x8Samples struct {
 // 调用方先以 Top[7] 扩展 Top[8..15]；TopLeft 有独立可用性，不能从
 // “上和左都可用”推断，尤其是 slice 起点与 constrained intra 边界。
 func Intra8x8(dst []byte, stride, mode int, s Intra8x8Samples, topAvail, leftAvail bool) error {
+	return intra8x8(dst, stride, mode, s, topAvail, leftAvail, 8)
+}
+
+// Intra8x8High 以采样为跨度，共用邻域平滑和九方向算术。
+func Intra8x8High(dst []uint16, stride, mode int, s Intra8x8Samples16, topAvail, leftAvail bool, bitDepth int) error {
+	if err := checkBitDepth(bitDepth); err != nil {
+		return err
+	}
+	return intra8x8(dst, stride, mode, s, topAvail, leftAvail, bitDepth)
+}
+
+func intra8x8[T sample](dst []T, stride, mode int, s intra8x8Samples[T], topAvail, leftAvail bool, bitDepth int) error {
 	if stride < 8 || len(dst) < 7*stride+8 || mode < 0 || mode > 8 {
 		return fmt.Errorf("prediction: invalid intra8x8 arguments: %w", h264.ErrInvalidData)
 	}
@@ -28,8 +45,8 @@ func Intra8x8(dst []byte, stride, mode int, s Intra8x8Samples, topAvail, leftAva
 	if (mode == 4 || mode == 5 || mode == 6) && (!topAvail || !leftAvail || !s.TopLeftAvailable) {
 		return fmt.Errorf("prediction: intra8x8 diagonal neighborhood unavailable: %w", h264.ErrInvalidData)
 	}
-	var top [16]byte
-	var left [8]byte
+	var top [16]T
+	var left [8]T
 	tl := s.TopLeft
 	if topAvail {
 		for i := 0; i < 16; i++ {
@@ -67,19 +84,19 @@ func Intra8x8(dst []byte, stride, mode int, s Intra8x8Samples, topAvail, leftAva
 			tl = avg3(s.Left[0], s.TopLeft, s.TopLeft)
 		}
 	}
-	t := func(i int) byte {
+	t := func(i int) T {
 		if i < 0 {
 			return tl
 		}
 		return top[min(15, i)]
 	}
-	l := func(i int) byte {
+	l := func(i int) T {
 		if i < 0 {
 			return tl
 		}
 		return left[min(7, i)]
 	}
-	vr := func(x, y int, topRef, leftRef func(int) byte) byte {
+	vr := func(x, y int, topRef, leftRef func(int) T) T {
 		z := 2*x - y
 		if z >= 0 {
 			if z%2 == 0 {
@@ -94,7 +111,7 @@ func Intra8x8(dst []byte, stride, mode int, s Intra8x8Samples, topAvail, leftAva
 		k := -z
 		return avg3(leftRef(k-3), leftRef(k-2), leftRef(k-1))
 	}
-	dc := byte(128)
+	dc := T(1 << (bitDepth - 1))
 	if mode == 2 {
 		sum, n := 0, 0
 		if topAvail {
@@ -110,13 +127,13 @@ func Intra8x8(dst []byte, stride, mode int, s Intra8x8Samples, topAvail, leftAva
 			n += 8
 		}
 		if n > 0 {
-			dc = byte((sum + n/2) / n)
+			dc = T((sum + n/2) / n)
 		}
 	}
 	for y := 0; y < 8; y++ {
 		row := dst[y*stride : y*stride+8]
 		for x := 0; x < 8; x++ {
-			var v byte
+			var v T
 			switch mode {
 			case 0:
 				v = top[x]

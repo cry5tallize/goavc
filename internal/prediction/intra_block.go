@@ -6,7 +6,7 @@ import (
 	h264 "github.com/goavc/h264"
 )
 
-// 16×16 与色度 8×8 的模式编号（规范表 8-3 / 8-4）。
+// 16×16 与色度 8×8/8×16 的模式编号（规范表 8-3 / 8-4）。
 const (
 	Intra16x16Vertical   = 0
 	Intra16x16Horizontal = 1
@@ -14,31 +14,77 @@ const (
 	Intra16x16Plane      = 3
 )
 
-// IntraBlockSamples 是 16×16 或 8×8 预测所需的邻域样本。
+// IntraBlockSamples 是 16×16 或色度 8×8/8×16 预测所需的邻域样本。
 //
-// Top/Left 长度分别为 16 或 8；Top[-1] 与 Left[-1] 由 TopLeft 给出。
-type IntraBlockSamples struct {
-	Top     []byte
-	Left    []byte
-	TopLeft byte
+// Top/Left 至少覆盖块宽/高；Top[-1] 与 Left[-1] 由 TopLeft 给出。
+type IntraBlockSamples = intraBlockSamples[byte]
+
+// IntraBlockSamples16 是 16×16 或色度 8×8/8×16 预测的高位深邻域。
+type IntraBlockSamples16 = intraBlockSamples[uint16]
+
+type intraBlockSamples[T sample] struct {
+	Top     []T
+	Left    []T
+	TopLeft T
 }
 
 // Intra16x16 计算 16×16 帧内预测。
 func Intra16x16(dst []byte, stride, mode int, s IntraBlockSamples, topAvail, leftAvail bool) error {
+	return intra16x16(dst, stride, mode, s, topAvail, leftAvail, 8)
+}
+
+// Intra16x16High 保留高位深 Plane 计算与位深相关的 Clip1。
+func Intra16x16High(dst []uint16, stride, mode int, s IntraBlockSamples16, topAvail, leftAvail bool, bitDepth int) error {
+	if err := checkBitDepth(bitDepth); err != nil {
+		return err
+	}
+	return intra16x16(dst, stride, mode, s, topAvail, leftAvail, bitDepth)
+}
+
+func intra16x16[T sample](dst []T, stride, mode int, s intraBlockSamples[T], topAvail, leftAvail bool, bitDepth int) error {
 	if len(s.Top) < 16 || len(s.Left) < 16 {
 		return fmt.Errorf("prediction: intra16x16 needs 16 top and left samples")
 	}
-	return intraBlock(dst, stride, 16, mode, s, topAvail, leftAvail, true)
+	return intraBlock(dst, stride, 16, 16, mode, s, topAvail, leftAvail, bitDepth)
 }
 
 // Chroma8x8 计算 8×8 色度帧内预测。
 //
 // 注意 chroma 的模式编号与 16×16 不同（规范表 8-4）：
-// 0=DC、1=水平、2=垂直、3=Plane。这里先做映射再复用 intraBlock，
-// 避免把垂直当成 DC（这是逐像素对比才能发现的错误）。
+// 0=DC、1=水平、2=垂直、3=Plane。这里先做映射再复用 intraBlock。
 func Chroma8x8(dst []byte, stride, mode int, s IntraBlockSamples, topAvail, leftAvail bool) error {
-	if len(s.Top) < 8 || len(s.Left) < 8 {
-		return fmt.Errorf("prediction: chroma8x8 needs 8 top and left samples")
+	return chroma8x8(dst, stride, mode, s, topAvail, leftAvail, 8)
+}
+
+// Chroma8x8High 使用四象限 DC 和 4:2:0 Plane 预测。
+func Chroma8x8High(dst []uint16, stride, mode int, s IntraBlockSamples16, topAvail, leftAvail bool, bitDepth int) error {
+	if err := checkBitDepth(bitDepth); err != nil {
+		return err
+	}
+	return chroma8x8(dst, stride, mode, s, topAvail, leftAvail, bitDepth)
+}
+
+// Chroma422 计算 4:2:2 的 8×16 色度帧内预测（Spec: 8.3.4）。
+// Top 至少 8 个样本，Left 至少 16 个样本；跨度以采样计。
+func Chroma422(dst []byte, stride, mode int, s IntraBlockSamples, topAvail, leftAvail bool) error {
+	return chromaBlock(dst, stride, 16, mode, s, topAvail, leftAvail, 8)
+}
+
+// Chroma422High 与 Chroma422 使用同一内核；bitDepth 决定 DC 中点和 Clip1C。
+func Chroma422High(dst []uint16, stride, mode int, s IntraBlockSamples16, topAvail, leftAvail bool, bitDepth int) error {
+	if err := checkBitDepth(bitDepth); err != nil {
+		return err
+	}
+	return chromaBlock(dst, stride, 16, mode, s, topAvail, leftAvail, bitDepth)
+}
+
+func chroma8x8[T sample](dst []T, stride, mode int, s intraBlockSamples[T], topAvail, leftAvail bool, bitDepth int) error {
+	return chromaBlock(dst, stride, 8, mode, s, topAvail, leftAvail, bitDepth)
+}
+
+func chromaBlock[T sample](dst []T, stride, height, mode int, s intraBlockSamples[T], topAvail, leftAvail bool, bitDepth int) error {
+	if len(s.Top) < 8 || len(s.Left) < height {
+		return fmt.Errorf("prediction: chroma8x%d needs 8 top and %d left samples: %w", height, height, h264.ErrInvalidData)
 	}
 	var internal int
 	switch mode {
@@ -53,15 +99,12 @@ func Chroma8x8(dst []byte, stride, mode int, s IntraBlockSamples, topAvail, left
 	default:
 		return fmt.Errorf("prediction: invalid chroma mode %d: %w", mode, h264.ErrInvalidData)
 	}
-	return intraBlock(dst, stride, 8, internal, s, topAvail, leftAvail, false)
+	return intraBlock(dst, stride, 8, height, internal, s, topAvail, leftAvail, bitDepth)
 }
 
-// intraBlock 是 16×16/8×8 的共享实现。
-//
-// 两者除尺寸与 Plane 系数外公式相同；luma16 仅用于选择 5/17 的 Plane
-// 归一化系数。
-func intraBlock(dst []byte, stride, n, mode int, s IntraBlockSamples, topAvail, leftAvail, luma16 bool) error {
-	if len(dst) < (n-1)*stride+n {
+// intraBlock 共享 16×16 亮度和 8×8/8×16 色度预测，尺寸决定 DC 分区与 Plane 系数。
+func intraBlock[T sample](dst []T, stride, width, height, mode int, s intraBlockSamples[T], topAvail, leftAvail bool, bitDepth int) error {
+	if stride < width || len(dst) < (height-1)*stride+width {
 		return fmt.Errorf("prediction: intra block destination too small: %w", h264.ErrInvalidData)
 	}
 	switch mode {
@@ -69,156 +112,159 @@ func intraBlock(dst []byte, stride, n, mode int, s IntraBlockSamples, topAvail, 
 		if !topAvail {
 			return fmt.Errorf("prediction: intra block vertical without top: %w", h264.ErrInvalidData)
 		}
-		for y := 0; y < n; y++ {
-			copy(dst[y*stride:y*stride+n], s.Top[:n])
+		for y := 0; y < height; y++ {
+			copy(dst[y*stride:y*stride+width], s.Top[:width])
 		}
 	case Intra16x16Horizontal:
 		if !leftAvail {
 			return fmt.Errorf("prediction: intra block horizontal without left: %w", h264.ErrInvalidData)
 		}
-		for y := 0; y < n; y++ {
-			row := dst[y*stride : y*stride+n]
+		for y := 0; y < height; y++ {
+			row := dst[y*stride : y*stride+width]
 			for x := range row {
 				row[x] = s.Left[y]
 			}
 		}
 	case Intra16x16DC:
-		if n == 8 {
-			// 8×8 DC 按四个 4×4 象限分别计算（规范 8.3.3.4 与
-			// libavcodec 的 pred8x8_dc 一致），不是一个 16 样本平均。
-			var top0, top1, left0, left1 int
-			for i := 0; i < 4; i++ {
-				top0 += int(s.Top[i])
-				top1 += int(s.Top[4+i])
-				left0 += int(s.Left[i])
-				left1 += int(s.Left[4+i])
-			}
-			var d00, d01, d10, d11 byte
-			switch {
-			case topAvail && leftAvail:
-				d00 = byte((top0 + left0 + 4) >> 3)
-				d01 = byte((top1 + 2) >> 2)
-				d10 = byte((left1 + 2) >> 2)
-				d11 = byte((top1 + left1 + 4) >> 3)
-			case topAvail:
-				d00 = byte((top0 + 2) >> 2)
-				d01 = byte((top1 + 2) >> 2)
-				d10, d11 = d00, d01
-			case leftAvail:
-				d00 = byte((left0 + 2) >> 2)
-				d10 = byte((left1 + 2) >> 2)
-				d01, d11 = d00, d10
-			default:
-				d00, d01, d10, d11 = 128, 128, 128, 128
-			}
-			for y := 0; y < 8; y++ {
-				row := dst[y*stride : y*stride+8]
-				for x := 0; x < 8; x++ {
-					switch {
-					case y < 4 && x < 4:
-						row[x] = d00
-					case y < 4:
-						row[x] = d01
-					case x < 4:
-						row[x] = d10
-					default:
-						row[x] = d11
-					}
-				}
-			}
+		if width == 8 {
+			intraChromaDC(dst, stride, height, s, topAvail, leftAvail, bitDepth)
 			break
 		}
 		var dc int
 		switch {
 		case topAvail && leftAvail:
 			sum := 0
-			for i := 0; i < n; i++ {
+			for i := 0; i < width; i++ {
 				sum += int(s.Top[i]) + int(s.Left[i])
 			}
-			dc = (sum + n) >> (log2(n) + 1)
+			dc = (sum + width) >> (log2(width) + 1)
 		case topAvail:
 			sum := 0
-			for i := 0; i < n; i++ {
+			for i := 0; i < width; i++ {
 				sum += int(s.Top[i])
 			}
-			dc = (sum + n/2) / n
+			dc = (sum + width/2) / width
 		case leftAvail:
 			sum := 0
-			for i := 0; i < n; i++ {
+			for i := 0; i < height; i++ {
 				sum += int(s.Left[i])
 			}
-			dc = (sum + n/2) / n
+			dc = (sum + height/2) / height
 		default:
-			dc = 128
+			dc = 1 << (bitDepth - 1)
 		}
-		for y := 0; y < n; y++ {
-			row := dst[y*stride : y*stride+n]
+		for y := 0; y < height; y++ {
+			row := dst[y*stride : y*stride+width]
 			for x := range row {
-				row[x] = byte(dc)
+				row[x] = T(dc)
 			}
 		}
 	case Intra16x16Plane:
 		if !topAvail || !leftAvail {
 			return fmt.Errorf("prediction: plane mode requires top and left: %w", h264.ErrInvalidData)
 		}
-		intraPlane(dst, stride, n, s, luma16)
+		intraPlane(dst, stride, width, height, s, bitDepth)
 	default:
 		return fmt.Errorf("prediction: invalid intra block mode %d: %w", mode, h264.ErrInvalidData)
 	}
 	return nil
 }
 
-// intraPlane 实现 16×16/8×8 Plane 预测（8.3.3.4）。
-//
-// 两份公式仅在求和范围与 5/17 系数上不同：
-//
-//	16×16: b = (5H+32)>>6
-//	 8×8 : b = (17H+16)>>5
-//
-// top[-1]/left[-1] 都取左上角样本。
-func intraPlane(dst []byte, stride, n int, s IntraBlockSamples, luma16 bool) {
-	half := n / 2
-	var hSum, vSum int
-	for i := 0; i < half; i++ {
-		w := i + 1
-		topHi := int(s.Top[half+i])
-		leftHi := int(s.Left[half+i])
-		var topLo, leftLo int
-		if i == half-1 {
-			// 规范中的 top[-1]/left[-1] 就是左上角样本。
-			topLo, leftLo = int(s.TopLeft), int(s.TopLeft)
-		} else {
-			topLo, leftLo = int(s.Top[half-2-i]), int(s.Left[half-2-i])
+// intraChromaDC 按 4×4 分区计算 DC（Spec: 8.3.4.1）。除左上区外，
+// 首行右区只取上方、其余行左区只取左方，其余区平均对应的上方与左方。
+func intraChromaDC[T sample](dst []T, stride, height int, s intraBlockSamples[T], topAvail, leftAvail bool, bitDepth int) {
+	var top [2]int
+	if topAvail {
+		for x := 0; x < 8; x++ {
+			top[x/4] += int(s.Top[x])
 		}
-		hSum += w * (topHi - topLo)
-		vSum += w * (leftHi - leftLo)
 	}
-	var b, c int
-	if luma16 {
-		b = (5*hSum + 32) >> 6
-		c = (5*vSum + 32) >> 6
-	} else {
-		b = (17*hSum + 16) >> 5
-		c = (17*vSum + 16) >> 5
-	}
-	a := 16 * (int(s.Top[n-1]) + int(s.Left[n-1]))
-	for y := 0; y < n; y++ {
-		row := dst[y*stride : y*stride+n]
-		for x := 0; x < n; x++ {
-			v := (a + b*(x-(half-1)) + c*(y-(half-1)) + 16) >> 5
-			row[x] = clip8(v)
+	for by := 0; by < height; by += 4 {
+		left := 0
+		if leftAvail {
+			for y := by; y < by+4; y++ {
+				left += int(s.Left[y])
+			}
+		}
+		for bx := 0; bx < 2; bx++ {
+			dc := 1 << (bitDepth - 1)
+			switch {
+			case topAvail && leftAvail:
+				switch {
+				case by == 0 && bx == 1:
+					dc = (top[bx] + 2) >> 2
+				case by != 0 && bx == 0:
+					dc = (left + 2) >> 2
+				default:
+					dc = (top[bx] + left + 4) >> 3
+				}
+			case topAvail:
+				dc = (top[bx] + 2) >> 2
+			case leftAvail:
+				dc = (left + 2) >> 2
+			}
+			for y := by; y < by+4; y++ {
+				row := dst[y*stride+bx*4 : y*stride+bx*4+4]
+				for x := range row {
+					row[x] = T(dc)
+				}
+			}
 		}
 	}
 }
 
-func clip8(v int) byte {
+// intraPlane 的两个轴分别归一化，8×16 的水平使用 17/32、垂直使用 5/64。
+// Top[-1]/Left[-1] 均为 TopLeft（Spec: 8.3.3.4、8.3.4.4）。
+func intraPlane[T sample](dst []T, stride, width, height int, s intraBlockSamples[T], bitDepth int) {
+	b := intraPlaneSlope(s.Top[:width], s.TopLeft)
+	c := intraPlaneSlope(s.Left[:height], s.TopLeft)
+	a := 16 * (int(s.Top[width-1]) + int(s.Left[height-1]))
+	for y := 0; y < height; y++ {
+		row := dst[y*stride : y*stride+width]
+		for x := range row {
+			v := (a + b*(x-(width/2-1)) + c*(y-(height/2-1)) + 16) >> 5
+			row[x] = clipSample[T](v, bitDepth)
+		}
+	}
+}
+
+func intraPlaneSlope[T sample](edge []T, topLeft T) int {
+	half := len(edge) / 2
+	sum := 0
+	for i := 0; i < half; i++ {
+		lo := int(topLeft)
+		if i != half-1 {
+			lo = int(edge[half-2-i])
+		}
+		sum += (i + 1) * (int(edge[half+i]) - lo)
+	}
+	if len(edge) == 16 {
+		return (5*sum + 32) >> 6
+	}
+	return (17*sum + 16) >> 5
+}
+
+// sample 的实例直接读取原始采样缓冲，8-bit 路径不分配转换数组。
+type sample interface {
+	~uint8 | ~uint16
+}
+
+func clipSample[T sample](v, bitDepth int) T {
 	if v < 0 {
 		return 0
 	}
-	if v > 255 {
-		return 255
+	max := (1 << bitDepth) - 1
+	if v > max {
+		return T(max)
 	}
-	return byte(v)
+	return T(v)
+}
+
+func checkBitDepth(bitDepth int) error {
+	if bitDepth < 8 || bitDepth > 16 {
+		return fmt.Errorf("prediction: invalid bit depth %d: %w", bitDepth, h264.ErrInvalidData)
+	}
+	return nil
 }
 
 func log2(n int) int {
