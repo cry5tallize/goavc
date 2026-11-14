@@ -1,5 +1,24 @@
 # testdata
 
+## M7 High10
+
+`high10/`新增三份32×32/48×32、共18帧的真实10-bit420码流，包含CAVLC I/P、
+CABAC I/P/B、双slice、8×8/JVT矩阵和低QP。三份均已与独立FFmpeg逐采样一致，
+状态为`conformant`，码流与完整原始LE输出哈希登记在manifest；仅证明列明的工具组合。
+
+生成输入为5 FPS、目标尺寸的10-bit滤镜：
+
+```text
+nullsrc=size=<size>:rate=5,format=yuv420p10le,geq=lum='mod(X*13+Y*7+N*19,1024)':cb='mod(251+X*3+N*7,1024)':cr='mod(769+Y*5+N*11,1024)'
+```
+
+使用FFmpeg 8.0/libx264、`-preset medium -profile:v high10`，固定`scenecut=0:threads=1:aud=1:keyint=30`。
+001为32×32/6帧/QP26、`cabac=0:bframes=0:ref=1:weightp=0:8x8dct=0`；
+002为48×32/8帧/QP26、`cabac=1:bframes=2:ref=3:weightp=2:slices=2:8x8dct=1:cqm=jvt`；
+003为32×32/4帧/QP1、`cabac=1:bframes=0:ref=1:weightp=0:8x8dct=1`。
+Oracle命令为`ffmpeg -v error -i <file> -map 0:v:0 -c:v rawvideo -pix_fmt yuv420p10le -f hash -hash sha256 -`，
+哈希覆盖按显示顺序串联的完整原始采样字节。输入低两位有真实信息，禁止先降为8-bit再比较。
+
 ## M3 High 与不支持边界
 
 七份 High 样本覆盖默认 CABAC（96×64/12 帧、176×144/12 帧、320×240/10 帧、

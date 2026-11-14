@@ -1,7 +1,7 @@
 package decoder
 
 import (
-	"github.com/goavc/h264/internal/prediction"
+	"github.com/goavc/h264/internal/picture"
 	"github.com/goavc/h264/internal/transform"
 )
 
@@ -51,8 +51,15 @@ func dcScale(matrix *[16]uint8) uint8 {
 	return matrix[0]
 }
 
-func (fs *frameState) intra8Samples(mbx, mby, bx, by int) (prediction.Intra8x8Samples, bool, bool) {
-	var out prediction.Intra8x8Samples
+type intra8Neighborhood[T ~uint8 | ~uint16] struct {
+	Top              [16]T
+	Left             [8]T
+	TopLeft          T
+	TopLeftAvailable bool
+}
+
+func intra8Samples[T ~uint8 | ~uint16](fs *frameState, mbx, mby, bx, by int, data []T) (intra8Neighborhood[T], bool, bool) {
+	var out intra8Neighborhood[T]
 	pl := &fs.pic.Planes[0]
 	addr := mby*fs.mbW + mbx
 	x, y := mbx*16+bx*8, mby*16+by*8
@@ -77,28 +84,32 @@ func (fs *frameState) intra8Samples(mbx, mby, bx, by int) (prediction.Intra8x8Sa
 	}
 	out.TopLeftAvailable = tl
 	if tl {
-		out.TopLeft = pl.Pix(x-1, y-1)
+		out.TopLeft = data[pl.Index(x-1, y-1)]
 	}
 	if top {
 		for i := 0; i < 8; i++ {
-			out.Top[i] = pl.Pix(x+i, y-1)
+			out.Top[i] = data[pl.Index(x+i, y-1)]
 		}
 		for i := 8; i < 16; i++ {
 			out.Top[i] = out.Top[7]
 			if tr {
-				out.Top[i] = pl.Pix(x+i, y-1)
+				out.Top[i] = data[pl.Index(x+i, y-1)]
 			}
 		}
 	}
 	if left {
 		for i := 0; i < 8; i++ {
-			out.Left[i] = pl.Pix(x-1, y+i)
+			out.Left[i] = data[pl.Index(x-1, y+i)]
 		}
 	}
 	return out, top, left
 }
 
 func (fs *frameState) addLuma8Block(mbx, mby, block, qp int, levels *[64]int32, intra bool) error {
+	qp, err := transform.ScaleQP(qp, 8+int(fs.sps.BitDepthLumaMinus8))
+	if err != nil {
+		return err
+	}
 	var coeff, residual [64]int32
 	if err := transform.Dequant8x8(&coeff, levels, qp, fs.matrix8(intra)); err != nil {
 		return err
@@ -108,23 +119,17 @@ func (fs *frameState) addLuma8Block(mbx, mby, block, qp int, levels *[64]int32, 
 	}
 	x, y := mbx*16+(block%2)*8, mby*16+(block/2)*8
 	pl := &fs.pic.Planes[0]
-	for yy := 0; yy < 8; yy++ {
-		for xx := 0; xx < 8; xx++ {
-			pl.SetPix(x+xx, y+yy, clip8(int(pl.Pix(x+xx, y+yy))+int(residual[yy*8+xx])))
-		}
-	}
+	picture.AddResidual8x8(pl, x, y, &residual)
 	return nil
 }
 
 func (fs *frameState) reconstructIntra8x8(mbx, mby, cbp, qp int, res *residual) error {
-	pl := &fs.pic.Planes[0]
 	info := &fs.info[mby*fs.mbW+mbx]
 	for block := 0; block < 4; block++ {
 		bx, by := block%2, block/2
-		s, top, left := fs.intra8Samples(mbx, mby, bx, by)
 		x, y := mbx*16+bx*8, mby*16+by*8
 		mode := int(info.intraModes[by*8+bx*2])
-		if err := prediction.Intra8x8(pl.Data[pl.Index(x, y):], pl.Stride, mode, s, top, left); err != nil {
+		if err := fs.predictIntra8(mbx, mby, bx, by, x, y, mode); err != nil {
 			return err
 		}
 		if cbp&(1<<block) != 0 {

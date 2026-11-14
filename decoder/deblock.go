@@ -91,8 +91,13 @@ func (fs *frameState) filterLumaVertical(mbx, mby, edgeX int, boundary bool) err
 		info := &fs.info[mby*fs.mbW+mbx]
 		x := baseX + edgeX
 		y := mby*16 + r*4
-		filter.LumaEdge(pl.Data, pl.Index(x, y), pl.Stride, 1, bS, qp,
-			int(info.alphaDiv2), int(info.betaDiv2))
+		if pl.BitDepth == 10 {
+			filter.LumaEdgeHigh(pl.Data16, pl.Index(x, y), pl.Stride, 1, bS, qp,
+				int(info.alphaDiv2), int(info.betaDiv2), pl.BitDepth)
+		} else {
+			filter.LumaEdge(pl.Data, pl.Index(x, y), pl.Stride, 1, bS, qp,
+				int(info.alphaDiv2), int(info.betaDiv2))
+		}
 	}
 	return nil
 }
@@ -110,8 +115,13 @@ func (fs *frameState) filterLumaHorizontal(mbx, mby, edgeY int, boundary bool) e
 		info := &fs.info[mby*fs.mbW+mbx]
 		x := mbx*16 + c*4
 		y := mby*16 + edgeY
-		filter.LumaEdge(pl.Data, pl.Index(x, y), 1, pl.Stride, bS, qp,
-			int(info.alphaDiv2), int(info.betaDiv2))
+		if pl.BitDepth == 10 {
+			filter.LumaEdgeHigh(pl.Data16, pl.Index(x, y), 1, pl.Stride, bS, qp,
+				int(info.alphaDiv2), int(info.betaDiv2), pl.BitDepth)
+		} else {
+			filter.LumaEdge(pl.Data, pl.Index(x, y), 1, pl.Stride, bS, qp,
+				int(info.alphaDiv2), int(info.betaDiv2))
+		}
 	}
 	return nil
 }
@@ -131,8 +141,13 @@ func (fs *frameState) filterChromaVertical(mbx, mby, lumaEdgeX int, boundary boo
 			pl := &fs.pic.Planes[comp+1]
 			x := mbx*8 + chromaX
 			y := mby*8 + r*2
-			filter.ChromaEdge(pl.Data, pl.Index(x, y), pl.Stride, 1, bS, qpc,
-				int(info.alphaDiv2), int(info.betaDiv2), 2)
+			if pl.BitDepth == 10 {
+				filter.ChromaEdgeHigh(pl.Data16, pl.Index(x, y), pl.Stride, 1, bS, qpc,
+					int(info.alphaDiv2), int(info.betaDiv2), 2, pl.BitDepth)
+			} else {
+				filter.ChromaEdge(pl.Data, pl.Index(x, y), pl.Stride, 1, bS, qpc,
+					int(info.alphaDiv2), int(info.betaDiv2), 2)
+			}
 		}
 	}
 	return nil
@@ -154,8 +169,13 @@ func (fs *frameState) filterChromaHorizontal(mbx, mby, lumaEdgeY int, boundary b
 			pl := &fs.pic.Planes[comp+1]
 			x := mbx*8 + c*2
 			y := mby*8 + chromaY
-			filter.ChromaEdge(pl.Data, pl.Index(x, y), 1, pl.Stride, bS, qpc,
-				int(info.alphaDiv2), int(info.betaDiv2), 2)
+			if pl.BitDepth == 10 {
+				filter.ChromaEdgeHigh(pl.Data16, pl.Index(x, y), 1, pl.Stride, bS, qpc,
+					int(info.alphaDiv2), int(info.betaDiv2), 2, pl.BitDepth)
+			} else {
+				filter.ChromaEdge(pl.Data, pl.Index(x, y), 1, pl.Stride, bS, qpc,
+					int(info.alphaDiv2), int(info.betaDiv2), 2)
+			}
 		}
 	}
 	return nil
@@ -171,7 +191,15 @@ func (fs *frameState) edgeChromaQP(mbx, mby int, boundary, left bool, comp int) 
 	if comp == 1 {
 		off = int(fs.pps.SecondChromaQPIndexOffset)
 	}
-	cur := transform.ChromaQP(fs.info[mby*fs.mbW+mbx].qp, off)
+	chromaQP := func(qpy int) int {
+		if fs.sps == nil || fs.sps.BitDepthChromaMinus8 == 0 {
+			return transform.ChromaQP(qpy, off)
+		}
+		// QPY及PPS偏移已由语法层校验；滤波表需要移除位深偏移。
+		qpc, _ := transform.ScaleChromaQP(qpy, off, 8+int(fs.sps.BitDepthChromaMinus8))
+		return qpc - 6*int(fs.sps.BitDepthChromaMinus8)
+	}
+	cur := chromaQP(fs.info[mby*fs.mbW+mbx].qp)
 	if !boundary {
 		return cur
 	}
@@ -181,7 +209,7 @@ func (fs *frameState) edgeChromaQP(mbx, mby int, boundary, left bool, comp int) 
 	} else {
 		otherQP = fs.info[(mby-1)*fs.mbW+mbx].qp
 	}
-	return (cur + transform.ChromaQP(otherQP, off) + 1) >> 1
+	return (cur + chromaQP(otherQP) + 1) >> 1
 }
 
 // edgeQP 返回边界使用的 QP。MB 边界取两侧宏块 QP 的平均，内部边取当前 MB。

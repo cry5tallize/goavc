@@ -1,8 +1,8 @@
 // Package decoder 实现 H.264 Baseline 解码流水线。
 //
 // 输入单位是访问单元（Packet.Data 为 Annex-B），输出是显示顺序的
-// 4:2:0 8-bit Frame。支持 CAVLC/CABAC 的 I/P/B、多参考/MMCO、direct、加权
-// 预测、High 8x8/ScalingMatrix 和 POC 显示重排，范围为渐进式 8-bit 4:2:0。
+// 4:2:0 8/10-bit Frame。支持 CAVLC/CABAC 的 I/P/B、多参考/MMCO、direct、加权
+// 预测、High 8x8/ScalingMatrix 和 POC 显示重排，范围为渐进式 4:2:0。
 package decoder
 
 import (
@@ -53,8 +53,8 @@ func New(cfg h264.DecoderConfig) (*Decoder, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-	if cfg.OutputFormat != h264.YUV420P || cfg.Threads > 1 {
-		return nil, fmt.Errorf("decoder: only serial yuv420p output is supported: %w", h264.ErrUnsupported)
+	if (cfg.OutputFormat != h264.YUV420P && cfg.OutputFormat != h264.YUV420P10LE) || cfg.Threads > 1 {
+		return nil, fmt.Errorf("decoder: only serial 8/10-bit yuv420p output is supported: %w", h264.ErrUnsupported)
 	}
 	d := &Decoder{
 		cfg:  cfg,
@@ -291,9 +291,14 @@ func (d *Decoder) checkSPSLimits(s *syntax.SPS) error {
 		return fmt.Errorf("decoder: %dx%d exceeds configured limit %dx%d: %w",
 			w, h, d.cfg.MaxWidth, d.cfg.MaxHeight, h264.ErrResourceLimit)
 	}
-	if d.cfg.MaxFrameSize > 0 && w*h*2 > uint64(d.cfg.MaxFrameSize) {
+	// 保留既有8-bit预算口径；高位深采样存储与输出均按双字节计费。
+	frameBytes := w * h * 2
+	if s.BitDepthLumaMinus8 == 2 || s.BitDepthChromaMinus8 == 2 {
+		frameBytes *= 2
+	}
+	if d.cfg.MaxFrameSize > 0 && frameBytes > uint64(d.cfg.MaxFrameSize) {
 		return fmt.Errorf("decoder: frame size %d exceeds limit %d: %w",
-			w*h*2, d.cfg.MaxFrameSize, h264.ErrResourceLimit)
+			frameBytes, d.cfg.MaxFrameSize, h264.ErrResourceLimit)
 	}
 	if s.MaxNumRefFrames > uint32(d.cfg.MaxDPBFrames) {
 		return fmt.Errorf("decoder: DPB limit %d: %w", d.cfg.MaxDPBFrames, h264.ErrResourceLimit)

@@ -101,8 +101,8 @@ func TestYUVWriter_ValidationBeforeAnyOutput(t *testing.T) {
 	if err := w.WriteFrame(nil); !errors.Is(err, h264.ErrInvalidData) {
 		t.Fatal(err)
 	}
-	if err := w.WriteFrame(&h264.Frame{Width: 3, Height: 3, Format: h264.YUV420P10LE}); !errors.Is(err, h264.ErrUnsupported) {
-		t.Fatal("高位深未明确拒绝", err)
+	if err := w.WriteFrame(&h264.Frame{Width: 3, Height: 3, Format: h264.YUV420P10LE}); !errors.Is(err, h264.ErrInvalidData) {
+		t.Fatal("未拒绝缺失高位深平面", err)
 	}
 }
 

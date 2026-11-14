@@ -53,6 +53,9 @@ func ParsePPS(rbsp []byte, sps *SPS) (*PPS, error) {
 	if sps == nil {
 		return nil, fmt.Errorf("syntax: parse pps requires an sps context")
 	}
+	if sps.BitDepthLumaMinus8 > 6 {
+		return nil, fmt.Errorf("syntax: invalid SPS bit depth: %w", h264.ErrInvalidData)
+	}
 	r := bitstream.NewReader(rbsp)
 	p := &PPS{}
 	var err error
@@ -108,7 +111,7 @@ func ParsePPS(rbsp []byte, sps *SPS) (*PPS, error) {
 	if p.PicInitQPMinus26, err = readSE(r, "pic_init_qp_minus26"); err != nil {
 		return nil, err
 	}
-	if err := validateQPOffset("pic_init_qp_minus26", p.PicInitQPMinus26, -26, 25); err != nil {
+	if err := validateQPOffset("pic_init_qp_minus26", p.PicInitQPMinus26, -26-6*int32(sps.BitDepthLumaMinus8), 25); err != nil {
 		return nil, err
 	}
 	if p.PicInitQSMinus26, err = readSE(r, "pic_init_qs_minus26"); err != nil {
@@ -305,6 +308,9 @@ func (p *PPS) validateForWrite(sps *SPS) error {
 	if sps == nil {
 		return fmt.Errorf("syntax: write pps requires an sps context")
 	}
+	if sps.BitDepthLumaMinus8 > 6 {
+		return fmt.Errorf("syntax: invalid SPS bit depth: %w", h264.ErrInvalidData)
+	}
 	if p.PicParameterSetID > 255 {
 		return fmt.Errorf("syntax: pic_parameter_set_id %d exceeds 255: %w",
 			p.PicParameterSetID, h264.ErrInvalidData)
@@ -322,7 +328,7 @@ func (p *PPS) validateForWrite(sps *SPS) error {
 	if p.WeightedBipredIDC > 2 {
 		return fmt.Errorf("syntax: weighted_bipred_idc %d exceeds 2: %w", p.WeightedBipredIDC, h264.ErrInvalidData)
 	}
-	if err := validateQPOffset("pic_init_qp_minus26", p.PicInitQPMinus26, -26, 25); err != nil {
+	if err := validateQPOffset("pic_init_qp_minus26", p.PicInitQPMinus26, -26-6*int32(sps.BitDepthLumaMinus8), 25); err != nil {
 		return err
 	}
 	if err := validateQPOffset("pic_init_qs_minus26", p.PicInitQSMinus26, -26, 25); err != nil {

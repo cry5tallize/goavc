@@ -54,8 +54,9 @@ func (c EncoderConfig) Validate() error {
 	if c.FPSDen <= 0 {
 		return fmt.Errorf("%w: fps denominator %d must be positive", ErrInvalidData, c.FPSDen)
 	}
-	if c.QP < MinQP || c.QP > MaxQP {
-		return fmt.Errorf("%w: qp %d outside [%d,%d]", ErrInvalidData, c.QP, MinQP, MaxQP)
+	minQP := -6 * (c.PixelFormat.BitDepth() - 8)
+	if c.QP < minQP || c.QP > MaxQP {
+		return fmt.Errorf("%w: qp %d outside [%d,%d]", ErrInvalidData, c.QP, minQP, MaxQP)
 	}
 	if c.GOPSize < 1 || c.GOPSize > maxGOPSize {
 		return fmt.Errorf("%w: gop size %d outside [1,%d]", ErrInvalidData, c.GOPSize, maxGOPSize)

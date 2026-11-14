@@ -83,9 +83,9 @@ func TestYUVReader_ConstructorAndClockLimits(t *testing.T) {
 	if _, err := NewYUVReader(nil, 3, 3, h264.YUV420P); !errors.Is(err, h264.ErrInvalidData) {
 		t.Fatal(err)
 	}
-	for _, format := range []h264.PixelFormat{h264.YUV420P10LE, h264.YUV422P10LE, h264.YUV444P10LE, 255} {
+	for _, format := range []h264.PixelFormat{255} {
 		if _, err := NewYUVReader(bytes.NewReader(nil), 3, 3, format); !errors.Is(err, h264.ErrUnsupported) {
-			t.Fatal("未拒绝高位深/未知格式", format, err)
+			t.Fatal("未拒绝未知格式", format, err)
 		}
 	}
 	r, _ := NewYUVReader(bytes.NewReader([]byte{1}), 3, 3, h264.YUV420P)

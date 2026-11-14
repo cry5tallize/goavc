@@ -22,10 +22,19 @@ func (s *sliceEntry) applyPWeights(fs *frameState, mbx, mby, x, y, w, h, ref int
 			denom = t.ChromaDenom
 		}
 		pl := &fs.pic.Planes[c]
-		for yy := 0; yy < ph; yy++ {
-			row := pl.Row(py + yy)[px : px+pw]
-			for i, v := range row {
-				row[i] = prediction.WeightSample(v, weight.Weight[c], weight.Offset[c], denom)
+		if pl.BitDepth == 10 {
+			for yy := range ph {
+				row := pl.Row16(py + yy)[px : px+pw]
+				for i, v := range row {
+					row[i] = prediction.WeightSampleHigh(v, weight.Weight[c], weight.Offset[c], denom, pl.BitDepth)
+				}
+			}
+		} else {
+			for yy := range ph {
+				row := pl.Row(py + yy)[px : px+pw]
+				for i, v := range row {
+					row[i] = prediction.WeightSample(v, weight.Weight[c], weight.Offset[c], denom)
+				}
 			}
 		}
 	}
@@ -34,6 +43,14 @@ func (s *sliceEntry) applyPWeights(fs *frameState, mbx, mby, x, y, w, h, ref int
 // mcBPartition 将各方向运动补偿结果独立插值，再做均值或显式/隐式加权。
 // 工作数组固定在栈上；不创建第二套插值、反变换或图像重建内核。
 func (fs *frameState) mcBPartition(s *sliceEntry, mbx, mby int, p pPartition, refs [2]int8, mvs [2]motion.MV) {
+	if fs.pic.Planes[0].BitDepth == 10 {
+		mcBPartitionSamples[uint16](fs, s, mbx, mby, p, refs, mvs)
+	} else {
+		mcBPartitionSamples[byte](fs, s, mbx, mby, p, refs, mvs)
+	}
+}
+
+func mcBPartitionSamples[T ~uint8 | ~uint16](fs *frameState, s *sliceEntry, mbx, mby int, p pPartition, refs [2]int8, mvs [2]motion.MV) {
 	for c := 0; c < 3; c++ {
 		x, y, w, h := mbx*16+p.x*4, mby*16+p.y*4, p.w*4, p.h*4
 		if c > 0 {
@@ -42,17 +59,26 @@ func (fs *frameState) mcBPartition(s *sliceEntry, mbx, mby int, p pPartition, re
 			w /= 2
 			h /= 2
 		}
-		var samples [2][256]byte
+		var samples [2][256]T
 		for l := 0; l < 2; l++ {
 			if refs[l] < 0 {
 				continue
 			}
 			r := s.refs[l][refs[l]]
 			mv := mvs[l]
-			if c == 0 {
-				prediction.MCBlockLuma(samples[l][:], w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
-			} else {
-				prediction.MCBlockChroma(samples[l][:], w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
+			switch dst := any(samples[l][:]).(type) {
+			case []byte:
+				if c == 0 {
+					prediction.MCBlockLuma(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
+				} else {
+					prediction.MCBlockChroma(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
+				}
+			case []uint16:
+				if c == 0 {
+					prediction.MCBlockLumaHigh(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
+				} else {
+					prediction.MCBlockChromaHigh(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
+				}
 			}
 		}
 		denom := uint32(0)
@@ -78,20 +104,37 @@ func (fs *frameState) mcBPartition(s *sliceEntry, mbx, mby int, p pPartition, re
 			denom = 5
 		}
 		pl := &fs.pic.Planes[c]
-		for yy := 0; yy < h; yy++ {
-			row := pl.Row(y + yy)[x : x+w]
-			for xx := 0; xx < w; xx++ {
-				i := yy*w + xx
-				if refs[0] >= 0 && refs[1] >= 0 {
-					row[xx] = prediction.BiWeightSample(samples[0][i], samples[1][i], weights[0], weights[1], offsets[0], offsets[1], denom)
-				} else {
-					l := 0
-					if refs[0] < 0 {
-						l = 1
+		l := 0
+		if refs[0] < 0 {
+			l = 1
+		}
+		both := refs[0] >= 0 && refs[1] >= 0
+		switch values := any(&samples).(type) {
+		case *[2][256]byte:
+			for yy := range h {
+				row := pl.Row(y + yy)[x : x+w]
+				for xx := range w {
+					i := yy*w + xx
+					if both {
+						row[xx] = prediction.BiWeightSample(values[0][i], values[1][i], weights[0], weights[1], offsets[0], offsets[1], denom)
+					} else if explicit {
+						row[xx] = prediction.WeightSample(values[l][i], weights[l], offsets[l], denom)
+					} else {
+						row[xx] = values[l][i]
 					}
-					row[xx] = samples[l][i]
-					if explicit {
-						row[xx] = prediction.WeightSample(row[xx], weights[l], offsets[l], denom)
+				}
+			}
+		case *[2][256]uint16:
+			for yy := range h {
+				row := pl.Row16(y + yy)[x : x+w]
+				for xx := range w {
+					i := yy*w + xx
+					if both {
+						row[xx] = prediction.BiWeightSampleHigh(values[0][i], values[1][i], weights[0], weights[1], offsets[0], offsets[1], denom, pl.BitDepth)
+					} else if explicit {
+						row[xx] = prediction.WeightSampleHigh(values[l][i], weights[l], offsets[l], denom, pl.BitDepth)
+					} else {
+						row[xx] = values[l][i]
 					}
 				}
 			}

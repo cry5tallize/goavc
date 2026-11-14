@@ -21,7 +21,8 @@ func decodeCABACSlice(fs *frameState, s *sliceEntry, sliceID, first, end int) er
 	if err != nil {
 		return err
 	}
-	ctx, err := cabac.InitContexts(s.hdr.Type == syntax.SliceTypeI, s.hdr.CabacInitIDC, s.hdr.SliceQP)
+	// CABAC上下文初始化使用语法QPY裁剪域，不使用变换的QP'。
+	ctx, err := cabac.InitContexts(s.hdr.Type == syntax.SliceTypeI, s.hdr.CabacInitIDC, max(0, min(51, s.hdr.SliceQP)))
 	if err != nil {
 		return err
 	}

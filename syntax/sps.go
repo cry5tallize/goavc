@@ -13,7 +13,7 @@ import (
 // 解析时会补上默认值 ChromaFormatIDC=1、BitDepth*Minus8=0，
 // 这样消费方可以统一使用这些字段。
 //
-// 未实现的工具组合（High10/422/444、隔行、非 Baseline/Main/High profile）
+// 未实现的工具组合（422/444、隔行、扩展profile）
 // 在解析结束时返回 ErrUnsupported，而不是把不完整的结果交给上层。
 type SPS struct {
 	ProfileIDC         uint8
@@ -277,8 +277,7 @@ func (s *SPS) parseHighProfileFields(r *bitstream.Reader) error {
 
 // usesHighProfileSyntax 判断该 profile_idc 是否携带 High 系列扩展字段。
 //
-// 列表来自 §7.3.2.1；本实现只支持其中的 100，其余会在 validateSupported
-// 中返回 ErrUnsupported，但必须先按相同语法读掉字段，才能给出准确的错误。
+// 列表来自 §7.3.2.1；先读取完整字段，再由validateSupported限制已实现组合。
 func usesHighProfileSyntax(profile uint8) bool {
 	switch profile {
 	case 100, 110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134, 135:
@@ -288,12 +287,12 @@ func usesHighProfileSyntax(profile uint8) bool {
 	}
 }
 
-// validateSupported 拒绝 M1 未实现的 profile / 色度 / 位深组合。
+// validateSupported 限制已经接入共享内核与流水线的工具组合。
 func (s *SPS) validateSupported() error {
 	switch s.ProfileIDC {
-	case 66, 77, 100:
+	case 66, 77, 100, 110:
 	default:
-		return fmt.Errorf("syntax: profile_idc %d is not supported in M1: %w",
+		return fmt.Errorf("syntax: profile_idc %d is not supported: %w",
 			s.ProfileIDC, h264.ErrUnsupported)
 	}
 	if usesHighProfileSyntax(s.ProfileIDC) {
@@ -307,9 +306,10 @@ func (s *SPS) validateSupported() error {
 			return fmt.Errorf("syntax: chroma_format_idc %d is not supported (only 4:2:0): %w",
 				s.ChromaFormatIDC, h264.ErrUnsupported)
 		}
-		if s.BitDepthLumaMinus8 != 0 || s.BitDepthChromaMinus8 != 0 {
-			return fmt.Errorf("syntax: bit depth %d/%d is not supported (only 8-bit): %w",
-				s.BitDepthLumaMinus8+8, s.BitDepthChromaMinus8+8, h264.ErrUnsupported)
+		high10 := s.ProfileIDC == 110 && s.BitDepthLumaMinus8 == 2 && s.BitDepthChromaMinus8 == 2
+		if !high10 && (s.BitDepthLumaMinus8 != 0 || s.BitDepthChromaMinus8 != 0) {
+			return fmt.Errorf("syntax: unsupported bit depth %d/%d for profile %d: %w",
+				s.BitDepthLumaMinus8+8, s.BitDepthChromaMinus8+8, s.ProfileIDC, h264.ErrUnsupported)
 		}
 	}
 	if !s.FrameMbsOnlyFlag {

@@ -9,9 +9,9 @@ import (
 	h264 "github.com/goavc/h264"
 )
 
-type planeLayout struct{ width, height, bytes int }
+type planeLayout struct{ rowBytes, height, bytes int }
 
-// rawLayout先限界再乘法；8192²×3在32位int内，奇数色度按公共格式向上取整。
+// rawLayout先限界再乘法；8192²×3×2在32位int内，行宽以字节计。
 func rawLayout(width, height int, format h264.PixelFormat) ([3]planeLayout, int, error) {
 	var planes [3]planeLayout
 	if width <= 0 || height <= 0 {
@@ -20,14 +20,15 @@ func rawLayout(width, height int, format h264.PixelFormat) ([3]planeLayout, int,
 	if width > h264.MaxFrameWidth || height > h264.MaxFrameHeight {
 		return planes, 0, fmt.Errorf("stream: YUV尺寸超限: %w", h264.ErrResourceLimit)
 	}
-	if !format.Valid() || format.BitDepth() != 8 {
-		return planes, 0, fmt.Errorf("stream: 仅支持8-bit YUV420/422/444: %w", h264.ErrUnsupported)
+	if !format.Valid() {
+		return planes, 0, fmt.Errorf("stream: 未知YUV格式: %w", h264.ErrUnsupported)
 	}
 	total := 0
 	for comp := range planes {
 		w, h := format.PlaneDimensions(comp, width, height)
-		planes[comp] = planeLayout{w, h, w * h}
-		total += w * h
+		rowBytes := w * format.BytesPerSample()
+		planes[comp] = planeLayout{rowBytes, h, rowBytes * h}
+		total += rowBytes * h
 	}
 	return planes, total, nil
 }
@@ -90,8 +91,15 @@ func (r *YUVReader) ReadFrame() (*h264.Frame, error) {
 	start := 0
 	for comp, pl := range r.planes {
 		end := start + pl.bytes
-		f.Planes[comp] = h264.Plane{Data: data[start:end:end], Stride: pl.width}
+		f.Planes[comp] = h264.Plane{Data: data[start:end:end], Stride: pl.rowBytes}
 		start = end
+	}
+	if r.format.BitDepth() == 10 {
+		if err := f.Validate(); err != nil {
+			f.Release()
+			r.err = fmt.Errorf("stream: 非法高位深YUV采样: %w", err)
+			return nil, r.err
+		}
 	}
 	r.nextPTS++
 	return f, nil

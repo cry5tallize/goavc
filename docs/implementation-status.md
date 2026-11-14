@@ -53,7 +53,7 @@
 | Annex-B 扫描 | B.1 | 3/4 字节起始码、任意分块、前导/尾随零 | Conformant | `annexb_test.go`、`annexb_chunk_test.go`、语料测试 | 前导非零字节按同步恢复策略跳过 |
 | AVCC / avcC | ISO/IEC 14496-15 | 1..4 字节长度、8 MiB 上限、avcC 解析与序列化 | Partial | `avcc_test.go`、`avcc_writer_test.go`、`avcconfig_test.go`、`avcconfig_writer_test.go` | 尚无真实 MP4/avcC 语料，目前只有合成记录 |
 | Access Unit 组装 | 7.4.1.2.3 | AUD/前缀/后缀、first_mb/frame_num/POC 等判定、显式 hint | Conformant | `accessunit_test.go`、`assembler_test.go`、`corpus_test.go` | 多 slice 且无 AUD 时依赖 SliceInfo hint；suffix SEI 归类保守 |
-| SPS 解析与序列化 | 7.3.2.1 | Baseline/Main/High 8-bit 4:2:0、VUI/ScalingList、裁剪尺寸 | Conformant | `sps_test.go`、`sps_write_test.go`、`corpus_test.go`、`ffprobe_oracle_test.go` | High10/422/444、隔行、qpprime 显式返回 `ErrUnsupported`（M7） |
+| SPS 解析与序列化 | 7.3.2.1 | Baseline/Main/High 8-bit及High10渐进4:2:0、VUI/ScalingList、裁剪尺寸 | Conformant | 原语法/ffprobe语料回归及M7 High10真实压缩码流Oracle通过 | 422/444、隔行、qpprime仍显式拒绝，按M7后续实施项接入 |
 | PPS 解析与序列化 | 7.3.2.2 | 核心字段、可选 8×8/scaling 扩展、FMO 拒绝 | Partial | `pps_test.go`、`corpus_test.go` | 无独立 PPS 级 Oracle；依赖 x264 原始字节往返与 manifest 熵模式 |
 | VUI | E.1 | 宽高比、overscan、video signal、timing、HRD、bitstream restriction | Partial | `vui_test.go`、`corpus_test.go` | timing/HRD 语义未与独立 Oracle 对比（裸流 ffprobe 帧率不可靠） |
 | ScalingList | 7.3.2.1.1.1 | 4×4/8×8、保留原始 delta 序列 | Partial | `scaling_list_test.go`、`sps_write_test.go` | 无自定义矩阵真实语料；应用层（反量化）在 M3 |
@@ -196,7 +196,7 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 ## M7：高级 AVC 特性（WIP）
 
 当前特性分支`feat/m7-high10`，按实施计划从共享内核到流水线逐项验收、独立提交。
-基础布局参数化不表示扩展Profile已接入，既有8-bit编解码路径保持不变。
+High10渐进420解码已接入，限定工具与证据逐项列于下表；既有8-bit编解码回归保持通过，不据基础内核进度承诺完整Profile。
 
 | 实施项 | 职责 | Status | 证据 | 缺口 |
 |---|---|---|---|---|
@@ -206,6 +206,7 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 | 共享预测前置 | byte/uint16共用泛型帧内/MC/权重算术，默认DC与裁剪按位深；矩形422色度及采样格式相关MC供后续流水线接入 | Conformant | 暂存区独立快照通过CGO=0完整vet/build/非缓存全包test、depscheck34包、manifest27条及gofmt；高位深规范解析值和既有8-bit Oracle回归通过 | 新入口仅为共享核心，尚不单独声明扩展Profile或422/444流水线已支持 |
 | 共享滤波前置 | byte/uint16共用弱/强亮度与色度去块，按位深缩放alpha/beta/tc0，保留规范附加量与舍入常量 | Conformant | 独立暂存区快照通过CGO=0完整常规门禁；10-bit阈值、裁剪及正负边界解析向量、旧8-bit Oracle回归通过 | 高位深流水线另行验收；QP实参仍为去掉位深偏移的语法域 |
 | 共享运动搜索前置 | 8/10-bit复用整数/菱形/半与四像素搜索控制，uint16原始SAD与共享高位深MC，不降位深 | Conformant | 独立暂存区快照通过CGO=0完整常规门禁；低两位纹理平移、负MV、奇数stride、极值SAD与原8-bit Oracle回归通过 | 编码器High10接入另行验收；Scorer接收原位深SAD |
+| 4：High10解码 | 渐进10-bit420 CAVLC/CABAC I/P/B、帧内4/8/16、矩阵、权重、PCM、去块、LE裁剪输出、资源预算与SPS恢复 | Conformant | 七组外部x264压缩序列与三份18帧登记语料逐采样FFmpeg一致；负QP/模64/混合PCM滤波边界/8→10→8与坏IDR恢复/裁剪解析解通过；独立暂存区完整常规门禁通过，manifest30条 | 隔行、422/444、transform bypass仍按现有组合门禁拒绝；不声明完整High10 Profile；高位深编码另验收 |
 
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名用例及无对应VUI/SEI的语料子用例亦跳过，不计作通过。未重跑race与六目标构建。

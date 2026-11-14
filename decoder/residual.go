@@ -97,10 +97,8 @@ func (fs *frameState) reconstructIntra4x4(mbx, mby, cbp, qp int, res *residual) 
 		raster := blockRaster(n)
 		bx, by := raster%4, raster/4
 		mode := int(info.intraModes[raster])
-		samples, topAvail, leftAvail := fs.intra4Samples(mbx, mby, bx, by)
 		x, y := mbx*16+bx*4, mby*16+by*4
-		dst := plane.Data[plane.Index(x, y):]
-		if err := prediction.Intra4x4(dst, plane.Stride, mode, samples, topAvail, leftAvail); err != nil {
+		if err := fs.predictIntra4(mbx, mby, bx, by, x, y, mode); err != nil {
 			return err
 		}
 		i8 := (by/2)*2 + bx/2
@@ -116,10 +114,11 @@ func (fs *frameState) reconstructIntra4x4(mbx, mby, cbp, qp int, res *residual) 
 // reconstructI16 预测 16x16，并加入 DC/AC 残差。
 func (fs *frameState) reconstructI16(mbx, mby, predMode, chromaMode int, lumaAC bool, qp int, res *residual) error {
 	plane := &fs.pic.Planes[0]
-	samples, topAvail, leftAvail := fs.intra16Samples(mbx, mby)
-	x, y := mbx*16, mby*16
-	dst := plane.Data[plane.Index(x, y):]
-	if err := prediction.Intra16x16(dst, plane.Stride, predMode, samples, topAvail, leftAvail); err != nil {
+	qp, err := transform.ScaleQP(qp, 8+int(fs.sps.BitDepthLumaMinus8))
+	if err != nil {
+		return err
+	}
+	if err := fs.predictIntraBlock(mbx, mby, 0, predMode); err != nil {
 		return err
 	}
 	var dc [16]int32
@@ -140,14 +139,8 @@ func (fs *frameState) reconstructI16(mbx, mby, predMode, chromaMode int, lumaAC 
 		}
 	}
 	// 色度预测。
-	for comp := 0; comp < 2; comp++ {
-		pl := &fs.pic.Planes[comp+1]
-		cs, ct, cl := fs.chromaSamples(mbx, mby, comp)
-		cx, cy := mbx*8, mby*8
-		cdst := pl.Data[pl.Index(cx, cy):]
-		if err := prediction.Chroma8x8(cdst, pl.Stride, chromaMode, cs, ct, cl); err != nil {
-			return err
-		}
+	if err := fs.predictChroma(mbx, mby, chromaMode); err != nil {
+		return err
 	}
 	return nil
 }
@@ -155,10 +148,7 @@ func (fs *frameState) reconstructI16(mbx, mby, predMode, chromaMode int, lumaAC 
 // predictChroma 对两个色度分量做 8x8 帧内预测。
 func (fs *frameState) predictChroma(mbx, mby, mode int) error {
 	for comp := 0; comp < 2; comp++ {
-		pl := &fs.pic.Planes[comp+1]
-		cs, ct, cl := fs.chromaSamples(mbx, mby, comp)
-		dst := pl.Data[pl.Index(mbx*8, mby*8):]
-		if err := prediction.Chroma8x8(dst, pl.Stride, mode, cs, ct, cl); err != nil {
+		if err := fs.predictIntraBlock(mbx, mby, comp+1, mode); err != nil {
 			return err
 		}
 	}
@@ -201,7 +191,10 @@ func (fs *frameState) addChromaResidual(mbx, mby, chromaCBP, qp int, res *residu
 	}
 	offsets := [2]int{int(fs.pps.ChromaQPIndexOffset), int(fs.pps.SecondChromaQPIndexOffset)}
 	for comp := 0; comp < 2; comp++ {
-		qpc := transform.ChromaQP(qp, offsets[comp])
+		qpc, err := transform.ScaleChromaQP(qp, offsets[comp], 8+int(fs.sps.BitDepthChromaMinus8))
+		if err != nil {
+			return err
+		}
 		matrix := fs.matrix4(fs.info[mby*fs.mbW+mbx].intra, comp+1)
 		var dc [4]int32
 		if err := transform.DequantChromaDCWithScaling(&dc, &res.chromaDC[comp], qpc, dcScale(matrix)); err != nil {
@@ -233,6 +226,11 @@ func addResidual4x4(pl *picture.Plane, x, y int, levels *[16]int32, qp int, alre
 	var dequant [16]int32
 	src := levels
 	if alreadyDequant == nil {
+		var err error
+		qp, err = transform.ScaleQP(qp, pl.BitDepth)
+		if err != nil {
+			return err
+		}
 		if err := transform.Dequant4x4WithScaling(&dequant, levels, qp, scaling); err != nil {
 			return err
 		}
@@ -248,12 +246,18 @@ func addResidual4x4(pl *picture.Plane, x, y int, levels *[16]int32, qp int, alre
 func (fs *frameState) mcPartition(ref *picture.Picture, mbx, mby, xOff, yOff, w, h int, mv motion.MV) {
 	lx, ly := mbx*16+xOff, mby*16+yOff
 	pl := &fs.pic.Planes[0]
-	dst := pl.Data[pl.Index(lx, ly):]
-	prediction.MCBlockLuma(dst, pl.Stride, &ref.Planes[0], lx, ly, w, h, int(mv.X), int(mv.Y))
+	if pl.BitDepth == 10 {
+		prediction.MCBlockLumaHigh(pl.Data16[pl.Index(lx, ly):], pl.Stride, &ref.Planes[0], lx, ly, w, h, int(mv.X), int(mv.Y))
+	} else {
+		prediction.MCBlockLuma(pl.Data[pl.Index(lx, ly):], pl.Stride, &ref.Planes[0], lx, ly, w, h, int(mv.X), int(mv.Y))
+	}
 	cx, cy := mbx*8+xOff/2, mby*8+yOff/2
 	for comp := 0; comp < 2; comp++ {
 		cpl := &fs.pic.Planes[comp+1]
-		cdst := cpl.Data[cpl.Index(cx, cy):]
-		prediction.MCBlockChroma(cdst, cpl.Stride, &ref.Planes[comp+1], cx, cy, w/2, h/2, int(mv.X), int(mv.Y))
+		if cpl.BitDepth == 10 {
+			prediction.MCBlockChromaHigh(cpl.Data16[cpl.Index(cx, cy):], cpl.Stride, &ref.Planes[comp+1], cx, cy, w/2, h/2, int(mv.X), int(mv.Y))
+		} else {
+			prediction.MCBlockChroma(cpl.Data[cpl.Index(cx, cy):], cpl.Stride, &ref.Planes[comp+1], cx, cy, w/2, h/2, int(mv.X), int(mv.Y))
+		}
 	}
 }

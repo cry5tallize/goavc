@@ -240,7 +240,7 @@ func TestSPS_WriteErrors(t *testing.T) {
 		},
 		"unsupported profile": func() *SPS {
 			s := valid()
-			s.ProfileIDC = 110
+			s.ProfileIDC = 122
 			s.ChromaFormatIDC = 1
 			return s
 		},

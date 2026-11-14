@@ -18,9 +18,20 @@ func blockOrder(bx, by int) int {
 	return (by/2*2+bx/2)*4 + by%2*2 + bx%2
 }
 
+// 邻域可用性与采样宽度无关，使用同一实现服务8/10-bit路径。
+type intra4Neighborhood[T ~uint8 | ~uint16] struct {
+	Top, TopRight, Left [4]T
+	TopLeft             T
+}
+
+type intraBlockNeighborhood[T ~uint8 | ~uint16] struct {
+	Top, Left [16]T
+	TopLeft   T
+}
+
 // intra4Samples 从当前图像读取 4x4 预测邻域。
-func (fs *frameState) intra4Samples(mbx, mby, bx, by int) (prediction.Intra4x4Samples, bool, bool) {
-	var s prediction.Intra4x4Samples
+func intra4Samples[T ~uint8 | ~uint16](fs *frameState, mbx, mby, bx, by int, data []T) (intra4Neighborhood[T], bool, bool) {
+	var s intra4Neighborhood[T]
 	pl := &fs.pic.Planes[0]
 	x, y := mbx*16+bx*4, mby*16+by*4
 	addr := mby*fs.mbW + mbx
@@ -28,7 +39,7 @@ func (fs *frameState) intra4Samples(mbx, mby, bx, by int) (prediction.Intra4x4Sa
 	leftAvail := bx > 0 || (mbx > 0 && fs.intraNeighbor(addr, addr-1))
 	if topAvail {
 		for i := 0; i < 4; i++ {
-			s.Top[i] = pl.Pix(x+i, y-1)
+			s.Top[i] = data[pl.Index(x+i, y-1)]
 		}
 		// 右上样本只有在“已经被解码”时才可用：
 		//   - bx<3 时在当前 MB 内，顶行已重建；
@@ -43,72 +54,47 @@ func (fs *frameState) intra4Samples(mbx, mby, bx, by int) (prediction.Intra4x4Sa
 		}
 		for i := 0; i < 4; i++ {
 			if trAvail {
-				s.TopRight[i] = pl.Pix(x+4+i, y-1)
+				s.TopRight[i] = data[pl.Index(x+4+i, y-1)]
 			} else {
 				s.TopRight[i] = s.Top[3]
 			}
 		}
 		if leftAvail {
-			s.TopLeft = pl.Pix(x-1, y-1)
+			s.TopLeft = data[pl.Index(x-1, y-1)]
 		}
 	}
 	if leftAvail {
 		for i := 0; i < 4; i++ {
-			s.Left[i] = pl.Pix(x-1, y+i)
+			s.Left[i] = data[pl.Index(x-1, y+i)]
 		}
 	}
 	return s, topAvail, leftAvail
 }
 
-func (fs *frameState) intra16Samples(mbx, mby int) (prediction.IntraBlockSamples, bool, bool) {
-	var s prediction.IntraBlockSamples
-	pl := &fs.pic.Planes[0]
-	x, y := mbx*16, mby*16
+func intraBlockSamples[T ~uint8 | ~uint16](fs *frameState, mbx, mby, component int, data []T) (intraBlockNeighborhood[T], bool, bool) {
+	var s intraBlockNeighborhood[T]
+	pl := &fs.pic.Planes[component]
+	size := 16
+	if component != 0 {
+		size = 8
+	}
+	x, y := mbx*size, mby*size
 	addr := mby*fs.mbW + mbx
 	topAvail := fs.intraNeighbor(addr, addr-fs.mbW)
 	leftAvail := mbx > 0 && fs.intraNeighbor(addr, addr-1)
-	top := make([]byte, 16)
-	left := make([]byte, 16)
 	if topAvail {
-		for i := 0; i < 16; i++ {
-			top[i] = pl.Pix(x+i, y-1)
+		for i := range size {
+			s.Top[i] = data[pl.Index(x+i, y-1)]
 		}
 	}
 	if leftAvail {
-		for i := 0; i < 16; i++ {
-			left[i] = pl.Pix(x-1, y+i)
+		for i := range size {
+			s.Left[i] = data[pl.Index(x-1, y+i)]
 		}
 	}
 	if topAvail && leftAvail {
-		s.TopLeft = pl.Pix(x-1, y-1)
+		s.TopLeft = data[pl.Index(x-1, y-1)]
 	}
-	s.Top, s.Left = top, left
-	return s, topAvail, leftAvail
-}
-
-func (fs *frameState) chromaSamples(mbx, mby, comp int) (prediction.IntraBlockSamples, bool, bool) {
-	var s prediction.IntraBlockSamples
-	pl := &fs.pic.Planes[comp+1]
-	x, y := mbx*8, mby*8
-	addr := mby*fs.mbW + mbx
-	topAvail := fs.intraNeighbor(addr, addr-fs.mbW)
-	leftAvail := mbx > 0 && fs.intraNeighbor(addr, addr-1)
-	top := make([]byte, 8)
-	left := make([]byte, 8)
-	if topAvail {
-		for i := 0; i < 8; i++ {
-			top[i] = pl.Pix(x+i, y-1)
-		}
-	}
-	if leftAvail {
-		for i := 0; i < 8; i++ {
-			left[i] = pl.Pix(x-1, y+i)
-		}
-	}
-	if topAvail && leftAvail {
-		s.TopLeft = pl.Pix(x-1, y-1)
-	}
-	s.Top, s.Left = top, left
 	return s, topAvail, leftAvail
 }
 

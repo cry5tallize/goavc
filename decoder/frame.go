@@ -1,6 +1,7 @@
 package decoder
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	h264 "github.com/goavc/h264"
@@ -75,7 +76,11 @@ func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFrame bool) (*
 	}
 	mbW := int(sps.PicWidthInMbs())
 	mbH := int(sps.FrameHeightInMbs())
-	pic, err := d.pool.Get(mbW, mbH, h264.YUV420P)
+	format := h264.YUV420P
+	if sps.BitDepthLumaMinus8 == 2 {
+		format = h264.YUV420P10LE
+	}
+	pic, err := d.pool.Get(mbW, mbH, format)
 	if err != nil {
 		return nil, err
 	}
@@ -353,13 +358,13 @@ func (d *Decoder) checkSupported(sps *syntax.SPS, pps *syntax.PPS, hdr *syntax.S
 	if !sps.FrameMbsOnlyFlag || sps.MbAdaptiveFrameFieldFlag || hdr.FieldPicFlag {
 		return fmt.Errorf("decoder: field/MBAFF coding: %w", h264.ErrUnsupported)
 	}
-	if sps.ChromaFormatIDC != 1 || sps.BitDepthLumaMinus8 != 0 || sps.BitDepthChromaMinus8 != 0 {
-		return fmt.Errorf("decoder: only 8-bit 4:2:0: %w", h264.ErrUnsupported)
+	if sps.ChromaFormatIDC != 1 || sps.BitDepthLumaMinus8 != sps.BitDepthChromaMinus8 || (sps.BitDepthLumaMinus8 != 0 && sps.BitDepthLumaMinus8 != 2) {
+		return fmt.Errorf("decoder: only 8/10-bit 4:2:0: %w", h264.ErrUnsupported)
 	}
 	if hdr.Type == syntax.SliceTypeSP || hdr.Type == syntax.SliceTypeSI {
 		return fmt.Errorf("decoder: SP/SI slices: %w", h264.ErrUnsupported)
 	}
-	if hdr.SliceQP < 0 || hdr.SliceQP > 51 {
+	if hdr.SliceQP < -6*int(sps.BitDepthLumaMinus8) || hdr.SliceQP > 51 {
 		return fmt.Errorf("decoder: slice QP %d: %w", hdr.SliceQP, h264.ErrInvalidData)
 	}
 	if hdr.RedundantPicCnt > 0 {
@@ -453,7 +458,7 @@ func (d *Decoder) toFrame(pic *picture.Picture, sps *syntax.SPS, p h264.Packet, 
 	f := &h264.Frame{
 		Width:    w,
 		Height:   h,
-		Format:   h264.YUV420P,
+		Format:   pic.Format,
 		PTS:      p.PTS,
 		Duration: p.Duration,
 		KeyFrame: key,
@@ -465,7 +470,7 @@ func (d *Decoder) toFrame(pic *picture.Picture, sps *syntax.SPS, p h264.Packet, 
 		} else {
 			pw, ph = (w+1)/2, (h+1)/2
 		}
-		rowBytes := pw
+		rowBytes := f.Format.RowBytes(pi, w)
 		buf := make([]byte, rowBytes*ph)
 		src := &pic.Planes[pi]
 		cropX, cropY := int(sps.FrameCropLeftOffset), int(sps.FrameCropTopOffset)
@@ -474,7 +479,14 @@ func (d *Decoder) toFrame(pic *picture.Picture, sps *syntax.SPS, p h264.Packet, 
 			cropY *= 2
 		}
 		for y := 0; y < ph; y++ {
-			copy(buf[y*rowBytes:(y+1)*rowBytes], src.Row(y + cropY)[cropX:cropX+pw])
+			row := buf[y*rowBytes : (y+1)*rowBytes]
+			if pic.Format == h264.YUV420P10LE {
+				for x, value := range src.Row16(y + cropY)[cropX : cropX+pw] {
+					binary.LittleEndian.PutUint16(row[x*2:], value)
+				}
+			} else {
+				copy(row, src.Row(y + cropY)[cropX:cropX+pw])
+			}
 		}
 		f.Planes[pi] = h264.Plane{Data: buf, Stride: rowBytes}
 	}

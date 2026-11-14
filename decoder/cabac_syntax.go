@@ -150,8 +150,9 @@ func (s *sliceEntry) readCBP(fs *frameState, addr int, intra bool) (int, error) 
 }
 
 func (s *sliceEntry) updateQP(qp *int) error {
+	depthOffset := 6 * int(s.sps.BitDepthLumaMinus8)
 	if s.cabac == nil {
-		return updateQScale(s.data, qp)
+		return updateQScale(s.data, qp, depthOffset)
 	}
 	c := s.cabac
 	v := 0
@@ -161,7 +162,7 @@ func (s *sliceEntry) updateQP(qp *int) error {
 		for c.d.Err() == nil && c.bin(inc) != 0 {
 			v++
 			inc = 63
-			if v > 102 {
+			if v > 2*(26+depthOffset/2) {
 				return fmt.Errorf("decoder: CABAC qp delta overflow: %w", h264.ErrInvalidData)
 			}
 		}
@@ -170,10 +171,9 @@ func (s *sliceEntry) updateQP(qp *int) error {
 	if v%2 == 0 {
 		delta = -delta
 	}
-	if delta < -26 || delta > 25 {
-		return fmt.Errorf("decoder: CABAC qp delta %d: %w", delta, h264.ErrInvalidData)
+	if err := applyQPDelta(qp, delta, depthOffset); err != nil {
+		return err
 	}
-	*qp = (*qp + delta + 52) % 52
 	c.lastDelta = delta != 0
 	return c.d.Err()
 }

@@ -44,7 +44,7 @@ func (w *YUVWriter) WriteFrame(f *h264.Frame) error {
 	for comp, pl := range layout {
 		p := f.Planes[comp]
 		for y := 0; y < pl.height; y++ {
-			row := p.Data[y*p.Stride : y*p.Stride+pl.width]
+			row := p.Data[y*p.Stride : y*p.Stride+pl.rowBytes]
 			n, err := w.dst.Write(row)
 			if err == nil && n != len(row) {
 				err = io.ErrShortWrite

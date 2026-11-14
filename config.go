@@ -61,8 +61,8 @@ const (
 	MaxFrameWidth  = 8192
 	MaxFrameHeight = 8192
 
-	MinQP = 0  // 8 bit 4:2:0 的最小 QP
-	MaxQP = 51 // 8 bit 4:2:0 的最大 QP（高位深在 M7 扩展为 63）
+	MinQP = 0  // 8-bit语法QPY下限；10-bit按QpBdOffset允许到-12
+	MaxQP = 51 // 语法QPY上限；10-bit有效QP'可到63，不可混用两者
 
 	// LevelAuto 表示由编码器根据分辨率、帧率与码率自动推导 level_idc。
 	LevelAuto = 0
@@ -110,7 +110,7 @@ type EncoderConfig struct {
 	// 若 MaxBitrate 也为 0 则使用 Bitrate 的一秒容量。
 	VBVBufferSize int
 
-	// QP 是基准量化参数，范围 0..51。
+	// QP 是基准语法QPY：8-bit为0..51，10-bit为-12..51。
 	QP int
 
 	RateControl RateControl

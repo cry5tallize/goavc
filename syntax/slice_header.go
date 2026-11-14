@@ -322,9 +322,12 @@ func ParseSliceHeaderEx(rbsp []byte, sps *SPS, ppsByID map[uint32]*PPS, idr bool
 	if h.SliceQPDelta, err = readSE(r, "slice_qp_delta"); err != nil {
 		return nil, err
 	}
-	// 8-bit 4:2:0 的有效 QP 范围是 0..51。这里只检查派生值；
-	// 语法层不限制 QP 的绝对范围，便于后续高位深复用。
-	h.SliceQP = 26 + int(pps.PicInitQPMinus26) + int(h.SliceQPDelta)
+	// Spec: 7.4.3。语法QPY可为负；有效QP'偏移只在变换量化边界应用。
+	qp := int64(26) + int64(pps.PicInitQPMinus26) + int64(h.SliceQPDelta)
+	if sps.BitDepthLumaMinus8 > 6 || qp < -6*int64(sps.BitDepthLumaMinus8) || qp > 51 {
+		return nil, fmt.Errorf("syntax: slice QPY %d out of range: %w", qp, h264.ErrInvalidData)
+	}
+	h.SliceQP = int(qp)
 
 	if pps.DeblockingFilterControlPresentFlag {
 		if h.DisableDeblockingFilterIDC, err = readUE(r, "disable_deblocking_filter_idc"); err != nil {

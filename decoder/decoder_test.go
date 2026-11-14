@@ -163,7 +163,10 @@ func TestDecoder_UnsupportedTools(t *testing.T) {
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.FrameMbsOnlyFlag = false },
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.MbAdaptiveFrameFieldFlag = true },
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.ChromaFormatIDC = 2 },
-		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { s.BitDepthLumaMinus8 = 2 },
+		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) {
+			s.BitDepthLumaMinus8 = 1
+			s.BitDepthChromaMinus8 = 1
+		},
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { h.RedundantPicCnt = 1 },
 		func(s *syntax.SPS, p *syntax.PPS, h *syntax.SliceHeader) { h.Type = syntax.SliceTypeSP },
 	} {

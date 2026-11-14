@@ -8,7 +8,6 @@ import (
 	"github.com/goavc/h264/internal/entropy/cabac"
 	"github.com/goavc/h264/internal/motion"
 	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/internal/transform"
 	"github.com/goavc/h264/syntax"
 )
 
@@ -255,18 +254,18 @@ func decodePCMMacroblock(fs *frameState, addr, mbx, mby int, s *sliceEntry) erro
 	for pi := 0; pi < 3; pi++ {
 		for y := 0; y < dims[pi][1]; y++ {
 			for x := 0; x < dims[pi][0]; x++ {
-				v, err := readBits(s.data, 8)
+				v, err := readBits(s.data, uint(8+fs.sps.BitDepthLumaMinus8))
 				if err != nil {
 					return fmt.Errorf("i_pcm plane %d: %w", pi, err)
 				}
-				planes[pi].SetPix(origins[pi][0]+x, origins[pi][1]+y, byte(v))
+				planes[pi].SetSample(origins[pi][0]+x, origins[pi][1]+y, uint16(v))
 			}
 		}
 	}
 	info := &fs.info[addr]
 	info.intra = true
 	info.pcm = true
-	info.qp = 0 // 规范：I_PCM 的去块 QP 为 0
+	info.qp = -6 * int(fs.sps.BitDepthLumaMinus8) // I_PCM的去块QP'为0，元数据保留语法域。
 	info.cbp = 47
 	base := addr * 16
 	for i := 0; i < 16; i++ {
@@ -292,27 +291,20 @@ func decodePCMMacroblock(fs *frameState, addr, mbx, mby int, s *sliceEntry) erro
 	return nil
 }
 
-func updateQScale(r *bitstream.Reader, qscale *int) error {
+func updateQScale(r *bitstream.Reader, qscale *int, depthOffset int) error {
 	d, err := r.ReadSE()
 	if err != nil {
 		return fmt.Errorf("mb_qp_delta: %w", err)
 	}
-	if d < -26 || d > 25 {
-		return fmt.Errorf("decoder: mb_qp_delta %d: %w", d, h264.ErrInvalidData)
+	return applyQPDelta(qscale, int(d), depthOffset)
+}
+
+// applyQPDelta 保留语法QPY：高位深的回绕区间为[-QpBdOffset,51]。
+func applyQPDelta(qp *int, delta, depthOffset int) error {
+	if delta < -(26+depthOffset/2) || delta > 25+depthOffset/2 {
+		return fmt.Errorf("decoder: mb_qp_delta %d: %w", delta, h264.ErrInvalidData)
 	}
-	q := *qscale + int(d)
-	if q < 0 || q > transform.MaxQP {
-		if q < 0 {
-			q += transform.MaxQP + 1
-		} else {
-			q -= transform.MaxQP + 1
-		}
-		if q < 0 || q > transform.MaxQP {
-			return fmt.Errorf("mb_qp_delta %d leads to qp %d out of range: %w",
-				d, q, h264.ErrInvalidData)
-		}
-	}
-	*qscale = q
+	*qp = (*qp+delta+52+2*depthOffset)%(52+depthOffset) - depthOffset
 	return nil
 }
 
@@ -337,14 +329,4 @@ func boolToInt(v bool) int {
 		return 1
 	}
 	return 0
-}
-
-func clip8(v int) byte {
-	if v < 0 {
-		return 0
-	}
-	if v > 255 {
-		return 255
-	}
-	return byte(v)
 }
