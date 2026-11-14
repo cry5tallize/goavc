@@ -65,7 +65,7 @@ func (e *Encoder) parameters() error {
 	}
 	e.pps.EntropyCodingModeFlag = e.cabac
 	e.pps.WeightedPredFlag = e.autoWeights || e.fixedWeights != nil
-	e.pps.HasOptionalBlock = e.transform8
+	e.pps.HasOptionalBlock = e.transform8 || e.scaling4 != nil
 	e.pps.Transform8x8ModeFlag = e.transform8
 	if c.MaxBFrames > 0 {
 		e.sps.PicOrderCntType = 0

@@ -56,6 +56,7 @@ if err != nil {
 | WithPredictionWeights(weights) | 固定单参考 P 的三平面显式权重，与自动分析互斥；denom 0..7，显式 weight/offset -128..127 |
 | WithTransform8x8() | High增加Intra8与P 8×8残差候选，按RD与原4×4比较；默认关闭，Baseline/Main拒绝 |
 | WithScalingMatrix8x8(intra, inter) | 两个光栅顺序[64]uint8矩阵，项为1..255；按值复制、隐式开启8×8，4×4/DC列表显式flat=16 |
+| WithScalingMatrices4x4(matrices) | High六个光栅[16]uint8列表：intra Y/Cb/Cr、inter Y/Cb/Cr，项1..255、按值复制；DC取对应首项，可独立于8×8配置 |
 | WithLookahead(depth) | 1..16帧未来窗口确认场景变化并抑制单帧闪光，默认20%阈值；B启用时增加未来锚点后预读，避免跨场景参考；有界深拷贝与Flush排空，PCM拒绝 |
 | WithSceneChangeThreshold(n) | 全平面平均绝对采样变化达到 1..100% 时触发 IDR；直接比较当前输入与已重建参考，不做 lookahead |
 

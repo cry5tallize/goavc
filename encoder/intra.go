@@ -39,6 +39,7 @@ type frameState struct {
 	weights         *PredictionWeights
 	allow8          bool
 	scaling8        *[2][64]uint8
+	scaling4        *[6][16]uint8
 	mv              *motion.Grid
 	allowZeroPCM    bool
 	maxLevelPrefix  int
@@ -201,8 +202,8 @@ func (s *frameState) analyzeIntra(addr, family int) residual {
 			info.modes[r] = int8(mode)
 			putBlock(pl, x+bx*4, y+by*4, 4, pred[:])
 			coeff := residualTransform(&s.src.Planes[0], pl, x+bx*4, y+by*4)
-			transform.Quant4x4(&res.luma[r], &coeff, info.qp)
-			reconstruct(pl, x+bx*4, y+by*4, &res.luma[r], info.qp, nil)
+			transform.Quant4x4WithScaling(&res.luma[r], &coeff, info.qp, s.matrix4(true, 0))
+			reconstructScaled(pl, x+bx*4, y+by*4, &res.luma[r], info.qp, nil, s.matrix4(true, 0))
 		}
 	}
 	if family == 2 {
@@ -214,13 +215,13 @@ func (s *frameState) analyzeIntra(addr, family int) residual {
 			coeff := residualTransform(&s.src.Planes[0], pl, x+r%4*4, y+r/4*4)
 			dc[r] = coeff[0]
 			coeff[0] = 0
-			transform.Quant4x4(&res.luma[r], &coeff, info.qp)
+			transform.Quant4x4WithScaling(&res.luma[r], &coeff, info.qp, s.matrix4(true, 0))
 		}
 		transform.ForwardLumaDC(&had, &dc)
-		transform.QuantDC(res.lumaDC[:], had[:], info.qp)
-		transform.DequantLumaDC(&dc, &res.lumaDC, info.qp)
+		transform.QuantDCWithScaling(res.lumaDC[:], had[:], info.qp, scalingDC(s.matrix4(true, 0)))
+		transform.DequantLumaDCWithScaling(&dc, &res.lumaDC, info.qp, scalingDC(s.matrix4(true, 0)))
 		for r := 0; r < 16; r++ {
-			reconstruct(pl, x+r%4*4, y+r/4*4, &res.luma[r], info.qp, &dc[r])
+			reconstructScaled(pl, x+r%4*4, y+r/4*4, &res.luma[r], info.qp, &dc[r], s.matrix4(true, 0))
 			info.modes[r] = 2
 		}
 	}
@@ -274,19 +275,19 @@ func (s *frameState) chroma(addr int, res *residual) {
 			coeff := residualTransform(&s.src.Planes[c+1], pl, x+r%2*4, y+r/2*4)
 			dc[r] = coeff[0]
 			coeff[0] = 0
-			transform.Quant4x4(&res.chroma[c][r], &coeff, qpc)
+			transform.Quant4x4WithScaling(&res.chroma[c][r], &coeff, qpc, s.matrix4(true, c+1))
 			if nonzero(res.chroma[c][r][:]) {
 				cbp = 2
 			}
 		}
 		transform.ForwardChromaDC(&had, &dc)
-		transform.QuantDC(res.chromaDC[c][:], had[:], qpc)
+		transform.QuantDCWithScaling(res.chromaDC[c][:], had[:], qpc, scalingDC(s.matrix4(true, c+1)))
 		if cbp == 0 && nonzero(res.chromaDC[c][:]) {
 			cbp = 1
 		}
-		transform.DequantChromaDC(&dc, &res.chromaDC[c], qpc)
+		transform.DequantChromaDCWithScaling(&dc, &res.chromaDC[c], qpc, scalingDC(s.matrix4(true, c+1)))
 		for r := 0; r < 4; r++ {
-			reconstruct(pl, x+r%2*4, y+r/2*4, &res.chroma[c][r], qpc, &dc[r])
+			reconstructScaled(pl, x+r%2*4, y+r/2*4, &res.chroma[c][r], qpc, &dc[r], s.matrix4(true, c+1))
 		}
 	}
 	info.cbp |= cbp << 4
@@ -304,8 +305,12 @@ func residualTransform(src, pred *picture.Plane, x, y int) [16]int32 {
 }
 
 func reconstruct(pl *picture.Plane, x, y int, levels *[16]int32, qp int, dc *int32) {
+	reconstructScaled(pl, x, y, levels, qp, dc, nil)
+}
+
+func reconstructScaled(pl *picture.Plane, x, y int, levels *[16]int32, qp int, dc *int32, matrix *[16]uint8) {
 	var coeff, out [16]int32
-	transform.Dequant4x4(&coeff, levels, qp)
+	transform.Dequant4x4WithScaling(&coeff, levels, qp, matrix)
 	if dc != nil {
 		coeff[0] = *dc
 	}

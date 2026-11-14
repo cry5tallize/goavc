@@ -55,7 +55,7 @@ func (s *frameState) matrix8(intra bool) *[64]uint8 {
 // 显式写出六个flat 4×4列表，避免PPS fallback规则将默认JVT矩阵带入
 // 原来的4×4/DC路径；8×8列表按Zigzag扫描从光栅矩阵计算规范delta。
 func (e *Encoder) scalingParameters() {
-	if e.scaling8 == nil {
+	if e.scaling8 == nil && e.scaling4 == nil {
 		return
 	}
 	e.pps.PicScalingMatrixPresentFlag = true
@@ -68,7 +68,10 @@ func (e *Encoder) scalingParameters() {
 		last := int32(8)
 		for _, r := range scan {
 			value := int32(16)
-			if i >= 6 {
+			if i < 6 && e.scaling4 != nil {
+				value = int32(e.scaling4[i][r])
+			}
+			if i >= 6 && e.scaling8 != nil {
 				value = int32(e.scaling8[i-6][r])
 			}
 			delta := (value-last+128+256)%256 - 128

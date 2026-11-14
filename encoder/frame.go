@@ -17,7 +17,8 @@ func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
 	s.allowZeroPCM = e.cfg.Profile == h264.ProfileHigh
 	s.allow8 = e.transform8
 	s.scaling8 = e.scaling8
-	if e.reference != nil && (e.autoWeights || e.fixedWeights != nil) {
+	s.scaling4 = e.scaling4
+	if !e.encodingB && e.reference != nil && (e.autoWeights || e.fixedWeights != nil) {
 		weights := e.fixedWeights
 		if e.autoWeights {
 			w := estimatePredictionWeights(src, e.reference)

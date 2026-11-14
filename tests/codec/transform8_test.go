@@ -27,6 +27,13 @@ func TestEncoder_Transform8x8Oracle(t *testing.T) {
 							b[i] = uint8(9 + i%23)
 						}
 						options = append(options, encoder.WithScalingMatrix8x8(a, b))
+						var four [6][16]uint8
+						for list := range four {
+							for i := range four[list] {
+								four[list][i] = uint8(8 + (i*3+list*5)%31)
+							}
+						}
+						options = append(options, encoder.WithScalingMatrices4x4(four))
 					}
 					e, err := encoder.New(cfg, options...)
 					if err != nil {

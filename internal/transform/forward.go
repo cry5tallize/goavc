@@ -49,23 +49,48 @@ var quantScale = [6][3]int64{{13107, 8066, 5243}, {11916, 7490, 4660}, {10082, 6
 // Quant4x4 使用平坦矩阵、intra 死区 1/3 的定点量化；QP 必须在 0..51。
 // DC 块需使用 QuantDC，不能把 Hadamard 系数当普通 4×4 处理。
 func Quant4x4(dst, src *[16]int32, qp int) error {
+	return Quant4x4WithScaling(dst, src, qp, nil)
+}
+
+// Quant4x4WithScaling 在原量化乘子上施加16/matrix，nil保持flat逐比特一致。
+// 矩阵为光栅顺序；所有矩阵项先验证再写输出，非法输入不产生半块结果。
+func Quant4x4WithScaling(dst, src *[16]int32, qp int, scaling *[16]uint8) error {
 	if qp < 0 || qp > 51 {
 		return fmt.Errorf("transform: quant qp %d: %w", qp, h264.ErrInvalidData)
 	}
+	if scaling != nil {
+		for _, v := range scaling {
+			if v == 0 {
+				return fmt.Errorf("transform: zero 4x4 quant scaling entry: %w", h264.ErrInvalidData)
+			}
+		}
+	}
 	for i, v := range src {
 		class := (i / 4 % 2) + (i % 2)
-		dst[i] = quantize(v, quantScale[qp%6][class], 15+qp/6)
+		mul := quantScale[qp%6][class]
+		if scaling != nil {
+			mul = (mul*16 + int64(scaling[i])/2) / int64(scaling[i])
+		}
+		dst[i] = quantize(v, mul, 15+qp/6)
 	}
 	return nil
 }
 
 // QuantDC 量化已变换的 I16 或色度 DC，额外一位吸收 Hadamard 缩放。
 func QuantDC(dst, src []int32, qp int) error {
+	return QuantDCWithScaling(dst, src, qp, 16)
+}
+
+// QuantDCWithScaling 对Hadamard DC仅使用对应4×4矩阵的首项。
+func QuantDCWithScaling(dst, src []int32, qp int, scale uint8) error {
 	if qp < 0 || qp > 51 || len(dst) < len(src) {
 		return fmt.Errorf("transform: invalid DC quantization: %w", h264.ErrInvalidData)
 	}
+	if scale == 0 {
+		return fmt.Errorf("transform: zero DC quant scaling entry: %w", h264.ErrInvalidData)
+	}
 	for i, v := range src {
-		dst[i] = quantize(v, quantScale[qp%6][0], 16+qp/6)
+		dst[i] = quantize(v, (quantScale[qp%6][0]*16+int64(scale)/2)/int64(scale), 16+qp/6)
 	}
 	return nil
 }

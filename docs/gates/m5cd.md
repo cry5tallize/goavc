@@ -22,7 +22,7 @@
 
 - B非参考spatial-direct零MV双参考策略已接入；B temporal-direct、B运动搜索与B-pyramid未生成，当前不作完整B宏块模式承诺。
 - P 单参考显式权重编码已验证；B 显式/隐式权重编码待 B slice 接入。
-- High Intra8/P 8×8与自定义8×8矩阵已接入CABAC闭环；自定义4×4/DC矩阵编码仍未接入，现有路径保持flat=16。
+- High Intra8/P8×8、六个4×4列表/DC首项和8×8 intra/inter自定义矩阵已接入CABAC闭环；320帧组合和126帧4×4/DC+B三方Oracle已通过。
 - CABAC 整帧率估算仍借用 CAVLC 候选代理；zero-word 已实施逐slice bin密度约束，计入PCM restart前的bin数，并在封装后进入AU资源门禁。解析阈值与5000个MPS密集流读回测试通过。
 - WithLookahead(1..16)已实现有界深拷贝、未来窗口确认切换/抑制闪光、PTS/DTS、背压、失败事务与尾部Flush排空；与B调度组合避免跨场景选未来锚点。
 - VBV大尺寸长序列/突变压力证据待完成；filler NAL与分数FPS余数已实现，HRD参数信令仍属后续扩展。

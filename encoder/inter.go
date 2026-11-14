@@ -156,7 +156,7 @@ func (s *frameState) interResidual(addr int) residual {
 			break
 		}
 		coeff := residualTransform(&s.src.Planes[0], &s.pic.Planes[0], x+r%4*4, y+r/4*4)
-		transform.Quant4x4(&res.luma[r], &coeff, info.qp)
+		transform.Quant4x4WithScaling(&res.luma[r], &coeff, info.qp, s.matrix4(false, 0))
 		if nonzero(res.luma[r][:]) {
 			info.cbp |= 1 << ((r/4/2)*2 + r%4/2)
 		}
@@ -185,13 +185,13 @@ func (s *frameState) interResidual(addr int) residual {
 			coeff := residualTransform(&s.src.Planes[c+1], &s.pic.Planes[c+1], x/2+r%2*4, y/2+r/2*4)
 			dc[r] = coeff[0]
 			coeff[0] = 0
-			transform.Quant4x4(&res.chroma[c][r], &coeff, qpc)
+			transform.Quant4x4WithScaling(&res.chroma[c][r], &coeff, qpc, s.matrix4(false, c+1))
 			if nonzero(res.chroma[c][r][:]) {
 				cbp = 2
 			}
 		}
 		transform.ForwardChromaDC(&had, &dc)
-		transform.QuantDC(res.chromaDC[c][:], had[:], qpc)
+		transform.QuantDCWithScaling(res.chromaDC[c][:], had[:], qpc, scalingDC(s.matrix4(false, c+1)))
 		if cbp == 0 && nonzero(res.chromaDC[c][:]) {
 			cbp = 1
 		}
@@ -212,7 +212,7 @@ func (s *frameState) reconstructInter(addr int, res *residual) {
 		if s.info[addr].transform8 {
 			break
 		}
-		reconstruct(&s.pic.Planes[0], x+r%4*4, y+r/4*4, &res.luma[r], qp, nil)
+		reconstructScaled(&s.pic.Planes[0], x+r%4*4, y+r/4*4, &res.luma[r], qp, nil, s.matrix4(false, 0))
 	}
 	if s.info[addr].transform8 {
 		for block := 0; block < 4; block++ {
@@ -222,9 +222,9 @@ func (s *frameState) reconstructInter(addr int, res *residual) {
 	qpc := transform.ChromaQP(qp, 0)
 	for c := 0; c < 2; c++ {
 		var dc [4]int32
-		transform.DequantChromaDC(&dc, &res.chromaDC[c], qpc)
+		transform.DequantChromaDCWithScaling(&dc, &res.chromaDC[c], qpc, scalingDC(s.matrix4(false, c+1)))
 		for r := 0; r < 4; r++ {
-			reconstruct(&s.pic.Planes[c+1], x/2+r%2*4, y/2+r/2*4, &res.chroma[c][r], qpc, &dc[r])
+			reconstructScaled(&s.pic.Planes[c+1], x/2+r%2*4, y/2+r/2*4, &res.chroma[c][r], qpc, &dc[r], s.matrix4(false, c+1))
 		}
 	}
 }

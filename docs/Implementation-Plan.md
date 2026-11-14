@@ -505,7 +505,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 6 | `feat[encoder]: add b slice with direct mode strategy` | B 帧编码 | 非参考spatial B_Direct/B_Skip、双列表零MV预测与压缩残差；1120帧三方Oracle |
 | 7 | `feat[encoder]: add b frame reordering and poc assignment` | 输出 DTS 顺序 | POC type0、未来锚点先输出、规则PTS/Duration、递增DTS与Flush已验证；B+Lookahead场景边界已测 |
 | 8 | `feat[transform]: add forward 8x8 transform` | 8×8 变换 | 规范逆基定点投影与High Intra8/P 8×8残差候选、信令/共享重建/滤波已接入；320帧三方Oracle |
-| 9 | `feat[transform]: add scaling matrix in forward path` | 量化矩阵 | 8×8 intra/inter自定义矩阵PPS/量化/共享重建已验证；4×4/DC编码矩阵仍固定flat |
+| 9 | `feat[transform]: add scaling matrix in forward path` | 量化矩阵 | 4×4六列表/DC首项与8×8 intra/inter自定义矩阵PPS/量化/共享重建已验证；flat兼容、矩阵组合320帧及4×4/DC+B126帧三方Oracle |
 | 10 | `feat[prediction]: add weighted prediction in encoder` | explicit 权重 | Main/High 单参考 P 已实现；160帧三方 Oracle、权重表解析与实际加权 Skip；B 权重后续接入 |
 | 11 | `feat[syntax]: add main and high profile sps writing` | profile_idc 分支 | 已实现并经 ffprobe/FFmpeg Main/High I/P 验证 |
 | 12 | `test[oracle]: add main and high decode compatibility suite` | 全 profile 差分 | I/P288、P权重160、High8×8/矩阵320、Main/High B+码控1120帧三方Oracle |

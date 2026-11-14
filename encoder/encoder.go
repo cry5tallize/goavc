@@ -11,8 +11,8 @@ import (
 	"github.com/goavc/h264/syntax"
 )
 
-// Encoder 是串行 Baseline I/P 编码器，单参考、无显示重排。
-// 同一实例非并发安全；输入在 SendFrame 返回前消费完毕。
+// Encoder 是串行8-bit 4:2:0编码器；Main/High可用双锚点非参考B与显示重排。
+// 同一实例非并发安全；输入在SendFrame返回前消费或复制到有界内部队列。
 type Encoder struct {
 	cfg                       h264.EncoderConfig
 	pcm                       bool
@@ -25,6 +25,7 @@ type Encoder struct {
 	fixedWeights              *PredictionWeights
 	transform8                bool
 	scaling8                  *[2][64]uint8
+	scaling4                  *[6][16]uint8
 	lookahead                 int
 	pendingFrames             []*h264.Frame
 	lookaheadPrevious         *h264.Frame
@@ -92,8 +93,8 @@ func WithSceneChangeThreshold(threshold int) Option {
 	}
 }
 
-// New 创建 8-bit 4:2:0 串行编码器。首帧与 IDRInterval 边界输出 IDR，
-// 其余输出单参考 P 帧；目前 MaxBFrames 必须为 0。
+// New 创建8-bit 4:2:0串行编码器。Baseline支持I/P，Main/High可设置
+// MaxBFrames启用非参考spatial B_Direct/B_Skip及POC/DTS重排。
 func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	cfg.SetDefaults()
 	if err := cfg.Validate(); err != nil {

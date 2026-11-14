@@ -103,7 +103,7 @@
 | 2×2 色度 DC Hadamard | Conformant | Conformant | M4 常量解析解及完整 Intra Oracle |
 | 8×8 逆/正变换 | Conformant | Conformant | 规范逆基定点分析、解析空间基；High Intra8/P 8×8候选/信令/共享逆变换/去块，320帧三方Oracle |
 | 量化 / 反量化 | Conformant | Conformant | M4 平坦矩阵 QP 0..51；编码重建共享反量化；非平坦正向 M5c |
-| ScalingMatrix 应用 | Conformant | Partial | 编码器8×8 intra/inter矩阵PPS/量化/重建与320帧Oracle；4×4/DC编码仅flat=16，自定义4×4/DC属后续完整矩阵范围 |
+| ScalingMatrix 应用 | Conformant | Conformant | 编码High六个4×4列表/DC首项与intra/inter8×8列表，光栅配置、PPS扫描/delta与共享重建；320帧组合及126帧4×4/DC+B三方Oracle；限渐进8-bit4:2:0 |
 | 10 bit 变换路径 | TODO | TODO | M7 |
 
 ## 7. 滤波
