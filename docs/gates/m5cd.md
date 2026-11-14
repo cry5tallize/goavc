@@ -45,14 +45,20 @@ WithTransform8x8、WithWeightedPrediction、WithLookahead(2)。每次Receive均�
 - CABAC 整帧率估算仍借用 CAVLC 候选代理；zero-word 已实施逐slice bin密度约束，计入PCM restart前的bin数，并在封装后进入AU资源门禁。解析阈值与5000个MPS密集流读回测试通过。
 - WithLookahead(1..16)已实现有界深拷贝、未来窗口确认切换/抑制闪光、PTS/DTS、背压、失败事务与尾部Flush排空；与B调度组合避免跨场景选未来锚点。
 - VBV大尺寸长序列/突变压力证据待完成；filler NAL与分数FPS余数已实现，HRD参数信令仍属后续扩展。
-- 720p/1080p各300帧High/B2/8×8/P权重长Oracle已通过；QP18/26/34同参数x264、等码率报告、大尺寸码控窗口、正式基准仍待执行结果，不能因短序列或已启动后台任务自动算通过。
+- 720p/1080p各300帧High/B2/8×8/P权重长Oracle已通过；历史基线QP18/26/34六组同参数x264与等码率报告已齐，五过一失败；后续量化改动的新质量矩阵与大尺寸码控证据需单独验收。
 
 720p同参数质量矩阵已完成，见`performance.md`§12：QP18/34绝对Y差0.983346/
 0.878151dB通过，QP26差1.542604dB未通过（Go更高PSNR但协议为绝对差）；
 不降低画质或放宽阈值。实测等码率匹配误差均<1%，Go Y-PSNR低于x264约
-7.09..8.79dB，完整公开。1080p与大尺寸码控仍在执行；M5总质量门禁保持未通过。
+7.09..8.79dB，完整公开。1080p历史基线矩阵现已完成：QP18/26/34绝对Y差
+1.078893/1.4999924216020588/1.021472dB均通过；按未舍入值判定QP26。
+输入/码流/重建哈希与完整300帧长度已现场核对，详见`performance.md`§12。
+1080p等码率补测匹配误差−0.460001%/+0.807906%/+0.843907%，Go Y-PSNR
+低于x264约4.66..5.74dB。六组总体仍因720p QP26失败而未通过。
+本任务运行旧脚本，正常退出并不表示质量通过；产物也不包含后续预测量化改动，
+不能用作当前HEAD的新质量验收。大尺寸码控另按其任务证据核验。
 
-常规门禁（CGO=0）gofmt/vet/build/test、depscheck和manifest27条通过；非缓存`go test -count=1 ./...`也通过。`CGO_ENABLED=1 go test -race -timeout 30m ./...`全包通过，最新一次codec500.406秒，包含4×4/DC矩阵、B队列、filler、延迟测量及其回归；部分未改包命中Go测试缓存，不描述为全部非缓存执行。该次启动于新增High剪枝对照测试之前，不将其算作该新增测试的race证据。Windows/Linux/macOS×amd64/arm64六目标CGO=0构建通过。High两尺寸各300帧Oracle已通过；1080p质量与大尺寸码控仍等待长任务结果。
+常规门禁（CGO=0）gofmt/vet/build/test、depscheck和manifest27条通过；非缓存`go test -count=1 ./...`也通过。`CGO_ENABLED=1 go test -race -timeout 30m ./...`全包通过，该次codec500.406秒，包含4×4/DC矩阵、B队列、filler、延迟测量及其回归；部分未改包命中Go测试缓存，不描述为全部非缓存执行。该次启动于新增High剪枝对照测试之前，不将其算作该新增测试或后续量化提交的race证据。Windows/Linux/macOS×amd64/arm64六目标CGO=0构建通过。High两尺寸各300帧Oracle已通过；历史质量结果现已补齐，后续量化版本质量和大尺寸码控按独立记录核验。
 
 4×4/DC改动后相关包`encoder/internal/transform/tests/codec/tools/encodebench`的race通过，
 codec487.741秒；B调度fuzz先跑10秒11次，后续30秒4700次、发现16个新覆盖输入，均无失败；仍只是smoke，不替代长时覆盖。

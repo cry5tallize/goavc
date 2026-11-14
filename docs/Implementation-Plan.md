@@ -525,7 +525,7 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | 6 | `feat[encoder]: add scene change triggered idr` | 自适应 IDR | 当前帧检测与Lookahead未来帧确认、闪光抑制、实际IDR序列和三方Oracle通过 |
 | 7 | `test[encoder]: add bitrate accuracy and vbv window tests` | 长序列 | 32×32 ABR 120帧、CBR 2×30窗口、VBV 60帧通过；720p/1080p 各 300 帧未运行 |
 | 8 | `bench[encoder]: add end to end encode benchmark for 720p` | 全参数矩阵 | ABR/CBR/CABAC/B2各5次与输入哈希已记performance.md §11；大尺寸自然视频码控矩阵在运行 |
-| 9 | `docs[performance]: publish encoder quality and bitrate report` | PSNR/SSIM/码率 vs x264 | 码率与 CPU profile 已记录；x264/SSIM 报告未完成 |
+| 9 | `docs[performance]: publish encoder quality and bitrate report` | PSNR/SSIM/码率 vs x264 | 历史基线720p/1080p×QP18/26/34六组同QP/实测匹配码率PSNR/SSIM及哈希已公开；五过一失败，不替代后续量化版本验收 |
 | 10 | `chore[release]: close milestone m5d gate and tag v0.6.0` | 总证据 | 未关闭；见 `docs/gates/m5cd.md` |
 
 ---

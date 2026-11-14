@@ -138,7 +138,7 @@ M5b 本地门禁已通过（`v0.5.2`，远端 CI 待执行）：SATD/RD、全候
 等价剪枝、600帧长Oracle与第一项x264质量比较已记录；Profile边界已补充显式拒绝。
 证据见 `docs/gates/m5b.md`。M5 整体的 Main/High 工具、B 帧与全参数质量/性能门禁仍未完成。
 
-M5c/d已通过Main/High I/P288帧、P权重160帧、High8×8/矩阵320帧、非参考spatial B+重排/码控1120帧三方Oracle；High/B2/8×8/P权重/Lookahead的720p/1080p各300帧长Oracle也已通过。Lookahead/B场景边界及小尺寸ABR/CBR/VBV窗口已验证。720p同QP/等码率报告已完成，其中QP26绝对Y差1.542604dB未通过1.5dB门槛；1080p矩阵、大尺寸码控与正式验收仍未齐。M5c/d不据此关闭，最新复核见 `docs/gates/m5cd.md`。
+M5c/d已通过Main/High I/P288帧、P权重160帧、High8×8/矩阵320帧、非参考spatial B+重排/码控1120帧三方Oracle；High/B2/8×8/P权重/Lookahead的720p/1080p各300帧长Oracle也已通过。Lookahead/B场景边界及小尺寸ABR/CBR/VBV窗口已验证。历史基线两尺寸QP18/26/34同QP/等码率六组报告已完成：五项通过，720p QP26绝对Y差1.542604dB未通过；1080p QP26未舍入差1.4999924216020588dB通过。等码率效率差距完整公开。这些旧产物不包含后续预测量化改动，不等同当前HEAD验收；大尺寸码控与新版本质量证据仍需单独核验。M5c/d不据此关闭，见 `docs/gates/m5cd.md`。
 
 | Module | 规范条款/职责 | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|---|
