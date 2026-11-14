@@ -250,6 +250,11 @@ func (c *cabacWriter) macroblock(s *frameState, addr int, qp *int, res *residual
 			}
 		}
 	}
+	c.residualMacroblock(s, addr, qp, res)
+}
+
+func (c *cabacWriter) residualMacroblock(s *frameState, addr int, qp *int, res *residual) {
+	i := &s.info[addr]
 	if !i.is16 {
 		c.cbp(s, addr)
 	}

@@ -29,6 +29,9 @@ func (e *Encoder) parameters() error {
 		if fs > int64(l.fs) || int64(mw*mw) > int64(l.fs)*8 || int64(mh*mh) > int64(l.fs)*8 || fs*int64(c.FPSNum) > int64(l.mbps)*int64(c.FPSDen) {
 			continue
 		}
+		if c.MaxBFrames > 0 && 3*fs > levelDPBMbs(l.id) {
+			continue
+		}
 		if int64(c.Bitrate) <= int64(l.br)*1000 {
 			fallback = l.id
 		}
@@ -64,6 +67,15 @@ func (e *Encoder) parameters() error {
 	e.pps.WeightedPredFlag = e.autoWeights || e.fixedWeights != nil
 	e.pps.HasOptionalBlock = e.transform8
 	e.pps.Transform8x8ModeFlag = e.transform8
+	if c.MaxBFrames > 0 {
+		e.sps.PicOrderCntType = 0
+		e.sps.Log2MaxPicOrderCntLsbMinus4 = 12
+		e.sps.MaxNumRefFrames = 2
+		// 未来锚点后按显示顺序编码非参考B；最多1个待输出重排锚点，
+		// 2个参考与1个当前图像足以容纳，不随连续B数量增长。
+		e.sps.VUI.MaxNumReorderFrames = 1
+		e.sps.VUI.MaxDecFrameBuffering = 3
+	}
 	e.scalingParameters()
 	for _, l := range levels {
 		if l.id == selected {
@@ -72,4 +84,34 @@ func (e *Encoder) parameters() error {
 		}
 	}
 	return nil
+}
+
+// Annex A表A-1的MaxDpbMbs；B流水线要求两参考与一个非参考输出图像预算。
+func levelDPBMbs(level int) int64 {
+	switch level {
+	case 10:
+		return 396
+	case 11:
+		return 900
+	case 12, 13, 20:
+		return 2376
+	case 21:
+		return 4752
+	case 22, 30:
+		return 8100
+	case 31:
+		return 18000
+	case 32:
+		return 20480
+	case 40, 41:
+		return 32768
+	case 42:
+		return 34816
+	case 50:
+		return 110400
+	case 51, 52:
+		return 184320
+	default:
+		return 696320
+	}
 }

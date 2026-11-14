@@ -477,7 +477,7 @@ M6/M7/M8 ───────────► M9 生产化与发布
 - [ ] 等 QP 下 PSNR 与 x264（`-preset veryfast -tune psnr` 同 QP）差距在预设阈值内（阈值在 M5 开始时写入 `docs/conformance.md`，例如 Y-PSNR 差值 ≤ 1.5 dB）。
 - [ ] 等码率下 PSNR 与 x264 差距记录并公开（不做选择性报告）。
 - [ ] ABR：目标码率 ±10% 内（长序列平均）；CBR：窗口内波动有记录；VBV 不越界。
-- [ ] GOP 参数变化（`GOPSize`、`MaxBFrames`、IDR 间隔）均正确反映在码流中（用 `h264probe` 断言）。部分证据：I/P 的 `GOPSize` 非 IDR I picture 与独立 IDRInterval 已由 ffprobe 测试；`MaxBFrames>0` 当前显式拒绝，B-frame placement 尚未通过。
+- [ ] GOP 参数变化（`GOPSize`、`MaxBFrames`、IDR 间隔）均正确反映在码流中（用 `h264probe` 断言）。局部证据：GOP/IDR ffprobe及MaxBFrames=1/2/3/16实际slice/POC/PTS/DTS、强制IDR和B+Lookahead边界已验证；完整大尺寸门禁待执行。
 - [ ] 编码器 CPU profile 有记录，热点排名写入 `docs/performance.md`（为 M8 定向优化）。
 - [ ] `ErrUnsupported`：不支持的 Profile/Level/格式在 `NewEncoder` 阶段报错，而非产出坏码流。
 

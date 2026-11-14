@@ -8,7 +8,7 @@
 > 每帧独立 IDR；支持 I_PCM 选项、1..64 slice、偶数显示尺寸裁剪和宏块 QP 覆盖。
 > 两条路径及混合 PCM 已通过 FFmpeg/自研解码/本地重建逐像素验证。
 > 本地门禁及性能记录已完成，证据见 gates/m4.md；远端 CI 尚待执行。
-> M5c 已接入 Main/High CABAC I/P；B 帧仍明确拒绝。M5d 已接入 ABR/CBR/VBV 帧级码控，
+> M5c 已接入Main/High CABAC I/P及非参考spatial B_Direct/B_Skip和重排。M5d已接入ABR/CBR/VBV，
 > 但没有 HRD filler NAL，仍未通过 M5 总门禁。LevelAuto 新增实际 AU 预算门禁，
 > 1080p@30 已通过 300 帧三方像素验证。M5a 本地门禁见 gates/m5a.md；M5 整体未完成。
 
@@ -36,8 +36,8 @@
 | Profile | profile_idc | 关键工具 | Decoder | Encoder | 目标里程碑 |
 |---|---|---|---|---|---|
 | Baseline | 66 | CAVLC、I/P | Partial | Partial | M4 Encoder 仅独立 IDR I_PCM/I4/I16；P 在 M5a；高级工具 M7 |
-| Main | 77 | CABAC、B、隔行 | Partial | Partial | 编码 CABAC I/P 已通过288帧三方 Oracle；B/权重/重排待接入，隔行 M7 |
-| High | 100 | 8×8 变换、ScalingMatrix | Partial | Partial | 编码CABAC I4/I8/I16/P 4×4/8×8、8×8自定义矩阵已验证；B待接入，字段/扩展M7 |
+| Main | 77 | CABAC、B、隔行 | Partial | Partial | CABAC I/P/P显式权重、spatial B_Direct/B_Skip非参考与重排已验证；隔行M7 |
+| High | 100 | 8×8 变换、ScalingMatrix | Partial | Partial | CABAC I4/I8/I16/P 4×4/8×8、自定义8×8矩阵及spatial B_Direct/B_Skip已验证；字段/扩展M7 |
 | High 10 | 110 | 10 bit | TODO | TODO | M7 |
 | High 4:2:2 | 122 | 4:2:2、10 bit | TODO | TODO | M7 |
 | High 4:4:4 Predictive | 244 | 4:4:4、残差预测 | TODO | TODO | M7 |
@@ -75,7 +75,7 @@
 | CAVLC：level prefix / suffix / 转义 | Conformant | Conformant | M4 suffix 0/1..6、百万 level 转义、14,400 组往返及 Oracle |
 | CABAC：算术编解码器 | Conformant | Conformant | 编码区间解析解、64状态与 Main/High I/P 整帧 FFmpeg Oracle |
 | CABAC：上下文初始化与状态转移 | Conformant | Conformant | I/PB0..2、QP 0..51 共用初始化表；编码 slice 使用 idc=0 |
-| CABAC：宏块/MV/残差上下文 | Conformant | Partial | 编码 I/P 单参考、四分区、4×4/8×8/DC/AC、QP/CBP及多slice Oracle；B待接入 |
+| CABAC：宏块/MV/残差上下文 | Conformant | Partial | I/P四分区与4×4/8×8/DC/AC、非参考B_Direct/B_Skip残差Oracle；B非Direct分区未生成 |
 | CABAC：terminate / cabac_zero_word | Conformant | Conformant | 停止位/PCM重启、逐slice bin密度预算、终端03封装、阈值解析解与5000个MPS密集流读回；现有整帧Oracle回归通过 |
 
 ## 5. 预测
@@ -91,7 +91,7 @@
 | Inter 16×16 / 16×8 / 8×16 / 8×8 | Conformant | Conformant | M5a 四种分区实际选中；单参考 P，360+600 帧双解码器 Oracle |
 | 亚像素插值（1/2、1/4） | Conformant | Conformant | M5a 共享 MC、解析亚像素平移与完整 P 帧 Oracle |
 | Weighted Prediction（explicit / implicit） | Conformant | Partial | 编码 Main/High 单参考 P 显式权重已验证：自动分析/固定三平面权重、负权重、裁剪、隐含默认值、多 slice 与160帧三方 Oracle；B/implicit 编码待实现 |
-| B Direct（temporal / spatial） | Conformant | TODO | M3 CABAC/CAVLC、B_Skip 与两类 direct Oracle |
+| B Direct（temporal / spatial） | Conformant | Partial | 编码spatial-direct零MV双参考、B_Skip/B_Direct残差实际选中，1120帧三方Oracle；temporal与非Direct运动搜索未生成 |
 | 帧场自适应（MBAFF / PAFF） | Unsupported | TODO | M2 显式拒绝；M3/M7 按路线图实现 |
 
 ## 6. 变换与量化
@@ -121,10 +121,10 @@
 |---|---|---|---|
 | 单参考帧 | Conformant | Conformant | M5a 已滤波参考、IDR 边界、P_Skip、16 帧号回绕与长序列 Oracle |
 | 多参考帧 + reordering | Conformant | TODO | M3 P/B 列表、短期/长期重排通过解析解与 Oracle |
-| POC type 0 / 1 / 2 | Conformant | Partial | M5a 编码仅渐进帧 type2，无重排；0/1 编码尚待实现 |
+| POC type 0 / 1 / 2 | Conformant | Partial | 编码I/P type2；启用B为type0、16-bit POC LSB、IDR锚点与显示重排已验证；type1编码未生成 |
 | 滑动窗口标记 | Conformant | TODO | M3 PicNum 回绕排序、淘汰与所有权单测/Oracle |
 | MMCO（含长期参考） | Conformant | TODO | M3 操作 1..6、长期参考、重置及专设 Oracle 语料；字段 M7 |
-| 输出重排序与延迟输出 | Conformant | TODO | M3 VUI/POC 缓冲、PTS/Duration 与 Flush 已验证 |
+| 输出重排序与延迟输出 | Conformant | Conformant | 编码未来参考锚点先于B输出、规则PTS/Duration和递增DTS、Flush/Reset/Close/输入深拷贝，1120帧三方Oracle |
 | Flush 排空语义 | Conformant | Conformant | M4 单槽输出、重复 Flush、排空 EOF、Reset/Close/背压测试 |
 
 ## 9. 编码器工具
@@ -133,9 +133,9 @@
 |---|---|---|
 | CQP | Conformant | M4 固定 QP 与宏块 QP 回调，QP=0 仍为有损；无残差沿用前 QP |
 | ABR / CBR / VBV | Partial | M5d | ABR 120帧平均、CBR 2×30帧窗口均在 ±10%；VBV 60帧候选 AU fullness 上下界搜索；无 filler NAL/HRD，完整 M5 门禁未完成 |
-| GOP 结构 / IDR 间隔 | Partial | M5d | GOPSize 控制非 IDR I 刷新，IDRInterval 独立控制 IDR；MaxBFrames>0 仍拒绝 |
+| GOP 结构 / IDR 间隔 | Partial | M5d | GOPSize/IDRInterval、连续1..16非参考B、强制IDR与场景边界；B需规则PTS与恒定Duration，完整长序列质量门禁未完成 |
 | 场景切换检测 | Conformant | M5d | 直接阈值比较或WithLookahead未来窗口确认/闪光抑制；实际IDR序列、PTS/DTS与三方Oracle |
-| Lookahead | Partial | M5d | WithLookahead(1..16)有界深拷贝窗口，未来帧参与场景/IDR决策；背压/Flush/Reset/Close/失败事务已测；B放置尚未接入 |
+| Lookahead | Conformant | M5d | WithLookahead(1..16)有界深拷贝，未来确认场景/抑制闪光；B调度避免跨切换边界；背压/Flush/Reset/Close/失败事务已测 |
 | RD 模式决策（J = D + λR） | Conformant | M5b 定点 lambda、SSE/实际 CAVLC 比特、Skip/P/I4/I16/PCM 候选；整段质量门禁仍待执行 |
 | 自适应 QP | Conformant | M5b 活动度 QP 选项 0..6、QP 0..51 裁剪，默认关闭，显式回调/PCM 冲突拒绝 |
 | SSE2 / AVX2 / NEON | TODO | M8 |

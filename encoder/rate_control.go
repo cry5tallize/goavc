@@ -13,6 +13,9 @@ func (e *Encoder) encodeAtQP(src *picture.Picture, intra, idr bool, qp int) ([]b
 	old := e.frameQP
 	e.frameQP = qp
 	defer func() { e.frameQP = old }()
+	if e.encodingB {
+		return e.encodeB(src)
+	}
 	if e.cabac {
 		return e.encodeCABAC(src, intra, idr)
 	}

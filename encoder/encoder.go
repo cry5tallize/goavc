@@ -14,40 +14,52 @@ import (
 // Encoder 是串行 Baseline I/P 编码器，单参考、无显示重排。
 // 同一实例非并发安全；输入在 SendFrame 返回前消费完毕。
 type Encoder struct {
-	cfg                     h264.EncoderConfig
-	pcm                     bool
-	searchRange             int
-	fullSearch              bool
-	maxAUBytes              int
-	adaptiveQP              int
-	cabac                   bool
-	autoWeights             bool
-	fixedWeights            *PredictionWeights
-	transform8              bool
-	scaling8                *[2][64]uint8
-	lookahead               int
-	pendingFrames           []*h264.Frame
-	lookaheadPrevious       *h264.Frame
-	sceneThreshold          int
-	frameQP, lastQP         int
-	vbvFullness             int64
-	lastFrameBits           int64
-	vbvBufferBits           int64
-	reference               *picture.Picture
-	frameNum                uint32
-	framesSinceIDR          int
-	framesInGOP             int
-	reconKeyFrame           bool
-	qpAt                    func(x, y int) int
-	last                    *frameState
-	slices                  int
-	sps                     *syntax.SPS
-	pps                     *syntax.PPS
-	out                     *h264.Packet
-	recon                   *picture.Picture
-	reconPTS, reconDuration int64
-	idr                     uint32
-	flushed, closed         bool
+	cfg                       h264.EncoderConfig
+	pcm                       bool
+	searchRange               int
+	fullSearch                bool
+	maxAUBytes                int
+	adaptiveQP                int
+	cabac                     bool
+	autoWeights               bool
+	fixedWeights              *PredictionWeights
+	transform8                bool
+	scaling8                  *[2][64]uint8
+	lookahead                 int
+	pendingFrames             []*h264.Frame
+	lookaheadPrevious         *h264.Frame
+	bInputs                   []bInput
+	bReady                    []bInput
+	bPast, bFuture            *picture.Picture
+	encodingB                 bool
+	bCurrentIndex, bNextIndex int64
+	bIDRIndex, bIntraIndex    int64
+	currentPOC                uint32
+	bClock, bStep             int64
+	bInputOrigin              int64
+	bLastInputPTS             int64
+	bClockSet                 bool
+	bPreviousSource           *h264.Frame
+	sceneThreshold            int
+	frameQP, lastQP           int
+	vbvFullness               int64
+	lastFrameBits             int64
+	vbvBufferBits             int64
+	reference                 *picture.Picture
+	frameNum                  uint32
+	framesSinceIDR            int
+	framesInGOP               int
+	reconKeyFrame             bool
+	qpAt                      func(x, y int) int
+	last                      *frameState
+	slices                    int
+	sps                       *syntax.SPS
+	pps                       *syntax.PPS
+	out                       *h264.Packet
+	recon                     *picture.Picture
+	reconPTS, reconDuration   int64
+	idr                       uint32
+	flushed, closed           bool
 }
 
 // Option 配置编码通道；选项在构造时校验，不允许静默回退。
@@ -86,8 +98,8 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-	if (cfg.Profile != h264.ProfileBaseline && cfg.Profile != h264.ProfileMain && cfg.Profile != h264.ProfileHigh) || cfg.PixelFormat != h264.YUV420P || cfg.MaxBFrames != 0 || cfg.Threads > 1 {
-		return nil, fmt.Errorf("encoder: only serial baseline/main/high yuv420p without B frames is supported: %w", h264.ErrUnsupported)
+	if (cfg.Profile != h264.ProfileBaseline && cfg.Profile != h264.ProfileMain && cfg.Profile != h264.ProfileHigh) || cfg.PixelFormat != h264.YUV420P || cfg.Threads > 1 {
+		return nil, fmt.Errorf("encoder: only serial baseline/main/high yuv420p is supported: %w", h264.ErrUnsupported)
 	}
 	// Spec: 7.4.2.1.1，4:2:0 渐进帧的 crop 单位为 2×2，不能无损表达奇数显示尺寸。
 	if cfg.Width%2 != 0 || cfg.Height%2 != 0 {
@@ -134,6 +146,9 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	if e.lookahead > 0 && e.pcm {
 		return nil, fmt.Errorf("encoder: lookahead is not meaningful for all-PCM IDR: %w", h264.ErrUnsupported)
 	}
+	if cfg.MaxBFrames > 0 && e.pcm {
+		return nil, fmt.Errorf("encoder: B scheduling cannot combine with PCM: %w", h264.ErrUnsupported)
+	}
 	if err := e.parameters(); err != nil {
 		return nil, err
 	}
@@ -157,6 +172,9 @@ func (e *Encoder) SendFrame(f *h264.Frame) error {
 	}
 	if f.Width != e.cfg.Width || f.Height != e.cfg.Height || f.Format != e.cfg.PixelFormat {
 		return fmt.Errorf("encoder: frame differs from configuration: %w", h264.ErrInvalidData)
+	}
+	if e.cfg.MaxBFrames > 0 {
+		return e.queueBInput(f)
 	}
 	if e.lookahead > 0 {
 		return e.queueLookahead(f)
@@ -194,11 +212,23 @@ func (e *Encoder) encodeFrameNow(f *h264.Frame, lookaheadScene bool) error {
 		}
 	}
 	sceneChange := lookaheadScene
-	if e.lookahead == 0 {
+	if e.lookahead == 0 && e.cfg.MaxBFrames == 0 {
 		sceneChange = e.sceneChanged(pic)
 	}
 	isIDR := e.pcm || e.reference == nil || e.framesSinceIDR >= e.cfg.IDRInterval || f.KeyFrame || sceneChange
 	isIntra := isIDR || e.framesInGOP >= e.cfg.GOPSize
+	if e.cfg.MaxBFrames > 0 {
+		isIDR = e.reference == nil || e.bCurrentIndex-e.bIDRIndex >= int64(e.cfg.IDRInterval) || f.KeyFrame || lookaheadScene
+		isIntra = isIDR || e.bCurrentIndex-e.bIntraIndex >= int64(e.cfg.GOPSize)
+		if e.encodingB {
+			isIDR, isIntra = false, false
+		}
+		base := e.bIDRIndex
+		if isIDR {
+			base = e.bCurrentIndex
+		}
+		e.currentPOC = uint32((e.bCurrentIndex-base)*2) & 65535
+	}
 	data, state, selectedQP, err := e.encodeRateControlled(pic, isIntra, isIDR)
 	if err != nil {
 		return err
@@ -216,6 +246,19 @@ func (e *Encoder) encodeFrameNow(f *h264.Frame, lookaheadScene bool) error {
 	e.last = state
 	e.reconKeyFrame = isIDR
 	e.out = &h264.Packet{Data: data, PTS: f.PTS, DTS: f.PTS, Duration: f.Duration, KeyFrame: isIDR}
+	if e.cfg.MaxBFrames > 0 {
+		e.out.DTS = e.bClock
+		e.bClock += e.bStep
+		if isIDR {
+			e.bIDRIndex = e.bCurrentIndex
+		}
+		if isIntra {
+			e.bIntraIndex = e.bCurrentIndex
+		}
+	}
+	if e.encodingB {
+		return nil
+	}
 	if isIDR {
 		e.idr = (e.idr + 1) & 65535
 		e.frameNum = 1
@@ -237,7 +280,12 @@ func (e *Encoder) encodeFrameNow(f *h264.Frame, lookaheadScene bool) error {
 
 // ReceivePacket 转交一个完整 Annex-B AU；Data 的所有权归调用方。
 func (e *Encoder) ReceivePacket() (h264.Packet, error) {
-	if e.out == nil && !e.closed && e.lookahead > 0 && (len(e.pendingFrames) > e.lookahead || e.flushed && len(e.pendingFrames) > 0) {
+	if e.out == nil && !e.closed && e.cfg.MaxBFrames > 0 && (len(e.bReady) > 0 || e.flushed && len(e.bInputs) > 0) {
+		if err := e.encodeNextBOutput(); err != nil {
+			return h264.Packet{}, err
+		}
+	}
+	if e.out == nil && !e.closed && e.cfg.MaxBFrames == 0 && e.lookahead > 0 && (len(e.pendingFrames) > e.lookahead || e.flushed && len(e.pendingFrames) > 0) {
 		if err := e.encodeLookaheadHead(); err != nil {
 			return h264.Packet{}, err
 		}
@@ -292,6 +340,7 @@ func (e *Encoder) Reset() error {
 	e.last = nil
 	e.reference = nil
 	e.releaseLookahead()
+	e.releaseBScheduler()
 	e.frameNum = 0
 	e.framesSinceIDR = 0
 	e.framesInGOP = 0
@@ -312,6 +361,7 @@ func (e *Encoder) Close() error {
 	e.last = nil
 	e.reference = nil
 	e.releaseLookahead()
+	e.releaseBScheduler()
 	e.closed = true
 	return nil
 }
@@ -376,6 +426,11 @@ func (e *Encoder) sliceHeader(w *bitstream.Writer, first int, disableFilter, idr
 	w.WriteBits(4, uint64(frameNum))
 	if idr {
 		w.WriteUE(e.idr)
+	}
+	if e.cfg.MaxBFrames > 0 {
+		w.WriteBits(16, uint64(e.currentPOC))
+	}
+	if idr {
 		w.WriteBits(2, 0)
 	} else {
 		w.WriteBit(0)
@@ -391,12 +446,6 @@ func (e *Encoder) sliceHeader(w *bitstream.Writer, first int, disableFilter, idr
 }
 
 func (e *Encoder) sliceQPDelta() int {
-	delta := e.frameQP - e.cfg.QP
-	if delta > 25 {
-		delta -= 52
-	}
-	if delta < -26 {
-		delta += 52
-	}
-	return delta
+	// SliceQPY是PPS基准加有符号差，不能沿用mb_qp_delta的模52规则。
+	return e.frameQP - e.cfg.QP
 }

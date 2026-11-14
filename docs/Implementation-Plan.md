@@ -498,26 +498,26 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | # | Commit | 内容 | 验证 |
 |---|---|---|---|
 | 1 | `feat[cabac]: add arithmetic encoder with renormalization` | `encodeBin`、range 更新 | 已实现；规范区间向量见 `internal/entropy/cabac` |
-| 2 | `feat[cabac]: add context encoding for macroblock and residual` | 全部相关 context | I/P 单参考、4×4/8×8/DC/AC已验证；B residual待接 |
+| 2 | `feat[cabac]: add context encoding for macroblock and residual` | 全部相关 context | I/P 4×4/8×8/DC/AC及B_Skip/B_Direct残差已验证；B非Direct分区不作完整覆盖承诺 |
 | 3 | `feat[cabac]: add cabac termination and zero word handling` | terminate / `cabac_zero_word` | terminate/PCM restart 已验证；逐 slice bin密度预算、终端03封装及5000个MPS密集流读回已验证 |
 | 4 | `feat[encoder]: add cabac slice writing path` | 熵模式分流 | I/P Main/High slice 已接入 |
 | 5 | `test[cabac]: add encoder decoder symmetry for full slices` | 整 slice 对称 | 288 帧 Main/High 三方像素 Oracle 通过 |
-| 6 | `feat[encoder]: add b slice with direct mode strategy` | B 帧编码 | 未完成；`MaxBFrames>0` 明确 ErrUnsupported |
-| 7 | `feat[encoder]: add b frame reordering and poc assignment` | 输出 DTS 顺序 | 未完成；当前 PTS=DTS，无重排 |
+| 6 | `feat[encoder]: add b slice with direct mode strategy` | B 帧编码 | 非参考spatial B_Direct/B_Skip、双列表零MV预测与压缩残差；1120帧三方Oracle |
+| 7 | `feat[encoder]: add b frame reordering and poc assignment` | 输出 DTS 顺序 | POC type0、未来锚点先输出、规则PTS/Duration、递增DTS与Flush已验证；B+Lookahead场景边界已测 |
 | 8 | `feat[transform]: add forward 8x8 transform` | 8×8 变换 | 规范逆基定点投影与High Intra8/P 8×8残差候选、信令/共享重建/滤波已接入；320帧三方Oracle |
 | 9 | `feat[transform]: add scaling matrix in forward path` | 量化矩阵 | 8×8 intra/inter自定义矩阵PPS/量化/共享重建已验证；4×4/DC编码矩阵仍固定flat |
 | 10 | `feat[prediction]: add weighted prediction in encoder` | explicit 权重 | Main/High 单参考 P 已实现；160帧三方 Oracle、权重表解析与实际加权 Skip；B 权重后续接入 |
 | 11 | `feat[syntax]: add main and high profile sps writing` | profile_idc 分支 | 已实现并经 ffprobe/FFmpeg Main/High I/P 验证 |
-| 12 | `test[oracle]: add main and high decode compatibility suite` | 全 profile 差分 | I/P 288帧、P权重160帧、High 8×8/矩阵320帧通过；B未覆盖 |
+| 12 | `test[oracle]: add main and high decode compatibility suite` | 全 profile 差分 | I/P288、P权重160、High8×8/矩阵320、Main/High B+码控1120帧三方Oracle |
 | 13 | `bench[encoder]: add cabac and b frame benchmarks` | 性能记录 | CABAC/B 专用基准未完成 |
-| 14 | `docs[status]: mark cabac and b slice modules conformant` | 状态 | 已登记 CABAC I/P/High 8×8与权重；B仍未完成 |
+| 14 | `docs[status]: mark cabac and b slice modules conformant` | 状态 | 已登记CABAC I/P/High8×8、P权重、非参考spatial B_Direct/B_Skip及重排的具体支持边界 |
 | 15 | `chore[release]: close milestone m5c gate and tag v0.5.3` | 证据 | 未关闭；见 `docs/gates/m5cd.md` |
 
 ### M5d — GOP 与码率控制（`feat/m5d-rate-control`，10）
 
 | # | Commit | 内容 | 验证 |
 |---|---|---|---|
-| 1 | `feat[encoder]: add gop structure with idr interval and b placement` | `IBBP`/`IPPP` | I/P GOP 与独立 IDR 已验证；B placement 未完成 |
+| 1 | `feat[encoder]: add gop structure with idr interval and b placement` | `IBBP`/`IPPP` | 连续1/2/3/16个B、独立GOP/IDR、强制关键帧、规则PTS/DTS、尾部Flush与场景边界已验证 |
 | 2 | `feat[encoder]: add lookahead window for scene change detection` | 小窗口分析 | WithLookahead(1..16)窗口分析、未来帧确认切换/抑制闪光、输入深拷贝/背压/失败事务/Flush排空已测试 |
 | 3 | `feat[encoder]: add abr rate control` | 目标码率 → QP | ABR 120 帧平均 ±10% 通过 |
 | 4 | `feat[encoder]: add cbr rate control with buffer model` | 固定码率 | 30 帧窗口 ±10%；无 filler NAL，仍为 Partial |

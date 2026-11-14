@@ -138,7 +138,7 @@ M5b 本地门禁已通过（`v0.5.2`，远端 CI 待执行）：SATD/RD、全候
 等价剪枝、600帧长Oracle与第一项x264质量比较已记录；Profile边界已补充显式拒绝。
 证据见 `docs/gates/m5b.md`。M5 整体的 Main/High 工具、B 帧与全参数质量/性能门禁仍未完成。
 
-M5c/d 已有部分本地验证，不能视为子阶段关闭：CABAC Main/High I/P 288帧、P显式权重160帧、High I/P 8×8与矩阵320帧三方Oracle；ABR/CBR目标窗口、VBV fullness、I/P GOP与IDR结构已验证。此前Race与六目标交叉构建通过。B slice/重排、Lookahead、x264等QP/等码率和720p/1080p长序列门禁未完成。证据见 `docs/gates/m5cd.md`。
+M5c/d已通过Main/High I/P288帧、P权重160帧、High8×8/矩阵320帧、非参考spatial B+重排/码控1120帧三方Oracle；Lookahead/B场景边界及ABR/CBR/VBV窗口已验证。完整720p/1080p长序列、x264等QP/等码率和性能矩阵门禁仍待执行；不据短序列关闭里程碑。证据见 `docs/gates/m5cd.md`。
 
 | Module | 规范条款/职责 | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|---|
@@ -157,8 +157,9 @@ M5c/d 已有部分本地验证，不能视为子阶段关闭：CABAC Main/High I
 | P 显式加权预测编码 | 7.3.3.2 / 8.4.3.2 | 固定三平面权重、整数最小二乘自动分析、PPS/slice 信令、共享 MC 后加权、P_Skip | Conformant | 权重/偏移解析拟合、插值先于裁剪、实际 Skip、失败事务；Main/High 160帧权重表与三方 Oracle | 单参考 P；搜索使用加权参考代理估计 MV，最终 RD/重建使用原参考插值后加权；B/implicit 待接入 |
 | High 8×8 编码闭环 | 8.3.2 / 8.5.13 / 9.3 | 规范逆基定点投影、QP0..51、Intra8九模式与P 8×8残差RD候选、CABAC/代理CAVLC扫描、共享逆变换与滤波 | Conformant | 常量/脉冲/非DC解析基、实际I/P 8×8决策；QP0/18/26/51×1/3slice×flat/custom的320帧三方Oracle | 默认关闭，通过WithTransform8x8启用；RD仍借用CAVLC候选比特代理，不宣称CABAC最优 |
 | 8×8 ScalingMatrix编码 | 7.3.2.2 / 8.5.13 | intra/inter亮度光栅矩阵配置、PPS扫描/delta、正量化与共享重建 | Conformant | PPS解析与矩阵选择核对、delta回绕、零项拒绝、flat/custom320帧三方Oracle | 4×4/DC编码列表显式flat=16；自定义4×4/DC未接入 |
-| GOP / IDR 与场景变化 | 编码器策略 | GOPSize非IDR I刷新、独立IDRInterval、强制IDR、直接阈值或未来窗口确认场景变化 | Partial | GOP ffprobe、Lookahead单帧闪光/持续切换IDR序列、PTS/DTS与三方Oracle | 无B-frame placement与DTS重排 |
-| Lookahead窗口 | 输入所有权/帧类型分析 | 1..16帧未来窗口、深拷贝、闪光抑制、持续切换IDR、尾部排空 | Conformant | `Lookahead_BoundsResetAndFailedSend`、`LookaheadFlashSceneAndDrainOracle` | 非并行；无B调度；最多depth+1输入副本及一个分析锚点；错误保持已接受队列，Reset可丢弃 |
+| GOP / IDR 与场景变化 | 编码器策略 | GOPSize非IDR I刷新、独立IDRInterval、强制IDR、未来窗口确认、B边界调度 | Conformant | GOP ffprobe、Lookahead闪光/切换与B边界Oracle；B深度1/2/3/16实际slice/POC/PTS/DTS | B需规则PTS与恒定Duration；不生成B-pyramid |
+| B编码与重排 | 7.3.3 / 8.2.4 / 8.4 | 非参考spatial B_Direct/B_Skip、双锚点零MV、4×4压缩残差、POC type0、规则PTS/DTS、有界输入/尾部排空 | Conformant | Main/High14组1120帧三方Oracle，含B2 ABR/CBR/VBV和High8×8/P权重；实际Direct/Skip、失败事务、溢出与清理测试 | B零MV不做运动搜索；temporal/B-pyramid/B显式权重未生成；B+PCM拒绝 |
+| Lookahead窗口 | 输入所有权/帧类型分析 | 1..16帧未来窗口、深拷贝、闪光抑制、持续切换IDR、B边界与尾部排空 | Conformant | `Lookahead_BoundsResetAndFailedSend`、`LookaheadFlashSceneAndDrainOracle`含B0/B2 | 非并行；B组合输入上界MaxBFrames+depth+1，另有锚点与待输出B组；错误保留已接受队列 |
 | ABR / CBR / VBV | 编码器码率控制 | 帧 QP 候选搜索、AU 比特反馈、CBR fullness 平滑、VBV 候选硬边界 | Partial | 120 帧 ABR ±10% + FFmpeg Oracle；2×30 帧 CBR 窗口 ±10%；60 帧 VBV fullness/Oracle 与失败事务测试 | 无 filler NAL/HRD CBR 恒定传输；暂无 720p/1080p 300 帧门禁、x264 质量比较 |
 | CABAC 零字封装修复 | 7.4.1 / 9.3.4.6 | VCL 末尾00 00 03按已知 CABAC PPS 接受；CAVLC 仍拒绝 | Conformant | `EncapsulatedZeroWordPadding` 先失败后修复，FFmpeg 像素对照；CAVLC 终端转义拒绝 | 通用 EBSP 严格规则保持；不扩大参数集/未知 PPS 的截断容忍 |
 

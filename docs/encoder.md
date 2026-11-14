@@ -2,7 +2,7 @@
 
 `encoder.New(cfg, options...)` 创建非并发安全的编码器。M4 范围为串行、渐进式
 8-bit YUV420、偶数显示尺寸；支持 CQP/ABR/CBR/VBV 帧级 QP 搜索，Main/High 使用
-CABAC I/P slice，Baseline 使用 CAVLC。仍为单参考、无 B 重排；Profile 整体 Partial。
+CABAC I/P及非参考B_Direct/B_Skip，Baseline使用CAVLC。B启用双锚点与POC重排；Profile整体Partial。
 
 ```go
 cfg := h264.DefaultEncoderConfig()
@@ -38,7 +38,8 @@ if err != nil {
   未编码返回 `ErrAgain`，关闭后返回 `ErrEOF`。返回帧使用完毕调用 Release。
 - IDR AU 包含 SPS/PPS；P AU 只包含 slice，PTS=DTS，Duration 保留。
   KeyFrame 与实际 IDR 一致。首帧、IDRInterval 边界或输入 KeyFrame=true 时写 IDR。
-  GOPSize 触发非 IDR I 刷新、IDRInterval 独立触发 IDR；仍无 B 或延迟/重排；PCM 通道仍全帧 IDR。
+  GOPSize触发非IDR I刷新、IDRInterval独立触发IDR；PCM通道仍全帧IDR。
+- Main/High设置MaxBFrames=1..16后，先输出未来参考锚点，再输出中间非参考B帧。B采用双向零MV spatial-direct与量化残差，残差全零用B_Skip；不做B运动搜索。PTS必须等间隔，Duration固定（非正值按1个时间戳单位调度），否则显式拒绝。DTS从首PTS减MaxBFrames×步长开始递增。末尾Flush继续Receive排空；每次成功Receive后获取对应Reconstruction。B与Lookahead可并用，但不支持PCM。
 
 选项：
 
@@ -55,7 +56,7 @@ if err != nil {
 | WithPredictionWeights(weights) | 固定单参考 P 的三平面显式权重，与自动分析互斥；denom 0..7，显式 weight/offset -128..127 |
 | WithTransform8x8() | High增加Intra8与P 8×8残差候选，按RD与原4×4比较；默认关闭，Baseline/Main拒绝 |
 | WithScalingMatrix8x8(intra, inter) | 两个光栅顺序[64]uint8矩阵，项为1..255；按值复制、隐式开启8×8，4×4/DC列表显式flat=16 |
-| WithLookahead(depth) | 1..16帧未来窗口确认场景变化并抑制单帧闪光，默认20%阈值；有界深拷贝、延迟输出/Flush排空；PCM拒绝，当前不启用B帧 |
+| WithLookahead(depth) | 1..16帧未来窗口确认场景变化并抑制单帧闪光，默认20%阈值；B启用时增加未来锚点后预读，避免跨场景参考；有界深拷贝与Flush排空，PCM拒绝 |
 | WithSceneChangeThreshold(n) | 全平面平均绝对采样变化达到 1..100% 时触发 IDR；直接比较当前输入与已重建参考，不做 lookahead |
 
 QP=0 仍为有损变换，不等同 PCM。无残差的 I4 不携带 mb_qp_delta，滤波沿用前一宏块 QP。
@@ -69,7 +70,7 @@ Skip、P 的四种分区、I4、I16 和 PCM。运动搜索同时计入 MVD 比�
 和语法位数下界允许安全提前终止。候选试探不会修改先前参考帧。
 QP 回调所有返回值先校验，失败不发布半帧、不递增 IDR；调用方可修正输入后重试。
 
-New 显式拒绝 Baseline CABAC、非 YUV420P、B 帧、Threads>1、显式宏块 QP 与码控并用、无法满足的 Level 和奇数显示尺寸。GOPSize 控制非 IDR I 刷新，IDRInterval 独立控制 IDR。ABR/CBR/VBV 目标窗口的实证与 HRD/filler 限制见 [M5c/d 进展](gates/m5cd.md)。LevelAuto 按最坏 PCM/EBSP 预算保守选择，可能明显高于平均码率需要的 Level。
+New显式拒绝Baseline CABAC/B、非YUV420P、B+PCM、Threads>1、显式宏块QP与码控并用、无法满足的Level和奇数显示尺寸。B初始化额外检查三图像DPB预算。ABR/CBR/VBV目标窗口实证见[M5c/d进展](gates/m5cd.md)。LevelAuto按最坏PCM/EBSP预算保守选择，可能明显高于平均码率需要的Level。
 M5a 对最坏预算超出最高 Level 的 Auto 配置，改为选择满足几何/帧率的最高级别，
 并在发布 AU 前检查实际大小。1080p30 可初始化；内容超限返回 ErrResourceLimit，
 保持原参考帧与编号，调用方可降低帧率/调整质量或 Reset。

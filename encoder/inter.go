@@ -100,6 +100,9 @@ func (e *Encoder) pSliceHeader(w *bitstream.Writer, first int, weights *Predicti
 	w.WriteUE(0)
 	w.WriteUE(0)
 	w.WriteBits(4, uint64(e.frameNum))
+	if e.cfg.MaxBFrames > 0 {
+		w.WriteBits(16, uint64(e.currentPOC))
+	}
 	w.WriteBit(0) // num_ref_idx_active_override_flag，单参考来自 PPS
 	w.WriteBit(0) // ref_pic_list_modification_flag_l0
 	if e.pps.WeightedPredFlag {
