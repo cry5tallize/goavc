@@ -1,6 +1,6 @@
 package encoder
 
-import "github.com/goavc/h264/bitstream"
+import "github.com/cry5tallize/goavc/bitstream"
 
 // cabacZeroWordPayload 保留旧 420 测试入口；编码路径传入实际 RawMbBits。
 // 将不等式乘96消去分数：96*bins <= 1024*nalBytes + 3*RawMbBits*mbs。

@@ -2,8 +2,8 @@ package encoder
 
 import (
 	"fmt"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // Annex A 表 A-1，MaxMBPS/MaxFS/MaxBR（Baseline，kbit/s）。

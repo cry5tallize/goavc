@@ -1,6 +1,6 @@
 package encoder
 
-import "github.com/goavc/h264/internal/transform"
+import "github.com/cry5tallize/goavc/internal/transform"
 
 // QPY仅用于语法和上下文；正逆变换统一使用加上位深偏移后的QP'。
 // 调用前配置和逐宏块QP已完成校验，故共享转换不会失败。

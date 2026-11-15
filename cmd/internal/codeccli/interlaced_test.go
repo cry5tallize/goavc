@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/nal"
-	"github.com/goavc/h264/syntax"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/nal"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 func TestCodecCLI_InterlacedFieldOrderOracle(t *testing.T) {

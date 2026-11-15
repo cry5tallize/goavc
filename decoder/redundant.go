@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // reconstructRepresentation只重建一个redundant_pic_cnt表示，不发布帧、不更新

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // TestUnitType_IsSupported 验证 M1 支持的 NAL 类型集合。

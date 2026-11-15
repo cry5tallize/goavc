@@ -1,8 +1,8 @@
 package decoder
 
 import (
-	"github.com/goavc/h264/internal/entropy/cabac"
-	"github.com/goavc/h264/internal/transform"
+	"github.com/cry5tallize/goavc/internal/entropy/cabac"
+	"github.com/cry5tallize/goavc/internal/transform"
 )
 
 // cbfNeighbor 推导 CABAC coded_block_flag 的邻域条件。帧内当前宏块

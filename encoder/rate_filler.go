@@ -3,7 +3,7 @@ package encoder
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // padRateControlledAU 只在CBR/VBV码量不足时写filler_data_rbsp，

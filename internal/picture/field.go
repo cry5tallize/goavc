@@ -3,7 +3,7 @@ package picture
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // FieldView 返回 src 的上场（bottom=false）或下场（bottom=true）逻辑视图。

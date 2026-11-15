@@ -1,7 +1,7 @@
 package decoder
 
 import (
-	"github.com/goavc/h264/internal/prediction"
+	"github.com/cry5tallize/goavc/internal/prediction"
 )
 
 func (fs *frameState) sampleAvailable(addr, comp, x, y, order int) bool {

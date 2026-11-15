@@ -3,8 +3,8 @@ package transform
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/simd"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/simd"
 )
 
 // DC2x4Scan 是 4:2:2 色度 DC 的扫描序号到光栅下标（row*2+col）的映射。

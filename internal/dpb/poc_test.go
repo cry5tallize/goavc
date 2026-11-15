@@ -1,7 +1,7 @@
 package dpb
 
 import (
-	"github.com/goavc/h264/syntax"
+	"github.com/cry5tallize/goavc/syntax"
 	"testing"
 )
 

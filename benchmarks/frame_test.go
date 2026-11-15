@@ -3,7 +3,7 @@ package benchmarks_test
 import (
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // newFrame 构造一张行紧密排列的帧，模拟解码器的标准输出。

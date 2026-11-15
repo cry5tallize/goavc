@@ -1,6 +1,6 @@
 package transform
 
-import "github.com/goavc/h264/internal/simd"
+import "github.com/cry5tallize/goavc/internal/simd"
 
 // SATD4x4 对残差做二维 Hadamard 并返回绝对值和/2。
 // 输入为8/10-bit样本差，范围[-1023,1023]；不是编解码重建所用的正变换。

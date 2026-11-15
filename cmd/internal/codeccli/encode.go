@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/encoder"
-	"github.com/goavc/h264/stream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/encoder"
+	"github.com/cry5tallize/goavc/stream"
 )
 
 // Encode 编码紧密平面 YUV；调用者提供的标准流始终为借用资源。

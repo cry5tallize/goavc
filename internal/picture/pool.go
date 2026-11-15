@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // Pool 是按编码尺寸和像素格式分桶的图像缓冲池。

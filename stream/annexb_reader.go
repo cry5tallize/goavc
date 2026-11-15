@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/nal"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/nal"
 )
 
 // AnnexBReader按NAL读取Annex-B字节流；返回EBSP，不组装AU或推断时间戳。

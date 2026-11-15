@@ -3,7 +3,7 @@ package syntax
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // MapUnitToSliceGroupMap 按 §8.2.2 生成 map-unit 光栅地址到 slice group 的映射。

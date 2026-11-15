@@ -3,7 +3,7 @@ package prediction
 import (
 	"testing"
 
-	"github.com/goavc/h264/internal/picture"
+	"github.com/cry5tallize/goavc/internal/picture"
 )
 
 func TestChromaFormat_VerticalMotionAnd420Compatibility(t *testing.T) {

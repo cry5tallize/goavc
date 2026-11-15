@@ -1,8 +1,8 @@
 package decoder
 
 import (
-	"github.com/goavc/h264/internal/motion"
-	"github.com/goavc/h264/internal/prediction"
+	"github.com/cry5tallize/goavc/internal/motion"
+	"github.com/cry5tallize/goavc/internal/prediction"
 )
 
 func (s *sliceEntry) applyPWeights(fs *frameState, mbx, mby, x, y, w, h, ref int) {

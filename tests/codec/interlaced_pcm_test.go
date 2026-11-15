@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/decoder"
-	"github.com/goavc/h264/encoder"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/decoder"
+	"github.com/cry5tallize/goavc/encoder"
 )
 
 // 显式PCM必须逐采样保留场交织与高位深，不能因MBAFF对齐或场边界去块而改写输入。

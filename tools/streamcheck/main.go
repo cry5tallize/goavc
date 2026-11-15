@@ -14,10 +14,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/encoder"
-	"github.com/goavc/h264/internal/testutil/perfstats"
-	"github.com/goavc/h264/stream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/encoder"
+	"github.com/cry5tallize/goavc/internal/testutil/perfstats"
+	"github.com/cry5tallize/goavc/stream"
 )
 
 type sample struct {

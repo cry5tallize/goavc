@@ -3,11 +3,11 @@ package decoder
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/dpb"
-	"github.com/goavc/h264/internal/filter"
-	"github.com/goavc/h264/internal/motion"
-	"github.com/goavc/h264/internal/transform"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/dpb"
+	"github.com/cry5tallize/goavc/internal/filter"
+	"github.com/cry5tallize/goavc/internal/motion"
+	"github.com/cry5tallize/goavc/internal/transform"
 )
 
 // deblock 对整个帧做去块滤波（8.7）。

@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/encoder"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/encoder"
 )
 
 // 通过工具入口比较字节、RC轨迹与媒体时钟，不对非确定性的性能数值设阈值。

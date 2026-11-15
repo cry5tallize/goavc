@@ -2,8 +2,8 @@ package encoder
 
 import (
 	"fmt"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/picture"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/picture"
 )
 
 // WithAdaptiveQP 按亮度活动度对基准 QP 加减 strength（0..6，0 关闭）。

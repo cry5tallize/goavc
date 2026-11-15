@@ -8,8 +8,8 @@ package dpb
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/picture"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/picture"
 )
 
 // DPB 管理最多 16 个参考帧；默认容量 1 保留 M2 接口行为。

@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/testutil/pattern"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/testutil/pattern"
 )
 
 // 在纯分析复用前固定真实RC输出；包含场/独立平面、位深低位、权重和AQ。

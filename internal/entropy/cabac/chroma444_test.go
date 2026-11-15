@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // 下列固定值独立摘自ITU-T H.264表9-39..9-43，不引用被测映射表。

@@ -3,7 +3,7 @@ package bitstream
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // EBSPToRBSP 把 EBSP 转换为 RBSP：移除防竞争字节（emulation_prevention_three_byte）。

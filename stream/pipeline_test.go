@@ -16,10 +16,10 @@ import (
 	"testing"
 	"time"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/encoder"
-	"github.com/goavc/h264/nal"
-	"github.com/goavc/h264/stream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/encoder"
+	"github.com/cry5tallize/goavc/nal"
+	"github.com/cry5tallize/goavc/stream"
 )
 
 type packetSink func(h264.Packet) error

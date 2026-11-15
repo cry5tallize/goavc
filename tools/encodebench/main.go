@@ -20,12 +20,12 @@ import (
 	"sort"
 	"time"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/decoder"
-	"github.com/goavc/h264/encoder"
-	"github.com/goavc/h264/internal/testutil/pattern"
-	"github.com/goavc/h264/nal"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/decoder"
+	"github.com/cry5tallize/goavc/encoder"
+	"github.com/cry5tallize/goavc/internal/testutil/pattern"
+	"github.com/cry5tallize/goavc/nal"
 )
 
 type report struct {

@@ -1,7 +1,7 @@
 package cavlc
 
 import (
-	"github.com/goavc/h264/bitstream"
+	"github.com/cry5tallize/goavc/bitstream"
 	"math/rand"
 	"testing"
 )

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // reader422Bits 在前方补齐字节而非尾部补零，确保截断测试只有指定的有效位。

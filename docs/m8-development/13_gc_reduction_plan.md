@@ -115,8 +115,8 @@ CGO_ENABLED=0 go test -run '^$' -bench '^BenchmarkDecoder_1080p_Generic$' -bench
 CGO_ENABLED=0 go test -run '^$' -bench '^BenchmarkEncoderP_720p_Generic$' -benchtime=1x -memprofilerate=1 -memprofile "$work/encoder.mem" -o "$work/encoder.test" ./encoder > "$work/profile-run.txt"
 go tool pprof -top -alloc_space "$work/encoder.test" "$work/encoder.mem"
 go tool pprof -top -alloc_objects "$work/encoder.test" "$work/encoder.mem"
-CGO_ENABLED=0 go test -run '^$' -gcflags='github.com/goavc/h264/internal/motion/search=-m=2' ./internal/motion/search > "$work/search-escape.txt" 2>&1
-CGO_ENABLED=0 go test -run '^$' -gcflags='github.com/goavc/h264/encoder=-m=2' ./encoder > "$work/encoder-escape.txt" 2>&1
+CGO_ENABLED=0 go test -run '^$' -gcflags='github.com/cry5tallize/goavc/internal/motion/search=-m=2' ./internal/motion/search > "$work/search-escape.txt" 2>&1
+CGO_ENABLED=0 go test -run '^$' -gcflags='github.com/cry5tallize/goavc/encoder=-m=2' ./encoder > "$work/encoder-escape.txt" 2>&1
 ```
 
 profile 包括准备/预热等整个进程的采样分配，不直接等同 benchmark 计时窗口；按栈定位后，用 prepared/warm 运行计数验证。日志写临时目录，不把profile二进制提交仓库；报告保留命令、原始样本及 SHA。

@@ -2,10 +2,10 @@ package dpb
 
 import (
 	"fmt"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/motion"
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/motion"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/syntax"
 	"sort"
 )
 

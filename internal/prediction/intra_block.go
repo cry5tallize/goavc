@@ -3,7 +3,7 @@ package prediction
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // 16×16 与色度 8×8/8×16 的模式编号（规范表 8-3 / 8-4）。

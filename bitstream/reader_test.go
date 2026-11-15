@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // TestReader_ReadBits_Sequential 验证跨字节边界的连续读取。

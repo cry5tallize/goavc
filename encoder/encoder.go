@@ -5,12 +5,12 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/motion/search"
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/nal"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/motion/search"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/nal"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // Encoder 是串行8/10-bit 4:2:0、4:2:2和4:4:4编码器，支持双锚点非参考B与显示重排。

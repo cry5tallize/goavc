@@ -2,7 +2,7 @@ package encoder
 
 import (
 	"fmt"
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // WithScalingMatrices4x4 为High配置六个光栅矩阵：intra Y/Cb/Cr、inter Y/Cb/Cr。

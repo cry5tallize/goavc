@@ -3,12 +3,12 @@ package encoder
 import (
 	"bytes"
 
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/entropy/cabac"
-	"github.com/goavc/h264/internal/motion"
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/internal/transform"
-	"github.com/goavc/h264/nal"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/entropy/cabac"
+	"github.com/cry5tallize/goavc/internal/motion"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/internal/transform"
+	"github.com/cry5tallize/goavc/nal"
 )
 
 // WithInterlaced 编码逐行交织的完整帧；true为顶场优先，false为底场优先。

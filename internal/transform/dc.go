@@ -3,8 +3,8 @@ package transform
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/simd"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/simd"
 )
 
 // DequantLumaDC 返回每个 4×4 亮度块的 DC，输入输出均为光栅顺序。

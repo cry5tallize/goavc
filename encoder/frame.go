@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"unsafe"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/motion"
-	"github.com/goavc/h264/internal/motion/search"
-	"github.com/goavc/h264/internal/picture"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/motion"
+	"github.com/cry5tallize/goavc/internal/motion/search"
+	"github.com/cry5tallize/goavc/internal/picture"
 )
 
 const frameStorageBudget = 16 << 20

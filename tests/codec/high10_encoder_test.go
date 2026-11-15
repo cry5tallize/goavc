@@ -11,12 +11,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/decoder"
-	"github.com/goavc/h264/encoder"
-	"github.com/goavc/h264/nal"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/decoder"
+	"github.com/cry5tallize/goavc/encoder"
+	"github.com/cry5tallize/goavc/nal"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // 高低字节均参与图案，行尾故意留填充；不能靠8位复制或右移再编码通过。

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // SP/SI 类型本身合法；不完整的头必须报告截断，而不是工具未实现。

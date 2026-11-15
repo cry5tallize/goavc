@@ -8,8 +8,8 @@ import (
 	"slices"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/picture"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/picture"
 )
 
 // 通过公开SendFrame在不同组合的后续通道拒绝QP，验证完整图像的唯一owner。

@@ -1,6 +1,6 @@
 package filter
 
-import "github.com/goavc/h264/internal/simd"
+import "github.com/cry5tallize/goavc/internal/simd"
 
 // ChromaEdge 对一条色度边界的像素线段做去块滤波。
 //

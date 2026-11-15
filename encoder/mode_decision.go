@@ -3,9 +3,9 @@ package encoder
 import (
 	"errors"
 	"fmt"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/motion"
-	"github.com/goavc/h264/internal/motion/search"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/motion"
+	"github.com/cry5tallize/goavc/internal/motion/search"
 )
 
 type rdCandidate struct {

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/entropy/cabac"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/entropy/cabac"
 )
 
 func TestCABACPadding_AnalyticBinBudget(t *testing.T) {

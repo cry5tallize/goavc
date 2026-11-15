@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // fmoLiteralRBSP 仅打包字面位串，不调用任何被测语法写出函数。

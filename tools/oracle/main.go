@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/goavc/h264/internal/testutil/yuvdiff"
+	"github.com/cry5tallize/goavc/internal/testutil/yuvdiff"
 )
 
 // pixFmtInfo 描述像素格式的色度抽样与存储字节数。

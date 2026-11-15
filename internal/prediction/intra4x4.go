@@ -7,7 +7,7 @@ package prediction
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // 帧内 4×4 模式编号（规范表 8-2）。

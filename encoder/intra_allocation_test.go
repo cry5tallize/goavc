@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // 在bb3c7d8上捕获全部帧内候选，避免仅以最终胜者掩盖未胜出模式的变化。

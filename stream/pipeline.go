@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/decoder"
-	"github.com/goavc/h264/encoder"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/decoder"
+	"github.com/cry5tallize/goavc/encoder"
 )
 
 // DefaultMaxInputBuffer是pipeline单个输入载荷的默认上限（两倍默认NAL上限）。

@@ -3,7 +3,7 @@ package transform
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // MaxScaledQP 是共享8/10-bit量化内核接受的QP'上限：51+QpBdOffset(10)=63。

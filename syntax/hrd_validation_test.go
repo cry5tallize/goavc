@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // 仅用基础位写入器构造故意非法的语法，不绕过公开 API 的被测验证逻辑。

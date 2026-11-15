@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/testutil/manifest"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/testutil/manifest"
 )
 
 // ffmpegPath 允许通过环境变量覆盖 FFmpeg 位置；找不到时测试 skip。

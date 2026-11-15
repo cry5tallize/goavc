@@ -3,12 +3,12 @@ package decoder
 import (
 	"fmt"
 
-	"github.com/goavc/h264/internal/dpb"
-	"github.com/goavc/h264/internal/entropy/cavlc"
-	"github.com/goavc/h264/internal/motion"
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/internal/prediction"
-	"github.com/goavc/h264/internal/transform"
+	"github.com/cry5tallize/goavc/internal/dpb"
+	"github.com/cry5tallize/goavc/internal/entropy/cavlc"
+	"github.com/cry5tallize/goavc/internal/motion"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/internal/prediction"
+	"github.com/cry5tallize/goavc/internal/transform"
 )
 
 // decodeCAVLCLuma 同时服务亮度与444全尺寸色度，nC按当前平面独立维护。

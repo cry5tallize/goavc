@@ -3,13 +3,13 @@ package encoder
 import (
 	"bytes"
 	"fmt"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/motion"
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/internal/prediction"
-	"github.com/goavc/h264/internal/transform"
-	"github.com/goavc/h264/nal"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/motion"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/internal/prediction"
+	"github.com/cry5tallize/goavc/internal/transform"
+	"github.com/cry5tallize/goavc/nal"
 )
 
 // WithSearchRange 配置相对零位移的运动搜索半径（整数像素，1..64）。

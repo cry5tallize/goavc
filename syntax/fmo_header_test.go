@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // cycle 位紧跟去块字段；尾部保留真实 payload，检查 HeaderBits 没有多消费。

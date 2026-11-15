@@ -3,7 +3,7 @@ package transform
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // 规范依据：Rec. ITU-T H.264 (08/2021)，8.6，式8-414至8-441；

@@ -2,8 +2,8 @@ package cabac
 
 import (
 	"fmt"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // Context 保存规范中的 pStateIdx 和 valMPS，独立于算术引擎的区间状态。

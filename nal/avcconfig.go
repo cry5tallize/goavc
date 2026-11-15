@@ -3,7 +3,7 @@ package nal
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // AVCDecoderConfig 是 AVCDecoderConfigurationRecord（ISO/IEC 14496-15）的解析结果。

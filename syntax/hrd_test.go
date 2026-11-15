@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // 此向量直接按 E.1.2 拼出，不依赖本包的写出函数：

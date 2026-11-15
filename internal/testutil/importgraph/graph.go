@@ -14,7 +14,7 @@ import (
 
 // Package 描述模块内的一个 Go 包（按目录聚合，包含 _test.go）。
 type Package struct {
-	// Path 是完整 import 路径，例如 github.com/goavc/h264/decoder。
+	// Path 是完整 import 路径，例如 github.com/cry5tallize/goavc/decoder。
 	Path string
 	// Dir 是包所在目录的绝对路径。
 	Dir string

@@ -2,10 +2,10 @@ package encoder
 
 import (
 	"bytes"
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/entropy/cabac"
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/nal"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/entropy/cabac"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/nal"
 )
 
 // cabacWriter 的上下文跨 PCM restart 保留，算术区间则重新初始化。

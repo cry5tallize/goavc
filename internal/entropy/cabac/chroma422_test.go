@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/transform"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/transform"
 )
 
 // chroma422SyntaxFixture 只按规范的独立 bin/ctxIdx 轨迹编码，不调用 Residual，

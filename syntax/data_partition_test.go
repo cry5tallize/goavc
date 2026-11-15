@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/nal"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/nal"
 )
 
 // partitionBits 使用手工指定的码字，避免用被测语法的写入器生成期望值。

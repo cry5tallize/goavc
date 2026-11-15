@@ -3,10 +3,10 @@ package decoder
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/nal"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/nal"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // partitionedSlice 保持 A 的关联上下文与独立的 B/C 读取位置。

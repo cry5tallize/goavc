@@ -1,6 +1,6 @@
 package transform
 
-import "github.com/goavc/h264/internal/simd"
+import "github.com/cry5tallize/goavc/internal/simd"
 
 // IDCT4x4 做 4×4 整数逆变换（规范 8.5.12.2）。
 // src 是反量化后的系数，dst 是不裁剪的残差值。

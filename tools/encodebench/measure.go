@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/encoder"
-	"github.com/goavc/h264/internal/testutil/perfstats"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/encoder"
+	"github.com/cry5tallize/goavc/internal/testutil/perfstats"
 )
 
 // measurementConfig完整保留调用配置；Encoder已应用SetDefaults，不暗中覆盖Threads。

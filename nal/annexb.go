@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // AnnexBScanner 从字节流中增量切分 Annex-B NAL unit。

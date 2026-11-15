@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/decoder"
-	"github.com/goavc/h264/encoder"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/decoder"
+	"github.com/cry5tallize/goavc/encoder"
 )
 
 // TestEncoder_InterLongOracle 是显式开发期长门禁，不拖慢普通单元测试。

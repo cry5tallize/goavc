@@ -1,7 +1,7 @@
 package syntax
 
 import (
-	"github.com/goavc/h264/internal/transform"
+	"github.com/cry5tallize/goavc/internal/transform"
 	"testing"
 )
 

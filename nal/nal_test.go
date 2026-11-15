@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // TestParseHeader_RoundTrip 遍历全部 5 bit 类型与 2 bit ref_idc。

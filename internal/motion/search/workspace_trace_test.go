@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/picture"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/picture"
 )
 
 // 这些指纹在 G01 改造前的 4ec4ccc 上采集；同时保护重复候选、严格小于

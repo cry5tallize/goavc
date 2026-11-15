@@ -1,8 +1,8 @@
 package prediction
 
 import (
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/internal/simd"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/internal/simd"
 )
 
 // LumaSample 按亮度六抽头和四分之一相位图读取单个样本（Spec: 8.4.2.2.1）。

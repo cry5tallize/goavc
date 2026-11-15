@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 func paddedFrame(format h264.PixelFormat) *h264.Frame {

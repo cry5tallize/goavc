@@ -1,8 +1,8 @@
 package decoder
 
 import (
-	"github.com/goavc/h264/internal/filter"
-	"github.com/goavc/h264/internal/transform"
+	"github.com/cry5tallize/goavc/internal/filter"
+	"github.com/cry5tallize/goavc/internal/transform"
 )
 
 // MBAFF去块按宏块对地址顺序。混合边界逐采样定位p/q所属MB，再调用同一滤波核；

@@ -3,8 +3,8 @@ package decoder
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/transform"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/transform"
 )
 
 // fullPlaneCount 对共同编码444处理三平面；独立平面每个slice只处理colour_plane_id。

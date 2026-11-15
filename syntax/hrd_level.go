@@ -3,7 +3,7 @@ package syntax
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // hrdLevelLimits 对应 H.264 (08/2024) 表 A-1；码率和容量尚未乘 profile 倍率。

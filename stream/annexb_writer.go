@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/nal"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/nal"
 )
 
 // AnnexBWriterConfig分别限制单NAL（含header）、输入/规范化输出AU字节数及NAL数。

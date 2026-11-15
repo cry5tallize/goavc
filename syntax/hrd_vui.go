@@ -3,7 +3,7 @@ package syntax
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // Validate 校验不依赖 SPS 上下文的 E.2.1/E.2.2 字段语义。

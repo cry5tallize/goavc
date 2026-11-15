@@ -3,11 +3,11 @@ package encoder
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/internal/prediction"
-	"github.com/goavc/h264/internal/transform"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/internal/prediction"
+	"github.com/cry5tallize/goavc/internal/transform"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // WithTransform8x8 在 High Profile 的 I/P 宏块中加入8×8残差候选。

@@ -3,7 +3,7 @@ package encoder
 import (
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // 不依赖内容碰巧选中8×8：以同一场参考加常量亮度，产生真实非零DC残差。

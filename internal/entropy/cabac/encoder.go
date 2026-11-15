@@ -2,8 +2,8 @@ package cabac
 
 import (
 	"fmt"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // Encoder 维护 Spec: 9.3.3.2 解码区间的编码侧对偶。low 为 10-bit 归一化

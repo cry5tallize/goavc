@@ -3,8 +3,8 @@ package transform
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/simd"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/simd"
 )
 
 // Zigzag8x8 是 Spec: 8.5 的逐帧 8×8 光栅反扫描，供两种熵模式共用。

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/nal"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/nal"
 )
 
 // AVCCWriterConfig配置输出大端长度前缀及资源上限。

@@ -1,6 +1,6 @@
 package stream
 
-import h264 "github.com/goavc/h264"
+import h264 "github.com/cry5tallize/goavc"
 
 // FrameReader按显示顺序读取完整帧。正常结束返回io.EOF，不完整尾帧返回错误。
 // 成功帧归调用方所有，用完Release；后续读取不得覆盖此前返回的帧。

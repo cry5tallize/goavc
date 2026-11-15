@@ -2,8 +2,8 @@ package decoder
 
 import (
 	"fmt"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/dpb"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/dpb"
 )
 
 func (fs *frameState) setReferenceIdentity(list, bx, by, w, h int, id *dpb.Identity) {

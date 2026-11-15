@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"math"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // CPBEntry 是 hrd_parameters() 中的一个 CPB 描述。

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // maxLeadingZeroBits 是 H.264 §9.1 对 ue(v) 前导零个数的硬上限。

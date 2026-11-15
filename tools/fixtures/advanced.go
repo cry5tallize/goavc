@@ -8,9 +8,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/nal"
-	"github.com/goavc/h264/syntax"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/nal"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // advancedMetadata 与 manifest 的已有字段同名；generated 只表示已构造，

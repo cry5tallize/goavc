@@ -1,7 +1,7 @@
 package encoder
 
 import (
-	"github.com/goavc/h264/internal/filter"
+	"github.com/cry5tallize/goavc/internal/filter"
 )
 
 // Spec: 8.7。按帧内、非零系数与运动信息逐段推导 bS。

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"math"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/picture"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/picture"
 )
 
 func (e *Encoder) encodeAtQP(src *picture.Picture, intra, idr bool, qp int) ([]byte, *frameState, error) {

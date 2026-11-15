@@ -2,7 +2,7 @@
 
 ## 项目与进度
 
-goavc 是从零实现的纯 Go H.264/AVC 编解码库，模块为 `github.com/goavc/h264`，根包名为 `h264`。`go.mod` 要求 Go 1.27，CI 使用 1.27.x；代码需兼容该版本。
+goavc 是从零实现的纯 Go H.264/AVC 编解码库，模块为 `github.com/cry5tallize/goavc`，根包名为 `h264`。`go.mod` 要求 Go 1.27，CI 使用 1.27.x；代码需兼容该版本。
 
 开始实现前阅读相关文档：
 

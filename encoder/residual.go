@@ -1,8 +1,8 @@
 package encoder
 
 import (
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/entropy/cavlc"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/entropy/cavlc"
 )
 
 // Spec: table 9-4 的 Intra CBP 映射；值是 luma 位图 | chroma<<4。

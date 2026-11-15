@@ -8,7 +8,7 @@ package motion
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // MaxAbsMV 是允许的 MV 分量绝对值上限（四分之一像素）。

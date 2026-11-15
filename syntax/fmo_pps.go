@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"math/bits"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // fmoDimensions 在分配前限制编码尺寸为 8192×8192，不能用裁剪后尺寸绕过。

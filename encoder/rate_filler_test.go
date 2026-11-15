@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/nal"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/nal"
 )
 
 func TestRateFiller_ExactBytesAndResourceLimit(t *testing.T) {

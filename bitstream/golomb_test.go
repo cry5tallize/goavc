@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // packBits 把由 '0'/'1' 组成的字符串打包成大端比特流，末尾补零。

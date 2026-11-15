@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // avccStream 用指定前缀宽度拼接 AVCC 数据。

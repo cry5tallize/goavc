@@ -1,10 +1,10 @@
 package encoder
 
 import (
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/motion"
-	"github.com/goavc/h264/internal/prediction"
-	"github.com/goavc/h264/internal/testutil/pattern"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/motion"
+	"github.com/cry5tallize/goavc/internal/prediction"
+	"github.com/cry5tallize/goavc/internal/testutil/pattern"
 	"testing"
 )
 

@@ -3,7 +3,7 @@ package cavlc
 import (
 	"testing"
 
-	"github.com/goavc/h264/bitstream"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 func writeVLC(t *testing.T, w *bitstream.Writer, lengths, codes []uint8, sym int) {

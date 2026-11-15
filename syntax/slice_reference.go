@@ -2,8 +2,8 @@ package syntax
 
 import (
 	"fmt"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // RefListModification 保存表 7-7 的重排命令；Value 对应 abs_diff_pic_num_minus1

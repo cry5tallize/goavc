@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/internal/prediction"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/internal/prediction"
 )
 
 func TestHigh10ModeSearch_PreservesAllIntraModes(t *testing.T) {

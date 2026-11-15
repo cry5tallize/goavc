@@ -3,10 +3,10 @@ package encoder
 import (
 	"bytes"
 
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/entropy/cabac"
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/nal"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/entropy/cabac"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/nal"
 )
 
 // encodeB 使用可用的 spatial-direct 策略：本slice的全部宏块双列表ref_idx=0、

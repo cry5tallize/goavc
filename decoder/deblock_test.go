@@ -1,9 +1,9 @@
 package decoder
 
 import (
-	"github.com/goavc/h264/internal/dpb"
-	"github.com/goavc/h264/internal/motion"
-	"github.com/goavc/h264/syntax"
+	"github.com/cry5tallize/goavc/internal/dpb"
+	"github.com/cry5tallize/goavc/internal/motion"
+	"github.com/cry5tallize/goavc/syntax"
 	"testing"
 )
 

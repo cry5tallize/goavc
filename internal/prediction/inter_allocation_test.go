@@ -3,8 +3,8 @@ package prediction
 import (
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/picture"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/picture"
 )
 
 func TestAllocation_MCBlock(t *testing.T) {

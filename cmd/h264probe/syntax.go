@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/nal"
-	"github.com/goavc/h264/stream"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/nal"
+	"github.com/cry5tallize/goavc/stream"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // syntaxRecord 每行对应一个 NAL；直接保留共享语法结构中的 VUI、缩放矩阵和头部字段。

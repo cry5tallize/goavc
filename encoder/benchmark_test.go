@@ -2,8 +2,8 @@ package encoder
 
 import (
 	"errors"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/testutil/pattern"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/testutil/pattern"
 	"testing"
 )
 

@@ -1,6 +1,6 @@
 package prediction
 
-import "github.com/goavc/h264/internal/motion"
+import "github.com/cry5tallize/goavc/internal/motion"
 
 // WeightSample 实现 Spec: 8.4.3.2 的单向显式加权，先按分母舍入，再加
 // offset 并 Clip1。调用方只传入已完成插值和裁剪的 8-bit 样本。

@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // chunkReader 把数据按固定上限分块返回，用于模拟网络/文件读取的任意切分。

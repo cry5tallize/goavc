@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // YUVWriter写紧密Y/U/V，只消费各平面的活动行，忽略stride填充。

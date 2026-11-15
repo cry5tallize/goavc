@@ -3,8 +3,8 @@ package cavlc
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // EncodeBlock 写出光栅顺序的残差 level，返回 totalCoeff。

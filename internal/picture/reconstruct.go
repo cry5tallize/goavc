@@ -1,6 +1,6 @@
 package picture
 
-import "github.com/goavc/h264/internal/simd"
+import "github.com/cry5tallize/goavc/internal/simd"
 
 // AddResidual4x4 将共享逆变换得到的残差加到预测块并执行 Clip1。
 // 调用方必须保证 4×4 区域位于编码图像内；int64 避免极端残差加法回绕。

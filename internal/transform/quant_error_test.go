@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 func TestDequantization_FirstFailurePreservesPrefix(t *testing.T) {

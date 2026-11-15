@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/goavc/h264/internal/testutil/manifest"
-	"github.com/goavc/h264/syntax"
+	"github.com/cry5tallize/goavc/internal/testutil/manifest"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // 通过真实 CLI 输出与独立 ffprobe 对照；缺少外部工具必须显式跳过。

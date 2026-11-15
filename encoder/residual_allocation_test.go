@@ -7,8 +7,8 @@ import (
 	"hash"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/picture"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/picture"
 )
 
 // 初始化完整原生采样和真实场视图；返回的恢复函数也在测量区执行，

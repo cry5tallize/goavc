@@ -2,7 +2,7 @@ package cabac
 
 import (
 	"fmt"
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // 残差类别对应 Spec: 表 9-42 的 ctxBlockCat；422 DC 仍为 ChromaDC。

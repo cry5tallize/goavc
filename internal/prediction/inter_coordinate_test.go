@@ -1,7 +1,7 @@
 package prediction
 
 import (
-	"github.com/goavc/h264/internal/picture"
+	"github.com/cry5tallize/goavc/internal/picture"
 	"testing"
 )
 

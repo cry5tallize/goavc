@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/decoder"
-	"github.com/goavc/h264/encoder"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/decoder"
+	"github.com/cry5tallize/goavc/encoder"
 )
 
 func TestEncoder_CABACPCM_RoundTrip(t *testing.T) {

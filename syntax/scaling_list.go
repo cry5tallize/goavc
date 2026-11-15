@@ -3,8 +3,8 @@ package syntax
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // ScalingList 是一个 4×4 或 8×8 缩放矩阵的解析结果。

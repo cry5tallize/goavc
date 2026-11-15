@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/nal"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/nal"
 )
 
 // Spec: 7.3.2/3逐字段写出的独立比特向量，不调用syntax序列化器。

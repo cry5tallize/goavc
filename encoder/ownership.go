@@ -1,6 +1,6 @@
 package encoder
 
-import "github.com/goavc/h264/internal/picture"
+import "github.com/cry5tallize/goavc/internal/picture"
 
 // releaseFrameMetadata 只归还独占的临时存储；像素仍可能由reference/bPast借用，
 // 因而替换e.last不能顺便释放其像素。

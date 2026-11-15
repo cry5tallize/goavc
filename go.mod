@@ -1,4 +1,4 @@
-module github.com/goavc/h264
+module github.com/cry5tallize/goavc
 
 go 1.27.0
 

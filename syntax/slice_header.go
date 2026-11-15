@@ -3,8 +3,8 @@ package syntax
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // SliceType 是 slice_type 归一化后的类型（5 种基本类型）。

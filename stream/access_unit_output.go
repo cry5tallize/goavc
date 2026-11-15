@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/nal"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/nal"
 )
 
 // collectAnnexBAccessUnit供两种Writer共享写前验证。各上限须已由构造器设为正值，

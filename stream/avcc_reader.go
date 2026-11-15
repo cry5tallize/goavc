@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/nal"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/nal"
 )
 
 // AVCCReader按长度前缀读取独立EBSP NAL，不组装AU或生成时间戳。

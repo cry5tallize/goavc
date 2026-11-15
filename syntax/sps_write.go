@@ -3,8 +3,8 @@ package syntax
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // WriteTo 写出 SPS 的语法字段，不包含 rbsp_trailing_bits。

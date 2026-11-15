@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 func parsePPSHex(t *testing.T, sps *SPS, hexString string) (*PPS, []byte) {

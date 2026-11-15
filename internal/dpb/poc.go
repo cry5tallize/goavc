@@ -2,8 +2,8 @@ package dpb
 
 import (
 	"fmt"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // POCState 实现 Spec: 8.2.1 的逐帧 type 0/1/2 推导。参考 POC 状态与

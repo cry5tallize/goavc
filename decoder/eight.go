@@ -1,8 +1,8 @@
 package decoder
 
 import (
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/internal/transform"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/internal/transform"
 )
 
 func (s *sliceEntry) readTransformFlag(fs *frameState, addr int) (bool, error) {

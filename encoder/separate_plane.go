@@ -3,8 +3,8 @@ package encoder
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/picture"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/picture"
 )
 
 // encodeSeparate 将三个独立 colour_plane_id slice 集合写入同一个 AU。

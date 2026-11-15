@@ -1,8 +1,8 @@
 package prediction
 
 import (
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/internal/simd"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/internal/simd"
 )
 
 // ChromaSample 的MV仍以亮度1/4像素计，420色度为1/8本平面采样。

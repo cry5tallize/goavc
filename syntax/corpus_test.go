@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/testutil/manifest"
-	"github.com/goavc/h264/nal"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/testutil/manifest"
+	"github.com/cry5tallize/goavc/nal"
 )
 
 // corpusEntry 是某个 manifest 条目解析出的参数集与 NAL 序列。

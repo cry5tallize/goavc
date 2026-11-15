@@ -3,7 +3,7 @@ package syntax
 import (
 	"testing"
 
-	"github.com/goavc/h264/bitstream"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 func TestPredWeightTable_SeparatePlanesUseMonochromeSyntax(t *testing.T) {

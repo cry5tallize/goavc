@@ -12,12 +12,12 @@ import (
 	"io"
 	"reflect"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/dpb"
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/nal"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/dpb"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/nal"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // Decoder 是单实例解码器。与公共契约一致：实例非并发安全。

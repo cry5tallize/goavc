@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/goavc/h264/internal/testutil/manifest"
+	"github.com/cry5tallize/goavc/internal/testutil/manifest"
 )
 
 func main() {

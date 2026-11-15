@@ -3,7 +3,7 @@ package picture
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // validateLayout 在任何尺寸乘法和分配前校验构造与池共用的布局契约。

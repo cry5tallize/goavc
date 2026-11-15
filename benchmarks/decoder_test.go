@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/decoder"
-	"github.com/goavc/h264/stream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/decoder"
+	"github.com/cry5tallize/goavc/stream"
 )
 
 // BenchmarkDecoder_Sequence测完整固定序列，输入组AU与像素哈希不计时。

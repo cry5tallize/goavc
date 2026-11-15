@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/goavc/h264/internal/buffer"
+	"github.com/cry5tallize/goavc/internal/buffer"
 )
 
 const (

@@ -1,6 +1,6 @@
 package encoder
 
-import "github.com/goavc/h264/internal/prediction"
+import "github.com/cry5tallize/goavc/internal/prediction"
 
 func (s *frameState) available(addr, other int) bool {
 	return other >= s.info[addr].start && other < addr

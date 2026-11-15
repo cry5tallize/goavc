@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/goavc/h264/internal/simd"
+	"github.com/cry5tallize/goavc/internal/simd"
 )
 
 func TestQuantization_Backends(t *testing.T) {

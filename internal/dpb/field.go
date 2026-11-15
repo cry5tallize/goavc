@@ -3,8 +3,8 @@ package dpb
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/picture"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/picture"
 )
 
 // FieldReference 返回MBAFF场列表的借用参考；帧仍是唯一DPB/图像池所有者。

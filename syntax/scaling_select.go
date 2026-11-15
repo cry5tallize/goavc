@@ -2,8 +2,8 @@ package syntax
 
 import (
 	"fmt"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/transform"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/transform"
 )
 
 // ScalingMatrices 以空间光栅顺序返回有效矩阵。Four 为

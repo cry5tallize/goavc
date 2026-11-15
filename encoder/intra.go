@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/motion"
-	"github.com/goavc/h264/internal/motion/search"
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/internal/prediction"
-	"github.com/goavc/h264/internal/simd"
-	"github.com/goavc/h264/internal/transform"
-	"github.com/goavc/h264/nal"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/motion"
+	"github.com/cry5tallize/goavc/internal/motion/search"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/internal/prediction"
+	"github.com/cry5tallize/goavc/internal/simd"
+	"github.com/cry5tallize/goavc/internal/transform"
+	"github.com/cry5tallize/goavc/nal"
 )
 
 type mbInfo struct {

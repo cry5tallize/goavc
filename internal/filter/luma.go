@@ -1,8 +1,8 @@
 package filter
 
 import (
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/simd"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/simd"
 )
 
 // LumaEdge 对一条亮度边界的 4 像素线段做去块滤波（8.7.2.2/8.7.2.3）。

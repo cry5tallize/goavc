@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 )
 
 // 固定字节按 E.1.1/E.1.2 字段顺序独立拼接，不调用 VUI/HRD 写出器生成。

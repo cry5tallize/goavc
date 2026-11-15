@@ -1,9 +1,9 @@
 package encoder
 
 import (
-	"github.com/goavc/h264/internal/motion"
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/internal/prediction"
+	"github.com/cry5tallize/goavc/internal/motion"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/internal/prediction"
 )
 
 func (s *frameState) analyzeB(addr, qp int, past, future *picture.Picture) (residual, error) {

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // TestRBSPToEBSP 覆盖规范 §7.4.1 的插入条件。

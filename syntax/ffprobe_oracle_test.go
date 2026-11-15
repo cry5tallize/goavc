@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/testutil/manifest"
-	"github.com/goavc/h264/nal"
-	"github.com/goavc/h264/syntax"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/testutil/manifest"
+	"github.com/cry5tallize/goavc/nal"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // ffprobeStream 是 ffprobe -show_entries stream 的 JSON 子集。

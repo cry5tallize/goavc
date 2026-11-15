@@ -1,10 +1,10 @@
 package decoder
 
 import (
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/entropy/cabac"
-	"github.com/goavc/h264/internal/entropy/cavlc"
-	"github.com/goavc/h264/internal/transform"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/entropy/cabac"
+	"github.com/cry5tallize/goavc/internal/entropy/cavlc"
+	"github.com/cry5tallize/goavc/internal/transform"
 )
 
 func (fs *frameState) scan4() []int {

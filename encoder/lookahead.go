@@ -3,7 +3,7 @@ package encoder
 import (
 	"encoding/binary"
 	"fmt"
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // WithLookahead 设置未来帧窗口1..16。缓存帧按显示顺序输出；该选项不启用B帧。

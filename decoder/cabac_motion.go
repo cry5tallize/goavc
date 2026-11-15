@@ -2,8 +2,8 @@ package decoder
 
 import (
 	"fmt"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/motion"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/motion"
 )
 
 // readMVDComponent 实现 Spec: 9.3.3 的 UEG3，首 bin 依赖 A/B 邻块

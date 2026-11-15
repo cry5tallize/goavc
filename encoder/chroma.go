@@ -1,7 +1,7 @@
 package encoder
 
 import (
-	"github.com/goavc/h264/internal/transform"
+	"github.com/cry5tallize/goavc/internal/transform"
 )
 
 // 色度块的采样与系数几何只由格式导出；cnz 的宏块步长固定为十六项。

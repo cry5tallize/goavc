@@ -1,6 +1,6 @@
 package decoder
 
-import "github.com/goavc/h264/internal/prediction"
+import "github.com/cry5tallize/goavc/internal/prediction"
 
 // neighborAvailable 实现 Spec: 6.4.8 的宏块可用性：跨 slice 的邻块
 // 即使在同一帧内已经重建，也不能用于 CAVLC 或预测上下文。

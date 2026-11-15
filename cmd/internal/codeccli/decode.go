@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/decoder"
-	"github.com/goavc/h264/stream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/decoder"
+	"github.com/cry5tallize/goavc/stream"
 )
 
 // Decode 将显式封装的裸 H.264 解码为紧密平面 YUV，不猜测 MP4 或 avcC。

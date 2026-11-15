@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/picture"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/picture"
 )
 
 func preparedDecision(t testing.TB, format h264.PixelFormat, field, separate, eight bool) (*frameState, *picture.Picture, func()) {

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // 固定向量直接由规范的整数平均式解析计算，包含非 4 倍数采样与 1023。

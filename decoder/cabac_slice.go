@@ -2,9 +2,9 @@ package decoder
 
 import (
 	"fmt"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/entropy/cabac"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/entropy/cabac"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 func decodeCABACSlice(fs *frameState, s *sliceEntry, sliceID, first, end int) error {

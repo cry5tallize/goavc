@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // Main将信号转成取消。独立命令拥有进程标准流，首次信号关闭stdin/stdout以

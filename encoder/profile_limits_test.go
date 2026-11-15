@@ -2,9 +2,9 @@ package encoder
 
 import (
 	"errors"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/entropy/cavlc"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/entropy/cavlc"
 	"testing"
 )
 

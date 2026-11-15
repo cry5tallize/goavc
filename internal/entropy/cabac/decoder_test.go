@@ -3,8 +3,8 @@ package cabac
 import (
 	"encoding/csv"
 	"errors"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/bitstream"
 	"os"
 	"strconv"
 	"testing"

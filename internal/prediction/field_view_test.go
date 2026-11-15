@@ -3,9 +3,9 @@ package prediction_test
 import (
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/picture"
-	"github.com/goavc/h264/internal/prediction"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/picture"
+	"github.com/cry5tallize/goavc/internal/prediction"
 )
 
 func TestFieldView_MCFieldEdgesAllFormats(t *testing.T) {

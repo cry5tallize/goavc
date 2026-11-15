@@ -3,9 +3,9 @@ package decoder
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/transform"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/transform"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // siMacroblockType 只在分派内部使用，不与码流中的普通 I_NxN 混淆。

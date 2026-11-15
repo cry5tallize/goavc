@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // 每次迭代解码同一条三帧 1080p I/P 序列，包含构造、Flush、输出消费

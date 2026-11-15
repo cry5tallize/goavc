@@ -1,6 +1,6 @@
 package encoder
 
-import "github.com/goavc/h264/internal/motion"
+import "github.com/cry5tallize/goavc/internal/motion"
 
 // motion 写出单参考 P 分区；MVD 按图像 4×4 光栅布局存储。
 func (c *cabacWriter) motion(s *frameState, addr int) {

@@ -3,9 +3,9 @@ package decoder
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/dpb"
-	"github.com/goavc/h264/internal/motion"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/dpb"
+	"github.com/cry5tallize/goavc/internal/motion"
 )
 
 // MB元数据始终按完整帧光栅索引；MBAFF只改变语法遍历和像素视图。

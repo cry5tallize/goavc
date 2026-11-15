@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // DefaultMaxNALSize 是 AVCC 读取器的默认单 NAL 上限（8 MiB）。

@@ -1,8 +1,8 @@
 package encoder
 
 import (
-	"github.com/goavc/h264/internal/entropy/cabac"
-	"github.com/goavc/h264/internal/transform"
+	"github.com/cry5tallize/goavc/internal/entropy/cabac"
+	"github.com/cry5tallize/goavc/internal/transform"
 )
 
 // cbf 按 Spec: 9.3.3.1.1.9 推导已编码邻块；不可用时帧内取 1，帧间取 0。

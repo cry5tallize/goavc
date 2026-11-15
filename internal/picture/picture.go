@@ -12,7 +12,7 @@ package picture
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // DefaultBorder 是每个平面四周的扩展像素数。

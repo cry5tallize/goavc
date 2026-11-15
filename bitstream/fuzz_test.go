@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // FuzzReaderReadBits 检查位读取器在任意输入与任意宽度下都不 panic、

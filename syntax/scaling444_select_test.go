@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // Spec: 6.4 的帧扫描列表，输入按规范手工列出，期望是逐行递增的光栅。

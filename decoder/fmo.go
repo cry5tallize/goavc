@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"slices"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // prepareSliceOrder只重排NAL描述符，不复制RBSP。Spec: 8.2.2.8；组内必须

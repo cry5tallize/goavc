@@ -2,8 +2,8 @@ package transform
 
 import (
 	"fmt"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/simd"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/simd"
 )
 
 // Forward4x4 是8/10-bit残差共用的可分离整数变换；输入须在[-1023,1023]。

@@ -1,8 +1,8 @@
 package decoder
 
 import (
-	"github.com/goavc/h264/internal/dpb"
-	"github.com/goavc/h264/internal/motion"
+	"github.com/cry5tallize/goavc/internal/dpb"
+	"github.com/cry5tallize/goavc/internal/motion"
 )
 
 // mbaffColocated 将共位图像的物理位置还原为其原生MB/场网格，不能在场视图

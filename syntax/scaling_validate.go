@@ -3,7 +3,7 @@ package syntax
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // 参数集 writer 在输出第一个比特前调用以下预检，防止最后一个列表非法时

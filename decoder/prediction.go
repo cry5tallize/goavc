@@ -1,6 +1,6 @@
 package decoder
 
-import "github.com/goavc/h264/internal/prediction"
+import "github.com/cry5tallize/goavc/internal/prediction"
 
 // 预测入口只分派采样存储；邻域规则和预测算术均各自只有一份实现。
 func (fs *frameState) predictIntra4(mbx, mby, bx, by, x, y, mode int) error {

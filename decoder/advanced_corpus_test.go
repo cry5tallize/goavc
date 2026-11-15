@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goavc/h264/internal/testutil/manifest"
+	"github.com/cry5tallize/goavc/internal/testutil/manifest"
 )
 
 // 高级外部语料直接比较原生位深与色度采样，绝不先转成 8-bit 4:2:0。

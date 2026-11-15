@@ -4,7 +4,7 @@ package transform
 
 import (
 	"errors"
-	"github.com/goavc/h264/internal/simd"
+	"github.com/cry5tallize/goavc/internal/simd"
 	"testing"
 )
 

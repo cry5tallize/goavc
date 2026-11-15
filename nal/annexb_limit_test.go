@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 func TestAnnexBScanner_NALLimit(t *testing.T) {

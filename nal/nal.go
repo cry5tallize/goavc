@@ -3,7 +3,7 @@ package nal
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // UnitType 是 NAL unit 的 5 bit nal_unit_type（H.264 表 7-1）。

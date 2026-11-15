@@ -3,7 +3,7 @@ package prediction
 import (
 	"testing"
 
-	"github.com/goavc/h264/internal/picture"
+	"github.com/cry5tallize/goavc/internal/picture"
 )
 
 func TestHigh10LumaAllPhasesAnalyticVector(t *testing.T) {

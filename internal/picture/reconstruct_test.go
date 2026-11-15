@@ -3,7 +3,7 @@ package picture
 import (
 	"testing"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 func TestAddResidual4x4_ClipAndStride(t *testing.T) {

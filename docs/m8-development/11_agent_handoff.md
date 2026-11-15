@@ -7,7 +7,7 @@
 ## 2. 通用任务前缀，可直接复制
 
 ```text
-你在 github.com/goavc/h264 仓库实施指定M8任务。先阅读仓库工作指引及：
+你在 github.com/cry5tallize/goavc 仓库实施指定M8任务。先阅读仓库工作指引及：
 docs/m8-development/README.md
 01_baseline_and_scope.md、02_contracts.md、08_task_schedule.md
 再读本任务对应专题。上述相对文件均在 docs/m8-development/ 内。

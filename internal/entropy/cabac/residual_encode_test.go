@@ -1,8 +1,8 @@
 package cabac
 
 import (
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/transform"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/transform"
 	"math/rand"
 	"testing"
 )

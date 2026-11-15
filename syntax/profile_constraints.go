@@ -3,7 +3,7 @@ package syntax
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // 规范依据：H.264，7.4.2.1.1、7.4.2.2、Annex A.2.1–A.2.10。

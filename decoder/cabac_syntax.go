@@ -2,9 +2,9 @@ package decoder
 
 import (
 	"fmt"
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/internal/entropy/cabac"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/internal/entropy/cabac"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // cabacSyntax 把算术 bin 映射到宏块语法值，不实现像素预测与重建。

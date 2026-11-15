@@ -8,10 +8,10 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/goavc/h264/bitstream"
-	"github.com/goavc/h264/internal/testutil/manifest"
-	"github.com/goavc/h264/nal"
-	"github.com/goavc/h264/syntax"
+	"github.com/cry5tallize/goavc/bitstream"
+	"github.com/cry5tallize/goavc/internal/testutil/manifest"
+	"github.com/cry5tallize/goavc/nal"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // 把M2/M3码流投影至High10：保留原有预测/分区/参考/残差语法，QPY不变，

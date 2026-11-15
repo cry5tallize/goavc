@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/goavc/h264/internal/testutil/importgraph"
+	"github.com/cry5tallize/goavc/internal/testutil/importgraph"
 )
 
 func main() {

@@ -3,7 +3,7 @@ package bitstream
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
+	h264 "github.com/cry5tallize/goavc"
 )
 
 // Reader 从字节切片中按位读取，内部使用 64 bit 位容器（bit reservoir）。

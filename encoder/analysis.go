@@ -1,6 +1,6 @@
 package encoder
 
-import "github.com/goavc/h264/internal/picture"
+import "github.com/cry5tallize/goavc/internal/picture"
 
 // frameAnalysis只在一次RC调用内存在；源图和已提交参考在全部QP尝试间不可变。
 // 三个独立平面各保留整帧/顶场/底场槽，不按QP创建缓存，不跨AU借用图像。

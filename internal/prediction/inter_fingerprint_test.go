@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/goavc/h264/internal/picture"
+	"github.com/cry5tallize/goavc/internal/picture"
 )
 
 // 在K09a之前记录M7逐采样钳位算法的输出；覆盖大于一个tile的矩形，

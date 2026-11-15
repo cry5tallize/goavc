@@ -3,8 +3,8 @@ package decoder
 import (
 	"fmt"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/syntax"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/syntax"
 )
 
 // decodeMBAFFCAVLC 延迟处理奇数skip_run末尾的上MB：其场标志属于随后非Skip下MB。

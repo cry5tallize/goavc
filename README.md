@@ -12,17 +12,17 @@
 需要 **Go 1.27 或更高版本**。
 
 ```bash
-go get github.com/goavc/h264
+go get github.com/cry5tallize/goavc
 ```
 
-使用本地源码时，可在调用方模块中添加 `replace github.com/goavc/h264 => /path/to/goavc`。
+使用本地源码时，可在调用方模块中添加 `replace github.com/cry5tallize/goavc => /path/to/goavc`。
 
 | 包 | 用途 |
 |---|---|
-| `github.com/goavc/h264` | `Frame`、`Plane`、`Packet`、配置及错误值 |
-| `github.com/goavc/h264/encoder` | 帧级编码器 |
-| `github.com/goavc/h264/decoder` | 帧级解码器 |
-| `github.com/goavc/h264/stream` | YUV 读写、码流封装、AU 组装与流式编解码 |
+| `github.com/cry5tallize/goavc` | `Frame`、`Plane`、`Packet`、配置及错误值 |
+| `github.com/cry5tallize/goavc/encoder` | 帧级编码器 |
+| `github.com/cry5tallize/goavc/decoder` | 帧级解码器 |
+| `github.com/cry5tallize/goavc/stream` | YUV 读写、码流封装、AU 组装与流式编解码 |
 
 ## 编码 YUV 帧
 
@@ -36,8 +36,8 @@ import (
 	"log"
 	"os"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/encoder"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/encoder"
 )
 
 func main() {
@@ -114,8 +114,8 @@ import (
 	"log"
 	"os"
 
-	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/stream"
+	h264 "github.com/cry5tallize/goavc"
+	"github.com/cry5tallize/goavc/stream"
 )
 
 func main() {
@@ -197,9 +197,9 @@ arm64 已交叉编译，尚未原生验证。完整组合与已知限制见[支�
 仓库也提供文件编解码和码流探测工具：
 
 ```bash
-go install github.com/goavc/h264/cmd/h264enc
-go install github.com/goavc/h264/cmd/h264dec
-go install github.com/goavc/h264/cmd/h264probe
+go install github.com/cry5tallize/goavc/cmd/h264enc
+go install github.com/cry5tallize/goavc/cmd/h264dec
+go install github.com/cry5tallize/goavc/cmd/h264probe
 
 h264enc -input input.yuv -output out.264 -width 640 -height 360 -profile high -qp 26
 h264dec -input out.264 -output decoded.yuv
