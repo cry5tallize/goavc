@@ -76,30 +76,39 @@ func (r *YUVReader) ReadFrame() (*h264.Frame, error) {
 		r.err = err
 		return nil, err
 	}
-	data := make([]byte, r.bytes)
-	data[0] = first[0]
-	if _, err := io.ReadFull(r.src, data[1:]); err != nil {
-		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
-			err = fmt.Errorf("stream: YUV尾帧截断: %w: %w", h264.ErrInvalidData, io.ErrUnexpectedEOF)
-		} else {
-			err = fmt.Errorf("stream: 读取YUV帧: %w", err)
-		}
-		r.err = err
-		return nil, err
+	f, err := h264.NewFrame(r.width, r.height, r.format)
+	if err != nil {
+		r.err = fmt.Errorf("stream: allocate YUV frame: %w", err)
+		return nil, r.err
 	}
-	f := &h264.Frame{Width: r.width, Height: r.height, Format: r.format, PTS: r.nextPTS, Duration: 1}
-	start := 0
+	f.PTS = r.nextPTS
+	f.Duration = 1
+	f.Planes[0].Data[0] = first[0]
 	for comp, pl := range r.planes {
-		end := start + pl.bytes
-		f.Planes[comp] = h264.Plane{Data: data[start:end:end], Stride: pl.rowBytes}
-		start = end
-	}
-	if r.format.BitDepth() == 10 {
-		if err := f.Validate(); err != nil {
+		data := f.Planes[comp].Data
+		if comp == 0 {
+			data = data[1:]
+		}
+		if _, err := io.ReadFull(r.src, data); err != nil {
+			if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+				err = fmt.Errorf("stream: YUV尾帧截断: %w: %w", h264.ErrInvalidData, io.ErrUnexpectedEOF)
+			} else {
+				err = fmt.Errorf("stream: 读取YUV帧: %w", err)
+			}
 			f.Release()
-			r.err = fmt.Errorf("stream: 非法高位深YUV采样: %w", err)
+			r.err = err
+			return nil, err
+		}
+		if len(data) != pl.bytes && comp != 0 {
+			f.Release()
+			r.err = fmt.Errorf("stream: YUV plane %d size mismatch: %w", comp, h264.ErrInvalidData)
 			return nil, r.err
 		}
+	}
+	if err := f.Validate(); err != nil {
+		f.Release()
+		r.err = fmt.Errorf("stream: 非法高位深YUV采样: %w", err)
+		return nil, r.err
 	}
 	r.nextPTS++
 	return f, nil

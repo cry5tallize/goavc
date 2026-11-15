@@ -392,14 +392,18 @@ func (e *Encoder) Reconstruction() (*h264.Frame, error) {
 	if e.recon == nil {
 		return nil, h264.ErrAgain
 	}
-	f := &h264.Frame{Width: e.cfg.Width, Height: e.cfg.Height, Format: e.cfg.PixelFormat, KeyFrame: e.reconKeyFrame, PTS: e.reconPTS, Duration: e.reconDuration}
+	f, err := h264.NewFrame(e.cfg.Width, e.cfg.Height, e.cfg.PixelFormat)
+	if err != nil {
+		return nil, fmt.Errorf("encoder: allocate reconstruction frame: %w", err)
+	}
+	f.KeyFrame = e.reconKeyFrame
+	f.PTS = e.reconPTS
+	f.Duration = e.reconDuration
 	for c := range f.Planes {
 		w, h := f.Format.PlaneDimensions(c, f.Width, f.Height)
-		bytesPerSample := (e.recon.Planes[c].BitDepth + 7) / 8
-		stride := w * bytesPerSample
-		f.Planes[c] = h264.Plane{Data: make([]byte, stride*h), Stride: stride}
+		stride := f.Format.RowBytes(c, f.Width)
 		for y := 0; y < h; y++ {
-			if bytesPerSample == 2 {
+			if f.Format.BitDepth() > 8 {
 				for x, v := range e.recon.Planes[c].Row16(y)[:w] {
 					binary.LittleEndian.PutUint16(f.Planes[c].Data[y*stride+x*2:], v)
 				}

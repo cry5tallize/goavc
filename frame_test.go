@@ -1,6 +1,9 @@
 package h264
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 // 格式元数据是后续所有尺寸计算的基础，必须逐项锁定：
 // 位深、每采样字节、色度抽样因子任何一项错了，都会在后面表现为
@@ -200,6 +203,92 @@ func TestFrameReleaseIsIdempotent(t *testing.T) {
 
 	var nilFrame *Frame
 	nilFrame.Release() // 不得 panic
+}
+
+func TestNewFrame_BoundedPooledLifecycle(t *testing.T) {
+	formats := []PixelFormat{YUV420P, YUV420P10LE, YUV422P, YUV422P10LE, YUV444P, YUV444P10LE}
+	for _, format := range formats {
+		f, err := NewFrame(17, 9, format)
+		if err != nil {
+			t.Fatalf("NewFrame(%s) = %v", format, err)
+		}
+		if err := f.Validate(); err != nil {
+			t.Fatalf("NewFrame(%s) Validate = %v", format, err)
+		}
+		for i := range f.Planes {
+			if len(f.Planes[i].Data) == 0 || f.Planes[i].Stride != format.RowBytes(i, 17) {
+				t.Fatalf("format %s plane %d has invalid compact layout", format, i)
+			}
+			for _, value := range f.Planes[i].Data {
+				if value != 0 {
+					t.Fatalf("format %s plane %d was not cleared", format, i)
+				}
+			}
+		}
+		f.Planes[0].Data[0] = 0xA5
+		f.Release()
+		f.Release()
+		reused, err := NewFrame(17, 9, format)
+		if err != nil {
+			t.Fatalf("second NewFrame(%s) = %v", format, err)
+		}
+		if reused == f {
+			t.Fatalf("format %s reused Frame header", format)
+		}
+		if reused.Planes[0].Data[0] != 0 {
+			t.Fatalf("format %s reused dirty backing", format)
+		}
+		f.Release()
+		reused.Planes[0].Data[0] = 0x5A
+		reused.Release()
+	}
+}
+
+func TestNewFrame_ShallowCopyReturnsBackingOnce(t *testing.T) {
+	f, err := NewFrame(16, 16, YUV420P)
+	if err != nil {
+		t.Fatal(err)
+	}
+	copyOfHeader := *f
+	f.Release()
+	copyOfHeader.Release()
+
+	a, err := NewFrame(16, 16, YUV420P)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := NewFrame(16, 16, YUV420P)
+	if err != nil {
+		a.Release()
+		t.Fatal(err)
+	}
+	if &a.Planes[0].Data[0] == &b.Planes[0].Data[0] {
+		t.Fatal("shallow-copy Release returned the same backing twice")
+	}
+	a.Release()
+	b.Release()
+}
+func TestNewFrame_RejectsInvalidGeometryAndFormat(t *testing.T) {
+	tests := []struct {
+		name   string
+		width  int
+		height int
+		format PixelFormat
+		want   error
+	}{
+		{"zero width", 0, 16, YUV420P, ErrInvalidData},
+		{"negative height", 16, -1, YUV420P, ErrInvalidData},
+		{"width limit", MaxFrameWidth + 1, 16, YUV420P, ErrResourceLimit},
+		{"height limit", 16, MaxFrameHeight + 1, YUV420P, ErrResourceLimit},
+		{"format", 16, 16, PixelFormat(pixelFormatCount), ErrUnsupported},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := NewFrame(tc.width, tc.height, tc.format); !errors.Is(err, tc.want) {
+				t.Fatalf("NewFrame error = %v, want %v", err, tc.want)
+			}
+		})
+	}
 }
 
 // Clone 不拷贝行尾填充：填充区在 SIMD 里只是越界读的安全边界，

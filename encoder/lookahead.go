@@ -26,7 +26,11 @@ func (e *Encoder) queueLookahead(frame *h264.Frame) error {
 	if len(e.pendingFrames) > e.lookahead {
 		return h264.ErrAgain
 	}
-	e.pendingFrames = append(e.pendingFrames, copyQueuedFrame(frame))
+	queued, err := copyQueuedFrame(frame)
+	if err != nil {
+		return fmt.Errorf("encoder: copy lookahead frame: %w", err)
+	}
+	e.pendingFrames = append(e.pendingFrames, queued)
 	if len(e.pendingFrames) <= e.lookahead {
 		return nil
 	}
@@ -112,15 +116,20 @@ func (e *Encoder) releaseLookahead() {
 
 // copyQueuedFrame 只复制有效平面，避免外部stride填充放大延迟队列内存。
 // 调用前已验证几何和数据长度；队列仅保留各格式显示尺寸的有效字节。
-func copyQueuedFrame(src *h264.Frame) *h264.Frame {
-	out := &h264.Frame{Width: src.Width, Height: src.Height, Format: src.Format, PTS: src.PTS, Duration: src.Duration, KeyFrame: src.KeyFrame}
+func copyQueuedFrame(src *h264.Frame) (*h264.Frame, error) {
+	out, err := h264.NewFrame(src.Width, src.Height, src.Format)
+	if err != nil {
+		return nil, err
+	}
+	out.PTS = src.PTS
+	out.Duration = src.Duration
+	out.KeyFrame = src.KeyFrame
 	for comp := range out.Planes {
-		w, h := src.Format.PlaneDimensions(comp, src.Width, src.Height)
-		w *= (src.Format.BitDepth() + 7) / 8
-		out.Planes[comp] = h264.Plane{Stride: w, Data: make([]byte, w*h)}
+		_, h := src.Format.PlaneDimensions(comp, src.Width, src.Height)
+		rowBytes := src.Format.RowBytes(comp, src.Width)
 		for y := 0; y < h; y++ {
-			copy(out.Planes[comp].Data[y*w:(y+1)*w], src.Planes[comp].Data[y*src.Planes[comp].Stride:y*src.Planes[comp].Stride+w])
+			copy(out.Planes[comp].Data[y*rowBytes:(y+1)*rowBytes], src.Planes[comp].Data[y*src.Planes[comp].Stride:y*src.Planes[comp].Stride+rowBytes])
 		}
 	}
-	return out
+	return out, nil
 }

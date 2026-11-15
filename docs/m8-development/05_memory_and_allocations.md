@@ -40,13 +40,13 @@
 
 ### 3.1 为什么需要根包入口
 
-`Frame.onRelease` 是根包私有字段，当前只有根包测试设置它。decoder、encoder、stream 不能直接注入。因此不能只在 internal/buffer 写一个 FramePool 后声称外部输出已回池；那会遇到私有字段、依赖环或任意 callback setter 问题。
+`Frame.onRelease` 保持根包私有；`frame_pool.go` 在根包内部绑定租约，decoder、encoder、stream 不直接注入 callback。因此不能只在 internal/buffer 写一个 FramePool 后声称外部输出已回池；那会遇到私有字段、依赖环或任意 callback setter 问题。
 
-推荐新增根包 `frame_pool.go`，提供：
+根包 `frame_pool.go` 已提供：
 
 `NewFrame(width, height int, format PixelFormat) (*Frame, error)`
 
-它是新增公共分配 API，不是替代 Clone，也不是零拷贝参考帧接口。实施前由公共 API 集成负责人冻结并通过 LSP 检查相关引用；本次文档不实现它。
+它是公共分配 API，不替代 Clone，也不是零拷贝参考帧接口；Frame 头每次新建，只有 backing storage 进入有界进程缓存。
 
 ### 3.2 固定语义
 
@@ -64,7 +64,7 @@
 
 `internal/buffer` 仅管理原始 byte 存储，依赖标准库；根包 import buffer，buffer 不 import 根包，避免环。Frame 几何与 onRelease 绑定放根包，Picture 池保留在 picture 包，不将两者强行抽成万能对象池。
 
-公共 Frame backing pool 初始采用进程级缓存，建议空闲总字节64MiB、每尺寸/格式桶最多4帧、最多8个非空桶；超过缓存容量直接丢弃归还存储。精确 key 不允许跨格式混用。总字节与桶数是缓存限制，不限制用户合法持有的活跃输出，也不保证进程 RSS ≤64MiB。最终常量在A00冻结，测量显示需要调整时公开修改原因。
+公共 Frame backing pool 已落地为进程级 64 MiB 空闲缓存、每个几何/格式 key 最多4个槽、最多8个非空 key；超过缓存容量直接丢弃归还存储。精确 key 不允许跨格式混用。总字节与桶数是缓存限制，不限制用户合法持有的活跃输出，也不保证进程 RSS ≤64MiB。
 
 新 Frame 头/租约/callback 可能仍有少量分配，这不违反 kernel 0 分配目标；不能把 Frame 获取/释放整个 API 断言为0。优先消除大像素 backing 分配，不为消除一个小 Frame 头引入危险的对象复用协议。
 

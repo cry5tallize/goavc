@@ -793,3 +793,7 @@ P控制分配中位从335761024B/875520次变为4945520B/42次；耗时873234900
 ### G05：有界 picture 空闲缓存
 
 G05 只增加 `picture.Pool` 的空闲 backing 账本与拒收策略，没有改变编码/解码计时路径，因此不新增吞吐 before/after 数字。64 MiB 是每个 Pool 的空闲缓存预算，借出图像、活跃工作图和调用方持有输出不计入该预算；不能把 `CacheStats` 的下降解释为 RSS、HeapSys 或自然 GC 已下降。完整留存、GC 和端点测量留待 G00/G06–G10。
+
+### G06：公共 Frame backing 与调用者迁移
+
+G06 增加公共 Frame 头/租约和 64 MiB backing 缓存，并迁移 decoder、encoder、YUVReader 的真实 Frame 路径；这些分配和清零成本不属于 kernel/MB 零分配门禁。本切片未新增吞吐 before/after 样本，也不把 backing 命中、清零或 `CacheStats` 解释为 RSS、HeapSys 或自然 GC 改善。G07/G08 完成后再按冷启动、稳态和调用者持有输出分别测量。

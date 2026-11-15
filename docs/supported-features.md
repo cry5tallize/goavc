@@ -171,6 +171,7 @@
 | 真实模式决策试写复用 | Partial | G03b在六格式/场/独立444、QP26/flat下的192个真实非空I/P/B决策0分配，旧率/失真/模式/重建指纹和固定码流不变。CAVLC保持整块失败原子性；整个codec仍有图像/元数据/输出分配，完整K16/K18/M8未完成 |
 | 引用清尾与容器留存 | Partial | G04 已解除 picture pool 弹出槽、DPB 图像/运动/场元数据、NAL pending 及 decoder slice entries 的失效引用；池租约与固定码流保护网通过。G05 有界缓存、公共Frame backing、完整 codec 所有权和自然GC/稳态验收仍待完成 |
 | 有界 picture 空闲缓存 | Partial | G05 为既有 `picture.Pool` 增加每 Pool 64 MiB 空闲 backing 预算，按实际 `cap` 计费并保留每桶/格式隔离；超预算合法图像仍可处理但不缓存，`CacheStats` 与 Trim 账本测试通过。不代表活跃内存、RSS、公共 Frame backing 或完整 codec 所有权已完成 |
+| 公共 Frame backing 与迁移 | Partial | G06 提供 `NewFrame`、64 MiB 有界 backing 缓存、新 Frame 头、清零和一次性租约；decoder 输出、encoder Reconstruction/lookahead/B 输入及 YUVReader 已迁移，六格式/奇数尺寸/High10 校验回归通过。公共头/租约分配、G07/G08 所有权和最终 M8 门禁仍待完成 |
 
 ## 10. 流式I/O（M6）
 

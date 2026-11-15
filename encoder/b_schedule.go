@@ -52,7 +52,11 @@ func (e *Encoder) queueBInput(frame *h264.Frame) (err error) {
 	if e.bClock > math.MaxInt64-step || frame.PTS > math.MaxInt64-step {
 		return fmt.Errorf("encoder: B timestamps overflow: %w", h264.ErrInvalidData)
 	}
-	e.bInputs = append(e.bInputs, bInput{frame: copyQueuedFrame(frame), index: e.bNextIndex})
+	queued, err := copyQueuedFrame(frame)
+	if err != nil {
+		return fmt.Errorf("encoder: copy B input: %w", err)
+	}
+	e.bInputs = append(e.bInputs, bInput{frame: queued, index: e.bNextIndex})
 	e.bNextIndex++
 	if e.reference != nil && len(e.bInputs) <= e.cfg.MaxBFrames+e.lookahead {
 		e.bLastInputPTS = frame.PTS

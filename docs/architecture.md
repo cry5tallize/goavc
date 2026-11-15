@@ -105,6 +105,7 @@ decoder              encoder
 | `stream.AVCCWriter.WriteAccessUnit()` | 同步消费Annex-B Packet并写AVCC长度前缀；全部NAL的长度容量/封装/预算验证后才写出，不保留Data，不写avcC或时间戳，不关闭底层Writer；传输失败粘性 |
 | `stream.EncodeStream()` | 拥有内部Encoder；读到的输入帧总会Release；逐次同步消费输出，正常EOF自动Flush；不关闭调用方I/O |
 | `stream.DecodeStream()` | 拥有内部Decoder；输出Writer返回后Release帧，错误/取消也释放；正常EOF排空显示队列；不关闭调用方I/O |
+| `NewFrame(width,height,format)` | 创建新的公共 Frame 头，尺寸/格式/乘法先校验；有效区域清零，backing 可从有界进程缓存复用；调用方必须 Release |
 | `Frame.Clone()` | 独立内存，不参与池管理，调用方负责释放（GC 回收即可） |
 | `Frame.Release()` | 幂等；调用后帧失效，`Validate` 返回 `ErrInvalidData` |
 

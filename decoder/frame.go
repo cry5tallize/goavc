@@ -451,18 +451,16 @@ func (d *Decoder) toFrame(pic *picture.Picture, sps *syntax.SPS, p h264.Packet, 
 	if w <= 0 || h <= 0 || w > pic.Width || h > pic.Height {
 		return nil, fmt.Errorf("decoder: invalid display size %dx%d: %w", w, h, h264.ErrInvalidData)
 	}
-	f := &h264.Frame{
-		Width:    w,
-		Height:   h,
-		Format:   pic.Format,
-		PTS:      p.PTS,
-		Duration: p.Duration,
-		KeyFrame: key,
+	f, err := h264.NewFrame(w, h, pic.Format)
+	if err != nil {
+		return nil, fmt.Errorf("decoder: allocate output frame: %w", err)
 	}
+	f.PTS = p.PTS
+	f.Duration = p.Duration
+	f.KeyFrame = key
 	for pi := 0; pi < 3; pi++ {
 		pw, ph := pic.Format.PlaneDimensions(pi, w, h)
 		rowBytes := f.Format.RowBytes(pi, w)
-		buf := make([]byte, rowBytes*ph)
 		src := &pic.Planes[pi]
 		subW, subH := pic.Format.ChromaSubsampling()
 		cropX := int(sps.FrameCropLeftOffset) * subW
@@ -472,7 +470,7 @@ func (d *Decoder) toFrame(pic *picture.Picture, sps *syntax.SPS, p h264.Packet, 
 			cropY /= subH
 		}
 		for y := 0; y < ph; y++ {
-			row := buf[y*rowBytes : (y+1)*rowBytes]
+			row := f.Planes[pi].Data[y*rowBytes : (y+1)*rowBytes]
 			if pic.Format.BitDepth() > 8 {
 				for x, value := range src.Row16(y + cropY)[cropX : cropX+pw] {
 					binary.LittleEndian.PutUint16(row[x*2:], value)
@@ -481,7 +479,6 @@ func (d *Decoder) toFrame(pic *picture.Picture, sps *syntax.SPS, p h264.Packet, 
 				copy(row, src.Row(y + cropY)[cropX:cropX+pw])
 			}
 		}
-		f.Planes[pi] = h264.Plane{Data: buf, Stride: rowBytes}
 	}
 	return f, nil
 }

@@ -218,3 +218,16 @@ G03b补充验证：完整`CGO_ENABLED=1 go test -race -count=1 ./...`退出0，t
 新增 `TestPool_BoundsFreeStorageAndCacheStats`，验证实际 capacity 计费、命中扣账、超预算拒收和后续重新分配；既有多格式/尺寸隔离、复用、并发测试继续保留。`CGO_ENABLED=0 go test -count=1 ./internal/picture` 与 `CGO_ENABLED=1 go test -race -count=1 ./internal/picture` 均退出 0。
 
 本切片没有新增吞吐或 GC 样本；64 MiB 是空闲缓存预算，不是活跃内存/RSS承诺。G06 公共 Frame backing、G07 encoder 图像/RC 所有权、G08 decoder retained metadata、G09 AU 容量和 G10 集成验收仍待完成。
+
+### G06：公共 Frame backing 与输入输出迁移
+
+起点为 G05 提交 `d81de411a8`。本切片实现根包 `NewFrame` 和标准库 `internal/buffer` 原始 backing 池，并迁移公共 Frame 的真实输出/输入路径；不改变 Frame/Packet 的公开所有权语义。
+
+- `NewFrame(width,height,format)` 先校验正尺寸、8192 上限、六种格式和每个平面乘法；返回新的 Frame 头、紧凑 byte 平面和清零有效区域。10-bit 继续使用公共 LE byte 存储。
+- `internal/buffer.Pool` 只管理三平面原始 `byte` backing；Frame 池按几何/格式 key 分桶，空闲总预算 64 MiB、每 key 4 个槽、最多 8 个非空 key。超预算合法归还直接丢弃，不返回新的资源错误。
+- `Frame` 头不复用。租约 callback 捕获原始 key/backing，并用 `sync.Once` 防止浅拷贝的多个 Release 重复归还；修改当前 Frame 的 `Planes` 不改变原始租约。Clone 仍为独立非池化分配。
+- `decoder.toFrame`、`encoder.Reconstruction`、`encoder.copyQueuedFrame`、B 输入队列和 `stream.YUVReader.ReadFrame` 均迁移到 `NewFrame`；拷贝/读取失败会 Release 已取得的 Frame，错误签名沿调用者传递。
+
+新增 `TestNewFrame_BoundedPooledLifecycle`、`TestNewFrame_RejectsInvalidGeometryAndFormat`、`TestNewFrame_ShallowCopyReturnsBackingOnce`。迁移后的首轮测试发现 YUVReader 丢失原有 High10 值域检查，`TestYUVIO_High10KnownLayout` 复现“非法 10-bit sample accepted”；恢复 `Frame.Validate` 后原失败用例通过，未放宽 0..1023 约束。
+
+验证：`CGO_ENABLED=0 go test -count=1 . ./stream ./decoder ./encoder`、`CGO_ENABLED=1 go test -race -count=1 . ./stream ./decoder ./encoder ./internal/buffer`、以及提交前完整 `gofmt/vet/build/test/depscheck/manifest/diff-check` 均退出 0；常规门禁为 CGO=0，race 按仓库例外使用 CGO=1。当前未把公共 Frame 头、租约和清零成本记为 kernel 零分配，也未宣称 RSS/GC 已下降。G07 encoder 图像/RC 所有权、G08 decoder retained metadata、G09 AU 容量和并行仍待完成。

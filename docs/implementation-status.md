@@ -259,6 +259,7 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | 真实试写（G03b/K16/K18切片） | 串行lane的RD/正式MB独立Writer复用；有效位追加；CAVLC固定level预检保持失败原子性 | Partial | 192个旧非Skip/非PCM I/P/B决策指纹与prepared零分配；Append位解析值、CAVLC坏尾部无写出、错误后复用、M8固定码流 | 当前完整RD分配矩阵为QP26/flat；矩阵/低QP/码控及K16所有权、完整K18收尾另验，不声明整个codec零分配 |
 | 引用清尾（G04） | picture pool、DPB retained metadata、NAL pending、decoder slice entries 的失效引用清理 | Partial | `TestPool_GetClearsReleasedSlotAndEmptyBucket`、`TestReferences_RemoveClearsRetainedState`、`TestAssembler_ClearConsumedUnitSlots`、`TestDecoder_ClearSliceEntries`及四包定向测试 | 仅解除已确认的容器留存；有界缓存、公共Frame backing、编码/解码完整所有权及自然GC/稳态指标仍待完成 |
 | 有界 picture 缓存（G05） | 既有 `picture.Pool` 的实际 backing 字节预算、每桶上限、格式隔离和 Trim 账本 | Partial | `TestPool_BoundsFreeStorageAndCacheStats`、既有池复用/并发/格式隔离测试、picture race | 默认每 Pool 空闲预算 64 MiB，不限制活跃图像或 RSS；公共 Frame backing、encoder/decoder 所有权和全库 GC 证据仍待完成 |
+| 公共 Frame backing（G06） | `NewFrame`、新的 Frame 头、原始 backing 有界池、清零和输入/输出调用者迁移 | Partial | 根包 NewFrame 生命周期/错误/浅拷贝租约测试，decoder/encoder/stream 定向回归及 High10 值域保护 | 公共 Frame 头/租约仍允许少量分配；G07/G08 完整所有权、长期 GC/RSS、CLI 全路径和 M8 最终门禁仍待完成 |
 | 其余池化/去分配/并行（K15–K20m） | 所有权、slice/分析/ME | TODO | 既有串行测试保留 | Threads>1仍拒绝；G00仅补分配基线，完整GC测量待实施 |
 
 ## M9
