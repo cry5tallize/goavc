@@ -243,12 +243,13 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | Module | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|
 | CPU检测（K01） | amd64安全CPUID/XGETBV、arm64基线NEON能力、purego/其他架构回退 | Partial | `simd/cpu_test.go` 的1024组合与 `cpu_purego_test.go` | CPU检测不等于任何向量kernel已实现；arm64仅交叉构建时不记原生执行 |
-| 内核表（K02） | SAD8/16、SATD4×4类型化分发、唯一Generic、真实consumer | Partial | `simd/dispatch_test.go`、search/transform解析用例、M7输出指纹 | SAD/SATD已逐槽接入；MC仍Generic，其余槽随真实内核交付扩充 |
+| 内核表（K02） | SAD8/16、SATD4×4、Forward4×4、整数相位宽16亮度复制的类型化分发、唯一Generic、真实consumer | Partial | `simd/dispatch_test.go`、search/transform/预测入口、M7输出指纹、MC stride/phase/bit-depth回归 | MC SSE2/AVX2目前只覆盖fx=fy=0且宽16的真实复制；插值仍Generic，NEON与其余MC槽待交付 |
 | parity框架（K03） | 固定种子矩形/stride/offset/最小len、输入不变、测试标签强制及生产包装0分配 | Partial | `simd/parity_test.go`、`backend_testing_test.go`、真实候选后端测试 | x86 SAD/SATD原生，NEON仅交叉构建；保护页当前只覆盖SAD，完整K14未完成 |
 | SSE2 SAD（K04） | byte/原生10-bit矩形，16/8/4窄加载与标量尾部，64位累加 | Partial | 直接后端parity、独立最大值、强制搜索双位深、M7固定指纹 | SAD保护页已由K14a完成；其他内核边界矩阵仍待交付 |
 | AVX2 SAD（K05） | width16的8/10-bit真实AVX2，其他宽度复用SSE2 | Partial | AVX2直接parity、强制搜索、M7指纹 | 逐槽AVX2诊断表示此快路覆盖域，非16宽实际为SSE2；其余kernel未完成 |
 | NEON SAD（K06） | width16的8/10-bit基线NEON，其他矩形复用Generic | WIP | 原生parity/bench测试入口已交付；三种arm64交叉vet/测试构建 | 用户指定只做编译验收；未原生执行，不提供虚构NEON性能或正确性通过声明 |
-| MC块化（K09a） | 唯一共享标量、interior/边界patch、相位一次分解、j中间行复用 | Partial | 旧MC指纹、原六格式/场/权重解析值、M7码流指纹、MC0分配 | SIMD插值架构快路仍待K09b/c/d；不把纯标量收益标为AVX2或NEON |
+| MC块化（K09a） | 唯一共享标量、interior/边界patch、相位一次分解、j中间行复用 | Partial | 旧MC指纹、原六格式/场/权重解析值、M7码流指纹、MC0分配与stride/phase/bit-depth回归 | SSE2/AVX2仅新增整数宽16复制快路；SIMD插值仍待K09b/c/d，不把复制快路标为完整AVX2/NEON MC |
+| MC整数复制快路（K09b前置） | SSE2/AVX2宽16、fx=fy=0、逐行16字节无对齐要求，其他尺寸/相位唯一Generic回退 | Partial | `mc_generic_test.go`、`internal/prediction`生产入口、purego/全库测试 | 仍缺SSE2/AVX2/NEON插值、uint16快路、完整guard-page与K14矩阵 |
 | x86 SATD（K07） | SSE2/AVX2的4×4 Hadamard，真实帧内候选接入，内部值参数 | Partial | 8/10-bit常量/冲激解析值、5000组parity、实际候选、局部残差0分配、M7指纹 | 默认实测优选SSE2；arm64尚未原生验证；矩形仍按原4×4 tiled |
 | NEON SATD（K08） | 基线ASIMD 4×4 Hadamard、同值参数与测试入口 | WIP | arm64交叉vet/构建，原生测试入口已交付 | 用户指定编译验收；未原生运行，不把Generic或跨编译当NEON通过 |
 | 汇编边界基础（K14a） | Windows逐行保护页与子进程协调，SAD尾部/最小len | Partial | 原生Generic/Auto/SSE2/AVX2、purego、386保护页实际执行 | 仅SAD已动态验证；其余kernel和非Windows动态页仍待补齐，不签完整K14 |
