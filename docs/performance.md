@@ -671,3 +671,12 @@ K09a测得916330100ns/op中位，约2.35倍。首次自动校准出现N=1/2混�
 96帧固定码流/像素/元数据、原生语料和27份High10投影继续通过。阶段状态及
 精确命令见 [实施记录](m8-development/12_execution_log.md)；后续仍须完成其余
 kernel、池化、去分配、确定性并行及完整端点/门禁矩阵。
+
+### K07：按槽选择 SATD 后端
+
+同机五次4×4 SATD初测中位：Generic21.61ns、SSE2 7.262ns、AVX2 16.02ns，
+均0分配。因此Auto初始化保留AVX2 SAD，但选SSE2 SATD；显式AVX2 SATD仍有
+真实候选和parity验证。内部固定数组按值传递，领域循环内局部残差0分配，
+原指针API保持不变。改默认策略前后的全部样本保留在
+[m8_satd_samples.json](gates/m8_satd_samples.json)，不能把CPU支持的最高ISA等同
+所有kernel的最佳后端。端点仍只是前述P控制场景，不代表最终M8主矩阵。

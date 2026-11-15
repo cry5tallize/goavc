@@ -27,26 +27,40 @@ func (b Backend) String() string {
 
 type sad8Func func(a []byte, as int, b []byte, bs, width, height int) int
 type sad16Func func(a []uint16, as int, b []uint16, bs, width, height int) int
+type satd4Func func([16]int32) int
 
 // Backends 是逐槽诊断快照。仅随真实内核迁移增加字段，不预建未来空槽。
 type Backends struct {
 	SAD8, SAD16 Backend
+	SATD4x4     Backend
 }
 
 type kernelTable struct {
 	sad8     sad8Func
 	sad16    sad16Func
+	satd4    satd4Func
 	backends Backends
 }
 
 func genericTable() kernelTable {
-	return kernelTable{sad8: sadGeneric[byte], sad16: sadGeneric[uint16]}
+	return kernelTable{sad8: sadGeneric[byte], sad16: sadGeneric[uint16], satd4: satd4Generic}
 }
 
 // 生产表初始化后不变；测试强制入口将在专用构建标签内提供。
-var kernels = selectKernels(nativeCPU)
+var kernels = autoKernels(nativeCPU)
 
 func selectKernels(cpu cpuFeatures) kernelTable { return platformKernels(cpu, genericTable()) }
+
+func autoKernels(cpu cpuFeatures) kernelTable {
+	table := selectKernels(cpu)
+	// 同机五次测量中4×4 SSE2约7.3ns，AVX2约16ns；按槽选择，
+	// 不因CPU有AVX2就让所有内核都使用它。显式测试仍可选择真实AVX2实现。
+	if table.backends.SATD4x4 == AVX2 {
+		sse := selectKernels(cpuFeatures{sse2: true})
+		table.satd4, table.backends.SATD4x4 = sse.satd4, sse.backends.SATD4x4
+	}
+	return table
+}
 
 // ActiveBackends 返回逐槽实际选择的后端，不向调用者暴露可变函数表。
 func ActiveBackends() Backends { return kernels.backends }
@@ -68,3 +82,7 @@ func SAD8(a []byte, as int, b []byte, bs, width, height int) int {
 func SAD16(a []uint16, as int, b []uint16, bs, width, height int) int {
 	return kernels.sad16(a, as, b, bs, width, height)
 }
+
+// SATD4x4 保持Hadamard的(sumAbs+1)>>1，输入为8/10-bit像素差。
+// 固定数组按值传递，间接调用不保留领域栈上残差的指针或造成其逃逸。
+func SATD4x4(src [16]int32) int { return kernels.satd4(src) }

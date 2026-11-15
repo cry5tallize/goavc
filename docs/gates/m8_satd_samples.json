@@ -1,0 +1,356 @@
+{
+    "sourceBase":  "4d3238c",
+    "dirtyBuild":  true,
+    "codeSource":  "K07后继提交",
+    "go":  "go1.27.4",
+    "host":  "windows/amd64",
+    "cpu":  "AMD Ryzen 7 5700X",
+    "CGO_ENABLED":  0,
+    "GOAMD64":  "v1",
+    "GOMAXPROCS":  16,
+    "benchtime":  "500ms",
+    "fixture":  "src[i]=(i*137 mod 2047)-1023, 16 signed coefficients by value",
+    "inputSHA256":  "53b0525e41983ea3f5d5c5cc191cc462a7d539e0e975372750339f2f275cd439",
+    "runs":  [
+                 {
+                     "phase":  "initial-avx2-auto",
+                     "name":  "BenchmarkSATD_4x4_SSE2",
+                     "actualBackend":  "SSE2",
+                     "medianNs":  7.262,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  7.235,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  7.262,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  7.361,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  7.477,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  7.229,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "8d21988837e3f2fe0c439c857baf27825e5483b743bf3a79fb410c06414e0ec1"
+                 },
+                 {
+                     "phase":  "initial-avx2-auto",
+                     "name":  "BenchmarkSATD_4x4_AVX2",
+                     "actualBackend":  "AVX2",
+                     "medianNs":  16.02,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  15.79,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  15.85,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  17.41,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  16.12,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  16.02,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "8d21988837e3f2fe0c439c857baf27825e5483b743bf3a79fb410c06414e0ec1"
+                 },
+                 {
+                     "phase":  "initial-avx2-auto",
+                     "name":  "BenchmarkSATD_4x4_Generic",
+                     "actualBackend":  "Generic",
+                     "medianNs":  21.61,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  22.23,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  21.56,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  21.58,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  22.96,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  21.61,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "8d21988837e3f2fe0c439c857baf27825e5483b743bf3a79fb410c06414e0ec1"
+                 },
+                 {
+                     "phase":  "initial-avx2-auto",
+                     "name":  "BenchmarkSATD_4x4_Auto",
+                     "actualBackend":  "AVX2",
+                     "medianNs":  17.49,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  17.63,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  17.73,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  17.37,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  17.33,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  17.49,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "8d21988837e3f2fe0c439c857baf27825e5483b743bf3a79fb410c06414e0ec1"
+                 },
+                 {
+                     "phase":  "preferred-sse2-auto",
+                     "name":  "BenchmarkSATD_4x4_SSE2",
+                     "actualBackend":  "SSE2",
+                     "medianNs":  7.297,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  7.297,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  7.107,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  7.351,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  7.305,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  7.128,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "4f80e0326c6a7112c3cb0e63de41609add2cb5afbaa49d1837a41b8b254e066d"
+                 },
+                 {
+                     "phase":  "preferred-sse2-auto",
+                     "name":  "BenchmarkSATD_4x4_AVX2",
+                     "actualBackend":  "AVX2",
+                     "medianNs":  16.89,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  16.91,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  15.76,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  16.89,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  15.72,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  16.92,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "4f80e0326c6a7112c3cb0e63de41609add2cb5afbaa49d1837a41b8b254e066d"
+                 },
+                 {
+                     "phase":  "preferred-sse2-auto",
+                     "name":  "BenchmarkSATD_4x4_Generic",
+                     "actualBackend":  "Generic",
+                     "medianNs":  22.03,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  22.06,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  22.09,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  21.29,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  21.93,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  22.03,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "4f80e0326c6a7112c3cb0e63de41609add2cb5afbaa49d1837a41b8b254e066d"
+                 },
+                 {
+                     "phase":  "preferred-sse2-auto",
+                     "name":  "BenchmarkSATD_4x4_Auto",
+                     "actualBackend":  "SSE2",
+                     "medianNs":  8.167,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  8.078,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  7.956,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  8.2,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  8.336,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  8.167,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "4f80e0326c6a7112c3cb0e63de41609add2cb5afbaa49d1837a41b8b254e066d"
+                 }
+             ],
+    "endpoints":  [
+                      {
+                          "phase":  "initial-avx2-auto",
+                          "medianNs":  936393400,
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  936393400,
+                                              "bytesPerOp":  335761136,
+                                              "allocationsPerOp":  875520
+                                          },
+                                          {
+                                              "nsPerOp":  954479200,
+                                              "bytesPerOp":  335761264,
+                                              "allocationsPerOp":  875523
+                                          },
+                                          {
+                                              "nsPerOp":  924888900,
+                                              "bytesPerOp":  335758240,
+                                              "allocationsPerOp":  875491
+                                          },
+                                          {
+                                              "nsPerOp":  911734300,
+                                              "bytesPerOp":  335760784,
+                                              "allocationsPerOp":  875516
+                                          },
+                                          {
+                                              "nsPerOp":  950296800,
+                                              "bytesPerOp":  335759328,
+                                              "allocationsPerOp":  875501
+                                          }
+                                      ],
+                          "rawLogSHA256":  "7475e381d2665bf6a8e744578c0ecfd16c602941a288e0327f8129e01da3e435"
+                      },
+                      {
+                          "phase":  "preferred-sse2-auto",
+                          "medianNs":  878243300,
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  882344600,
+                                              "bytesPerOp":  335760032,
+                                              "allocationsPerOp":  875508
+                                          },
+                                          {
+                                              "nsPerOp":  878243300,
+                                              "bytesPerOp":  335760608,
+                                              "allocationsPerOp":  875515
+                                          },
+                                          {
+                                              "nsPerOp":  895608000,
+                                              "bytesPerOp":  335761344,
+                                              "allocationsPerOp":  875523
+                                          },
+                                          {
+                                              "nsPerOp":  868523500,
+                                              "bytesPerOp":  335762736,
+                                              "allocationsPerOp":  875539
+                                          },
+                                          {
+                                              "nsPerOp":  868714400,
+                                              "bytesPerOp":  335759344,
+                                              "allocationsPerOp":  875502
+                                          }
+                                      ],
+                          "rawLogSHA256":  "3d6a2b058278a3465a71e3b45c061da156de3ce75b6bed0622590c63c965f908"
+                      }
+                  ],
+    "endpointConfig":  "同m8_mc_samples.json的固定1x P消费者；仅SATD默认选择不同",
+    "note":  "保留初始AVX2默认的较慢结果；按逐槽实测改用SSE2，SAD仍选AVX2。外部负载未监控。"
+}

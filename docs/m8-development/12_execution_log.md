@@ -94,3 +94,13 @@ A00：`CGO_ENABLED=0 go test -count=1 -run '^TestM8Baseline_SerialOutput$' ./tes
 同机五次MC微基准覆盖interior/border/真实bottom FieldView和双位深；旧源码的固定1x消费者在隔离clean worktree重测，再与最终代码同边界五次比较，旧中位2149919100ns、新中位916330100ns，约2.35倍。保留新首样本1393510500ns等波动，不挑最快值。原始样本、输入SHA及参数见 `docs/gates/m8_mc_samples.json` 和performance§15；原始日志保留于本地tmp，临时工作树已清理。不以此P控制场景替代代表性High/B主目标。
 
 下一项：K07/K08与K09b/c/d仍待实施，K10–K25及K20m未完成；后续SIMD MC必须使用上述唯一Generic与同一边界证明，不能复制一套预测；K18必须解决已登记搜索window逃逸。当前可用SAD测试后端锁和领域parity入口，基准期间不并行跑长测。尚未执行完整race或原生arm64，不签完整M8门禁。
+
+### K07：x86 SATD
+
+从 `4d3238c` 开始，真实 `encoder.blockSATD → transform.SATD4x4 → simd` 接入；唯一Generic迁入simd，保留领域指针签名。内部按值传16个int32（64字节），避免栈上局部残差因间接调用而逃逸；02中的拟定指针参数已同步为实际值参数。范围为真实8/10位残差±1023，两轴Hadamard没有中间舍入，最后仍 `(sumAbs+1)>>1`；矩形继续4×4 tiled，不改候选和代价标度。
+
+SSE2以32位蝶形/转置/绝对值归约，不夹SSE4/AVX；AVX2以双行YMM蝶形、VPBLENDD/VPABSD实际计算，退出VZEROUPPER，不额外假设BMI/FMA。固定输入值64字节，所有加载最大偏移63，不依赖padding或外部指针。vet对数组参数偏移的首轮检查已修正为先取完整数组地址再按明确偏移加载，随后完整门禁通过。
+
+独立常量/冲激解析值含±1023、低两位±3，固定seed5000组逐后端parity；强制Generic/SSE2/AVX2分别执行真实8/10位帧内候选，NEON SATD未交付时不把Generic槽记成NEON通过。生产包装及领域循环内局部残差的AllocsPerRun均0，M7固定96帧码流/像素/元数据不变。完整常规门禁、purego目标包、386实际执行simd/transform及六平台simd测试二进制构建均退出0；日志 `tmp/m8-baseline/k07-{verify,purego,consumer-parity}.txt`。
+
+同机五次初测SSE2约7.262ns、AVX2约16.02ns、Generic约21.61ns；因此生产初始化按槽优选SSE2 SATD，SAD仍为AVX2。显式测试仍可选择真正AVX2 SATD。选择前后的全部微基准/固定1x P样本见 `docs/gates/m8_satd_samples.json`，均0 kernel分配，不删除较慢数字。初始Auto AVX2端点中位936393400ns，改为SSE2后878243300ns；不据此保证其他CPU或代表性High/B主场景收益。完整race、NEON原生仍未执行。

@@ -2,6 +2,20 @@ package transform
 
 import "testing"
 
+func TestAllocation_SATDLocalResidual(t *testing.T) {
+	if got := testing.AllocsPerRun(1000, func() {
+		var src [16]int32
+		for i := range src {
+			src[i] = 3
+		}
+		if SATD4x4(&src) != 24 {
+			panic("SATD低两位解析值改变")
+		}
+	}); got != 0 {
+		t.Fatalf("领域局部残差逃逸，分配=%v", got)
+	}
+}
+
 func TestSATD_AnalyticBasisAndStride(t *testing.T) {
 	for _, v := range []int32{-255, -1, 1, 255} {
 		var residual [16]int32
