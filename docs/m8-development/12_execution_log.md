@@ -9,7 +9,7 @@
 - SIMD K10–K14 的精确部分向量化、共享消费者和现有内核保护页已作为 `e34d882` 提交；amd64默认按实测保留部分Generic槽，NEON仅编译验收。MC插值SIMD仍未交付，不扩大Profile或完整M8声明。
 - 本轮顺序提交：K15所有权收尾 `45d74432b0`、K16精简临时元数据复用 `cf87f09d87`、K17正常P/B宏块分区去分配 `81c2087510`、K18完整决策矩阵验收 `f384fe40a3`、K19收益准入决定 `76c2403505`、K20串行RC纯分析复用 `cf1dd8feea`。每项先验证后提交，未将后续代码堆入前项。
 - K19 worker、K20前瞻并行流水线、K20m候选执行器本轮均不实施，保留原设计与TODO/Partial边界；Threads>1仍拒绝。K16不是完整slice执行状态隔离，K17只签已测正常P/B路径，不宣称全codec零分配。
-- 已有逐项常规/定向race、purego/386和旧指纹证据见后文；最终集成验证另行登记。未测自然GC/RSS/主目标长矩阵/原生arm64/远端CI，不创建标签、不push/release，不签完整M8。
+- 本轮最终decoder/encoder purego及原生386、六目标全库build、双fuzz smoke和CGO=1全库race均通过，详末尾集成证据。未测自然GC/RSS/主目标长矩阵/原生arm64/远端CI，不创建标签、不push/release，不签完整M8。
 
 ## A00：基线与契约
 
@@ -415,4 +415,22 @@ K20定向RC指纹/失败重试、CGO=0完整常规门禁、purego及原生386的
 ### K20m：本轮不实施候选执行器
 
 起点 `cf1dd8feea`。依前期评估和本轮授权范围，不为默认4点diamond/9点refine引入worker或接口迁移；SAD现有SIMD、Scorer原序及当前B不搜索的边界保持。full-search大批并行仍是后续可重新准入的候选，没有测量就不写“并行无收益”或“已完成”。本项只记录决定，不写stub、不放行Threads>1、不生成空验收报告。
+
+
+### 本轮最终集成证据
+
+K20m范围决定单独提交 `566450e313`。最终生产代码为 `cf1dd8feea`（之后只有文档变化）；所有实现按K15/K16/K17/K18/K20逐项验证后立即提交，K19/K20m另有范围决定提交。日志均在 `tmp/m8-k15-k20/`，没有生成待清理的仓库内测试二进制；K17历史源码对照已删除，仅保留日志。
+
+| 最终命令/范围 | 实际结果 | 日志SHA-256 |
+|---|---|---|
+| CGO=0 `go test -tags purego -count=1 ./decoder ./encoder` | 两包通过 | `dc3babdbb93ce78a99eb6313f546434705dbec7b3480c498ff94bc6724d35a14` |
+| CGO=0 GOARCH=386 `go test -count=1 ./decoder ./encoder` | 本机实际运行，两包通过 | `ab7c521d166943cfe674a673f20d951b5896c560cc57477bfd42b40bf4e4b62c` |
+| CGO=0 GOOS=windows/linux/darwin × GOARCH=amd64/arm64 `go build ./...` | 六目标均编译通过，非宿主未运行 | 同次命令原始输出列出六组合 |
+| CGO=0 decoder `FuzzDecoder_NoPanic`，5s/parallel2 | 560次执行，通过；含558条已有种子准备，新增探索有限 | `ddc713ce4e6c303093042ff4cb0988de243ff88b410caa1a2e55838f6549c67b` |
+| CGO=0 codec `FuzzEncoder_InterRoundTrip`，5s/parallel2 | 1033次执行，通过 | `d8302a8c4020b2e0282ded52b4ac2151806e80d7a7b48eb495212f6958a30982` |
+| CGO=1 GOMAXPROCS=2 `go test -race -count=1 -timeout 45m ./...` | 全库通过；tests/codec 295.409s | `8f6a0796488409a5b9ebb9ca4bc2ad78bbc94a150582ddf570c65153c9161d0c` |
+
+各项提交前完整常规门禁日志SHA依次：K15 `76bfa36419bd8157adabf3842abd88e94e74cac9bff3c67117ace430eed0f652`、K16 `f2809b1f3c782b989af9598eaba1b403178f9d76ba3c3608fbff023b730171fb`、K17 `d5b6a94d416ba333460f17b90de934ce2f643ee09be57a9c8de2a708a07f763f`、K18 `2514702a5ac0153628429e5244f8c028b80d54695178c7cfd142c7d268323be0`、K20 `a6cb245d14d1dfbdf8bd8929460564389dc99170e23b271ba8d336389db5da23`。常规CGO=0，race仅开发工具链例外CGO=1。
+
+所有证据只覆盖本轮精简交付，不补写原生arm64、自然GC/assist/RSS、代表性300帧吞吐、并行实现或M8总门禁通过；原K19/K20流水线/K20m未实现边界保留。没有push、tag或release。
 

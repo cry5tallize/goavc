@@ -178,8 +178,8 @@
 | 有界 picture 空闲缓存 | Partial | G05 为既有 `picture.Pool` 增加每 Pool 64 MiB 空闲 backing 预算，按实际 `cap` 计费并保留每桶/格式隔离；超预算合法图像仍可处理但不缓存，`CacheStats` 与 Trim 账本测试通过。不代表活跃内存、RSS、公共 Frame backing 或完整 codec 所有权已完成 |
 | 公共 Frame backing 与迁移 | Partial | G06 提供 `NewFrame`、64 MiB 有界 backing 缓存、新 Frame 头、清零和一次性租约；decoder 输出、encoder Reconstruction/lookahead/B 输入及 YUVReader 已迁移，六格式/奇数尺寸/High10 校验回归通过。公共头/租约分配、G07/G08 所有权和最终 M8 门禁仍待完成 |
 | encoder 图像与 RC 候选所有权 | Partial | G07/K15收尾覆盖实例私有池、普通/场/独立平面候选、创建层失败及RC最佳候选fatal回收；后续通道拒绝QP、成功重试和Reset租约平衡有回归。不改变QP搜索、码流或公共输出；自然GC/RSS及完整M8门禁未验收 |
-| decoder retained metadata 与 DPB 所有权 | Partial | G08 清空失败 frameState 的图像/场视图/运动/reference-ID 元数据，Reset 后 DPB Picture 归还池，错误恢复、输出 Release/Clone 和 decoder race 通过；未执行全库 race 与自然 GC/RSS 门禁 |
-| AU 容量与粘性错误状态 | Partial | G09 保持 Annex-B/AVCC 单NAL、NAL数量、输入/输出AU预算在封装前校验，AUReader 失败后清空 assembler/容量/参数集状态并禁止重复读取；超限与 writer 原子性测试、stream race 通过。G10 集成与全库 race 仍待完成 |
+| decoder retained metadata 与 DPB 所有权 | Partial | G08失败清尾与DPB Picture归池，K16仅复用临时数组；本轮集成全库race通过。DPB retained backing未池化，自然GC/RSS和长期门禁仍未验收 |
+| AU 容量与粘性错误状态 | Partial | G09保持既有封装前预算与独立Packet所有权；失败清尾/粘性错误/容量测试及本轮集成全库race通过。未新增封装算法，自然GC/RSS和长期门禁仍未验收 |
 | 串行临时元数据复用 | Partial | K16精简复用decoder表示级临时数组及encoder帧/候选元数据，活跃租约独占；各实例空闲缓存16MiB/最多三槽。DPB retained Motion/reference IDs/MBField仍按原生命周期，未做slice并行或宣称全codec零分配；前后端点与边界见performance及实施记录 |
 | decoder正常P/B宏块去分配 | Partial | K17以固定栈backing消除分区容器分配；prepared双熵/双位深、全部P/B分区及子类型、空间/时间direct和非零残差有像素/MV/读端与0分配断言。不宣称每slice初始化、MBAFF首次场引用或整个codec零分配 |
 | RC纯分析复用 | Partial | K20精简单AU复用AQ分类、权重与加权搜索参考，保留场/平面布局及QP/回调顺序；144帧旧RC指纹及失败换源重试通过。只降低已测重复分配，不宣称吞吐加速；无前瞻worker或ME执行器 |

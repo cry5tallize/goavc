@@ -267,14 +267,14 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | 有界 picture 缓存（G05） | 既有 `picture.Pool` 的实际 backing 字节预算、每桶上限、格式隔离和 Trim 账本 | Partial | `TestPool_BoundsFreeStorageAndCacheStats`、既有池复用/并发/格式隔离测试、picture race | 默认每 Pool 空闲预算 64 MiB，不限制活跃图像或 RSS；公共 Frame backing、encoder/decoder 所有权和全库 GC 证据仍待完成 |
 | 公共 Frame backing（G06） | `NewFrame`、新的 Frame 头、原始 backing 有界池、清零和输入/输出调用者迁移 | Partial | 根包 NewFrame 生命周期/错误/浅拷贝租约测试，decoder/encoder/stream 定向回归及 High10 值域保护 | 公共 Frame 头/租约仍允许少量分配；G07/G08 完整所有权、长期 GC/RSS、CLI 全路径和 M8 最终门禁仍待完成 |
 | encoder 图像/RC 所有权（G07/K15收尾） | Encoder 私有池与普通/场/独立平面候选唯一所有权；创建层失败、RC best fatal、拒绝/替换、Reset/Close 回收 | Partial | 低QP拒绝租约回归、后续场/平面QP拒绝与成功重试、既有RC/B和固定码流保护网 | 本轮补齐创建层失败与独立平面池接入；自然GC/RSS、完整长期所有权及M8门禁仍未验收 |
-| decoder retained metadata（G08） | frameState 失败状态清尾、DPB Picture Reset 归还、输出/重排队列生命周期保护 | Partial | decoder 生命周期/恢复测试、Reset 后 `d.pool.Stats()` 平衡、decoder race 及编解码定向测试 | 未执行全库 race；自然 GC/RSS、G09 AU 容量与 G10 集成门禁仍待完成 |
-| AU 容量与粘性失败（G09） | AUReader 失败状态清零、NAL/AU 输入输出容量边界和 Packet.Data 独立所有权 | Partial | AU 超限/语法/IO/重复读取测试、Annex-B/AVCC writer 容量测试、stream race | 未新增封装算法；自然 GC/RSS、G10 端到端集成与全库 race 仍待完成 |
+| decoder retained metadata（G08） | frameState 失败状态清尾、DPB Picture Reset 归还、输出/重排队列生命周期保护 | Partial | decoder生命周期/恢复、池账本；本轮集成全库race通过 | DPB retained backing未池化，临时复用见K16；自然GC/RSS及长期集成门禁仍未完成 |
+| AU 容量与粘性失败（G09） | AUReader 失败状态清零、NAL/AU 输入输出容量边界和 Packet.Data 独立所有权 | Partial | AU错误/重复读取、writer容量；本轮集成全库race通过 | 未新增封装算法；自然GC/RSS及长期集成门禁仍未完成 |
 | 串行元数据复用（K16精简） | decoder临时与DPB retained分离；encoder候选/场/平面独占租约；各实例空闲16MiB/三槽 | Partial | 六格式脏缓存像素、错误恢复、RC best保持与租约/预算测试；原端点五次before/after | 不是完整slice执行状态隔离；未池化DPB retained backing，未开启内部并行，GC/RSS与长稳未测 |
 | 正常P/B宏块去分配（K17切片） | 栈上固定分区backing，保留全部分区/子类型与读取顺序 | Partial | prepared CAVLC/CABAC、8/10位、P/B非零残差、空间/时间direct的像素/MV/身份/读端与0分配 | 不含每slice初始化、MBAFF首次场引用等完整K17配置门禁；不是整个decoder零分配 |
 | slice并行（K19收益准入） | 本轮暂不实施worker，保留原并行设计 | TODO | 实际h264probe：现有1080p基准每帧1slice，320×240控制语料每帧2slice | 不证明代表性多slice收益；owner-first/私有执行上下文与调度均未交付，Threads>1仍拒绝 |
 | RC纯分析复用（K20精简） | 单次RC调用九槽缓存AQ分类/权重/加权搜索参考；场/平面槽分离 | Partial | 改动前144帧RC码流/像素/时钟/QP/VBV SHA不变，固定权重失败换源重试对照，真实ABR前后五样本 | 无worker/跨帧pipeline，CQP不建缓存；时间未加速，GC/RSS未测，不是完整K20 |
 | ME候选并行（K20m范围决定） | 本轮暂不新增批执行器或候选worker | TODO | 现有串行搜索workspace/Scorer轨迹和零分配保护网保留 | 默认diamond/refine粒度小；尚无full-search代表性并行端点证据，不代表证明full-search无收益 |
-| 其余池化/去分配/并行（K15–K20m） | 所有权、slice/分析/ME | TODO | 既有串行测试保留 | Threads>1仍拒绝；G00仅补分配基线，完整GC测量待实施 |
+| 本轮集成验证（精简K15–K20m） | 各代码项独立常规门禁；受影响purego/386、六目标build、短fuzz与全库race | Partial | 12执行记录末尾含命令/退出结果/样本及日志SHA，生产代码cf1dd8feea | 并行未实施；NEON原生、自然GC/RSS、主目标长矩阵和完整M8门禁未验收 |
 
 ## M9
 
