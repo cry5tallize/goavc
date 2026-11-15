@@ -858,7 +858,29 @@ decoder 只复用表示级临时数组，DPB 的 Motion/reference IDs/MBField �
 
 新增入口为 `scripts/verify_m8.ps1` 的独立validation/performance阶段，详 [测量边界](m8-development/10_performance_and_release.md#8-本轮实际测量入口)。不支持Resume，不自动创建发布标签；Generic端点由purego二进制证明，不把旧基准名当后端诊断。
 
-本轮内核/MC基准入口烟测实际运行501个case，均为0B/op、0allocs/op；一次迭代只证明入口和分配，不用其纳秒值作正式性能结论。`tools/encodebench -measure` 的小型真实B/Lookahead调用完成六帧并报告完整输入/码流SHA、媒体时钟和本机12种runtime GC指标；进程GC包含测量开销且无显式预热，不能记为codec独占或warm-steady。
+完整微基准为501个实际case、每case五个100ms样本，共2505个正式样本，全部0B/op、0allocs/op；首次1x烟测不混入正式数字。完整样本及日志SHA见 [m8_kernel_samples.json](gates/m8_kernel_samples.json)，构建源码 `e299d8a125b84f768c0f8a48d18f6cdb18c31690`，HW-M2、Go1.27.4、CGO=0、GOAMD64=v1、GOMAXPROCS16。其他本次长测/构建均已停止，外部负载未监控。
 
 独立像素保护网的显式300帧长Oracle已执行720p及1080p，两尺寸均通过；它沿用原基线配置，不冒充High/B主目标。全库purego/386/测试标签及27条High10投影已实际执行。测试结果与正式性能样本分别归档，不将测试运行中的计时填入吞吐主表。
+
+### 16.1 内核五样本中位数
+
+单位ns/op，均为同输入/同包装的真实已实现后端。NEON本机未执行，不填0，不做跨CPU ISA排名；完整尾部/位深/矩阵/宽域/边界组合在JSON中。
+
+| 内核/输入 | Generic | SSE2 | AVX2 |
+|---|---:|---:|---:|
+| SAD 8-bit 16×16 | 210.9 | 34.41 | 8.712 |
+| SAD 10-bit 16×16 | 214.3 | 40.75 | 20.94 |
+| SATD 8-bit残差 4×4 | 28.45 | 14.45 | 23.50 |
+| MC整像素复制 8-bit 16×16 | 77.27 | 14.88 | 14.67 |
+| Forward4真实块入口 | 18.46 | 17.23 | 32.52 |
+| Forward8真实块入口 | 822.5 | 11460 | 12972 |
+| IDCT4真实块入口 | 27.80 | 176.0 | 197.7 |
+| IDCT8真实块入口 | 391.6 | 995.4 | 1026 |
+| Quant4 QP26/flat/inter | 22.38 | 203.9 | 227.6 |
+| Dequant8 QP26/flat/inter | 73.26 | 783.8 | 921.8 |
+| 亮度强滤波/竖边/Span4/8-bit | 89.11 | 104.6 | 114.9 |
+| ResidualAdd 8×8/10-bit/int32裁剪极值 | 73.87 | 236.5 | 256.7 |
+
+小批值ABI、gather/scatter及部分向量化并不保证提速；这些退化数字保留，不开启默认慢路。现有Auto只在实测获益槽选SSE2/AVX2，其余保留Generic。MC表行只证明整数复制，不是缺失的插值SIMD。Prepared量化的乘子准备在计时外；端点成本另计，不据此声称整个codec零分配。
+
 

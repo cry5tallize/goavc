@@ -170,11 +170,11 @@
 | SIMD去块候选 | Partial | K12仅向量化同一条line的强弱候选加法；阈值、条件访问、逐线/跨边顺序与帧场几何不变。x86方向/Span及最小邻域保护页通过；实测SIMD较慢，amd64默认保留Generic，不宣称整条边全SIMD |
 | SIMD残差加减 | Partial | K13接入picture重建与真实encoder减法，保持int32极端Clip1、10-bit低两位、各自stride及未写区域；SSE2/AVX2/NEON为固定值向量算术，尾部与gather/scatter由Go完成。x86保护页/局部0分配通过，amd64默认直接标量避免gather开销；NEON原生未验 |
 | SIMD边界矩阵 | Partial | K14覆盖所有现有内核类别及MC全相位，Windows Generic/Auto/SSE2/AVX2、purego、386保护页执行通过；Unix mmap辅助和六目标汇编vet/build/测试编译已交付。未执行Unix/NEON原生动态页验证，值ABI栈范围另以静态访问证明记录 |
-| 搜索工作区复用 | Partial | G01在真实编码器复用双位深Workspace，prepared Integer/Refine/Estimate含Scorer为0分配；旧回调轨迹/码流不变。完整配置的K18、池化与并行尚未完成 |
-| 帧间残差去分配 | Partial | G02在六格式/场/矩阵/两死区/4与8变换下，prepared真实帧间候选与重建0分配，384组改造前指纹不变；完整K18仍未完成 |
-| 帧内邻域去分配 | Partial | G03a的I4/I16/I8真实候选（含六格式、场、矩阵与QP边界）0分配；1152个旧候选指纹一致。完整配置/集成门禁与K18仍未完成 |
+| 搜索工作区复用 | Partial | G01在真实编码器复用双位深Workspace，prepared Integer/Refine/Estimate含Scorer为0分配；旧回调轨迹/码流不变。决策集成见G03b/K18，K16仍限串行复用，未开启内部并行 |
+| 帧间残差去分配 | Partial | G02在六格式/场/矩阵/两死区/4与8变换下，prepared真实帧间候选与重建0分配，384组改造前指纹不变；真实决策集成见G03b/K18，不宣称整个codec零分配 |
+| 帧内邻域去分配 | Partial | G03a的I4/I16/I8真实候选（六格式/场/矩阵/QP边界）0分配，1152个旧候选指纹一致；真实决策集成见G03b/K18，完整M8仍未验收 |
 | 真实模式决策试写复用 | Partial | G03b/K18收尾保留192个旧非空I/P/B指纹；完整决策0分配矩阵扩至六格式/场/独立444/4与8变换、flat/custom和最小QPY/26/51。端点QP允许合法PCM/全零胜者，但每个family/矩阵组必须覆盖非空压缩；恢复与真实试写在计量内。整个codec和完整M8仍未验收 |
-| 引用清尾与容器留存 | Partial | G04 已解除 picture pool 弹出槽、DPB 图像/运动/场元数据、NAL pending 及 decoder slice entries 的失效引用；池租约与固定码流保护网通过。G05 有界缓存、公共Frame backing、完整 codec 所有权和自然GC/稳态验收仍待完成 |
+| 引用清尾与容器留存 | Partial | G04解除picture/DPB/NAL/slice entries失效引用；有界缓存、Frame backing与所有权后续证据见G05/K15/K16。局部清尾不证明整个codec长期无泄漏 |
 | 有界 picture 空闲缓存 | Partial | G05 为既有 `picture.Pool` 增加每 Pool 64 MiB 空闲 backing 预算，按实际 `cap` 计费并保留每桶/格式隔离；超预算合法图像仍可处理但不缓存，`CacheStats` 与 Trim 账本测试通过。不代表活跃内存、RSS、公共 Frame backing 或完整 codec 所有权已完成 |
 | 公共 Frame backing 与迁移 | Partial | G06 提供 `NewFrame`、64 MiB 有界 backing 缓存、新 Frame 头、清零和一次性租约；decoder 输出、encoder Reconstruction/lookahead/B 输入及 YUVReader 已迁移，六格式/奇数尺寸/High10 校验回归通过。公共头/租约分配、G07/G08 所有权和最终 M8 门禁仍待完成 |
 | encoder 图像与 RC 候选所有权 | Partial | G07/K15收尾覆盖实例私有池、普通/场/独立平面候选、创建层失败及RC最佳候选fatal回收；后续通道拒绝QP、成功重试和Reset租约平衡有回归。不改变QP搜索、码流或公共输出；自然GC/RSS及完整M8门禁未验收 |
@@ -183,6 +183,7 @@
 | 串行临时元数据复用 | Partial | K16精简复用decoder表示级临时数组及encoder帧/候选元数据，活跃租约独占；各实例空闲缓存16MiB/最多三槽。DPB retained Motion/reference IDs/MBField仍按原生命周期，未做slice并行或宣称全codec零分配；前后端点与边界见performance及实施记录 |
 | decoder正常P/B宏块去分配 | Partial | K17以固定栈backing消除分区容器分配；prepared双熵/双位深、全部P/B分区及子类型、空间/时间direct和非零残差有像素/MV/读端与0分配断言。不宣称每slice初始化、MBAFF首次场引用或整个codec零分配 |
 | RC纯分析复用 | Partial | K20精简单AU复用AQ分类、权重与加权搜索参考，保留场/平面布局及QP/回调顺序；144帧旧RC指纹及失败换源重试通过。只降低已测重复分配，不宣称吞吐加速；无前瞻worker或ME执行器 |
+| M8测试与微基准收尾 | Partial | 本机全库purego/386/测试标签与完整race、两尺寸各300帧原长Oracle、55条CLI哈希和六格式×四码控FFmpeg像素通过；501类×五样本微基准0分配。NEON原生、未实现并行/MC插值及完整M8门禁不算通过 |
 
 ## 10. 流式I/O（M6）
 

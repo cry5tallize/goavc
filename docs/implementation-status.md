@@ -259,9 +259,9 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | 去块（K12） | 唯一共享亮度/色度算法，强弱候选部分向量化，保持逐线顺序和条件邻域访问 | Partial | 本机Generic/Auto/SSE2/AVX2强弱、方向/Span1/2/4与最小邻域保护页通过；领域解析测试保留 | 不是整条边全SIMD，不改变bS/阈值/slice权限；amd64默认候选加法保留Generic，实测SIMD较慢；NEON原生未验 |
 | 残差加减（K13） | 8/10-bit共享Clip1和Subtract，picture与编码真实残差循环迁移，R3精确放行picture | Partial | 本机四路径parity、int32极值、低两位、奇数stride/最小len逐行保护页及局部0分配通过 | gather/scatter与不足4采样尾部为Go，值ABI仅向量化加减；amd64默认直接标量避免gather开销，显式后端保留真实SIMD；NEON原生未验 |
 | 其余MC SIMD（K09b-d） | 现有整数复制之外的插值向量化 | TODO | 唯一Generic与全相位边界保护保留 | 不以本轮K10–K14工作冒充K09插值SIMD已完成 |
-| 搜索去逃逸（G01/K18前置） | caller-owned双位深Workspace，真实编码器跨帧/场/Reset复用，结束解除借用 | Partial | 32组改造前Scorer轨迹/结果，64组prepared零分配，强制x86/purego/386/M8指纹 | 仅搜索；完整配置的K18及K16所有权/资源门禁仍待完成 |
-| 残差去逃逸（G02/K18切片） | 具名调用唯一共享量化器、共同444亮度重建入口解除递归逃逸 | Partial | 384组改造前系数/CBP/重建指纹；六格式/场/矩阵/两死区/4与8变换的真实残差和四种帧间分区0分配 | 完整K18未完成，不新增量化策略或SIMD量化 |
-| 帧内邻域（G03a/K18切片） | 调用者栈上固定邻域槽；相同可用性预检避免枚举不可用模式的错误分配 | Partial | 1152个旧I4/I16/I8候选指纹、六格式/场/矩阵/QP的prepared帧内候选0分配、邻域并存/清零解析值 | 完整K18仍待所有配置/正常MB集成门禁，不把单候选零分配扩大为整个库 |
+| 搜索去逃逸（G01/K18前置） | caller-owned双位深Workspace，真实编码器跨帧/场/Reset复用，结束解除借用 | Partial | 32组改造前Scorer轨迹/结果，64组prepared零分配，强制x86/purego/386/M8指纹 | 该行仅搜索；完整决策保护网见G03b，K16仍是串行租约复用，未开并行 |
+| 残差去逃逸（G02/K18切片） | 具名调用唯一共享量化器、共同444亮度重建入口解除递归逃逸 | Partial | 384组改造前系数/CBP/重建指纹；六格式/场/矩阵/两死区/4与8变换的真实残差和四种帧间分区0分配 | 该行仅残差，完整决策见G03b；不新增量化策略或SIMD量化 |
+| 帧内邻域（G03a/K18切片） | 调用者栈上固定邻域槽；相同可用性预检避免枚举不可用模式的错误分配 | Partial | 1152个旧I4/I16/I8候选指纹、六格式/场/矩阵/QP的prepared帧内候选0分配、邻域并存/清零解析值 | 该行仅单候选，完整决策见G03b；不将局部零分配扩大为整个库 |
 | 真实试写（G03b/K18收尾） | 串行lane的RD/正式MB独立Writer复用；有效位追加；CAVLC固定level预检 | Partial | 原192个非空决策指纹；新增六格式/场/独立444/4与8变换、flat/custom、最小QPY/26/51完整决策0分配；错误后复用 | 极端QP允许合法PCM/全零胜者，每个矩阵family仍强制覆盖非空压缩；不是整个codec零分配，完整M8未验收 |
 | 引用清尾（G04） | picture pool、DPB retained metadata、NAL pending、decoder slice entries 的失效引用清理 | Partial | `TestPool_GetClearsReleasedSlotAndEmptyBucket`、`TestReferences_RemoveClearsRetainedState`、`TestAssembler_ClearConsumedUnitSlots`、`TestDecoder_ClearSliceEntries`及四包定向测试 | 仅解除已确认的容器留存；有界缓存、公共Frame backing、编码/解码完整所有权及自然GC/稳态指标仍待完成 |
 | 有界 picture 缓存（G05） | 既有 `picture.Pool` 的实际 backing 字节预算、每桶上限、格式隔离和 Trim 账本 | Partial | `TestPool_BoundsFreeStorageAndCacheStats`、既有池复用/并发/格式隔离测试、picture race | 默认每 Pool 空闲预算 64 MiB，不限制活跃图像或 RSS；公共 Frame backing、encoder/decoder 所有权和全库 GC 证据仍待完成 |
@@ -274,7 +274,9 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | slice并行（K19收益准入） | 本轮暂不实施worker，保留原并行设计 | TODO | 实际h264probe：现有1080p基准每帧1slice，320×240控制语料每帧2slice | 不证明代表性多slice收益；owner-first/私有执行上下文与调度均未交付，Threads>1仍拒绝 |
 | RC纯分析复用（K20精简） | 单次RC调用九槽缓存AQ分类/权重/加权搜索参考；场/平面槽分离 | Partial | 改动前144帧RC码流/像素/时钟/QP/VBV SHA不变，固定权重失败换源重试对照，真实ABR前后五样本 | 无worker/跨帧pipeline，CQP不建缓存；时间未加速，GC/RSS未测，不是完整K20 |
 | ME候选并行（K20m范围决定） | 本轮暂不新增批执行器或候选worker | TODO | 现有串行搜索workspace/Scorer轨迹和零分配保护网保留 | 默认diamond/refine粒度小；尚无full-search代表性并行端点证据，不代表证明full-search无收益 |
-| 本轮集成验证（精简K15–K20m） | 各代码项独立常规门禁；受影响purego/386、六目标build、短fuzz与全库race | Partial | 12执行记录末尾含命令/退出结果/样本及日志SHA，生产代码cf1dd8feea | 并行未实施；NEON原生、自然GC/RSS、主目标长矩阵和完整M8门禁未验收 |
+| K15–K20m阶段集成验证 | 各代码项独立常规门禁；受影响purego/386、六目标build、短fuzz与全库race | Partial | 12执行记录含命令/结果/日志SHA，codec生产算法cf1dd8feea | 仅已授权精简切片，不签完整M8；本轮剩余测试与性能证据另列 |
+| K21已实现内核基准 | 501个实际case，覆盖双位深/边界/尾部/矩阵/宽域及真实可用后端 | Partial | 2505个正式100ms样本全部0B/0alloc；完整原始值和SHA见gates/m8_kernel_samples.json | 源码e299d8a125；NEON未原生运行，MC插值仍Generic，不伪称完整后端交付 |
+| M8剩余功能验证 | 非缓存全库、显式双尺寸300帧Oracle、全库purego/386/测试标签、CLI、race | Partial | 全库race及定向purego race、55语料实际CLI、六格式×四码控24组FFmpeg像素和六目标汇编编译通过 | 保留analytic/FFmpeg来源和NEON跳过；早期PS中文JSON事件损伤已登记，不把可解析子事件当完整计数 |
 
 ## M9
 
