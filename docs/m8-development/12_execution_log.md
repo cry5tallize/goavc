@@ -74,3 +74,9 @@ A00：`CGO_ENABLED=0 go test -count=1 -run '^TestM8Baseline_SerialOutput$' ./tes
 ### 独立修复：缺 FFmpeg 仍执行基线回归
 
 从 `7caf104` 开始；外部Oracle比较移到子测试，缺工具只跳过该子项，父测试仍校验全部12组固定指纹。新增清空PATH的定向回归，确认缺FFmpeg时父测试通过且各Oracle子项显式跳过；有工具的正常测试继续执行实际比较。`go test -count=1 -run '^TestM8Baseline_' -v ./tests/codec` 和完整常规门禁均退出0，日志 `tmp/m8-baseline/baseline-{no-ffmpeg,fix-verify}.txt`。此项单独fix提交，不与向量功能混合。
+
+### K06：NEON SAD 编译交付
+
+从 `360277b` 开始；arm64基线ASIMD，宽16正常生产调用进入真实向量计算。byte每行一个16字节向量，以unsigned max-min求差并扩宽归约后转64位累加；uint16每行两组8采样，分别扩宽到32位归约后转64位累加。其他宽度绑定包装中的唯一Generic，不能将这些fallback记为NEON运算。加入直接后端parity/基准及测试限定强制入口，留待原生环境执行；不含可选扩展，不复制另一份Generic。
+
+按用户明确范围完成编译验收：`CGO_ENABLED=0 GOARCH=arm64 GOOS={windows,linux,darwin} go vet ./internal/simd`、含 `goavc_simdtest` 的 `go test -c` 均退出0。随后windows/linux/darwin × amd64/arm64六目标全库 `go build ./...` 与simd后端测试二进制全部构建成功；native完整常规门禁、purego目标包也退出0（`tmp/m8-baseline/k06-verify.txt`）。没有运行任何arm64二进制，没有NEON五次基准/Oracle/parity数据，支持状态保留WIP。完整M8未完成。

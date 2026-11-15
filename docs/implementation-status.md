@@ -247,7 +247,8 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | parity框架（K03） | 固定种子矩形/stride/offset/最小len、输入不变、测试标签强制及生产包装0分配 | Partial | `simd/parity_test.go`、`backend_testing_test.go`、search后端测试 | 当前仅Generic实际执行；向量后端按交付追加，guard-page在K14补齐 |
 | SSE2 SAD（K04） | byte/原生10-bit矩形，16/8/4窄加载与标量尾部，64位累加 | Partial | 直接后端parity、独立最大值、强制搜索双位深、M7固定指纹 | 仅SAD；其他kernel及AVX2/NEON待实施，保护页属于K14 |
 | AVX2 SAD（K05） | width16的8/10-bit真实AVX2，其他宽度复用SSE2 | Partial | AVX2直接parity、强制搜索、M7指纹 | 逐槽AVX2诊断表示此快路覆盖域，非16宽实际为SSE2；其余kernel未完成 |
-| 其余SIMD内核（K06–K14） | NEON及SATD/MC/变换/量化/去块/残差、边界证明 | TODO | 待实施 | 不据SAD的加速推定端点或其他kernel已完成 |
+| NEON SAD（K06） | width16的8/10-bit基线NEON，其他矩形复用Generic | WIP | 原生parity/bench测试入口已交付；三种arm64交叉vet/测试构建 | 用户指定只做编译验收；未原生执行，不提供虚构NEON性能或正确性通过声明 |
+| 其余SIMD内核（K07–K14） | SATD/MC/变换/量化/去块/残差、边界证明 | TODO | 待实施 | 不据SAD的加速推定端点或其他kernel已完成 |
 | 池化/去分配/并行（K15–K20m） | 所有权、slice/分析/ME | TODO | 既有串行测试保留 | Threads>1仍拒绝 |
 
 ## M9

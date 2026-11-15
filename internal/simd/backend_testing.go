@@ -43,6 +43,12 @@ func testBackendTable(backend Backend) (kernelTable, error) {
 			return table, nil
 		}
 	}
+	if backend == NEON && nativeCPU.neon {
+		table := selectKernels(cpuFeatures{neon: true})
+		if table.backends.SAD8 == NEON && table.backends.SAD16 == NEON {
+			return table, nil
+		}
+	}
 	// 只有交付真实计算后端后才能扩展；CPU支持不能代替实现。
 	return kernelTable{}, ErrBackendUnavailable
 }
