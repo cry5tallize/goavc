@@ -280,3 +280,7 @@ K10a补充：CGO=0帧间编码fuzz smoke 5s/1432exec退出0；CGO=1 simd/transfo
 ### K10c前置：Forward8x8共享 Generic 迁移
 
 将 `internal/transform/eight.go` 中唯一的 Forward8x8 正变换实现迁入 `internal/simd/forward8_generic.go`，领域层保留原签名适配；没有新增伪造的 SIMD backend 槽。该迁移保持 `[64]int32` 原地契约、int64 中间域、基底/舍入和输出顺序不变。`CGO_ENABLED=0 go test -count=1 ./internal/simd ./internal/transform ./encoder ./decoder` 通过；AVX2/NEON Forward8x8、逆变换及 K10 完整边界矩阵仍未交付。
+
+### K10d：4×4/8×8逆变换共享 Generic 迁移
+
+将 `IDCT4x4`、`IDCT4x4DC` 和 `IDCT8x8` 的唯一算术实现迁入 `internal/simd/idct4_generic.go`、`idct8_generic.go`，`internal/transform` 仅保留错误/公共 API 适配。保持原地别名、算术右移顺序、int64 临时域、8×8 溢出分类和不裁剪残差语义。受影响 transform/encoder/decoder 测试、purego 测试、全库 vet/build/test、depscheck 均通过；真实 AVX2/NEON 逆变换后端、量化/去块/残差和 K14 完整边界矩阵仍未完成。
