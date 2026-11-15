@@ -37,6 +37,12 @@ func testBackendTable(backend Backend) (kernelTable, error) {
 			return table, nil
 		}
 	}
+	if backend == AVX2 && nativeCPU.avx2 {
+		table := selectKernels(cpuFeatures{sse2: true, avx2: true})
+		if table.backends.SAD8 == AVX2 && table.backends.SAD16 == AVX2 {
+			return table, nil
+		}
+	}
 	// 只有交付真实计算后端后才能扩展；CPU支持不能代替实现。
 	return kernelTable{}, ErrBackendUnavailable
 }

@@ -11,6 +11,27 @@ func TestParity_SSE2SAD(t *testing.T) {
 	checkSADParity(t, selectKernels(cpuFeatures{sse2: true}))
 }
 
+func TestParity_AVX2SAD(t *testing.T) {
+	if !nativeCPU.avx2 {
+		t.Skip("当前CPU/OS不能执行AVX2，未执行")
+	}
+	checkSADParity(t, selectKernels(cpuFeatures{sse2: true, avx2: true}))
+}
+
+func BenchmarkSAD8_16x16_AVX2(b *testing.B) {
+	if !nativeCPU.avx2 {
+		b.Skip("当前CPU/OS不能执行AVX2，未执行")
+	}
+	benchmarkSAD8(b, sad8AVX2)
+}
+
+func BenchmarkSAD16_16x16_AVX2(b *testing.B) {
+	if !nativeCPU.avx2 {
+		b.Skip("当前CPU/OS不能执行AVX2，未执行")
+	}
+	benchmarkSAD16(b, sad16AVX2)
+}
+
 func TestDispatch_MissingCPUUsesGeneric(t *testing.T) {
 	table := selectKernels(cpuFeatures{})
 	if table.backends != (Backends{}) {

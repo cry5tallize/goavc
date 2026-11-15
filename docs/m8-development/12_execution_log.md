@@ -58,3 +58,15 @@ A00：`CGO_ENABLED=0 go test -count=1 -run '^TestM8Baseline_SerialOutput$' ./tes
 本机SSE2直接后端及强制搜索（含10位低两位、负MV、全幅Scorer）通过；12配置M7码流/元数据/像素指纹不变，FFmpeg逐采样通过。完整常规门禁、purego目标包通过，`go tool objdump -s 'simd.sad(8|16)SSE2'` 得到实际汇编并核对仅SSE2/基线整数指令。首轮构建修正Go汇编使用的PMADDWL名称后重新验证。最小len矩阵和每行最大访问范围已核对；K14保护页尚未执行，不把canary/parity等同动态越读证明。
 
 同机五次微基准及原始日志SHA见 `docs/gates/m8_sad_samples.json`，kernel均0 B/op、0 allocs/op。真实P消费者实际后端SSE2（沿用旧函数名 `_Generic`，不能据名字称其为标量）五次ns/op为2102411500、2101213600、2104698700、2089643800、2099128300，中位2101213600；对照K02中位2243312300。分发造成的额外临时分配仍未解决，不声称整体模式决策零分配。日志在 `tmp/m8-baseline/k04-{parity,verify,sad-bench,encoder-p-bench}.txt`；原生NEON和完整race未执行。
+
+### K05：AVX2 SAD
+
+从 `311a449` 开始；宽16的byte路径将两条独立16字节行拼成YMM，奇数末行只加载16字节并清零高半部；uint16每行16采样恰为32字节。unsigned差值扩为qword累加，退出VZEROUPPER，不依赖BMI/FMA。其他宽度明确走SSE2，包括7×13等尾部场景；逐槽AVX2诊断表示绑定该混合包装，不能把非16宽的实际计算记为AVX2。
+
+`go test -tags goavc_simdtest -count=1 -v ./internal/simd ./internal/motion/search` 在原生amd64执行Generic/SSE2/AVX2直接与真实搜索路径，只有NEON跳过；固定96帧指纹和FFmpeg不变。完整常规门禁及purego目标包退出0，反汇编文件 `tmp/m8-baseline/k05-avx2-disassembly.txt`；全部常规Go命令CGO=0、GOAMD64=v1。
+
+各后端五次微基准原始样本追加至 `docs/gates/m8_sad_samples.json`，均0分配。真实P消费者实际Auto=AVX2/SSE2，五次ns/op为2106986600、2080791300、2129799700、2072790900、2151368700，中位2106986600，较K04端点无明显额外收益，不能用microbench倍率承诺端点提速。临时window分配问题仍在K18。原始日志 `tmp/m8-baseline/k05-{parity,verify,sad-bench,encoder-p-bench}.txt`。
+
+### arm64 验收范围调整
+
+用户明确确认没有arm64机器，要求“做了能过编译就行”。本次arm64工作按实现与六目标交叉构建交付，不等待原生runner；原实施门禁中的NEON原生parity/Oracle/性能仍记未执行，不能据交叉构建宣称这些证据存在。此调整不取消其他平台、正确性、所有权及并行门禁。

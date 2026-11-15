@@ -7,7 +7,8 @@
     "GOMAXPROCS":  16,
     "sourceBases":  {
                         "k04":  "2a99d40",
-                        "k03":  "5b9fa20"
+                        "k03":  "5b9fa20",
+                        "k05":  "311a449"
                     },
     "dirtyBuild":  true,
     "sourceNote":  "阶段修改先完成测试/测量再提交；实际文件见该任务后继提交。样本方差较大，未监控外部负载，不挑选最快值。",
@@ -43,7 +44,8 @@
                                          "allocationsPerOp":  0
                                      }
                                  ],
-                     "rawLogSHA256":  "b70fe239df4c207675aca4fd5760b848d300e5402e48c7f420f3322664244609"
+                     "rawLogSHA256":  "b70fe239df4c207675aca4fd5760b848d300e5402e48c7f420f3322664244609",
+                     "actualBackend":  "Generic"
                  },
                  {
                      "phase":  "k03",
@@ -76,7 +78,8 @@
                                          "allocationsPerOp":  0
                                      }
                                  ],
-                     "rawLogSHA256":  "b70fe239df4c207675aca4fd5760b848d300e5402e48c7f420f3322664244609"
+                     "rawLogSHA256":  "b70fe239df4c207675aca4fd5760b848d300e5402e48c7f420f3322664244609",
+                     "actualBackend":  "Generic"
                  },
                  {
                      "phase":  "k03",
@@ -109,7 +112,8 @@
                                          "allocationsPerOp":  0
                                      }
                                  ],
-                     "rawLogSHA256":  "b70fe239df4c207675aca4fd5760b848d300e5402e48c7f420f3322664244609"
+                     "rawLogSHA256":  "b70fe239df4c207675aca4fd5760b848d300e5402e48c7f420f3322664244609",
+                     "actualBackend":  "Generic"
                  },
                  {
                      "phase":  "k03",
@@ -142,7 +146,8 @@
                                          "allocationsPerOp":  0
                                      }
                                  ],
-                     "rawLogSHA256":  "b70fe239df4c207675aca4fd5760b848d300e5402e48c7f420f3322664244609"
+                     "rawLogSHA256":  "b70fe239df4c207675aca4fd5760b848d300e5402e48c7f420f3322664244609",
+                     "actualBackend":  "Generic"
                  },
                  {
                      "phase":  "k04",
@@ -175,7 +180,8 @@
                                          "allocationsPerOp":  0
                                      }
                                  ],
-                     "rawLogSHA256":  "a9cc55452cf3c15d8217f9a12090990595c974fdd85cc12431314b391556bf2f"
+                     "rawLogSHA256":  "a9cc55452cf3c15d8217f9a12090990595c974fdd85cc12431314b391556bf2f",
+                     "actualBackend":  "SSE2"
                  },
                  {
                      "phase":  "k04",
@@ -208,7 +214,8 @@
                                          "allocationsPerOp":  0
                                      }
                                  ],
-                     "rawLogSHA256":  "a9cc55452cf3c15d8217f9a12090990595c974fdd85cc12431314b391556bf2f"
+                     "rawLogSHA256":  "a9cc55452cf3c15d8217f9a12090990595c974fdd85cc12431314b391556bf2f",
+                     "actualBackend":  "SSE2"
                  },
                  {
                      "phase":  "k04",
@@ -241,7 +248,8 @@
                                          "allocationsPerOp":  0
                                      }
                                  ],
-                     "rawLogSHA256":  "a9cc55452cf3c15d8217f9a12090990595c974fdd85cc12431314b391556bf2f"
+                     "rawLogSHA256":  "a9cc55452cf3c15d8217f9a12090990595c974fdd85cc12431314b391556bf2f",
+                     "actualBackend":  "Generic"
                  },
                  {
                      "phase":  "k04",
@@ -274,7 +282,8 @@
                                          "allocationsPerOp":  0
                                      }
                                  ],
-                     "rawLogSHA256":  "a9cc55452cf3c15d8217f9a12090990595c974fdd85cc12431314b391556bf2f"
+                     "rawLogSHA256":  "a9cc55452cf3c15d8217f9a12090990595c974fdd85cc12431314b391556bf2f",
+                     "actualBackend":  "Generic"
                  },
                  {
                      "phase":  "k04",
@@ -307,7 +316,8 @@
                                          "allocationsPerOp":  0
                                      }
                                  ],
-                     "rawLogSHA256":  "a9cc55452cf3c15d8217f9a12090990595c974fdd85cc12431314b391556bf2f"
+                     "rawLogSHA256":  "a9cc55452cf3c15d8217f9a12090990595c974fdd85cc12431314b391556bf2f",
+                     "actualBackend":  "SSE2"
                  },
                  {
                      "phase":  "k04",
@@ -340,7 +350,280 @@
                                          "allocationsPerOp":  0
                                      }
                                  ],
-                     "rawLogSHA256":  "a9cc55452cf3c15d8217f9a12090990595c974fdd85cc12431314b391556bf2f"
+                     "rawLogSHA256":  "a9cc55452cf3c15d8217f9a12090990595c974fdd85cc12431314b391556bf2f",
+                     "actualBackend":  "SSE2"
+                 },
+                 {
+                     "phase":  "k05",
+                     "name":  "BenchmarkSAD8_16x16_AVX2",
+                     "backendAuto":  "AVX2",
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  9.202,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  8.959,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  9.328,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  9.693,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  8.952,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "b0dccc03874b4247d4d9e5d9a5d2ae7604e577efa6e1408beaf2bdbd9284abfd",
+                     "actualBackend":  "AVX2"
+                 },
+                 {
+                     "phase":  "k05",
+                     "name":  "BenchmarkSAD16_16x16_AVX2",
+                     "backendAuto":  "AVX2",
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  13.22,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  13.18,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  13.41,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  13.13,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  13.41,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "b0dccc03874b4247d4d9e5d9a5d2ae7604e577efa6e1408beaf2bdbd9284abfd",
+                     "actualBackend":  "AVX2"
+                 },
+                 {
+                     "phase":  "k05",
+                     "name":  "BenchmarkSAD8_16x16_SSE2",
+                     "backendAuto":  "AVX2",
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  27.85,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  27.67,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  27.64,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  27.63,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  27.64,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "b0dccc03874b4247d4d9e5d9a5d2ae7604e577efa6e1408beaf2bdbd9284abfd",
+                     "actualBackend":  "SSE2"
+                 },
+                 {
+                     "phase":  "k05",
+                     "name":  "BenchmarkSAD16_16x16_SSE2",
+                     "backendAuto":  "AVX2",
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  38.8,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  39.65,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  39.18,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  39.29,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  38.98,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "b0dccc03874b4247d4d9e5d9a5d2ae7604e577efa6e1408beaf2bdbd9284abfd",
+                     "actualBackend":  "SSE2"
+                 },
+                 {
+                     "phase":  "k05",
+                     "name":  "BenchmarkSAD8_16x16_Generic",
+                     "backendAuto":  "AVX2",
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  196.8,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  202.2,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  253.2,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  260.5,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  263.6,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "b0dccc03874b4247d4d9e5d9a5d2ae7604e577efa6e1408beaf2bdbd9284abfd",
+                     "actualBackend":  "Generic"
+                 },
+                 {
+                     "phase":  "k05",
+                     "name":  "BenchmarkSAD16_16x16_Generic",
+                     "backendAuto":  "AVX2",
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  214.8,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  261.8,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  261.7,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  260.3,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  195.9,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "b0dccc03874b4247d4d9e5d9a5d2ae7604e577efa6e1408beaf2bdbd9284abfd",
+                     "actualBackend":  "Generic"
+                 },
+                 {
+                     "phase":  "k05",
+                     "name":  "BenchmarkSAD8_16x16_Auto",
+                     "backendAuto":  "AVX2",
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  10.21,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  10.03,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  10.25,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  10.72,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  10.12,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "b0dccc03874b4247d4d9e5d9a5d2ae7604e577efa6e1408beaf2bdbd9284abfd",
+                     "actualBackend":  "AVX2"
+                 },
+                 {
+                     "phase":  "k05",
+                     "name":  "BenchmarkSAD16_16x16_Auto",
+                     "backendAuto":  "AVX2",
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  13.84,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  14.95,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  15.11,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  14.91,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     },
+                                     {
+                                         "nsPerOp":  13.93,
+                                         "bytesPerOp":  0,
+                                         "allocationsPerOp":  0
+                                     }
+                                 ],
+                     "rawLogSHA256":  "b0dccc03874b4247d4d9e5d9a5d2ae7604e577efa6e1408beaf2bdbd9284abfd",
+                     "actualBackend":  "AVX2"
                  }
              ]
 }

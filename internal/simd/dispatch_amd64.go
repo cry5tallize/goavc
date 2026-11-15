@@ -7,5 +7,9 @@ func platformKernels(cpu cpuFeatures, table kernelTable) kernelTable {
 		table.sad8, table.sad16 = sad8SSE2, sad16SSE2
 		table.backends = Backends{SAD8: SSE2, SAD16: SSE2}
 	}
+	if cpu.sse2 && cpu.avx2 {
+		table.sad8, table.sad16 = sad8AVX2, sad16AVX2
+		table.backends = Backends{SAD8: AVX2, SAD16: AVX2}
+	}
 	return table
 }
