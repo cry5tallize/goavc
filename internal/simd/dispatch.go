@@ -28,22 +28,25 @@ func (b Backend) String() string {
 type sad8Func func(a []byte, as int, b []byte, bs, width, height int) int
 type sad16Func func(a []uint16, as int, b []uint16, bs, width, height int) int
 type satd4Func func([16]int32) int
+type forward4Func func([16]int32) [16]int32
 
 // Backends 是逐槽诊断快照。仅随真实内核迁移增加字段，不预建未来空槽。
 type Backends struct {
 	SAD8, SAD16 Backend
 	SATD4x4     Backend
+	Forward4x4  Backend
 }
 
 type kernelTable struct {
 	sad8     sad8Func
 	sad16    sad16Func
 	satd4    satd4Func
+	forward4 forward4Func
 	backends Backends
 }
 
 func genericTable() kernelTable {
-	return kernelTable{sad8: sadGeneric[byte], sad16: sadGeneric[uint16], satd4: satd4Generic}
+	return kernelTable{sad8: sadGeneric[byte], sad16: sadGeneric[uint16], satd4: satd4Generic, forward4: forward4Generic}
 }
 
 // 生产表初始化后不变；测试强制入口将在专用构建标签内提供。
@@ -86,3 +89,6 @@ func SAD16(a []uint16, as int, b []uint16, bs, width, height int) int {
 // SATD4x4 保持Hadamard的(sumAbs+1)>>1，输入为8/10-bit像素差。
 // 固定数组按值传递，间接调用不保留领域栈上残差的指针或造成其逃逸。
 func SATD4x4(src [16]int32) int { return kernels.satd4(src) }
+
+// Forward4x4 返回共享正变换系数；值参数允许领域入口原地操作且不使局部残差逃逸。
+func Forward4x4(src [16]int32) [16]int32 { return kernels.forward4(src) }

@@ -165,6 +165,7 @@
 | RD 模式决策（J = D + λR） | Conformant | 定点lambda、三平面SSE、Skip/P/I4/I16/PCM；P/B两种死区保留原候选按J选优。完整长质量矩阵通过；CABAC率仍为CAVLC代理，不宣称全局最优 |
 | 自适应 QP | Conformant | M5b 活动度 QP 选项 0..6、QP 0..51 裁剪，默认关闭，显式回调/PCM 冲突拒绝 |
 | SSE2 / AVX2 / NEON | Partial | M8的8/10-bit SAD：SSE2通用矩形、AVX2宽16；x86 SATD4×4默认优选SSE2并保留AVX2。NEON SAD宽16/SATD4×4已交叉构建，原生未验证（用户指定编译验收）。其余kernel待实施，不声明完整M8通过 |
+| SIMD 4×4正变换 | Partial | K10a共享Forward4x4已接入SSE2，局部/原地零分配、解析基底与码流不变；AVX2机器也选SSE2此槽。其余正逆变换和NEON/AVX2变换未完成 |
 | 搜索工作区复用 | Partial | G01在真实编码器复用双位深Workspace，prepared Integer/Refine/Estimate含Scorer为0分配；旧回调轨迹/码流不变。完整配置的K18、池化与并行尚未完成 |
 | 帧间残差去分配 | Partial | G02在六格式/场/矩阵/两死区/4与8变换下，prepared真实帧间候选与重建0分配，384组改造前指纹不变；完整K18仍未完成 |
 | 帧内邻域去分配 | Partial | G03a的I4/I16/I8真实候选（含六格式、场、矩阵与QP边界）0分配；1152个旧候选指纹一致。完整配置/集成门禁与K18仍未完成 |

@@ -1,0 +1,353 @@
+{
+    "base":  "1e4effe",
+    "scope":  "K10a SSE2 Forward4x4 only",
+    "environment":  "Go1.27.4 windows/amd64 Ryzen7 5700X CGO=0 GOAMD64=v1 GOMAXPROCS16",
+    "workingTree":  "Original docs and picture/pool.go changes preserved; other memory work already in base; no GC changes in this task",
+    "before":  "Existing scalar transform before migration",
+    "after":  "Successor K10a commit, dirty during measurement",
+    "backends":  "SAD AVX2 width16/SSE2 otherwise, SATD SSE2, Forward4x4 SSE2, MC Generic",
+    "coverage":  "Independent basis impulses ±1023/255/3/1; 5000 seeded legal and full-int32 modulo parity; local residual and in-place 0 allocations; no raw external pointer in assembly",
+    "runs":  [
+                 {
+                     "log":  "k10a-micro.txt",
+                     "sha256":  "f986ee60472e73df8fcc2f1a63ba50b1e4173d3ee082c30033823ae7beeea51a",
+                     "samples":  [
+                                     {
+                                         "name":  "BenchmarkForward4x4_4x4_SSE2-16",
+                                         "ns":  10.58,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4_4x4_SSE2-16",
+                                         "ns":  10.41,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4_4x4_SSE2-16",
+                                         "ns":  10.42,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4_4x4_SSE2-16",
+                                         "ns":  10.51,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4_4x4_SSE2-16",
+                                         "ns":  10.44,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4_4x4_Generic-16",
+                                         "ns":  14.79,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4_4x4_Generic-16",
+                                         "ns":  14.72,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4_4x4_Generic-16",
+                                         "ns":  14.95,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4_4x4_Generic-16",
+                                         "ns":  16.98,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4_4x4_Generic-16",
+                                         "ns":  15.05,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4_4x4_Auto-16",
+                                         "ns":  18.44,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4_4x4_Auto-16",
+                                         "ns":  18.54,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4_4x4_Auto-16",
+                                         "ns":  18.61,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4_4x4_Auto-16",
+                                         "ns":  22.39,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4_4x4_Auto-16",
+                                         "ns":  28.87,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     }
+                                 ]
+                 },
+                 {
+                     "log":  "k10a-dispatch-micro.txt",
+                     "sha256":  "669942f1bc30ee2e76674a2e010d65310a4396aab2b5cf0b12dd59acd8a13fc3",
+                     "samples":  [
+                                     {
+                                         "name":  "BenchmarkForward4x4Dispatch_4x4_Generic-16",
+                                         "ns":  20.09,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4Dispatch_4x4_Generic-16",
+                                         "ns":  20.44,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4Dispatch_4x4_Generic-16",
+                                         "ns":  20.29,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4Dispatch_4x4_Generic-16",
+                                         "ns":  19.67,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4Dispatch_4x4_Generic-16",
+                                         "ns":  20,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4Dispatch_4x4_SSE2-16",
+                                         "ns":  20.97,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4Dispatch_4x4_SSE2-16",
+                                         "ns":  21,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4Dispatch_4x4_SSE2-16",
+                                         "ns":  21,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4Dispatch_4x4_SSE2-16",
+                                         "ns":  21.14,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForward4x4Dispatch_4x4_SSE2-16",
+                                         "ns":  20.98,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     }
+                                 ]
+                 },
+                 {
+                     "log":  "k10a-consumer-micro.txt",
+                     "sha256":  "981df007d689fea4944933e062b97054ede0aac48d6cec0960b93e93a25ee70a",
+                     "samples":  [
+                                     {
+                                         "name":  "BenchmarkForwardConsumer_4x4_Generic-16",
+                                         "ns":  15.53,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForwardConsumer_4x4_Generic-16",
+                                         "ns":  16.32,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForwardConsumer_4x4_Generic-16",
+                                         "ns":  15.89,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForwardConsumer_4x4_Generic-16",
+                                         "ns":  15.35,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForwardConsumer_4x4_Generic-16",
+                                         "ns":  15.36,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForwardConsumer_4x4_SSE2-16",
+                                         "ns":  15.13,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForwardConsumer_4x4_SSE2-16",
+                                         "ns":  15.45,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForwardConsumer_4x4_SSE2-16",
+                                         "ns":  15.01,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForwardConsumer_4x4_SSE2-16",
+                                         "ns":  15.14,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     },
+                                     {
+                                         "name":  "BenchmarkForwardConsumer_4x4_SSE2-16",
+                                         "ns":  15.12,
+                                         "bytes":  0,
+                                         "allocs":  0
+                                     }
+                                 ]
+                 },
+                 {
+                     "log":  "k10a-endpoint-before.txt",
+                     "sha256":  "208c7bb4144c24631591bb62231bc8d89d4dbdeee3f0ea4f2e28a123b69a85a2",
+                     "samples":  [
+                                     {
+                                         "name":  "BenchmarkEncoderP_720p_Generic-16",
+                                         "ns":  1052376400,
+                                         "bytes":  3282280,
+                                         "allocs":  42
+                                     },
+                                     {
+                                         "name":  "BenchmarkEncoderP_720p_Generic-16",
+                                         "ns":  988533400,
+                                         "bytes":  3282296,
+                                         "allocs":  42
+                                     },
+                                     {
+                                         "name":  "BenchmarkEncoderP_720p_Generic-16",
+                                         "ns":  886856700,
+                                         "bytes":  3282296,
+                                         "allocs":  42
+                                     },
+                                     {
+                                         "name":  "BenchmarkEncoderP_720p_Generic-16",
+                                         "ns":  858697700,
+                                         "bytes":  3282296,
+                                         "allocs":  42
+                                     },
+                                     {
+                                         "name":  "BenchmarkEncoderP_720p_Generic-16",
+                                         "ns":  887134400,
+                                         "bytes":  3282296,
+                                         "allocs":  42
+                                     }
+                                 ]
+                 },
+                 {
+                     "log":  "k10a-endpoint-after.txt",
+                     "sha256":  "2ef06b8ec58281ccc7f91b1322faaba1052c5e2e7f10a31423cf371ae4e50cf8",
+                     "samples":  [
+                                     {
+                                         "name":  "BenchmarkEncoderP_720p_Generic-16",
+                                         "ns":  905092200,
+                                         "bytes":  3287488,
+                                         "allocs":  49
+                                     },
+                                     {
+                                         "name":  "BenchmarkEncoderP_720p_Generic-16",
+                                         "ns":  937174000,
+                                         "bytes":  3282408,
+                                         "allocs":  43
+                                     },
+                                     {
+                                         "name":  "BenchmarkEncoderP_720p_Generic-16",
+                                         "ns":  940797900,
+                                         "bytes":  3282280,
+                                         "allocs":  42
+                                     },
+                                     {
+                                         "name":  "BenchmarkEncoderP_720p_Generic-16",
+                                         "ns":  928878300,
+                                         "bytes":  3282408,
+                                         "allocs":  43
+                                     },
+                                     {
+                                         "name":  "BenchmarkEncoderP_720p_Generic-16",
+                                         "ns":  1012455500,
+                                         "bytes":  3282408,
+                                         "allocs":  43
+                                     }
+                                 ]
+                 },
+                 {
+                     "log":  "k10a-endpoint-review.txt",
+                     "sha256":  "87bc852c6b235e101704898838872d1155da26e12acb67948ddcb7125da89703",
+                     "samples":  [
+                                     {
+                                         "name":  "BenchmarkEncoderP_720p_Generic-16",
+                                         "ns":  890776600,
+                                         "bytes":  3282296,
+                                         "allocs":  42
+                                     },
+                                     {
+                                         "name":  "BenchmarkEncoderP_720p_Generic-16",
+                                         "ns":  816168400,
+                                         "bytes":  3282296,
+                                         "allocs":  42
+                                     },
+                                     {
+                                         "name":  "BenchmarkEncoderP_720p_Generic-16",
+                                         "ns":  857548900,
+                                         "bytes":  3282296,
+                                         "allocs":  42
+                                     },
+                                     {
+                                         "name":  "BenchmarkEncoderP_720p_Generic-16",
+                                         "ns":  908388900,
+                                         "bytes":  3282296,
+                                         "allocs":  42
+                                     },
+                                     {
+                                         "name":  "BenchmarkEncoderP_720p_Generic-16",
+                                         "ns":  900486300,
+                                         "bytes":  3282280,
+                                         "allocs":  42
+                                     }
+                                 ]
+                 }
+             ],
+    "interpretation":  "Direct kernel median Generic14.95/SSE2 10.44 ns; actual transform consumer15.53/15.13 ns. Extra function-pointer wrapper20.09/21.00 ns has different call/copy overhead, retained honestly. Endpoint baseline887134400ns, first-after937174000ns (~5.6% slower), review890776600ns; strong spread, no stable endpoint speedup claim.",
+    "limitations":  "No native arm64; remaining K10 transforms/AVX2/NEON not delivered; full M8 incomplete. Cache/GC/RSS/performance main target not measured.",
+    "inputSHA256":  "b7fc8e5048a11a8a56e17f10cdc1073c840b8e1850e79f0fce9200b23ca22590",
+    "endpointBoundary":  "Unchanged BenchmarkEncoderP_720p_Generic: 1280x720 Baseline CAVLC CQP26 GOP600 effectiveThreads1, pattern.Frame(1280,720,1), New/input/IDR excluded; fixed 1 P Send/Receive; same parameters as m8_residual_samples.json",
+    "validation":  "Full CGO=0 gate35packages/55manifest, affected purego/386 native, six builds, forced backends, 1432 encoder inter fuzz executions, CGO=1 simd/transform/encoder race passed; full M8 and full race not signed"
+}

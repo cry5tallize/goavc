@@ -3,24 +3,14 @@ package transform
 import (
 	"fmt"
 	h264 "github.com/goavc/h264"
+	"github.com/goavc/h264/internal/simd"
 )
 
 // Forward4x4 是8/10-bit残差共用的可分离整数变换；输入须在[-1023,1023]。
 // 行列基底 C={1111;21-1-2;1-1-11;1-22-1}，缩放合并到量化中。
 // 解码语义见 Spec: 8.5.12；编码侧舍入策略不属于规范要求。
 func Forward4x4(dst, src *[16]int32) {
-	var tmp [16]int32
-	for y := 0; y < 4; y++ {
-		i := y * 4
-		a, b := src[i]+src[i+3], src[i+1]+src[i+2]
-		c, d := src[i]-src[i+3], src[i+1]-src[i+2]
-		tmp[i], tmp[i+1], tmp[i+2], tmp[i+3] = a+b, 2*c+d, a-b, c-2*d
-	}
-	for x := 0; x < 4; x++ {
-		a, b := tmp[x]+tmp[12+x], tmp[4+x]+tmp[8+x]
-		c, d := tmp[x]-tmp[12+x], tmp[4+x]-tmp[8+x]
-		dst[x], dst[4+x], dst[8+x], dst[12+x] = a+b, 2*c+d, a-b, c-2*d
-	}
+	*dst = simd.Forward4x4(*src)
 }
 
 // ForwardLumaDC 把 16 个子块 DC 变为 I16 Hadamard 系数，输入输出为光栅顺序。

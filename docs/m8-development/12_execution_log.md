@@ -257,3 +257,15 @@ G08 保留现有 DPB/输出顺序和公共 Frame 生命周期，补强失败路�
 现有 `AUReader`、Annex-B/AVCC Writer、pipeline 和 NAL Reader 已在分配/封装前校验单 NAL、NAL 数量、输入 AU 与输出 AU 容量，并保持 Packet.Data 独立归调用方。本切片只补齐 `AUReader.fail` 的失败状态清零：丢弃 assembler、重置 `size/hasVCL/closed`、SPS/PPS 和最后 slice 元数据；粘性错误仍阻止再次读取，不改变合法封装字节。
 
 扩展 `TestAUReader_ErrorsAndBudgets`，验证超限/语法/IO 失败不泄露部分 Packet，失败后容量与 assembler pending 均为零，重复读取返回同一错误且不再次访问源。`CGO_ENABLED=0 go test -count=1 . ./stream ./decoder ./encoder`、`CGO_ENABLED=1 go test -race -count=1 ./stream` 和提交前完整 `gofmt/vet/build/test/depscheck/manifest/diff-check` 均退出 0；常规门禁为 CGO=0，race 按仓库例外使用 CGO=1。G10 集成验收仍待完成。
+
+### K10a：SSE2 4×4正变换
+
+用户将后续内存/GC工作交给其他agent，本任务只处理SIMD。起点HEAD为`1e4effe`，保留已有05/08/README/13文档及picture/pool.go未提交改动；不修改池化/所有权代码。用gopls核对Forward4x4全部调用者，原领域签名保持不变，将唯一标量两轴算术迁入simd，增加固定`[16]int32 → [16]int32`值参数槽，避免局部残差经间接调用逃逸。领域只适配，无重复算法。Auto在amd64选择SSE2该槽；即使SAD/SATD显式AVX2，此槽仍如实诊断SSE2；其他架构/purego为Generic，不把回退记为向量通过。
+
+SSE2使用32位加减/倍增、两次4×4转置，输入/输出ABI数组各64字节，只访问0..63，MOVOU不要求对齐。有效残差±1023，单轴绝对值<=6138、双轴<=36828，不饱和窄化。全int32域还保持原Go模运算。独立矩阵正负冲激含低两位/极值、seed0x1044的5000组合法/宽域逐元素parity通过；原地与领域局部输入AllocsPerRun=0。没有触碰IDCT宽域/溢出契约、8×8投影或量化策略。
+
+同机五次直接内核中位Generic14.95ns、SSE2 10.44ns；真实transform入口中位15.53ns与15.13ns，均0分配。额外函数指针包装中位20.09/21.00ns，包含不同复制/调用开销，完整保留，不以直接内核数字替代实际consumer。固定1x P端点中位887134400ns→937174000ns（约+5.6%），触发复查，复查中位890776600ns；样本范围明显波动，不能声称稳定端点加速。所有样本及SHA见`docs/gates/m8_forward4_samples.json`。当前数据不作为30FPS或K23/K24证据。
+
+CGO=0的simd/transform定向、goavc_simdtest强制真实后端、purego simd/transform/encoder、实际386同包、六目标全库build和完整常规门禁全部退出0（`k10a-{tagged,purego,386,verify}.txt`）。原编码器/六格式/M8固定码流、Oracle、候选零分配保护网继续通过。新增consumer benchmark在同一测试标签编译运行；AVX2/NEON Forward专用路径明确未实现，不算这些后端通过。受影响包race/短fuzz实际结果另补。不宣称完整K10或M8；剩余SIMD MC、其他正逆变换、AVX2/NEON、量化、滤波和残差仍待推进。
+
+K10a补充：CGO=0帧间编码fuzz smoke 5s/1432exec退出0；CGO=1 simd/transform/encoder race退出0（k10a-fuzz.txt、k10a-race.txt）。完整全库race仍留给最终集成验收。

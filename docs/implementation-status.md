@@ -252,7 +252,8 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | x86 SATD（K07） | SSE2/AVX2的4×4 Hadamard，真实帧内候选接入，内部值参数 | Partial | 8/10-bit常量/冲激解析值、5000组parity、实际候选、局部残差0分配、M7指纹 | 默认实测优选SSE2；arm64尚未原生验证；矩形仍按原4×4 tiled |
 | NEON SATD（K08） | 基线ASIMD 4×4 Hadamard、同值参数与测试入口 | WIP | arm64交叉vet/构建，原生测试入口已交付 | 用户指定编译验收；未原生运行，不把Generic或跨编译当NEON通过 |
 | 汇编边界基础（K14a） | Windows逐行保护页与子进程协调，SAD尾部/最小len | Partial | 原生Generic/Auto/SSE2/AVX2、purego、386保护页实际执行 | 仅SAD已动态验证；其余kernel和非Windows动态页仍待补齐，不签完整K14 |
-| 其余SIMD内核（K09b-d/K10–K14） | SIMD MC/变换/量化/去块/残差、边界证明 | TODO | 待实施 | 不据已完成kernel推定其余范围或端点已完成 |
+| SSE2正变换（K10a） | 唯一Generic与SSE2 Forward4x4；固定值参数保持原地与局部零分配 | Partial | 独立正负冲激基底、5000组合法/宽域parity、真实transform入口/编码器指纹 | 仅4×4正变换；AVX2/NEON、逆变换、8×8及完整K10仍待交付，AVX2机器此槽实际为SSE2 |
+| 其余SIMD内核（K09b-d/K10其余–K14） | SIMD MC/其余变换/量化/去块/残差、边界证明 | TODO | 待实施 | 不据已完成kernel推定其余范围或端点已完成 |
 | 搜索去逃逸（G01/K18前置） | caller-owned双位深Workspace，真实编码器跨帧/场/Reset复用，结束解除借用 | Partial | 32组改造前Scorer轨迹/结果，64组prepared零分配，强制x86/purego/386/M8指纹 | 仅搜索；完整配置的K18及K16所有权/资源门禁仍待完成 |
 | 残差去逃逸（G02/K18切片） | 具名调用唯一共享量化器、共同444亮度重建入口解除递归逃逸 | Partial | 384组改造前系数/CBP/重建指纹；六格式/场/矩阵/两死区/4与8变换的真实残差和四种帧间分区0分配 | 完整K18未完成，不新增量化策略或SIMD量化 |
 | 帧内邻域（G03a/K18切片） | 调用者栈上固定邻域槽；相同可用性预检避免枚举不可用模式的错误分配 | Partial | 1152个旧I4/I16/I8候选指纹、六格式/场/矩阵/QP的prepared帧内候选0分配、邻域并存/清零解析值 | 完整K18仍待所有配置/正常MB集成门禁，不把单候选零分配扩大为整个库 |
