@@ -28,6 +28,8 @@ func TestParity_SearchBackends(t *testing.T) {
 			TestSearchHigh_AnalyticSubpixel(t)
 			TestSearchHigh_ScorerReceivesFullRangeSAD(t)
 			TestSearchHigh_SubpixelBounds(t)
+			TestWorkspace_FrozenSearchTrace(t)
+			TestAllocation_PreparedSearch(t)
 		})
 	}
 }

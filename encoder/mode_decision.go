@@ -203,7 +203,7 @@ func (s *frameState) interCandidateUsingMotion(addr, kind, radius int, full bool
 			lambda := motionLambdaQ8(s.lumaQP(info.qp))
 			mv, _ = search.EstimateWithCost(&s.src.Planes[0], &searchReference.Planes[0], x+p.x, y+p.y, p.w, p.h, pred, radius, full, func(m motion.MV, sad int) uint64 {
 				return uint64(sad)*256 + lambda*uint64(mvBits(m.X-pred.X, m.Y-pred.Y))
-			})
+			}, s.searchWorkspace)
 		}
 		s.mc(addr, p, mv)
 		s.mv.SetRect(x/4+p.x/4, y/4+p.y/4, p.w/4, p.h/4, mv, 0)

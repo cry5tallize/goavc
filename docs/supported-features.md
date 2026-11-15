@@ -165,6 +165,7 @@
 | RD 模式决策（J = D + λR） | Conformant | 定点lambda、三平面SSE、Skip/P/I4/I16/PCM；P/B两种死区保留原候选按J选优。完整长质量矩阵通过；CABAC率仍为CAVLC代理，不宣称全局最优 |
 | 自适应 QP | Conformant | M5b 活动度 QP 选项 0..6、QP 0..51 裁剪，默认关闭，显式回调/PCM 冲突拒绝 |
 | SSE2 / AVX2 / NEON | Partial | M8的8/10-bit SAD：SSE2通用矩形、AVX2宽16；x86 SATD4×4默认优选SSE2并保留AVX2。NEON SAD宽16/SATD4×4已交叉构建，原生未验证（用户指定编译验收）。其余kernel待实施，不声明完整M8通过 |
+| 搜索工作区复用 | Partial | G01在真实编码器复用双位深Workspace，prepared Integer/Refine/Estimate含Scorer为0分配；旧回调轨迹/码流不变。仅搜索路径，完整模式决策零分配、池化与并行尚未完成 |
 
 ## 10. 流式I/O（M6）
 

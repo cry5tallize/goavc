@@ -1,0 +1,212 @@
+{
+    "date":  "2026-11-15",
+    "go":  "go1.27.4",
+    "host":  "windows/amd64",
+    "cpu":  "AMD Ryzen 7 5700X",
+    "CGO_ENABLED":  0,
+    "GOAMD64":  "v1",
+    "GOMAXPROCS":  16,
+    "effectiveCodecThreads":  1,
+    "sourceBefore":  "4ec4ccc",
+    "sourceAfterBase":  "4ec4ccc",
+    "dirtyAfter":  true,
+    "source":  "G01 successor commit; pre-existing documentation changes preserved and excluded from the commit",
+    "command":  "CGO_ENABLED=0 go test -run \u0027^$\u0027 -bench \u0027^(BenchmarkEncoderP_720p_Generic|BenchmarkEncoderB_720p_Generic)$\u0027 -benchtime=1x -benchmem -count=5 ./encoder",
+    "inputSHA256":  "b7fc8e5048a11a8a56e17f10cdc1073c840b8e1850e79f0fce9200b23ca22590",
+    "input":  "pattern.Frame(1280,720,1); B assigns PTS=0..3 Duration=1, P retains pattern metadata",
+    "pConfig":  "Baseline/CAVLC/CQP26, GOP600, IDR0, B0, slices1, search16 diamond, no transform8/weights/lookahead; New/input/IDR warmup excluded, one P Send/Receive timed",
+    "bConfig":  "High/CABAC/CQP26, default GOP/FPS/IDR/search, B2, transform8, slices1, no weights/lookahead; one op Reset + IDR/P/B/B + Flush/Receive; setup/input and deferred Close outside measurement",
+    "defaultsReference":  "config.go DefaultEncoderConfig and encoder/benchmark_test.go, unchanged from 4ec4ccc",
+    "backends":  "SAD8/16 Auto AVX2 width16, SSE2 otherwise; SATD4x4 Auto SSE2; MC Generic",
+    "isolation":  "No other task benchmark/build/test ran concurrently; external load unmonitored; high-performance power scheme retained",
+    "runs":  [
+                 {
+                     "phase":  "before",
+                     "name":  "BenchmarkEncoderP_720p_Generic",
+                     "framesPerOp":  1,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  881639900,
+                                         "bytesPerOp":  335760384,
+                                         "allocationsPerOp":  875513
+                                     },
+                                     {
+                                         "nsPerOp":  868002100,
+                                         "bytesPerOp":  335761424,
+                                         "allocationsPerOp":  875525
+                                     },
+                                     {
+                                         "nsPerOp":  873234900,
+                                         "bytesPerOp":  335761024,
+                                         "allocationsPerOp":  875520
+                                     },
+                                     {
+                                         "nsPerOp":  865606500,
+                                         "bytesPerOp":  335759760,
+                                         "allocationsPerOp":  875506
+                                     },
+                                     {
+                                         "nsPerOp":  874507500,
+                                         "bytesPerOp":  335762352,
+                                         "allocationsPerOp":  875534
+                                     }
+                                 ],
+                     "medianNs":  873234900,
+                     "medianBytes":  335761024,
+                     "medianAllocs":  875520
+                 },
+                 {
+                     "phase":  "before",
+                     "name":  "BenchmarkEncoderB_720p_Generic",
+                     "framesPerOp":  4,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  1970490100,
+                                         "bytesPerOp":  777295184,
+                                         "allocationsPerOp":  2117821
+                                     },
+                                     {
+                                         "nsPerOp":  1967430800,
+                                         "bytesPerOp":  777293808,
+                                         "allocationsPerOp":  2117807
+                                     },
+                                     {
+                                         "nsPerOp":  1941546900,
+                                         "bytesPerOp":  777294336,
+                                         "allocationsPerOp":  2117812
+                                     },
+                                     {
+                                         "nsPerOp":  1958292700,
+                                         "bytesPerOp":  777292272,
+                                         "allocationsPerOp":  2117789
+                                     },
+                                     {
+                                         "nsPerOp":  1933887900,
+                                         "bytesPerOp":  777299240,
+                                         "allocationsPerOp":  2117839
+                                     }
+                                 ],
+                     "medianNs":  1958292700,
+                     "medianBytes":  777294336,
+                     "medianAllocs":  2117812
+                 },
+                 {
+                     "phase":  "after",
+                     "name":  "BenchmarkEncoderP_720p_Generic",
+                     "framesPerOp":  1,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  880950400,
+                                         "bytesPerOp":  293495064,
+                                         "allocationsPerOp":  778259
+                                     },
+                                     {
+                                         "nsPerOp":  863677800,
+                                         "bytesPerOp":  293497320,
+                                         "allocationsPerOp":  778281
+                                     },
+                                     {
+                                         "nsPerOp":  865611000,
+                                         "bytesPerOp":  293497608,
+                                         "allocationsPerOp":  778286
+                                     },
+                                     {
+                                         "nsPerOp":  859720700,
+                                         "bytesPerOp":  293498760,
+                                         "allocationsPerOp":  778297
+                                     },
+                                     {
+                                         "nsPerOp":  864596000,
+                                         "bytesPerOp":  293499176,
+                                         "allocationsPerOp":  778302
+                                     }
+                                 ],
+                     "medianNs":  864596000,
+                     "medianBytes":  293497608,
+                     "medianAllocs":  778286
+                 },
+                 {
+                     "phase":  "after",
+                     "name":  "BenchmarkEncoderB_720p_Generic",
+                     "framesPerOp":  4,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  1886617500,
+                                         "bytesPerOp":  735039216,
+                                         "allocationsPerOp":  2020595
+                                     },
+                                     {
+                                         "nsPerOp":  1995764200,
+                                         "bytesPerOp":  735043024,
+                                         "allocationsPerOp":  2020636
+                                     },
+                                     {
+                                         "nsPerOp":  1979717200,
+                                         "bytesPerOp":  735043488,
+                                         "allocationsPerOp":  2020642
+                                     },
+                                     {
+                                         "nsPerOp":  1950709500,
+                                         "bytesPerOp":  735044552,
+                                         "allocationsPerOp":  2020629
+                                     },
+                                     {
+                                         "nsPerOp":  1991541600,
+                                         "bytesPerOp":  735040088,
+                                         "allocationsPerOp":  2020628
+                                     }
+                                 ],
+                     "medianNs":  1979717200,
+                     "medianBytes":  735043024,
+                     "medianAllocs":  2020629
+                 }
+             ],
+    "artifacts":  [
+                      {
+                          "path":  "tmp/m8-baseline/g00-encoder-before.txt",
+                          "sha256":  "3f6eab388d795545be667bff01e0fc87ccb1b86c0f7ff379afac60d2c1b5ed14"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g00-decoder-before.txt",
+                          "sha256":  "d30753f3b06d17694e119e6aff9332b3be6468f5ce661d1c2e90c1377ddc3160"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g00-alloc-space.txt",
+                          "sha256":  "fe7a34ca03659ff0031b743ff3a595c888d854647e3d3f951b775ce3013fecf7"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g00-alloc-objects.txt",
+                          "sha256":  "40a8d60f05a93f3670840d8f71436b6e6b26c575a0c5f0604dd961f3c85f802c"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g01-encoder-after.txt",
+                          "sha256":  "b7a7f8223148250d8f28873ff4506bea3255e7e16b5b855eb0ae36faa083b017"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g01-alloc-space.txt",
+                          "sha256":  "27f6e0c7dd8151478418f0da0ac9fda7262b526621316de0bb4d50feb8f82cbd"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g01-alloc-objects.txt",
+                          "sha256":  "0c7cb0c07cefc08703fbb6792a97e555f42cfc43061fb8576d571f794e441062"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g01-frozen-trace-before.txt",
+                          "sha256":  "67019355a48d56fe89b58203ac8a0f1f70ffabf0ff638e3bcea36d5f6c7a0feb"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g00-search-escape.txt",
+                          "sha256":  "3ed58ad36763bb000e8f298bb70a21dae13275cdf720e2eca422ee75400d9f9e"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g01-search-escape.txt",
+                          "sha256":  "9ccf0081808856965ca3e357830591199c3cfb732e21f33743420964b000b756"
+                      }
+                  ],
+    "preparedSearch":  "8/10-bit x frame/true field x interior/edge x full/diamond x Integer/Refine/Estimate/EstimateWithCost: zero allocations; scorer constructed inside each measured call",
+    "frozenTrace":  "32 cases captured on 4ec4ccc before algorithm changes; testdata/workspace_trace.json; callback count/order/duplicates, returned MV and raw SAD all unchanged",
+    "outputEvidence":  "Existing 96-frame M8 baseline and external FFmpeg oracle run in full gate, golden unchanged",
+    "profileBoundary":  "Separate memprofilerate=1 run covers complete process including input/prewarm; not the timed benchmark window and not throughput data",
+    "gcMetrics":  "G00 partial: natural GC/assist/scan/pause/live-heap/RSS/warm-steady and RC scenario measurements not yet implemented; no GC reduction percentage claimed",
+    "limitations":  "G01 only, full K18/M8 not complete; NEON native not executed; full race not yet executed"
+}

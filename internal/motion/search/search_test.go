@@ -26,6 +26,7 @@ func TestSAD_ExtremesAndUnalignedStride(t *testing.T) {
 }
 
 func TestSearch_TranslationAndSubpixel(t *testing.T) {
+	var workspace Workspace
 	ref, _ := picture.New(4, 4, h264.YUV420P)
 	src, _ := picture.New(4, 4, h264.YUV420P)
 	for y := 0; y < 64; y++ {
@@ -36,13 +37,14 @@ func TestSearch_TranslationAndSubpixel(t *testing.T) {
 	for _, want := range []MV{{}, {X: 12, Y: -8}, {X: -7, Y: 5}, {X: 2, Y: -1}} {
 		p := &src.Planes[0]
 		prediction.MCBlockLuma(p.Data[p.Index(16, 16):], p.Stride, &ref.Planes[0], 16, 16, 16, 16, int(want.X), int(want.Y))
-		got, cost := Estimate(p, &ref.Planes[0], 16, 16, 16, 16, want, 4, true)
+		got, cost := Estimate(p, &ref.Planes[0], 16, 16, 16, 16, want, 4, true, &workspace)
 		if got != want || cost != 0 {
 			t.Fatalf("want %v got %v cost %d", want, got, cost)
 		}
 	}
 }
 func TestSearch_DiamondAndBounds(t *testing.T) {
+	var workspace Workspace
 	ref, _ := picture.New(2, 2, h264.YUV420P)
 	src, _ := picture.New(2, 2, h264.YUV420P)
 	for y := 0; y < 32; y++ {
@@ -54,8 +56,8 @@ func TestSearch_DiamondAndBounds(t *testing.T) {
 		x, y := xy[0], xy[1]
 		p := &src.Planes[0]
 		prediction.MCBlockLuma(p.Data[p.Index(x, y):], p.Stride, &ref.Planes[0], x, y, 16, 16, 8, -4)
-		_, full := Estimate(p, &ref.Planes[0], x, y, 16, 16, MV{}, 8, true)
-		mv, diamond := Estimate(p, &ref.Planes[0], x, y, 16, 16, MV{}, 8, false)
+		_, full := Estimate(p, &ref.Planes[0], x, y, 16, 16, MV{}, 8, true, &workspace)
+		mv, diamond := Estimate(p, &ref.Planes[0], x, y, 16, 16, MV{}, 8, false, &workspace)
 		// 菱形是局部搜索；本解析斜坡中允许每像素平均至多 1 的 SAD 差值，
 		// 不把它错误宣称为与穷举全局最优等价。
 		if diamond > full+256 || mv.X < -32 || mv.X > 32 || mv.Y < -32 || mv.Y > 32 {
@@ -65,6 +67,7 @@ func TestSearch_DiamondAndBounds(t *testing.T) {
 }
 
 func TestSearch_CostCallbackPreservesReportedSAD(t *testing.T) {
+	var workspace Workspace
 	ref, _ := picture.New(2, 2, h264.YUV420P)
 	src, _ := picture.New(2, 2, h264.YUV420P)
 	// 常量块所有位移的 SAD 都为 0；上层代价可以选择零之外的 MVP。
@@ -72,7 +75,7 @@ func TestSearch_CostCallbackPreservesReportedSAD(t *testing.T) {
 	got, sad := EstimateWithCost(&src.Planes[0], &ref.Planes[0], 8, 8, 8, 8, want, 4, true, func(m MV, sad int) uint64 {
 		dx, dy := int(m.X-want.X), int(m.Y-want.Y)
 		return uint64(sad + max(dx, -dx) + max(dy, -dy))
-	})
+	}, &workspace)
 	if got != want || sad != 0 {
 		t.Fatal(got, sad)
 	}
@@ -83,6 +86,7 @@ func highSearchPlane() picture.Plane {
 }
 
 func TestSearchHigh_IntegerTranslationLowBits(t *testing.T) {
+	var workspace Workspace
 	for _, lowBits := range []bool{false, true} {
 		ref, src := highSearchPlane(), highSearchPlane()
 		state := uint32(1)
@@ -108,12 +112,12 @@ func TestSearchHigh_IntegerTranslationLowBits(t *testing.T) {
 				}
 			}
 			for _, full := range []bool{false, true} {
-				got, sad := Integer(&src, &ref, tc.x, tc.y, 8, 8, tc.mv, 4, full)
+				got, sad := Integer(&src, &ref, tc.x, tc.y, 8, 8, tc.mv, 4, full, &workspace)
 				if got != tc.mv || sad != 0 {
 					t.Fatalf("lowBits=%v full=%v: want %v, got %v SAD=%d", lowBits, full, tc.mv, got, sad)
 				}
 			}
-			got, sad := Estimate(&src, &ref, tc.x, tc.y, 8, 8, tc.mv, 4, true)
+			got, sad := Estimate(&src, &ref, tc.x, tc.y, 8, 8, tc.mv, 4, true, &workspace)
 			if got != tc.mv || sad != 0 {
 				t.Fatalf("lowBits=%v: want %v, got %v SAD=%d", lowBits, tc.mv, got, sad)
 			}
@@ -122,6 +126,7 @@ func TestSearchHigh_IntegerTranslationLowBits(t *testing.T) {
 }
 
 func TestSearchHigh_AnalyticSubpixel(t *testing.T) {
+	var workspace Workspace
 	ref, src := highSearchPlane(), highSearchPlane()
 	// 线性平面的六抽头插值等于解析值，四分之一像素也恰好为整数。
 	for y := range 32 {
@@ -140,11 +145,11 @@ func TestSearchHigh_AnalyticSubpixel(t *testing.T) {
 			dx, dy := int(m.X-want.X), int(m.Y-want.Y)
 			return uint64(sad + 65536*(max(dx, -dx)+max(dy, -dy)))
 		}
-		got, sad := EstimateWithCost(&src, &ref, 8, 8, 8, 8, MV{}, 4, true, scorer)
+		got, sad := EstimateWithCost(&src, &ref, 8, 8, 8, 8, MV{}, 4, true, scorer, &workspace)
 		if got != want || sad != 0 {
 			t.Fatalf("want %v, got %v SAD=%d", want, got, sad)
 		}
-		_, sad = Refine(&src, &ref, 8, 8, 8, 8, MV{}, 4)
+		_, sad = Refine(&src, &ref, 8, 8, 8, 8, MV{}, 4, &workspace)
 		if sad != 0 {
 			t.Fatalf("want zero refined SAD for %v, got %d", want, sad)
 		}
@@ -152,6 +157,7 @@ func TestSearchHigh_AnalyticSubpixel(t *testing.T) {
 }
 
 func TestSearchHigh_ScorerReceivesFullRangeSAD(t *testing.T) {
+	var workspace Workspace
 	for _, size := range [][2]int{{16, 16}, {7, 13}} {
 		ref, src := highSearchPlane(), highSearchPlane()
 		for i := range src.Data16 {
@@ -165,7 +171,7 @@ func TestSearchHigh_ScorerReceivesFullRangeSAD(t *testing.T) {
 				t.Fatalf("MV=%v: want full-range SAD %d, got %d", m, want, sad)
 			}
 			return uint64(sad)
-		})
+		}, &workspace)
 		if got != (MV{}) || sad != want || calls == 0 {
 			t.Fatal(got, sad, calls)
 		}
@@ -173,6 +179,7 @@ func TestSearchHigh_ScorerReceivesFullRangeSAD(t *testing.T) {
 }
 
 func TestSearchHigh_SubpixelBounds(t *testing.T) {
+	var workspace Workspace
 	ref, src := highSearchPlane(), highSearchPlane()
 	for y := range ref.Height {
 		for x := range ref.Width {
@@ -187,7 +194,7 @@ func TestSearchHigh_SubpixelBounds(t *testing.T) {
 		got, sad := EstimateWithCost(&src, &ref, tc.x, tc.y, 7, 13, MV{}, 4, true, func(m MV, sad int) uint64 {
 			dx, dy := int(m.X-tc.mv.X), int(m.Y-tc.mv.Y)
 			return uint64(sad + 65536*(max(dx, -dx)+max(dy, -dy)))
-		})
+		}, &workspace)
 		if got != tc.mv || sad != 0 {
 			t.Fatalf("at (%d,%d): want %v, got %v SAD=%d", tc.x, tc.y, tc.mv, got, sad)
 		}

@@ -26,6 +26,13 @@ type sample interface {
 	byte | uint16
 }
 
+// Workspace 由一个串行执行 lane 持有；零值可用，不可复制或并发/重入使用。
+// 两个位深的固定槽避免切换格式时分配；每次搜索只覆盖有效原始块，结束解绑借用。
+type Workspace struct {
+	bytes window[byte]
+	words window[uint16]
+}
+
 type window[T sample] struct {
 	original, candidate [256]T
 	reference           []T
@@ -34,12 +41,14 @@ type window[T sample] struct {
 	best                MV
 	cost                uint64
 	sad                 int
-	scorer              Scorer
 	sadKernel           func([]T, int, []T, int, int, int) int
 }
 
-func newWindow[T sample](src, ref []T, srcPlane, refPlane *picture.Plane, x, y, w, h, radius int) window[T] {
-	s := window[T]{reference: ref, ref: refPlane, x: x, y: y, w: w, h: h, radius: min(max(1, radius), 64, max(4, min(refPlane.Width, refPlane.Height)/4)), cost: ^uint64(0)}
+func (s *window[T]) prepare(src, ref []T, srcPlane, refPlane *picture.Plane, x, y, w, h, radius int) {
+	s.reference, s.ref = ref, refPlane
+	s.x, s.y, s.w, s.h = x, y, w, h
+	s.radius = min(max(1, radius), 64, max(4, min(refPlane.Width, refPlane.Height)/4))
+	s.resetBest()
 	// 每个搜索上下文仅绑定一次样本类型；候选/像素循环不再做类型判断。
 	var zero T
 	switch any(zero).(type) {
@@ -52,10 +61,19 @@ func newWindow[T sample](src, ref []T, srcPlane, refPlane *picture.Plane, x, y, 
 		offset := srcPlane.Index(x, y+j)
 		copy(s.original[j*16:j*16+w], src[offset:offset+w])
 	}
-	return s
 }
 
-func (s *window[T]) consider(m MV) {
+func (s *window[T]) resetBest() {
+	s.best, s.cost, s.sad = MV{}, ^uint64(0), 0
+}
+
+func (s *window[T]) release() {
+	s.reference, s.ref = nil, nil
+}
+
+// Scorer 只在栈上同步传递；不存入持久窗口，避免每个分区的闭包再次逃逸，
+// 也避免搜索完成后钉住上层图像/代价上下文。候选顺序与调用次数不得去重。
+func (s *window[T]) consider(m MV, scorer Scorer) {
 	if m.X < int32(-s.radius*4) || m.X > int32(s.radius*4) || m.Y < int32(-s.radius*4) || m.Y > int32(s.radius*4) {
 		return
 	}
@@ -76,8 +94,8 @@ func (s *window[T]) consider(m MV) {
 		cost = s.sadKernel(s.original[:], 16, s.candidate[:], 16, s.w, s.h)
 	}
 	rank := uint64(cost)
-	if s.scorer != nil {
-		rank = s.scorer(m, cost)
+	if scorer != nil {
+		rank = scorer(m, cost)
 	}
 	if rank < s.cost {
 		s.best = m
@@ -88,33 +106,38 @@ func (s *window[T]) consider(m MV) {
 
 // Integer 对最大 16×16 区域做整像素估计。radius=1..64，小图像自适应收缩。
 // full 选择穷举，否则从零与 MVP 中较优点执行严格下降的有限菱形搜索。
-func Integer(src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool) (MV, int) {
-	return integerWithCost(src, ref, x, y, w, h, predictor, radius, full, nil)
+// workspace 必须非 nil，且本次返回前不得用于另一搜索。
+func Integer(src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool, workspace *Workspace) (MV, int) {
+	return integerWithCost(src, ref, x, y, w, h, predictor, radius, full, nil, workspace)
 }
 
-func integerWithCost(src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool, scorer Scorer) (MV, int) {
+func integerWithCost(src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool, scorer Scorer, workspace *Workspace) (MV, int) {
 	if src.Data16 != nil {
-		return integerSamples(src.Data16, ref.Data16, src, ref, x, y, w, h, predictor, radius, full, scorer)
+		return integerSamples(&workspace.words, src.Data16, ref.Data16, src, ref, x, y, w, h, predictor, radius, full, scorer)
 	}
-	return integerSamples(src.Data, ref.Data, src, ref, x, y, w, h, predictor, radius, full, scorer)
+	return integerSamples(&workspace.bytes, src.Data, ref.Data, src, ref, x, y, w, h, predictor, radius, full, scorer)
 }
 
-func integerSamples[T sample](srcSamples, refSamples []T, src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool, scorer Scorer) (MV, int) {
-	s := newWindow(srcSamples, refSamples, src, ref, x, y, w, h, radius)
-	s.scorer = scorer
-	s.consider(MV{})
-	s.consider(MV{X: int32(min(s.radius, max(-s.radius, int(predictor.X)/4)) * 4), Y: int32(min(s.radius, max(-s.radius, int(predictor.Y)/4)) * 4)})
+func integerSamples[T sample](s *window[T], srcSamples, refSamples []T, src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool, scorer Scorer) (MV, int) {
+	s.prepare(srcSamples, refSamples, src, ref, x, y, w, h, radius)
+	defer s.release()
+	return s.integer(predictor, full, scorer)
+}
+
+func (s *window[T]) integer(predictor MV, full bool, scorer Scorer) (MV, int) {
+	s.consider(MV{}, scorer)
+	s.consider(MV{X: int32(min(s.radius, max(-s.radius, int(predictor.X)/4)) * 4), Y: int32(min(s.radius, max(-s.radius, int(predictor.Y)/4)) * 4)}, scorer)
 	if full {
 		for dy := -s.radius; dy <= s.radius; dy++ {
 			for dx := -s.radius; dx <= s.radius; dx++ {
-				s.consider(MV{X: int32(dx * 4), Y: int32(dy * 4)})
+				s.consider(MV{X: int32(dx * 4), Y: int32(dy * 4)}, scorer)
 			}
 		}
 	} else {
 		for {
 			center := s.best
 			for _, d := range [...]MV{{X: -4}, {X: 4}, {Y: -4}, {Y: 4}} {
-				s.consider(MV{X: center.X + d.X, Y: center.Y + d.Y})
+				s.consider(MV{X: center.X + d.X, Y: center.Y + d.Y}, scorer)
 			}
 			if s.best == center {
 				break
@@ -126,26 +149,30 @@ func integerSamples[T sample](srcSamples, refSamples []T, src, ref *picture.Plan
 
 // Refine 使用共享规范 MC 对给定整像素点做半/四像素细化。
 // 可以在分区选择之后调用，避免为被丢弃的分区重复计算六抽头插值。
-func Refine(src, ref *picture.Plane, x, y, w, h int, base MV, radius int) (MV, int) {
-	return refineWithCost(src, ref, x, y, w, h, base, radius, nil)
+func Refine(src, ref *picture.Plane, x, y, w, h int, base MV, radius int, workspace *Workspace) (MV, int) {
+	return refineWithCost(src, ref, x, y, w, h, base, radius, nil, workspace)
 }
 
-func refineWithCost(src, ref *picture.Plane, x, y, w, h int, base MV, radius int, scorer Scorer) (MV, int) {
+func refineWithCost(src, ref *picture.Plane, x, y, w, h int, base MV, radius int, scorer Scorer, workspace *Workspace) (MV, int) {
 	if src.Data16 != nil {
-		return refineSamples(src.Data16, ref.Data16, src, ref, x, y, w, h, base, radius, scorer)
+		return refineSamples(&workspace.words, src.Data16, ref.Data16, src, ref, x, y, w, h, base, radius, scorer)
 	}
-	return refineSamples(src.Data, ref.Data, src, ref, x, y, w, h, base, radius, scorer)
+	return refineSamples(&workspace.bytes, src.Data, ref.Data, src, ref, x, y, w, h, base, radius, scorer)
 }
 
-func refineSamples[T sample](srcSamples, refSamples []T, src, ref *picture.Plane, x, y, w, h int, base MV, radius int, scorer Scorer) (MV, int) {
-	s := newWindow(srcSamples, refSamples, src, ref, x, y, w, h, radius)
-	s.scorer = scorer
-	s.consider(base)
+func refineSamples[T sample](s *window[T], srcSamples, refSamples []T, src, ref *picture.Plane, x, y, w, h int, base MV, radius int, scorer Scorer) (MV, int) {
+	s.prepare(srcSamples, refSamples, src, ref, x, y, w, h, radius)
+	defer s.release()
+	return s.refine(base, scorer)
+}
+
+func (s *window[T]) refine(base MV, scorer Scorer) (MV, int) {
+	s.consider(base, scorer)
 	for _, step := range []int32{2, 1} {
 		center := s.best
 		for dy := -step; dy <= step; dy += step {
 			for dx := -step; dx <= step; dx += step {
-				s.consider(MV{X: center.X + dx, Y: center.Y + dy})
+				s.consider(MV{X: center.X + dx, Y: center.Y + dy}, scorer)
 			}
 		}
 	}
@@ -153,13 +180,23 @@ func refineSamples[T sample](srcSamples, refSamples []T, src, ref *picture.Plane
 }
 
 // Estimate 组合整像素搜索与亚像素细化，供独立小块搜索和验证使用。
-func Estimate(src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool) (MV, int) {
-	base, _ := Integer(src, ref, x, y, w, h, predictor, radius, full)
-	return Refine(src, ref, x, y, w, h, base, radius)
+func Estimate(src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool, workspace *Workspace) (MV, int) {
+	return EstimateWithCost(src, ref, x, y, w, h, predictor, radius, full, nil, workspace)
 }
 
 // EstimateWithCost 在整像素与亚像素两阶段一致使用上层代价，返回原始 SAD。
-func EstimateWithCost(src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool, scorer Scorer) (MV, int) {
-	base, _ := integerWithCost(src, ref, x, y, w, h, predictor, radius, full, scorer)
-	return refineWithCost(src, ref, x, y, w, h, base, radius, scorer)
+func EstimateWithCost(src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool, scorer Scorer, workspace *Workspace) (MV, int) {
+	if src.Data16 != nil {
+		return estimateSamples(&workspace.words, src.Data16, ref.Data16, src, ref, x, y, w, h, predictor, radius, full, scorer)
+	}
+	return estimateSamples(&workspace.bytes, src.Data, ref.Data, src, ref, x, y, w, h, predictor, radius, full, scorer)
+}
+
+func estimateSamples[T sample](s *window[T], srcSamples, refSamples []T, src, ref *picture.Plane, x, y, w, h int, predictor MV, radius int, full bool, scorer Scorer) (MV, int) {
+	s.prepare(srcSamples, refSamples, src, ref, x, y, w, h, radius)
+	defer s.release()
+	base, _ := s.integer(predictor, full, scorer)
+	// 原始块与绑定只准备一次；细化仍重新从无穷代价开始，不能沿用整像素排名。
+	s.resetBest()
+	return s.refine(base, scorer)
 }

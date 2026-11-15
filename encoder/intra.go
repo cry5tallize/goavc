@@ -7,6 +7,7 @@ import (
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/bitstream"
 	"github.com/goavc/h264/internal/motion"
+	"github.com/goavc/h264/internal/motion/search"
 	"github.com/goavc/h264/internal/picture"
 	"github.com/goavc/h264/internal/prediction"
 	"github.com/goavc/h264/internal/transform"
@@ -38,6 +39,7 @@ type frameState struct {
 	cnz             [2][]uint8
 	reference       *picture.Picture
 	searchReference *picture.Picture
+	searchWorkspace *search.Workspace
 	weights         *PredictionWeights
 	allow8          bool
 	scaling8        *[6][64]uint8

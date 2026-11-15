@@ -4,10 +4,14 @@ import (
 	"fmt"
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/internal/motion"
+	"github.com/goavc/h264/internal/motion/search"
 	"github.com/goavc/h264/internal/picture"
 )
 
 func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
+	if e.searchWorkspace == nil {
+		e.searchWorkspace = new(search.Workspace)
+	}
 	pic := e.planeReconstruction
 	if pic == nil {
 		var err error
@@ -18,6 +22,7 @@ func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
 	}
 	total := src.MBWidth * src.MBHeight
 	s := &frameState{src: src, pic: pic, info: make([]mbInfo, total), nz: make([]uint8, total*16), mv: motion.NewGrid(src.MBWidth, src.MBHeight)}
+	s.searchWorkspace = e.searchWorkspace
 	s.allowZeroPCM = e.cfg.Profile != h264.ProfileBaseline && e.cfg.Profile != h264.ProfileMain
 	s.separate, s.plane = e.separateColourPlane, e.colourPlaneID
 	s.independent = e.separateColourPlane

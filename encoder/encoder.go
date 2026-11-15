@@ -7,6 +7,7 @@ import (
 
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/bitstream"
+	"github.com/goavc/h264/internal/motion/search"
 	"github.com/goavc/h264/internal/picture"
 	"github.com/goavc/h264/nal"
 	"github.com/goavc/h264/syntax"
@@ -21,6 +22,7 @@ type Encoder struct {
 	topFieldFirst             bool
 	searchRange               int
 	fullSearch                bool
+	searchWorkspace           *search.Workspace // 一个串行执行 lane；场/独立平面临时通道只借用。
 	maxAUBytes                int
 	adaptiveQP                int
 	cabac                     bool
@@ -152,7 +154,7 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	if uint64(cfg.FPSNum) > uint64(^uint32(0))/2 || uint64(cfg.FPSDen) > uint64(^uint32(0)) {
 		return nil, fmt.Errorf("encoder: VUI timing overflows: %w", h264.ErrInvalidData)
 	}
-	e := &Encoder{cfg: cfg, slices: 1, searchRange: 16, cabac: cfg.Profile != h264.ProfileBaseline, frameQP: cfg.QP, lastQP: cfg.QP}
+	e := &Encoder{cfg: cfg, slices: 1, searchRange: 16, searchWorkspace: new(search.Workspace), cabac: cfg.Profile != h264.ProfileBaseline, frameQP: cfg.QP, lastQP: cfg.QP}
 	if cfg.RateControl == h264.RateControlCBR || cfg.RateControl == h264.RateControlVBV {
 		e.vbvBufferBits = int64(cfg.VBVBufferSize)
 		if e.vbvBufferBits == 0 {
@@ -444,6 +446,7 @@ func (e *Encoder) Reset() error {
 
 // Close 幂等释放实例资源。
 func (e *Encoder) Close() error {
+	e.searchWorkspace = nil
 	e.out = nil
 	e.recon = nil
 	e.last = nil

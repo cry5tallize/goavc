@@ -7,7 +7,7 @@
 - 分支 `perf/m8-simd`，A00、K01–K05、K07、K09a已逐项提交；K06/K08按用户要求完成实现与交叉编译，原生未验证。SAD与SATD已真实接入，MC当前是唯一Generic块算法，不是SIMD插值。
 - amd64 Auto逐槽选择：SAD宽16为AVX2（其他宽SSE2），SATD4×4优选实测更快的SSE2；purego无项目汇编。没有全局“所有槽均AVX2”的声明。
 - K14a已补Windows SAD逐行保护页；其余内核矩阵未完成。K09b/c/d、K10–K13、K15–K25及K20m仍待实施，K14收尾待所有内核交付。
-- 当前已知成本：SAD间接调用导致搜索window逃逸，P控制场景约875.5k分配/op，须由K18的typed workspace复用解决；MC和SATD的已准备生产调用均0分配。
+- G01（K18前置）已用caller-owned搜索Workspace消除window/Scorer闭包反复逃逸；P控制场景中位778286分配/op，prepared搜索/MC/SATD为0分配。残差、邻域和试写仍是主要分配来源；不是完整K18。
 - 尚未执行完整race/代表性主目标长矩阵或远端CI；不创建标签、不push/release，不签完整M8。以下各节按实施时间保留当时的下一项与原始数据，最新状态以本节和状态矩阵为准。
 
 ## A00：基线与契约
@@ -124,3 +124,19 @@ SSE2以32位蝶形/转置/绝对值归约，不夹SSE4/AVX；AVX2以双行YMM蝶
 从 `59d3e45` 开始；Windows子进程在pin的无指针Go byte backing内部设置PAGE_NOACCESS，保证每一行（不只最后一行）的最后有效采样紧邻保护页。恢复原页属性后才unpin，不把Go指针藏入整数再转换回来；uint16视图限定偶数起点/len、同对象内。保护页不覆盖对象头或相邻对象，纯标准库/CGO=0，unsafe理由与边界在测试源码中说明。子进程异常由父测试报告，不杀死整个协调器。
 
 宽1/3/4/7/8/13/15/16/17/31、高1/3/16/17、byte/uint16共80几何；本机Generic/Auto/SSE2/AVX2四路径共320调用实际通过，解析期望分别为w*h*255/1023。最小len覆盖所有末行，无依赖padding的通过条件；原随机输入不变/非对齐stride矩阵继续保留。`go test -count=1 -run '^TestGuardPage_SAD$' -v ./internal/simd`、完整常规门禁、purego和386实际执行均退出0；六目标simd测试二进制编译通过。日志 `tmp/m8-baseline/k14a-{guard,verify}.txt`。其他OS动态页明确Skip为未执行，NEON不作原生声明；这不是完整K14或汇编race证明。
+
+### G00（部分）/G01：调用者拥有的搜索 Workspace
+
+起点 `4ec4ccc`。恢复时已有用户修改的05/08/README及未跟踪13专项计划，原样保留，不混入代码提交。按13优先级先修搜索逃逸，没有重做分发/SAD/SATD/MC。G00本次仅补当前P/B/冷解码各五样本、P独立allocation profile和搜索逃逸诊断；自然GC/assist/scan/pause/RSS/留存、warm-steady及RC测量尚未交付，不能称完整G00。
+
+`gopls references search.go:91:6 / :129:6 / :156:6 / :162:6`核对全部入口引用。Integer/Refine/Estimate追加必需`*Workspace`参数；EstimateWithCost在Scorer后追加同参数，移除旧隐式分配签名，真实interCandidateUsingMotion和所有测试同步迁移。Workspace零值可用，非并发/重入，一个lane一份；两个私有typed窗口含1536字节采样槽加状态。Encoder构造一次、Reset复用、Close解绑；场/独立平面channel浅拷贝只借用同一指针。newFrameState兼容包内手工构造的Encoder，不会每次建立workspace。
+
+准备时只覆盖有效原始矩形，Estimate两阶段共用原始块与绑定；细化前仍重新初始化best/cost/SAD。Scorer同步参数传递，不存入持久窗口；每次结束（包括Scorer panic展开）解除reference/ref借用。候选顺序、重复候选、原始SAD和strict-<不变。改造前捕获32组8/10-bit、frame/FieldView、full/diamond、边界/内部、相等/非相等Scorer的序列指纹、MV、SAD，改造后逐项一致。fixture无更新开关。初次采集测试误写不存在的格式常量，修正为既有YUV420P10LE后才采集有效基线，编译失败不算通过。
+
+TestAllocation_PreparedSearch覆盖双位深×真实场/帧×边界/内部×full/diamond×四入口，共64用例，均0分配；Scorer在每次测量调用内部建立。强制Generic/SSE2/AVX2重复上述测试和原解析向量；NEON本机不可用明确Skip。实际Encoder跨帧/Reset及MBAFF两场复用同一lane，Close解除私有指针。完整96帧基线不改golden。
+
+同机固定1x五次P中位：873234900 → 864596000 ns/op，335761024 → 293497608 B/op，875520 → 778286 allocs/op。B一个op含四帧：1958292700 → 1979717200 ns/op，777294336 → 735043024 B/op，2117812 → 2020629 allocs/op；保留B耗时约1.1%的波动，不称普遍吞吐提升。全部样本、计时边界、配置、源revision、输入SHA及日志SHA见`docs/gates/m8_search_workspace_samples.json`。
+
+P独立memprofilerate=1覆盖整个进程（含预热，不能与计时区B/op混算）：搜索两阶段原各20250KiB和32400对象已从top栈消失，Scorer调用者的32400闭包对象亦消失。剩余主要为interResidual、analyzeIntra、subsampledChromaResidual、Writer.WriteBits和blockSamples。search的-m=2不再报告局部window搬堆或生产Scorer逃逸；测试框架闭包准备分配单列。没有测自然GC，不能给GC次数/暂停下降百分比。
+
+验证全部退出0：`go test -count=1 ./internal/motion/search ./encoder`；`go test -tags goavc_simdtest -count=1 -run '^(TestParity_SearchBackends|TestWorkspace_)' -v ./internal/motion/search ./encoder`；`go test -tags purego -count=1 ./internal/motion/search ./encoder`；实际`GOARCH=386 go test -count=1 ./internal/motion/search ./encoder`；Windows/Linux/macOS × amd64/arm64全库build；完整常规门禁gofmt/vet/build/test/depscheck/55条manifest/diff-check。普通命令均CGO_ENABLED=0，日志`tmp/m8-baseline/g01-{targeted,parity,purego,386,verify}.txt`。未执行NEON原生、完整race、长矩阵、远端CI；没有push/tag/release。下一项优先G02残差逃逸，之后G03试写/邻域，再有界池和所有权；剩余SIMD任务仍保留。

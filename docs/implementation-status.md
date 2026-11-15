@@ -253,7 +253,8 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | NEON SATD（K08） | 基线ASIMD 4×4 Hadamard、同值参数与测试入口 | WIP | arm64交叉vet/构建，原生测试入口已交付 | 用户指定编译验收；未原生运行，不把Generic或跨编译当NEON通过 |
 | 汇编边界基础（K14a） | Windows逐行保护页与子进程协调，SAD尾部/最小len | Partial | 原生Generic/Auto/SSE2/AVX2、purego、386保护页实际执行 | 仅SAD已动态验证；其余kernel和非Windows动态页仍待补齐，不签完整K14 |
 | 其余SIMD内核（K09b-d/K10–K14） | SIMD MC/变换/量化/去块/残差、边界证明 | TODO | 待实施 | 不据已完成kernel推定其余范围或端点已完成 |
-| 池化/去分配/并行（K15–K20m） | 所有权、slice/分析/ME | TODO | 既有串行测试保留 | Threads>1仍拒绝 |
+| 搜索去逃逸（G01/K18前置） | caller-owned双位深Workspace，真实编码器跨帧/场/Reset复用，结束解除借用 | Partial | 32组改造前Scorer轨迹/结果，64组prepared零分配，强制x86/purego/386/M8指纹 | 仅搜索；残差/试写/正常模式决策去分配仍待完成，完整K18未通过 |
+| 其余池化/去分配/并行（K15–K20m） | 所有权、slice/分析/ME | TODO | 既有串行测试保留 | Threads>1仍拒绝；G00仅补分配基线，完整GC测量待实施 |
 
 ## M9
 
