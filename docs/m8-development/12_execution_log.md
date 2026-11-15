@@ -205,3 +205,16 @@ G03b补充验证：完整`CGO_ENABLED=1 go test -race -count=1 ./...`退出0，t
 新增/扩展行为测试：`TestPool_GetClearsReleasedSlotAndEmptyBucket`、`TestReferences_RemoveClearsRetainedState`、`TestAssembler_ClearConsumedUnitSlots`、`TestDecoder_ClearSliceEntries`。测试检查池租约平衡、DPB 图像与 retained metadata 解除、NAL 独立 AU 不受影响，以及 decoder slice 容器清零。
 
 定向命令 `CGO_ENABLED=0 go test -count=1 ./internal/picture ./internal/dpb ./nal ./decoder` 退出 0。该任务没有新增性能样本；自然 GC、scan/assist/pause、RSS 和稳态留存实验仍未执行。G05 有界缓存、G06 公共 Frame backing、G07/G08 所有权和 K19/K20/K20m 并行仍未完成。
+
+### G05：有界 picture 空闲缓存
+
+起点为 G04 提交 `6a0cba0673`。本切片只扩充既有 `internal/picture.Pool`，不新增第二套图像池，不改变 `Get/Release/Stats/Trim` 的既有调用契约，也不把缓存预算解释为活跃内存或 RSS 上限。
+
+- 每个 Pool 的空闲 backing 总预算固定为 64 MiB；原有每个尺寸/格式桶的 `maxFree` 上限保留为 4（`NewPool` 的 `<=0` 默认值仍为 4）。
+- 账本按三个平面的实际 backing capacity 计费：8-bit `cap(Data)`，10-bit `cap(Data16)*2`；不按显示尺寸估算，不跨 `PixelFormat` 或编码几何混桶。
+- `Get` 命中时扣除实际字节并清除空闲槽；`Release` 超过单桶或全池预算时仍完成合法归还，但不缓存；`Trim` 同步清空字节账本。新增 `CacheStats` 仅报告空闲 backing 字节、非空桶数和图像数，保留原 `Stats` 三返回值。
+- 大于缓存预算的合法图像不会返回新的资源错误；该缓存只限制空闲留存，借出图像和当前工作图像不计入空闲预算。
+
+新增 `TestPool_BoundsFreeStorageAndCacheStats`，验证实际 capacity 计费、命中扣账、超预算拒收和后续重新分配；既有多格式/尺寸隔离、复用、并发测试继续保留。`CGO_ENABLED=0 go test -count=1 ./internal/picture` 与 `CGO_ENABLED=1 go test -race -count=1 ./internal/picture` 均退出 0。
+
+本切片没有新增吞吐或 GC 样本；64 MiB 是空闲缓存预算，不是活跃内存/RSS承诺。G06 公共 Frame backing、G07 encoder 图像/RC 所有权、G08 decoder retained metadata、G09 AU 容量和 G10 集成验收仍待完成。

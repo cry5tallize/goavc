@@ -789,3 +789,7 @@ P控制分配中位从335761024B/875520次变为4945520B/42次；耗时873234900
 ### G04：清除无效引用与容器尾槽
 
 本切片处理 picture pool、DPB retained metadata、NAL pending 和 decoder slice entries 的失效引用，不改变计时路径或编码/解码策略，因此没有新增 before/after 吞吐样本。定向四包测试通过；G04 只证明容器槽和长期引用在消费、释放或压缩后解除，不证明自然 GC 周期、扫描量、assist、暂停、RSS 或稳态 HeapAlloc 已下降。上述指标留待 G00/G05–G10 的独立测量，不能由 G01–G04 的分配减少直接推导。
+
+### G05：有界 picture 空闲缓存
+
+G05 只增加 `picture.Pool` 的空闲 backing 账本与拒收策略，没有改变编码/解码计时路径，因此不新增吞吐 before/after 数字。64 MiB 是每个 Pool 的空闲缓存预算，借出图像、活跃工作图和调用方持有输出不计入该预算；不能把 `CacheStats` 的下降解释为 RSS、HeapSys 或自然 GC 已下降。完整留存、GC 和端点测量留待 G00/G06–G10。

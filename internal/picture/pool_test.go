@@ -105,6 +105,52 @@ func TestPool_GetClearsReleasedSlotAndEmptyBucket(t *testing.T) {
 	reused.Release()
 }
 
+func TestPool_BoundsFreeStorageAndCacheStats(t *testing.T) {
+	pool := NewPool(4)
+	pic, err := pool.Get(1, 1, h264.YUV420P)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bytes := pictureStorageBytes(pic)
+	if bytes == 0 {
+		t.Fatal("picture storage size is zero")
+	}
+	pool.maxFreeBytes = bytes
+	pic.Release()
+	freeBytes, buckets, pictures := pool.CacheStats()
+	if freeBytes != bytes || buckets != 1 || pictures != 1 {
+		t.Fatalf("cache stats = %d/%d/%d, want %d/1/1", freeBytes, buckets, pictures, bytes)
+	}
+
+	reused, err := pool.Get(1, 1, h264.YUV420P)
+	if err != nil {
+		t.Fatal(err)
+	}
+	freeBytes, buckets, pictures = pool.CacheStats()
+	if freeBytes != 0 || buckets != 0 || pictures != 0 {
+		t.Fatalf("cache stats after Get = %d/%d/%d, want 0/0/0", freeBytes, buckets, pictures)
+	}
+
+	pool.maxFreeBytes = bytes - 1
+	reused.Release()
+	freeBytes, buckets, pictures = pool.CacheStats()
+	if freeBytes != 0 || buckets != 0 || pictures != 0 {
+		t.Fatalf("over-budget cache stats = %d/%d/%d, want 0/0/0", freeBytes, buckets, pictures)
+	}
+	fresh, err := pool.Get(1, 1, h264.YUV420P)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fresh == reused {
+		t.Fatal("over-budget release was reused")
+	}
+	fresh.Release()
+	_, _, allocs := pool.Stats()
+	if allocs != 2 {
+		t.Fatalf("allocs = %d, want 2 after rejected reuse", allocs)
+	}
+}
+
 func TestPool_ConcurrentGetPut(t *testing.T) {
 	pool := NewPool(8)
 	const goroutines = 8
