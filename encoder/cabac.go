@@ -56,6 +56,12 @@ func (e *Encoder) encodeCABAC(src *picture.Picture, intra, idr bool) ([]byte, *f
 	if err != nil {
 		return nil, nil, err
 	}
+	success := false
+	defer func() {
+		if !success {
+			releaseFrameState(s)
+		}
+	}()
 	if !idr {
 		s.reference = e.reference
 	}
@@ -161,6 +167,7 @@ func (e *Encoder) encodeCABAC(src *picture.Picture, intra, idr bool) ([]byte, *f
 	}
 	s.src, s.reference = nil, nil
 	s.searchReference = nil
+	success = true
 	return out.Bytes(), s, nil
 }
 

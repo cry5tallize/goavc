@@ -177,7 +177,7 @@
 | 引用清尾与容器留存 | Partial | G04 已解除 picture pool 弹出槽、DPB 图像/运动/场元数据、NAL pending 及 decoder slice entries 的失效引用；池租约与固定码流保护网通过。G05 有界缓存、公共Frame backing、完整 codec 所有权和自然GC/稳态验收仍待完成 |
 | 有界 picture 空闲缓存 | Partial | G05 为既有 `picture.Pool` 增加每 Pool 64 MiB 空闲 backing 预算，按实际 `cap` 计费并保留每桶/格式隔离；超预算合法图像仍可处理但不缓存，`CacheStats` 与 Trim 账本测试通过。不代表活跃内存、RSS、公共 Frame backing 或完整 codec 所有权已完成 |
 | 公共 Frame backing 与迁移 | Partial | G06 提供 `NewFrame`、64 MiB 有界 backing 缓存、新 Frame 头、清零和一次性租约；decoder 输出、encoder Reconstruction/lookahead/B 输入及 YUVReader 已迁移，六格式/奇数尺寸/High10 校验回归通过。公共头/租约分配、G07/G08 所有权和最终 M8 门禁仍待完成 |
-| encoder 图像与 RC 候选所有权 | Partial | G07 为 Encoder 增加实例私有 picture.Pool；RC 快速/穷举候选、AU 拒绝、Reset/Close 的 Picture 租约回收测试通过，QP 搜索和固定码流顺序不变。底层语法早退全矩阵、自然 GC/RSS 与完整 M8 门禁仍待完成 |
+| encoder 图像与 RC 候选所有权 | Partial | G07/K15收尾覆盖实例私有池、普通/场/独立平面候选、创建层失败及RC最佳候选fatal回收；后续通道拒绝QP、成功重试和Reset租约平衡有回归。不改变QP搜索、码流或公共输出；自然GC/RSS及完整M8门禁未验收 |
 | decoder retained metadata 与 DPB 所有权 | Partial | G08 清空失败 frameState 的图像/场视图/运动/reference-ID 元数据，Reset 后 DPB Picture 归还池，错误恢复、输出 Release/Clone 和 decoder race 通过；未执行全库 race 与自然 GC/RSS 门禁 |
 | AU 容量与粘性错误状态 | Partial | G09 保持 Annex-B/AVCC 单NAL、NAL数量、输入/输出AU预算在封装前校验，AUReader 失败后清空 assembler/容量/参数集状态并禁止重复读取；超限与 writer 原子性测试、stream race 通过。G10 集成与全库 race 仍待完成 |
 

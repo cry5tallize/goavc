@@ -57,6 +57,7 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 	search := newQPSearch(e.rateQP[kind], e.rateQPKnown[kind], minQP)
 	var best []byte
 	var bestState *frameState
+	defer func() { releaseFrameState(bestState) }()
 	bestQP := e.frameQP
 	bestDelta := int64(math.MaxInt64)
 	feasible := false
@@ -170,7 +171,9 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 		}
 		return nil, nil, bestQP, fmt.Errorf("encoder: no QP satisfies rate-control and access-unit bounds: %w", h264.ErrResourceLimit)
 	}
-	return best, bestState, bestQP, nil
+	state := bestState
+	bestState = nil
+	return best, state, bestQP, nil
 }
 
 func (e *Encoder) preferRateQP(candidate, current int) bool {

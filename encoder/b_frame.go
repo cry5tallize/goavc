@@ -18,6 +18,12 @@ func (e *Encoder) encodeB(src *picture.Picture) ([]byte, *frameState, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	success := false
+	defer func() {
+		if !success {
+			releaseFrameState(s)
+		}
+	}()
 	s.reference = e.bPast
 	s.weights = nil
 	s.searchReference = nil
@@ -102,6 +108,7 @@ func (e *Encoder) encodeB(src *picture.Picture) ([]byte, *frameState, error) {
 	s.mv.BeginSlice(0)
 	s.deblock()
 	s.src, s.reference = nil, nil
+	success = true
 	return out.Bytes(), s, nil
 }
 

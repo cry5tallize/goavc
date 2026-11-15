@@ -61,6 +61,10 @@ func TestProfileLimits_LowQPExtremeContentRecovers(t *testing.T) {
 	if e.out != nil || e.reference != nil || e.frameNum != 0 {
 		t.Fatal("unsupported content changed state")
 	}
+	gets, puts, _ := e.picturePool.Stats()
+	if gets != puts {
+		t.Fatalf("非法候选未归还图像: gets=%d puts=%d", gets, puts)
+	}
 	valid := testFrame(c.Width, c.Height)
 	for comp := range valid.Planes {
 		for i := range valid.Planes[comp].Data {

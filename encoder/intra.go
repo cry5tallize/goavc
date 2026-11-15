@@ -78,6 +78,12 @@ func (e *Encoder) encodeIntra(src *picture.Picture, idr bool) ([]byte, *frameSta
 	if err != nil {
 		return nil, nil, err
 	}
+	success := false
+	defer func() {
+		if !success {
+			releaseFrameState(s)
+		}
+	}()
 	total := src.MBWidth * src.MBHeight
 	var b bytes.Buffer
 	out := nal.NewAnnexBWriter(&b)
@@ -143,6 +149,7 @@ func (e *Encoder) encodeIntra(src *picture.Picture, idr bool) ([]byte, *frameSta
 	}
 	s.deblock()
 	s.src = nil
+	success = true
 	return b.Bytes(), s, nil
 }
 

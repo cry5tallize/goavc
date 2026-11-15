@@ -31,6 +31,12 @@ func (e *Encoder) encodeP(src *picture.Picture) ([]byte, *frameState, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	success := false
+	defer func() {
+		if !success {
+			releaseFrameState(s)
+		}
+	}()
 	s.reference = e.reference
 	var b bytes.Buffer
 	out := nal.NewAnnexBWriter(&b)
@@ -95,6 +101,7 @@ func (e *Encoder) encodeP(src *picture.Picture) ([]byte, *frameState, error) {
 	s.src = nil
 	s.reference = nil
 	s.searchReference = nil
+	success = true
 	return b.Bytes(), s, nil
 }
 

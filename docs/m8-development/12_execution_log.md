@@ -350,3 +350,11 @@ amd64默认Forward4与SATD选择SSE2；8×8投影、逆变换/DC、量化、去�
 
 初始小批量路径的明显回退与修正过程保留在`arithmetic-bench.txt`、`arithmetic-bench-fixed.txt`、`transform-bench.txt`和`blocks-bench-final.txt`；最终代码以`bench-final.txt`为准。其SHA-256为`7f34263a89210899a0d17ff73bc4ba828dc25f8b2619852c6eeb0cbeb50799bb`。其余验证日志摘要见`verification-sha256.txt`，race摘要另存`race-final-sha256.txt`。本轮生成的交叉测试二进制和单独汇编对象已清理，保留文本证据。
 
+### K15 收尾：候选创建层失败回收
+
+本轮从 `e34d882` 开始，按用户授权采用可行性评估后的范围，并严格按 K15→K16→K17→K18→K19→K20→K20m 顺序独立提交。K16 仅做有证据的串行临时存储复用；K19 先作多 slice 收益准入；K20 仅消除重复纯分析，不启用流水线；K20m 暂不实施，不将裁剪项标成实现完成。
+
+K15 继续使用既有 Picture/Frame 池，不新增池或改变公共所有权。现有低 QP 拒绝后重试测试加入租约断言，修复前实际失败 `gets=2 puts=1`。普通 I/P/CABAC/B 创建层增加失败清理，成功才转移候选；RC fatal 退出清理此前最佳候选；场通道只回收自己拥有的完整 recon；独立平面改用实例池，整图成功转移，借用视图不独立归还。
+
+新增组合测试通过公开 SendFrame 在后续场/平面拒绝 QP，检查失败不发布、重试成功只保留一个图像 owner、Reset 后池账本平衡。定向测试、`CGO_ENABLED=0 bash scripts/verify.sh` 完整门禁（35包依赖、55条manifest）及四类失败/重试用例的 `CGO_ENABLED=1 go test -race -count=1` 均退出0；日志 `tmp/m8-k15-k20/k15-verify.txt`。尚未测自然 GC/RSS，不把所有权修复解释为吞吐提升。
+

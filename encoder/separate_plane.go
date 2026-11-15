@@ -10,10 +10,22 @@ import (
 // encodeSeparate 将三个独立 colour_plane_id slice 集合写入同一个 AU。
 // 每次只替换 Plane 描述符，I/P/B、熵编码、RD 与滤波仍走同一内核。
 func (e *Encoder) encodeSeparate(src *picture.Picture, intra, idr bool, qp int) ([]byte, *frameState, error) {
-	recon, err := picture.New(src.MBWidth, src.MBHeight, src.Format)
+	var recon *picture.Picture
+	var err error
+	if e.picturePool != nil {
+		recon, err = e.picturePool.Get(src.MBWidth, src.MBHeight, src.Format)
+	} else {
+		recon, err = picture.New(src.MBWidth, src.MBHeight, src.Format)
+	}
 	if err != nil {
 		return nil, nil, err
 	}
+	success := false
+	defer func() {
+		if !success {
+			recon.Release()
+		}
+	}()
 	var data []byte
 	var first *frameState
 	for comp := range 3 {
@@ -65,5 +77,7 @@ func (e *Encoder) encodeSeparate(src *picture.Picture, intra, idr bool, qp int) 
 		first = &frameState{}
 	}
 	first.pic = recon
+	first.ownsPic = true
+	success = true
 	return data, first, nil
 }

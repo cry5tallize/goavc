@@ -144,6 +144,12 @@ func (e *Encoder) encodeInterlaced(src *picture.Picture, intra, idr bool) ([]byt
 		}
 		ownsRecon = true
 	}
+	success := false
+	defer func() {
+		if ownsRecon && !success {
+			recon.Release()
+		}
+	}()
 	states, past, future, err := e.interlacedStates(src, recon)
 	if err != nil {
 		return nil, nil, err
@@ -364,5 +370,6 @@ func (e *Encoder) encodeInterlaced(src *picture.Picture, intra, idr bool) ([]byt
 		s.src, s.reference, s.searchReference = nil, nil, nil
 	}
 	// 最近帧的像素快照必须仍为完整交织帧，不能暴露半高场视图。
+	success = true
 	return out.Bytes(), &frameState{pic: recon, ownsPic: ownsRecon, fields: states}, nil
 }
