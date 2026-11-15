@@ -48,6 +48,7 @@ R3 的白名单是**显式**的：
 ```text
 internal/prediction  internal/transform  internal/motion
 internal/filter      internal/buffer     internal/simd
+internal/motion/search
 decoder              encoder
 ```
 
@@ -83,7 +84,8 @@ decoder              encoder
 - `picture.FieldView`只借用原帧的奇偶行，Stride加倍、高度减半，不分配像素、不归池，生命周期不得超过原帧。禁止单独扩边；共享MC按场Width/Height钳位，不得读到另一场或把两场边缘混用。
 
 这样上层永远只看到真实画面，不需要自己处理 Crop；内部算法又始终面对对齐尺寸，
-可以安全使用 SIMD 的越界读。
+仅当具体内核已证明实际len、halo与场边界满足要求时才能使用对应向量加载；
+宏块对齐不授权越界读，末行不要求padding，FieldView不能读取另一场作为halo。
 
 ## 5. 内存所有权
 

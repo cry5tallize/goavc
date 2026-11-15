@@ -53,14 +53,15 @@ func (v Violation) String() string {
 // 白名单而不是黑名单：新增一个包时默认"不允许直接触碰 SIMD"，
 // 想用就必须显式修改这张表，从而强制经过一次依赖评审（R3）。
 var simdImporters = map[string]bool{
-	"internal/prediction": true,
-	"internal/transform":  true,
-	"internal/motion":     true,
-	"internal/filter":     true,
-	"internal/buffer":     true,
-	"internal/simd":       true, // 自身与内部测试
-	"decoder":             true,
-	"encoder":             true,
+	"internal/prediction":    true,
+	"internal/transform":     true,
+	"internal/motion":        true,
+	"internal/motion/search": true,
+	"internal/filter":        true,
+	"internal/buffer":        true,
+	"internal/simd":          true, // 自身与内部测试
+	"decoder":                true,
+	"encoder":                true,
 }
 
 // Load 解析 root 目录下的整个模块。

@@ -36,3 +36,11 @@ A00：`CGO_ENABLED=0 go test -count=1 -run '^TestM8Baseline_SerialOutput$' ./tes
 从A00提交 `2a45f23` 开始，新增cpu平台文件及测试；运行时只在包初始化探测，缺leaf1/7、XSAVE/OSXSAVE/AVX或XMM/YMM状态均不启用AVX2。模拟1024种组合，断言缺能力时不调用XGETBV。native windows/amd64 检测SSE2/AVX2可执行；没有由检测结果冒称kernel已实现。
 
 `CGO_ENABLED=0 go test -count=1 -run '^TestCPU_' -v ./internal/simd`、`go test -tags purego -count=1 ./internal/simd` 均退出0；`go list -tags purego -f '{{.SFiles}}' ./internal/simd` 输出 `[]`。完整常规门禁退出0（`tmp/m8-baseline/k01-verify.txt`）；`GOARCH=386 go test -count=1 ./internal/simd` 在本机实际执行退出0；windows/linux/darwin × amd64/arm64 的simd测试二进制 `go test -c` 全部编译成功。arm64未原生执行。首次vet发现uint64返回区的部分宽度写法，已改为合并寄存器后一次MOVQ返回，并重新通过完整门禁。
+
+### K02：类型化 SAD 分发与真实接入
+
+从 `4620a76` 开始；新增SAD8/16两槽及逐槽 `ActiveBackends()` 诊断，当前均为Generic。共享包的 `BindSAD8/16()` 返回只读内核函数供搜索上下文一次绑定，候选循环仅一次函数指针调用。删除search原SAD标量循环，整像素与MC候选均调用同一simd内核。R3只加入当前真实消费者 `internal/motion/search`；`internal/picture` 等其真实接入时再放行，规则测试拒绝搜索子目录和picture的提前使用。架构原文中“宏块对齐允许越界读”已纠正为逐入口证明len/halo/场边界。
+
+`CGO_ENABLED=0 go test -count=1 ./internal/simd ./internal/motion/search ./internal/testutil/importgraph`、固定M7指纹、完整常规门禁及 `go test -tags purego -count=1 ./internal/simd ./internal/motion/search` 全部退出0，日志 `tmp/m8-baseline/k02-verify.txt`。12组指纹未改变，SAD16的低两位和261888最大值解析验证通过。
+
+真实P消费者五次ns/op为2291247300、2390645600、2216798200、2243312300、2191737400，中位2243312300；B/op约335.76MB，allocs/op约875.5k。对照A00中位2173442000ns、293.50MB、778.3k，分发结构阶段尚无加速，临时window经间接调用逃逸，增加约97.2k分配。K18必须将搜索/模式决策typed workspace复用一并解决，不能将该阶段记为性能完成。原始日志 `tmp/m8-baseline/k02-encoder-p-bench.txt`；后续比较保持相同串行配置，不覆盖A00。

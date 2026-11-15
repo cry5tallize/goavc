@@ -163,6 +163,27 @@ func TestCheckR3(t *testing.T) {
 	}
 }
 
+func TestCheckR3_ExactSearchConsumer(t *testing.T) {
+	for _, dir := range []string{"internal/motion/search", "internal/motion/search/helper", "internal/picture"} {
+		t.Run(dir, func(t *testing.T) {
+			root := newModule(t)
+			writeFile(t, root, "internal/simd/s.go", "package simd\n")
+			writeFile(t, root, dir+"/s.go", "package consumer\nimport _ \"example.com/m/internal/simd\"\n")
+			g, err := Load(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := 1
+			if dir == "internal/motion/search" {
+				want = 0
+			}
+			if got := rulesOf(g.Check())["R3"]; got != want {
+				t.Fatalf("目录%s R3违规=%d，期望%d", dir, got, want)
+			}
+		})
+	}
+}
+
 // R5：import 环必须被检测出来，且 Reason 里带完整环路径。
 func TestCheckR5Cycle(t *testing.T) {
 	root := newModule(t)

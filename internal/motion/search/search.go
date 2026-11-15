@@ -6,6 +6,7 @@ import (
 	"github.com/goavc/h264/internal/motion"
 	"github.com/goavc/h264/internal/picture"
 	"github.com/goavc/h264/internal/prediction"
+	"github.com/goavc/h264/internal/simd"
 )
 
 type MV = motion.MV
@@ -17,23 +18,12 @@ type Scorer func(MV, int) uint64
 // SAD 返回有效矩形的绝对差和。调用方须先验证缓冲/stride；只读有效像素，
 // 不读取行尾填充，所以支持奇数尺寸与非对齐 stride。
 func SAD(a []byte, as int, b []byte, bs, width, height int) int {
-	return sad(a, as, b, bs, width, height)
+	return simd.SAD8(a, as, b, bs, width, height)
 }
 
 // sample 仅覆盖平面的两种原生存储；SAD 保留原位深，不缩放像素差。
 type sample interface {
 	byte | uint16
-}
-
-func sad[T sample](a []T, as int, b []T, bs, width, height int) int {
-	sum := 0
-	for y := range height {
-		for x := range width {
-			d := int(a[y*as+x]) - int(b[y*bs+x])
-			sum += max(d, -d)
-		}
-	}
-	return sum
 }
 
 type window[T sample] struct {
@@ -45,10 +35,19 @@ type window[T sample] struct {
 	cost                uint64
 	sad                 int
 	scorer              Scorer
+	sadKernel           func([]T, int, []T, int, int, int) int
 }
 
 func newWindow[T sample](src, ref []T, srcPlane, refPlane *picture.Plane, x, y, w, h, radius int) window[T] {
 	s := window[T]{reference: ref, ref: refPlane, x: x, y: y, w: w, h: h, radius: min(max(1, radius), 64, max(4, min(refPlane.Width, refPlane.Height)/4)), cost: ^uint64(0)}
+	// 每个搜索上下文仅绑定一次样本类型；候选/像素循环不再做类型判断。
+	var zero T
+	switch any(zero).(type) {
+	case byte:
+		s.sadKernel = any(simd.BindSAD8()).(func([]T, int, []T, int, int, int) int)
+	case uint16:
+		s.sadKernel = any(simd.BindSAD16()).(func([]T, int, []T, int, int, int) int)
+	}
 	for j := range h {
 		offset := srcPlane.Index(x, y+j)
 		copy(s.original[j*16:j*16+w], src[offset:offset+w])
@@ -65,7 +64,7 @@ func (s *window[T]) consider(m MV) {
 	if m.X%4 == 0 && m.Y%4 == 0 && rx >= 0 && ry >= 0 && rx+s.w <= s.ref.Width && ry+s.h <= s.ref.Height {
 		// 整像素代价直接比较原始采样；边界外推和亚像素仍只由共享 MC 定义。
 		offset := s.ref.Index(rx, ry)
-		cost = sad(s.original[:], 16, s.reference[offset:], s.ref.Stride, s.w, s.h)
+		cost = s.sadKernel(s.original[:], 16, s.reference[offset:], s.ref.Stride, s.w, s.h)
 	} else {
 		// 只在插值入口区分存储类型；搜索边界、SAD 与代价决策完全共享。
 		switch dst := any(s.candidate[:]).(type) {
@@ -74,7 +73,7 @@ func (s *window[T]) consider(m MV) {
 		case []uint16:
 			prediction.MCBlockLumaHigh(dst, 16, s.ref, s.x, s.y, s.w, s.h, int(m.X), int(m.Y))
 		}
-		cost = sad(s.original[:], 16, s.candidate[:], 16, s.w, s.h)
+		cost = s.sadKernel(s.original[:], 16, s.candidate[:], 16, s.w, s.h)
 	}
 	rank := uint64(cost)
 	if s.scorer != nil {
