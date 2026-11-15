@@ -627,26 +627,21 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 
 ## M9 — 生产化与发布
 
-**分支：** `chore/m9-release` ｜ **预计提交：** 16
+**分支：** `chore/m9-release` ｜ **计划提交：** 最多 3 个收尾提交；没有实际改动的项直接跳过，不凑数。真实缺陷按 §3.1 独立修复，不捆绑进发布提交。
 
 | # | Commit | 内容 | 验证 |
 |---|---|---|---|
-| 1 | `test[fuzz]: add fuzz targets for parsers and entropy decoders` | 11 个入口 | 短时 smoke |
-| 2 | `test[fuzz]: add corpus seeds from malformed samples` | 种子语料 | 无 panic |
-| 3 | `test[decoder]: raise oracle coverage to full corpus` | 全 manifest | 全通过 |
-| 4 | `test[encoder]: add encoder compatibility matrix across profiles` | Baseline/Main/High/10 | 全通过 |
-| 5 | `ci[repo]: add daily full oracle and race workflow` | 每日门禁 | CI 绿 |
-| 6 | `ci[repo]: add benchmark canary with regression threshold` | >10% 告警 | 告警可触发 |
-| 7 | `ci[repo]: add allocation budget checks on hot packages` | 预算断言 | 超限失败 |
-| 8 | `test[repo]: add api surface snapshot test` | 公共 API 快照 | 变更即失败 |
-| 9 | `docs[api]: add godoc examples for encoder and decoder` | 可运行示例 | `go test` 跑 example |
-| 10 | `docs[api]: document ownership concurrency and error semantics` | 所有权/并发/错误 | — |
-| 11 | `docs[conformance]: publish conformance report` | 语料与结论 | — |
-| 12 | `docs[support]: publish supported feature matrix for v1` | 最终支持范围 | — |
-| 13 | `test[repo]: add eight hour stability test harness` | 长稳脚本 | 无泄漏 |
-| 14 | `build[repo]: add release build script for six platform targets` | 交叉构建 | 产物校验 |
-| 15 | `docs[readme]: rewrite readme for v1 release` | 安装/用法/限制 | — |
-| 16 | `chore[release]: close milestone m9 gate and tag v1.0.0` | 发布门禁全勾选 | 全部通过 |
+| 1 | `test[repo]: complete release regression checks` | 复用现有测试、Fuzz 种子、Oracle、分配断言和构建脚本，只补会影响用户的实际缺口；已有覆盖不重写 | 变更路径定向验证；发布前集中运行一次常规门禁，不按旧任务行重复跑全库 |
+| 2 | `docs[repo]: prepare v1 release documentation` | 一次整理 README、已有示例、API 所有权/并发/错误说明、支持边界、许可与 CHANGELOG；链接现有一致性和性能报告，不另造报告体系 | 核对内容与实际 API；有改动的示例可运行；未测和不支持项如实保留 |
+| 3 | `chore[release]: tag v1.0.0` | 核对版本和已完成检查，提交发布记录并创建注释标签；push/远端 release 仅在用户要求时执行 | 标签指向最终提交；不把未完成检查写成通过 |
+
+**执行约定：**
+
+- 原 16 行是工作清单，不再逐行开发、逐行提交；已有结果和工具能复用就复用。
+- 每日 Oracle/race 工作流、性能 canary、独立分配预算 CI、API 快照测试不作为新增交付要求；不为发布新建这些框架。
+- 不默认重跑 M8 的长性能矩阵，不新增性能目标，不重复采样，不另建门禁附件。
+- Roadmap 的 v1.0 质量要求保持不变；原生多平台和 8 小时长稳不在普通收尾中自动启动。确需执行时提前说明并单独安排，不能让用户在不知情时等待，也不能把未执行写成通过。
+- 本节只简化提交与执行组织，不新增编解码能力，不把现有 Partial/WIP 改称完整支持。
 
 ---
 
@@ -665,10 +660,10 @@ types/错误 → bitstream → syntax 解析 → 核心 kernel（含测试）
 | M6 | 19 | `feat/m6-streaming` | v0.7.0 |
 | M7 | 24 | `feat/m7-*` | v0.9.0 |
 | M8 | 25 | `perf/m8-*` | v0.9.5 |
-| M9 | 16 | `chore/m9-release` | v1.0.0 |
-| **合计** | **277** | — | — |
+| M9 | 最多 3 个收尾提交 | `chore/m9-release` | v1.0.0 |
+| **合计** | **最多 264 个计划提交（另计必要修复）** | — | — |
 
-> 数量是**计划下限**，不是配额。实际提交数会因 `fix[...]` 与 `refactor[...]` 增加；减少只允许合并"同 kernel 的连续小步"，不允许合并跨模块改动。
+> M0–M8 数量保留原计划下限规则；M9 按本节精简方案执行，不以提交数为配额。一个提交仍须是一个可独立回滚、可验证的逻辑变更；真实缺陷单独修复，无改动不创建空提交。
 
 ### 14.2 提交类型 → 必须通过的门禁
 
