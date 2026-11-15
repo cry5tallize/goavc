@@ -50,7 +50,8 @@ func TestIntraSelection_AllModes(t *testing.T) {
 				p.SetSample(7, 8+i, b.Left[i])
 			}
 			p.SetSample(7, 7, b.TopLeft)
-			a, t, l, _ := s.blockSamples(3, c)
+			var neighbors blockSamplesScratch
+			a, t, l, _ := s.blockSamples(3, c, &neighbors)
 			var target [64]uint16
 			prediction.Chroma8x8High(target[:], 8, mode, a, t, l, 8)
 			putBlock(&src.Planes[c], 8, 8, 8, target[:])

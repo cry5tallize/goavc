@@ -24,6 +24,9 @@ func TestParity_IntraBackends(t *testing.T) {
 			}
 			TestIntraSelection_AllModes(t)
 			TestHigh10ModeSearch_PreservesAllIntraModes(t)
+			TestIntra_FrozenCandidates(t)
+			TestAllocation_IntraCandidate(t)
+			TestNeighbors_ScratchLifetimeAndUnavailable(t)
 		})
 	}
 }

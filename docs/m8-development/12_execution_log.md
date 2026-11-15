@@ -7,8 +7,8 @@
 - 分支 `perf/m8-simd`，A00、K01–K05、K07、K09a已逐项提交；K06/K08按用户要求完成实现与交叉编译，原生未验证。SAD与SATD已真实接入，MC当前是唯一Generic块算法，不是SIMD插值。
 - amd64 Auto逐槽选择：SAD宽16为AVX2（其他宽SSE2），SATD4×4优选实测更快的SSE2；purego无项目汇编。没有全局“所有槽均AVX2”的声明。
 - K14a已补Windows SAD逐行保护页；其余内核矩阵未完成。K09b/c/d、K10–K13、K15–K25及K20m仍待实施，K14收尾待所有内核交付。
-- G01/G02（K18切片）已消除搜索window/Scorer闭包和残差量化临时量反复逃逸；prepared搜索/MC/SATD、六格式帧间残差/重建/四分区候选为0分配。P控制中位13371880B/op、342528次/op；仍有邻域与RD/正式试写分配，不是完整K18。
-- 尚未执行完整race/代表性主目标长矩阵或远端CI；不创建标签、不push/release，不签完整M8。以下各节按实施时间保留当时的下一项与原始数据，最新状态以本节和状态矩阵为准。
+- G01/G02/G03a（K18切片）已消除搜索/残差/帧内邻域的反复分配；prepared搜索/MC/SATD、六格式帧间/帧内候选为0分配。P控制中位11029600B/op、212910次/op；仍有RD/正式试写和模式列表分配，不是完整K18。
+- G02代码`bb3c7d8`完整race已通过（含tests/codec 305.297s），G03a另通过encoder race；后续改动仍需按范围验证，不能把旧结果扩大。代表性主目标长矩阵及远端CI未执行；不创建标签、不push/release，不签完整M8。以下各节按实施时间保留当时记录，最新状态以本节和状态矩阵为准。
 
 ## A00：基线与契约
 
@@ -152,3 +152,15 @@ P独立memprofilerate=1覆盖整个进程（含预热，不能与计时区B/op�
 五次prepared微基准12场景原420为7072B/11次、422为7616B/19次、444为19584B/3次，均降为0；耗时全部中位降低，见performance。相同固定1x端点：P中位864596000→847895700ns、293497608→13371880B、778286→342528次；B四帧/op中位1979717200→1894669700ns、735043024→47529072B、2020629→951160次。完整样本、配置、输入SHA、源码状态和日志SHA见`docs/gates/m8_residual_samples.json`。profile单独测量，含预热不能与计时窗口混算；原残差相关flat栈消失，剩余writer/blockSamples/picture/metadata。没有自然GC/assist/暂停数据，不宣称其下降百分比，也不签30FPS。
 
 定向真实候选/指纹、goavc_simdtest强制Generic/SSE2/AVX2、purego encoder、386 encoder实际运行、六OS/架构全库build、完整常规gofmt/vet/build/test/depscheck/55条manifest/diff-check均退出0；日志`tmp/m8-baseline/g02-{targeted-complete,parity,purego,386,verify}.txt`。NEON本机不可用明确Skip，交叉构建不替代原生。全库race在本次集成后单独运行，实际结果另行追加。下一项G03试写/邻域复用，剩余SIMD/池化/并行仍待交付。
+
+### G03a：帧内邻域固定槽与正常候选可用性预检
+
+起点`bb3c7d8`，保留用户05/08/README/13工作。blockSamples追加调用者私有`*blockSamplesScratch`，实际analyzeIntra/chroma及包内测试一次迁移；槽为Top/Left各16个uint16，返回slice借用到下一次填充前，不在frameState放单一共享槽。同存活邻域使用独立槽，不可用部分清零保持原make的零值，仍按实际采样几何返回8/16长度和FieldView采样stride。
+
+改造前在bb3c7d8捕获1152个I4/I16/I8候选完整系数、CBP、预测模式和重建采样SHA `8e5b5258d07d30ef0509e47f4306e30a51f8447e743f85a54beba064618da41b`，改造后不变。384组六格式/场/矩阵/QP/共同独立444配置每组跑三个family，真实非空候选的AllocsPerRun均0。邻域独立解析测试覆盖六格式×frame/真实场×slice起点0/1/2/3×三平面，检查可用性/有效长度、精确采样、不同时覆盖和复用清零。
+
+首次固定数组后仍有8次分配；临时尝试具名色度预测未改善，已撤回该无效改动。独立memprofilerate=1定位到原I16/色度枚举不可用方向时构造的fmt.Errorf；将相同top/left/tl写前判断移到调用前，跳过原本不可用的模式，未删去任何合法候选、未改顺序/公式，错误分配清零。中间8次/4次失败日志与profile原样保留；没有修改断言掩盖问题。
+
+五次prepared I4/I16/I8中位分别14079→13450、9193→8148、19333→18982ns，640B/20次、640B/20次、368B/14次均降为0。固定1x P中位847895700→870585400ns（+2.7%）、13371880→11029600B、342528→212910次；B四帧/op中位1894669700→1907183200ns（+0.7%）、47529072→40983320B、951160→577199次。保留端点耗时回退，不虚称FPS提高；原始样本、配置引用、边界和SHA见`docs/gates/m8_intra_workspace_samples.json`。仍有captureRD及正式MB试写/列表分配，未完成G03/K18。
+
+定向指纹/分配/邻域、强制Generic/SSE2/AVX2、purego/386 encoder实际执行、六目标全库build、完整常规门禁与encoder race均退出0，日志`tmp/m8-baseline/g03a-{targeted-success,parity,purego,386,verify,race}.txt`。普通CGO=0，race显式CGO=1。之前G02代码的完整`go test -race -count=1 ./...`也退出0（tests/codec 305.297s），完整日志`g02-race.txt`与SHA已登记；该结果只对应G02代码，不能扩大为未来并行实现通过。NEON原生、自然GC、主目标长矩阵及远端CI仍未执行。

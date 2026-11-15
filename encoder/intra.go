@@ -200,7 +200,8 @@ func (s *frameState) analyzeIntra(addr, family int) residual {
 	mw := s.pic.MBWidth
 	x, y := addr%mw*16, addr/mw*16
 	pl := &s.pic.Planes[0]
-	samples, top, left, tl := s.blockSamples(addr, 0)
+	var neighbors blockSamplesScratch
+	samples, top, left, tl := s.blockSamples(addr, 0, &neighbors)
 	var best16 [256]uint16
 	mode16 := info.mode16
 	if s.reuseModes {
@@ -279,8 +280,11 @@ func (s *frameState) chroma(addr int, res *residual) {
 		var pred [2][128]uint16
 		cost, available := 0, true
 		for c := range 2 {
-			a, t, l, tl := s.blockSamples(addr, c+1)
-			if mode == 3 && !tl {
+			var neighbors blockSamplesScratch
+			a, t, l, tl := s.blockSamples(addr, c+1, &neighbors)
+			// 可用性与共享预测器的写前校验相同；已知不可用的候选直接跳过，
+			// 避免为正常模式枚举构造再丢弃错误，保持原候选顺序和结果。
+			if (mode == 1 && !l) || (mode == 2 && !t) || (mode == 3 && !tl) {
 				available = false
 				break
 			}
@@ -394,7 +398,7 @@ func select4(dst *[16]uint16, src *picture.Plane, x, y int, a prediction.Intra4x
 func select16(dst *[256]uint16, src *picture.Plane, x, y int, a prediction.IntraBlockSamples16, top, left, tl bool) (int, int) {
 	best, mode := int(^uint(0)>>1), 2
 	for m := 0; m < 4; m++ {
-		if m == 3 && !tl {
+		if (m == 0 && !top) || (m == 1 && !left) || (m == 3 && !tl) {
 			continue
 		}
 		var p [256]uint16

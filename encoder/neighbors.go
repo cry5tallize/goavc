@@ -6,13 +6,22 @@ func (s *frameState) available(addr, other int) bool {
 	return other >= s.info[addr].start && other < addr
 }
 
-func (s *frameState) blockSamples(addr, c int) (prediction.IntraBlockSamples16, bool, bool, bool) {
+// blockSamplesScratch由调用栈持有。返回的Top/Left仅在该槽下次填充前有效；
+// 同时存活的邻域必须传入不同槽，不能用frameState单一共享槽替代。
+type blockSamplesScratch struct {
+	top, left [16]uint16
+}
+
+func (s *frameState) blockSamples(addr, c int, scratch *blockSamplesScratch) (prediction.IntraBlockSamples16, bool, bool, bool) {
 	w, h := s.pic.Format.PlaneDimensions(c, 16, 16)
 	mw := s.pic.MBWidth
 	x, y := addr%mw*w, addr/mw*h
 	top, left := s.available(addr, addr-mw), addr%mw > 0 && s.available(addr, addr-1)
 	tl := x > 0 && s.available(addr, addr-mw-1)
-	a := prediction.IntraBlockSamples16{Top: make([]uint16, w), Left: make([]uint16, h)}
+	a := prediction.IntraBlockSamples16{Top: scratch.top[:w], Left: scratch.left[:h]}
+	// 不可用邻域原先由make给出零值；复用后也不得泄漏上一宏块的采样。
+	clear(a.Top)
+	clear(a.Left)
 	p := &s.pic.Planes[c]
 	if top {
 		for i := range w {
