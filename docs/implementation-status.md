@@ -272,6 +272,7 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | 串行元数据复用（K16精简） | decoder临时与DPB retained分离；encoder候选/场/平面独占租约；各实例空闲16MiB/三槽 | Partial | 六格式脏缓存像素、错误恢复、RC best保持与租约/预算测试；原端点五次before/after | 不是完整slice执行状态隔离；未池化DPB retained backing，未开启内部并行，GC/RSS与长稳未测 |
 | 正常P/B宏块去分配（K17切片） | 栈上固定分区backing，保留全部分区/子类型与读取顺序 | Partial | prepared CAVLC/CABAC、8/10位、P/B非零残差、空间/时间direct的像素/MV/身份/读端与0分配 | 不含每slice初始化、MBAFF首次场引用等完整K17配置门禁；不是整个decoder零分配 |
 | slice并行（K19收益准入） | 本轮暂不实施worker，保留原并行设计 | TODO | 实际h264probe：现有1080p基准每帧1slice，320×240控制语料每帧2slice | 不证明代表性多slice收益；owner-first/私有执行上下文与调度均未交付，Threads>1仍拒绝 |
+| RC纯分析复用（K20精简） | 单次RC调用九槽缓存AQ分类/权重/加权搜索参考；场/平面槽分离 | Partial | 改动前144帧RC码流/像素/时钟/QP/VBV SHA不变，固定权重失败换源重试对照，真实ABR前后五样本 | 无worker/跨帧pipeline，CQP不建缓存；时间未加速，GC/RSS未测，不是完整K20 |
 | 其余池化/去分配/并行（K15–K20m） | 所有权、slice/分析/ME | TODO | 既有串行测试保留 | Threads>1仍拒绝；G00仅补分配基线，完整GC测量待实施 |
 
 ## M9

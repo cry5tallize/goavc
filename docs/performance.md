@@ -840,3 +840,16 @@ decoder 只复用表示级临时数组，DPB 的 Motion/reference IDs/MBField �
 
 原始样本 `tmp/m8-k15-k20/k17-decoder-after.txt`、`k17-decoder-review.txt`、`k17-baseline-review.txt`；原K16样本原样保留。分配下降来自已测正常P/B分区容器，prepared双熵/双位深非空宏块0分配另有确定性断言。时间仅为观测；不保证所有配置的速度、自然GC/RSS或完整M8主目标。
 
+
+### K20：RC分析复用，不是流水线
+
+基线 `76c2403505`，沿用K16硬件/Go/CGO=0/默认GOMAXPROCS16。新增 `BenchmarkEncoderRCAnalysis_320x240`：原pattern.Frame(320,240,1)，High/ABR500000、AQ3、自动权重、GOP/IDR600、LevelAuto，先完成一帧IDR再计量P帧Send/Receive；无I/O/Oracle计时。相同benchmark源码在生产改动前后各运行 `-benchtime=1x -count=5 -benchmem`，独占本次测量负载，外部负载未监控。
+
+| 五次中位，一帧/op | 前 | 后 |
+|---|---:|---:|
+| ns/op | 585107400 | 595927700 |
+| B/op | 1992552 | 886200 |
+| allocs/op | 194 | 176 |
+
+时间约+1.85%，不称吞吐加速；主要收益为同AU内多个QP候选不重复创建/写入加权搜索图和重复源统计。没有自然GC/assist/RSS测量。原始样本 `tmp/m8-k15-k20/k20-before.txt` SHA `fc20690771afbd60cc91b88dc24cac6f27c39666bb2f9b4a99261502c9e04061`，after SHA `82ad96543b36f557eefe8b6e982bfa43cafa93728f2ba3b4b6548524431b17e3`。改动前144帧RC指纹采集日志SHA `46f62eb4186fa0af0e1d46010a36379ccaa3c6b84de5e4b2ae2a5e54c1d3bf1c`，没有更新码流golden或修改QP策略。
+

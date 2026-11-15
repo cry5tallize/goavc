@@ -129,19 +129,20 @@ func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
 	if !e.encodingB && e.reference != nil && (e.autoWeights || e.fixedWeights != nil) {
 		weights := e.fixedWeights
 		if e.autoWeights {
-			w := estimatePredictionWeights(src, e.reference, s.planeCount())
+			w := e.predictionWeights(src, e.reference, s.planeCount())
 			weights = &w
 		}
 		s.weights = weights
 		// 该副本只用于整数/亚像素搜索启发式。真正 MC 必须先在原参考上插值，
 		// 再逐采样加权；裁剪与插值不可交换（Spec: 8.4.3.2）。
-		s.searchReference = weightedSearchReference(e.reference, weights, s.planeCount())
+		s.searchReference = e.searchReference(e.reference, weights, s.planeCount())
 	}
 	s.maxLevelPrefix = 15
 	if e.cabac || s.allowZeroPCM {
 		s.maxLevelPrefix = 28
 	}
 	// 所有回调值在写入之前校验；失败不得更新参考帧、帧号和输出槽。
+	activities := e.activities(src)
 	for addr := range s.info {
 		qp := e.frameQP
 		if e.qpAt != nil {
@@ -151,7 +152,11 @@ func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
 			releaseFrameState(s)
 			return nil, fmt.Errorf("encoder: macroblock qp %d: %w", qp, h264.ErrInvalidData)
 		}
-		qp = activityQP(&src.Planes[0], addr%src.MBWidth*16, addr/src.MBWidth*16, qp, e.adaptiveQP)
+		if activities != nil {
+			qp = activityAdjustedQP(qp, e.adaptiveQP, activities[addr], src.Planes[0].BitDepth)
+		} else {
+			qp = activityQP(&src.Planes[0], addr%src.MBWidth*16, addr/src.MBWidth*16, qp, e.adaptiveQP)
+		}
 		s.info[addr].qp = qp
 	}
 	return s, nil

@@ -77,10 +77,11 @@ func (e *Encoder) interlacedStates(src, recon *picture.Picture) ([2]*frameState,
 	e.ensureFrameStorage()
 	channel := *e
 	if e.autoWeights && e.reference != nil && !e.encodingB {
-		weights := estimatePredictionWeights(src, e.reference, 3-2*flag(e.separateColourPlane))
+		weights := e.predictionWeights(src, e.reference, 3-2*flag(e.separateColourPlane))
 		channel.autoWeights, channel.fixedWeights = false, &weights
 	}
 	for parity := range 2 {
+		channel.analysisIndex = e.analysisIndex + parity + 1
 		input, err := picture.FieldView(src, parity == 1)
 		if err != nil {
 			return states, past, future, err

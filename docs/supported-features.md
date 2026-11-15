@@ -182,6 +182,7 @@
 | AU 容量与粘性错误状态 | Partial | G09 保持 Annex-B/AVCC 单NAL、NAL数量、输入/输出AU预算在封装前校验，AUReader 失败后清空 assembler/容量/参数集状态并禁止重复读取；超限与 writer 原子性测试、stream race 通过。G10 集成与全库 race 仍待完成 |
 | 串行临时元数据复用 | Partial | K16精简复用decoder表示级临时数组及encoder帧/候选元数据，活跃租约独占；各实例空闲缓存16MiB/最多三槽。DPB retained Motion/reference IDs/MBField仍按原生命周期，未做slice并行或宣称全codec零分配；前后端点与边界见performance及实施记录 |
 | decoder正常P/B宏块去分配 | Partial | K17以固定栈backing消除分区容器分配；prepared双熵/双位深、全部P/B分区及子类型、空间/时间direct和非零残差有像素/MV/读端与0分配断言。不宣称每slice初始化、MBAFF首次场引用或整个codec零分配 |
+| RC纯分析复用 | Partial | K20精简单AU复用AQ分类、权重与加权搜索参考，保留场/平面布局及QP/回调顺序；144帧旧RC指纹及失败换源重试通过。只降低已测重复分配，不宣称吞吐加速；无前瞻worker或ME执行器 |
 
 ## 10. 流式I/O（M6）
 

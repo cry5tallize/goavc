@@ -45,6 +45,10 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 		data, state, err := e.encodeAtQP(src, intra, idr, e.cfg.QP)
 		return data, state, e.cfg.QP, err
 	}
+	if e.adaptiveQP != 0 || !e.encodingB && e.reference != nil && (e.autoWeights || e.fixedWeights != nil) {
+		e.analysis = new(frameAnalysis)
+		defer func() { e.analysis = nil }()
+	}
 	target := e.bitsPerFrame()
 	if e.cfg.RateControl == h264.RateControlCBR || e.cfg.RateControl == h264.RateControlVBV {
 		target += e.vbvBufferBits/2 - e.vbvFullness

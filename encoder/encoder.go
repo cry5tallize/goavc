@@ -24,7 +24,9 @@ type Encoder struct {
 	fullSearch                bool
 	searchWorkspace           *search.Workspace // 一个串行执行 lane；场/独立平面临时通道只借用。
 	trialWriters              *trialWriters
-	frameStorage              *frameStoragePool // Owner shared by shallow field/plane channels.
+	frameStorage              *frameStoragePool // 场/平面浅拷贝通道借用同一实例owner。
+	analysis                  *frameAnalysis    // 仅当前RC调用拥有，返回前解除借用。
+	analysisIndex             int               // 平面*3，加整帧0/顶场1/底场2。
 	maxAUBytes                int
 	adaptiveQP                int
 	cabac                     bool

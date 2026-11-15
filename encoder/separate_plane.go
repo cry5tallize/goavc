@@ -33,6 +33,7 @@ func (e *Encoder) encodeSeparate(src *picture.Picture, intra, idr bool, qp int) 
 	for comp := range 3 {
 		channel := *e
 		channel.frameQP, channel.colourPlaneID = qp, comp
+		channel.analysisIndex = comp * 3
 		input, output := *src, *recon
 		input.Planes[0], output.Planes[0] = src.Planes[comp], recon.Planes[comp]
 		channel.planeReconstruction = &output
