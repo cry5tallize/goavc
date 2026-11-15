@@ -3,29 +3,17 @@
 从零实现的 H.264/AVC 软件编解码器：**纯 Go**，允许 Go 汇编（amd64 SSE2/AVX2、arm64 NEON），
 **零 CGO、零 C/C++、零外部编解码库**。Encoder 与 Decoder 共享同一套预测、变换、重建、滤波内核。
 
-> 当前状态：**M7本地验收通过，本地标签`v0.9.0`**。六种8/10-bit YUV420/422/444原生编解码，
-> CAVLC/CABAC I/P/B、MBAFF与TFF/BFF编码、完整矩阵，以及限定FMO/ASO、分区、SP/SI、冗余解码已接入。
-> 55条语料登记；新增25份/76帧由实际CLI核对，明确区分FFmpeg原生Oracle与规范解析解。
-> 原M2/M3全部27份语料保工具投影至High10并与严格FFmpeg逐采样一致。
-> 常规门禁、全库race与六目标构建通过；[M7门禁](docs/gates/m7.md)列出完整证据。未push，远端CI与对外发布未执行，不声明完整Profile认证。
-> PAFF、transform bypass、单色及9/12/14-bit仍明确拒绝；详细组合见[支持矩阵](docs/supported-features.md)。
+当前版本：**v1.0.0，本地版本收尾**。提供六种 8/10-bit YUV420/422/444 原生编解码、
+CAVLC/CABAC I/P/B、CQP/ABR/CBR/VBV、Annex-B/AVCC 流式适配及三个 CLI。
+本次版本整理不新增编解码能力；完整 Profile 仍为 `Partial`，具体组合见[支持矩阵](docs/supported-features.md)。
 
-> **M4 Baseline 帧内编码已通过本地门禁**。`encoder.New` 提供 CQP、I4/I16/色度 SAD
-> 决策、CAVLC、共享本地重建与去块、独立 IDR Annex-B AU、I_PCM 和 1..64 slice 选项。
-> 187 帧通过本地重建/自研解码/FFmpeg 逐像素比较；完整测试、race、fuzz 与六目标构建通过。
-> M4当时验收限渐进式8-bit YUV420偶数显示尺寸，后续格式和场编码由M7扩展。M5a接入单参考P帧、四种分区与Skip，
-> LevelAuto 支持按实际 AU 预算校验 1080p@30；后续 M5 已完成限定工具与配置的本地验收，完整 Profile 仍为 Partial。
-> 见[编码用法](docs/encoder.md)、[M4 门禁](docs/gates/m4.md)和
-> [性能基线](docs/performance.md#6-m4-帧内编码基线)。本地标签 `v0.5.0`，远端 CI 待执行。
+主要限制：
 
-> **M5a/b 已通过本地子阶段门禁**：连续 P 帧、SATD/RD、活动度 QP、Profile 约束，
-> 720p/1080p 各300帧 Oracle，第一项同QP x264对比达到1.5dB阈值。
-> 见 [M5b 证据](docs/gates/m5b.md)；后续 M5c/d 本地门禁及标签 `v0.5.3`/`v0.6.0` 见对应门禁页，远端 CI 未执行。
-
-> **M6 流式处理**：YUV、Annex-B/AVCC、AU适配器与同步有界pipeline已接入，
-> `EncodeStream`/`DecodeStream`提供背压、取消检查与EOF自动Flush；可能阻塞的端点须支持取消或由所有者中断I/O。
-> `cmd/h264enc`、`cmd/h264dec`支持文件/二进制管道，`h264probe -syntax`逐NAL打印语法树。
-> 用法与资源/所有权边界见[流式文档](docs/stream.md)，验收结果见[M6门禁](docs/gates/m6.md)。
+- 单实例串行、非并发安全，`Threads>1` 返回 `ErrUnsupported`；多路视频使用独立实例。
+- PAFF、transform bypass、单色及 9/12/14-bit 像素流水线未支持；MBAFF 已有受限支持。
+- SIMD 按槽选择实际后端，不保证所有槽加速；arm64 仅完成交叉编译，未原生验证。
+- 不包含 MP4/RTP/WebRTC 封装和 RGB 转换；不承诺所有配置达到实时吞吐。
+- 本次不运行 8 小时长稳或远端 CI，不宣称完整生产认证；验证范围与性能见[版本记录](CHANGELOG.md)。
 
 ## 硬约束
 
@@ -54,13 +42,37 @@
 │   ├── dpb/ buffer/ simd/                                参考帧、缓冲池、SIMD
 │   └── testutil/                                        依赖检查、语料清单、YUV 比对
 ├── decoder/ encoder/ stream/                            流水线与 I/O 适配
-├── tools/       depscheck、manifest、oracle 三个开发期工具
+├── tools/       依赖检查、语料校验、Oracle 与开发期测量工具
 ├── benchmarks/  内核与端到端基准
 ├── testdata/    语料清单与测试向量（见 testdata/README.md）
 └── docs/        路线图、架构、支持矩阵、实现状态、性能、许可
 ```
 
 ## 快速开始
+
+需要 Go 1.27.x。在仓库内安装命令行工具（不依赖 FFmpeg）：
+
+```bash
+CGO_ENABLED=0 go install ./cmd/h264enc ./cmd/h264dec ./cmd/h264probe
+
+# 原始 YUV420P → Annex-B H.264 → 原始 YUV420P
+h264enc -input input.yuv -output out.264 -width 640 -height 360 -profile high -qp 26
+h264dec -input out.264 -output decoded.yuv
+h264probe -input out.264
+```
+
+`go install` 的目标目录须在 PATH 中；Windows PowerShell 用 `$env:CGO_ENABLED='0'` 设置环境变量。
+10-bit、场编码、B 帧与 AVCC 参数见[流式和 CLI 用法](docs/stream.md)。
+库接入示例见[帧级编码 API](docs/encoder.md)及[流式编解码 API](docs/stream.md#编解码入口)。
+
+公共 API 的使用约定：
+
+- `SendFrame` 返回后可复用或释放输入；`SendPacket` 接收完整 Annex-B AU，不是单个 NAL。
+- 接收的 Frame 使用后调用幂等 `Release()`，长期保存用 `Clone()`；Packet.Data 归调用方。
+- 用 `errors.Is` 判断 `ErrAgain`（暂时无输出）、`ErrEOF`（排空结束）及其他哨兵错误；输入结束后 `Flush` 并排空输出。
+- 同一 codec 不跨 goroutine 并发调用。详细契约见[架构](docs/architecture.md#5-内存所有权)。
+
+### 开发验证
 
 ```bash
 # 完整验证（格式、静态检查、构建、测试、依赖规则、语料清单）
@@ -77,8 +89,7 @@ go run ./tools/manifest -file testdata/manifest.json
 
 格式：`make fmt` 就地格式化；`make fmt-check` 只检查（PR 前执行）。
 
-模块路径当前为 `github.com/goavc/h264`。发布到实际仓库前请改为真实路径，
-并同步 `tools/` 下的 import。
+模块路径为 `github.com/goavc/h264`。版本标签当前只在本地；本次不执行 push 或远端 release。
 
 ## 开发纪律（摘要）
 
@@ -96,11 +107,12 @@ go run ./tools/manifest -file testdata/manifest.json
 | [docs/Roadmap.md](docs/Roadmap.md) | 里程碑、退出标准、风险 |
 | [docs/Implementation-Plan.md](docs/Implementation-Plan.md) | 提交规范与逐阶段提交计划 |
 | [docs/architecture.md](docs/architecture.md) | 分层、依赖规则、内存所有权 |
-| [docs/supported-features.md](docs/supported-features.md) | 支持矩阵与 M2 已验证范围 |
+| [docs/supported-features.md](docs/supported-features.md) | 当前支持组合与已知限制 |
 | [docs/implementation-status.md](docs/implementation-status.md) | 逐模块实现状态（Translation Ledger） |
 | [docs/stream.md](docs/stream.md) | M6流式API、取消/背压、资源预算、三个CLI与30秒稳定性验收 |
 | [docs/performance.md](docs/performance.md) | 基准口径与结果 |
 | [docs/licensing.md](docs/licensing.md) | 代码许可与专利许可（两件独立的事） |
+| [CHANGELOG.md](CHANGELOG.md) | v1.0.0 版本内容、验证范围与限制 |
 
 ## 许可与专利
 

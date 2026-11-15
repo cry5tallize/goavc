@@ -37,7 +37,7 @@ Public API      encoder.go decoder.go frame.go packet.go config.go errors.go
 | R1 | `encoder` 与 `decoder` 不得相互 import | `tools/depscheck`（自动） |
 | R2 | `internal/*` 不得 import `decoder` / `encoder` / `stream` | `tools/depscheck`（自动） |
 | R3 | `internal/simd` 只能被白名单内的底层包使用 | `tools/depscheck`（自动） |
-| R4 | 公共 API 不暴露内部包类型 | 公共 API 快照测试（M9）+ review |
+| R4 | 公共 API 不暴露内部包类型 | 公共 API 与依赖方向 review，不新增快照测试框架 |
 | R5 | 禁止 import 环 | `tools/depscheck`（自动） |
 | R6 | 禁止单文件巨型化（建议 ≤ 800 行有效代码） | review |
 

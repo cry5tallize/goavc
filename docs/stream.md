@@ -147,5 +147,4 @@ CGO_ENABLED=0 go run ./tools/streamcheck -duration 30s -warmup 5s -sample-interv
 本项仅覆盖该输入的30秒运行窗口，不证明长期无泄漏，也不是所有内容的吞吐承诺。
 
 按用户要求，M6以此短时测试作为稳定性退出标准，不再设置额外的长测等待条件。
-已有[m6_smoke.json](gates/m6_smoke.json)报告通过；M9生产化混合输入验收范围不变。
-功能按逻辑分项提交，发布仍须遵守其余门禁；远端CI尚未执行，未创建M6版本标签。
+已有[m6_smoke.json](gates/m6_smoke.json)报告通过。v1.0.0 本地收尾复用该短时结果，不重跑长稳，不据此声称 8 小时混合输入已验证；当前版本范围见[版本记录](../CHANGELOG.md)。

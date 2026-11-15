@@ -8,7 +8,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 文档版本 | v1.1（M6采用30秒稳定性验收） |
+| 文档版本 | v1.2（M9按现有能力完成本地版本收尾，不等同完整生产认证） |
 | 状态 | 生效（Active） |
 | 适用范围 | 本仓库全部里程碑、验收与发布判定 |
 | 关联文档 | `docs/architecture.md`、`docs/supported-features.md`、`docs/implementation-status.md`、`docs/conformance.md`、`docs/performance.md` |
@@ -28,7 +28,7 @@
 
 **门禁规则（必须遵守）：**
 
-1. 里程碑的 **Exit Criteria** 未全部满足，不得宣称该里程碑完成，后续里程碑即使已开工也不得对外发布。
+1. 完整里程碑认证仍须满足全部 Exit Criteria；按 M9 明确约定的限定能力本地版本可以创建标签，但不得据此宣称未执行的生产验收通过，也不自动执行远端发布。
 2. 每个里程碑的 **Out of Scope** 清单是硬边界。范围内的功能必须真正可用；范围外的功能必须显式返回 `ErrUnsupported`，不得"看似支持、实际不支持"。
 3. 每条 Exit Criteria 必须能映射到至少一个可执行检查（单元测试 / Oracle 差分 / Fuzz 语料 / Benchmark 记录 / CI 步骤）。无法自动化的项必须写明人工核验方式与记录位置。
 4. 只要出现"为了通过门禁而放宽断言"的情况，视为里程碑回退，按 §15 处理。
@@ -273,8 +273,8 @@ M6/M7/M8 ───────────► M9 生产化与发布
 | M5 | Encoder Main/High | P Slice、ME/MC、亚像素、模式决策、RD、B Frame、CABAC、8×8、GOP、RC | XL | WIP（M5a/b/c/d本地门禁已关闭，待远端CI；见gates/m5c.md、gates/m5d.md） |
 | M6 | 完整流式处理 | 增量Reader/AU/YUV、同步有界pipeline、取消/背压/Flush、三个CLI | M | WIP（功能、常规门禁/全库race/六目标构建及30秒稳定性验收通过，待远端CI；见gates/m6.md） |
 | M7 | 高级 AVC 特性 | High10/422/444、Interlaced、MBAFF/PAFF、FMO、Data Partitioning 等 | XL | WIP（限定能力本地全部退出证据、常规门禁/race/六目标通过，本地标签v0.9.0；待远端CI，未对外发布；见gates/m7.md） |
-| M8 | SIMD 与并行 | SSE2/AVX2/NEON、dispatch、pool、slice 并行、pipeline、profile | L | TODO |
-| M9 | 生产化与发布 | 全量测试、Fuzz、race、多平台、稳定性、文档、v1.0 | M | TODO |
+| M8 | SIMD 与并行 | SSE2/AVX2/NEON、dispatch、pool、slice 并行、pipeline、profile | L | Partial（授权范围收尾完成，本地标签v0.9.5；内部并行未实施，NEON未原生验证） |
+| M9 | 生产化与发布 | 复用现有验证、整理使用文档与版本记录、本地v1.0标签 | M | Partial（本地v1.0.0收尾完成，常规验证与CLI实跑通过；未宣称完整生产认证） |
 
 **关键路径：** M0 → M1 → M2 → M4 → M5。M3 可与 M4 并行（互不阻塞）；M6 只依赖 M1 + M4/M5 的输出接口；M8 只能优化已通过一致性验证的 kernel。
 
@@ -572,18 +572,15 @@ M6/M7/M8 ───────────► M9 生产化与发布
 
 ### M9 — 生产化与发布
 
-**目标：** 可被第三方依赖的 v1.0。
+**目标：** 按已实现并验证的能力完成 v1.0.0 本地版本整理，提供可使用的 API、CLI、支持边界和版本标签，不将版本号等同完整 Profile 或生产认证。
 
-**范围内：**
-- 单元/集成/一致性测试补齐（覆盖率不作为唯一指标，但关键模块需行覆盖记录）。
-- Fuzz：Annex-B、AVCC、RBSP、Exp-Golomb、SPS/PPS、Slice header、CAVLC、CABAC、宏块、DPB、SEI；语料库入仓并随 CI 增广。
-- `-race` 全量通过；多平台原生 runner 上跑汇编测试。
-- 长时稳定性（≥ 8 小时混合输入）。
-- API 文档（godoc 完整，含所有权与并发说明）、支持范围文档、一致性报告、性能报告。
-- 许可与专利文档定稿（`LICENSE`、`PATENTS.md`、`docs/licensing.md`）。
-- 版本标签、CHANGELOG、示例代码（`examples/`：文件转码、流式解码、帧级 API）。
+**本轮范围（按用户要求精简）：**
+- 复用现有单元/集成、Fuzz 种子、Oracle、race、跨平台构建和性能记录；集中运行一次常规验证，只修实际发现的缺陷。
+- 整理 README、已有帧级/流式/CLI 示例、所有权/并发/错误契约、支持矩阵和 CHANGELOG；许可与专利声明沿用现有文档。
+- 提交版本记录并创建本地注释标签 `v1.0.0`。不新增发布框架，不自动 push 或创建远端 release。
+- 原生 arm64、8 小时混合输入长稳、远端 CI 与原计划未交付的内部并行不在本轮执行；明确登记未执行/未实现，不改写已有 Partial/WIP 或规范一致性结论。
 
-**退出标准：** 见 §12 发布标准（v1.0 必须全部勾选）。
+**本地收尾退出标准：** 上述文档与现有行为一致、常规验证通过、版本提交与注释标签完成。§12 保留为完整生产验收标准；本地收尾不宣称该清单全部通过。本次范围调整不改变算法、错误分类或已通过的测试断言。
 
 ---
 
@@ -751,6 +748,8 @@ FFmpeg 仅用于开发期测试/对照/基准；CI 中的 Oracle 步骤在无 FF
 
 ## 12. 发布标准（v1.0 门禁）
 
+本节保留完整生产验收目标。v1.0.0 本地版本按 M9 的限定范围收尾；未勾选项不因创建标签自动变成通过。
+
 ### Encoder
 - [ ] 能编码真实 YUV 视频（420/422/444，8-bit 起）。
 - [ ] 生成合法 SPS / PPS（可被 M1 parser 与 FFmpeg 双向接受）。
@@ -800,7 +799,7 @@ FFmpeg 仅用于开发期测试/对照/基准；CI 中的 Oracle 步骤在无 FF
 | v0.6 | 流式 I/O | M6 |
 | v0.7 | SIMD + 并行 | M8 |
 | v0.9 | 高级特性 + 性能加固（RC 见 M5d） | M7 |
-| v1.0 | 全部发布门禁通过 | M9 |
+| v1.0 | 现有能力本地版本整理；完整生产验收状态单独保留 | M9 |
 
 ---
 
