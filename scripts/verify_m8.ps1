@@ -153,7 +153,10 @@ try {
         Run-Benchmark 'kernels' (Join-Path $dir 'simd.test.exe') '.' '100ms'
         Run-Benchmark 'prediction' (Join-Path $dir 'prediction.test.exe') '.' '100ms'
         Run-Benchmark 'encoder-controls-auto' (Join-Path $dir 'encoder-control.test.exe') '^BenchmarkEncoder(P|B)_720p_Generic$' '1x'
-        Run-Benchmark 'decoder-control-auto' (Join-Path $dir 'decoder-auto.test.exe') '^BenchmarkDecoder_1080p_Generic$' '1x'
+        # 原基准相对包目录读取语料；保持go test ./decoder的原工作目录语义。
+        Push-Location 'decoder'
+        try { Run-Benchmark 'decoder-control-auto' (Join-Path $dir 'decoder-auto.test.exe') '^BenchmarkDecoder_1080p_Generic$' '1x' }
+        finally { Pop-Location }
         foreach ($profile in @('baseline','high')) {
             foreach ($slices in @(1,4)) {
                 $name="decode-1080p-$profile-s$slices"
