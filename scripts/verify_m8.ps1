@@ -32,13 +32,20 @@ function Run-FFmpeg([string[]]$Arguments) {
     & ffmpeg @Arguments 2>> (Join-Path $dir 'ffmpeg.log')
     Assert-Exit 'FFmpeg'
 }
+function Run-Benchmark([string]$Name,[string]$Binary,[string]$Filter,[string]$BenchTime) {
+    $ErrorActionPreference = 'Continue'
+    $path=Join-Path $dir "$Name.txt"
+    $testArgs=@('-test.run','^$','-test.bench',$Filter,'-test.benchtime',$BenchTime,'-test.count',"$Iterations",'-test.benchmem')
+    & $Binary @testArgs *> $path
+    Assert-Exit $Name
+    if (@(Select-String -LiteralPath $path -Pattern '^Benchmark\S+\s+\d+').Count -eq 0) { throw "$Name 未实际运行基准" }
+}
 function Decoder-Sequence([string]$Name,[string]$Path,[string]$Hash,[int]$Count,[string]$Binary) {
     $ErrorActionPreference = 'Continue'
     $env:GOAVC_M8_INPUT=$Path
     $env:GOAVC_M8_FRAMES=[string]$Count
     $env:GOAVC_M8_YUV_SHA256=$Hash
-    & $Binary -test.run '^$' -test.bench '^BenchmarkDecoder_Sequence$' -test.benchtime 1x -test.count $Iterations -test.benchmem *> (Join-Path $dir "$Name.txt")
-    Assert-Exit $Name
+    Run-Benchmark $Name $Binary '^BenchmarkDecoder_Sequence$' '1x'
 }
 
 try {
@@ -143,14 +150,10 @@ try {
         Run-Go 'compile-encoder-control' @('test','-c','-o',(Join-Path $dir 'encoder-control.test.exe'),'./encoder')
         Run-Go 'compile-encoder-auto' @('build','-o',(Join-Path $dir 'encodebench-auto.exe'),'./tools/encodebench')
         Run-Go 'compile-encoder-generic' @('build','-tags','purego','-o',(Join-Path $dir 'encodebench-generic.exe'),'./tools/encodebench')
-        & (Join-Path $dir 'simd.test.exe') -test.run '^$' -test.bench . -test.benchtime 100ms -test.count $Iterations -test.benchmem *> (Join-Path $dir 'kernels.txt')
-        Assert-Exit 'kernel基准'
-        & (Join-Path $dir 'prediction.test.exe') -test.run '^$' -test.bench . -test.benchtime 100ms -test.count $Iterations -test.benchmem *> (Join-Path $dir 'prediction.txt')
-        Assert-Exit 'MC领域基准'
-        & (Join-Path $dir 'encoder-control.test.exe') -test.run '^$' -test.bench '^BenchmarkEncoder(P|B)_720p_Generic$' -test.benchtime 1x -test.count $Iterations -test.benchmem *> (Join-Path $dir 'encoder-controls-auto.txt')
-        Assert-Exit 'P/B历史控制基准（实际Auto）'
-        & (Join-Path $dir 'decoder-auto.test.exe') -test.run '^$' -test.bench '^BenchmarkDecoder_1080p_Generic$' -test.benchtime 1x -test.count $Iterations -test.benchmem *> (Join-Path $dir 'decoder-control-auto.txt')
-        Assert-Exit '三帧历史控制基准（实际Auto）'
+        Run-Benchmark 'kernels' (Join-Path $dir 'simd.test.exe') '.' '100ms'
+        Run-Benchmark 'prediction' (Join-Path $dir 'prediction.test.exe') '.' '100ms'
+        Run-Benchmark 'encoder-controls-auto' (Join-Path $dir 'encoder-control.test.exe') '^BenchmarkEncoder(P|B)_720p_Generic$' '1x'
+        Run-Benchmark 'decoder-control-auto' (Join-Path $dir 'decoder-auto.test.exe') '^BenchmarkDecoder_1080p_Generic$' '1x'
         foreach ($profile in @('baseline','high')) {
             foreach ($slices in @(1,4)) {
                 $name="decode-1080p-$profile-s$slices"

@@ -447,3 +447,6 @@ K20m范围决定单独提交 `566450e313`。最终生产代码为 `cf1dd8feea`�
 
 首次大脚本停在deps，没有完成标记；修复后仅执行尚未完成部分，原先已通过步骤证据保留，完成标记为 `completed-continuation.json`。这是本次人工续接，不是脚本支持Resume。未执行原生arm64/Unix保护页/远端CI，不签M8或创建v0.9.5标签。
 
+
+性能阶段首次启动在首个基准前退出：PowerShell将未引用的 `-test.run` 等含点flag传错，测试程序报 `flag provided but not defined: -test`，没有产生正式样本或完成标记。统一使用字符串数组调用测试二进制，并拒绝零匹配输出；实际Generic SAD基准五轮入口验证通过。失败目录 `tmp/m8-closeout/performance/` 保留，后续正式采样使用新目录，不覆盖初次失败。
+
