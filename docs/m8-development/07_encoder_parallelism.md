@@ -156,3 +156,9 @@ search包不能import encoder。采用search定义的typed批描述和两种样�
 
 缓存只在非CQP且启用相关工具时创建，正常与失败返回均解除；不跨AU缓存源/参考，不需要指针身份map或epoch。权重值按值交给候选，避免选中的state意外持有整套缓存。CQP、用户QP回调、场景/闪光、B调度和QP尝试顺序保持原实现。未做scene两两帧对缓存，因为本轮没有其命中率/收益证据。完整K20流水线与K20m执行器均不因本项标记完成。
 
+## 9. 本轮K20m范围决定
+
+本轮不新增CandidateBatch/BatchExecutor、不迁移search签名、不启动候选worker。当前默认diamond每轮四点、refine每阶段九点，下一中心依赖前一归约；SAD已有SIMD且Scorer必须原序串行执行。当前B直接使用零MV双向预测，不提供额外运动搜索并行量。上述结构不等于证明full-search并行无收益；只是当前缺少大半径full-search代表负载、调度成本与端点收益证据。
+
+后续若实际full-search成为重要瓶颈，沿§5的纯SAD固定批、私有MC scratch、原序Scorer与总Threads预算重新准入。不得先铺通用执行器、修改候选策略或新增B搜索来制造工作量；本轮保留串行零分配与原Scorer轨迹保护网，K20m实现状态仍TODO。
+
