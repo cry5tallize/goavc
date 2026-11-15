@@ -164,7 +164,7 @@
 | GOP头部探测与断言 | Conformant | M5d | cmd/h264probe有界解析实际参数集/POC/帧型/每图slice数，图片/B深度/IDR断言失败返回非零；12份长产物与ffprobe交叉核对，不替代像素Oracle |
 | RD 模式决策（J = D + λR） | Conformant | 定点lambda、三平面SSE、Skip/P/I4/I16/PCM；P/B两种死区保留原候选按J选优。完整长质量矩阵通过；CABAC率仍为CAVLC代理，不宣称全局最优 |
 | 自适应 QP | Conformant | M5b 活动度 QP 选项 0..6、QP 0..51 裁剪，默认关闭，显式回调/PCM 冲突拒绝 |
-| SSE2 / AVX2 / NEON | TODO | M8 |
+| SSE2 / AVX2 / NEON | TODO | M8已建立安全CPU检测；尚无向量计算内核，不能据检测结果宣称加速可用 |
 
 ## 10. 流式I/O（M6）
 

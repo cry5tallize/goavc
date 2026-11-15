@@ -30,3 +30,9 @@
 精确命令、退出码和剩余项随任务追加。没有原生arm64 runner，不能将交叉构建记为NEON通过；远端CI未执行，不自动push/tag/release。未完成K01–K25/K20m，不签M8门禁。
 
 A00：`CGO_ENABLED=0 go test -count=1 -run '^TestM8Baseline_SerialOutput$' ./tests/codec` 退出0，12配置共96帧独立FFmpeg比较执行。完整常规门禁依次执行 `gofmt -l .`（无输出）、`go vet ./...`、`go build ./...`、`go test -count=1 ./...`、`go run ./tools/depscheck`、`go run ./tools/manifest -file testdata/manifest.json` 和 `git diff --check`，均退出0。完整日志 `tmp/m8-baseline/a00-verify.txt`；依赖检查35包、清单55条。沙箱首次拒绝写模块版本缓存，获准后在沙箱外重跑通过。长门禁 `H264_LONG_TEST=1`、race及原生arm64未执行，不能由本次常规门禁推定通过。
+
+### K01：安全 CPU 检测
+
+从A00提交 `2a45f23` 开始，新增cpu平台文件及测试；运行时只在包初始化探测，缺leaf1/7、XSAVE/OSXSAVE/AVX或XMM/YMM状态均不启用AVX2。模拟1024种组合，断言缺能力时不调用XGETBV。native windows/amd64 检测SSE2/AVX2可执行；没有由检测结果冒称kernel已实现。
+
+`CGO_ENABLED=0 go test -count=1 -run '^TestCPU_' -v ./internal/simd`、`go test -tags purego -count=1 ./internal/simd` 均退出0；`go list -tags purego -f '{{.SFiles}}' ./internal/simd` 输出 `[]`。完整常规门禁退出0（`tmp/m8-baseline/k01-verify.txt`）；`GOARCH=386 go test -count=1 ./internal/simd` 在本机实际执行退出0；windows/linux/darwin × amd64/arm64 的simd测试二进制 `go test -c` 全部编译成功。arm64未原生执行。首次vet发现uint64返回区的部分宽度写法，已改为合并寄存器后一次MOVQ返回，并重新通过完整门禁。

@@ -236,6 +236,17 @@ ABR偏差+0.475360%/−0.769220%，CBR十个窗口达目标，VBV逐AU独立充�
 本轮完整常规门禁通过不等于每个可选用例均执行：TestEncoder_InterLongOracle保持跳过；
 CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；analytic不计作外部Oracle通过。最终全库race与六目标构建均已通过，完整发布边界见gates/m7.md。
 
-## M8–M9
+## M8：SIMD 与并行优化
+
+基线与接口冻结见 `m8-development/12_execution_log.md`；本地逐任务推进，未通过完整M8门禁，远端CI未执行。
+
+| Module | Scope | Status | Tests | Known gaps |
+|---|---|---|---|---|
+| CPU检测（K01） | amd64安全CPUID/XGETBV、arm64基线NEON能力、purego/其他架构回退 | Partial | `simd/cpu_test.go` 的1024组合与 `cpu_purego_test.go` | CPU检测不等于任何向量kernel已实现；arm64仅交叉构建时不记原生执行 |
+| 内核表与parity（K02/K03） | 类型化分发、唯一Generic、真实consumer | TODO | 待实施 | 当前仅有标量领域实现 |
+| SIMD内核（K04–K14） | SSE2/AVX2/NEON、边界证明 | TODO | 待实施 | 尚无向量计算快路 |
+| 池化/去分配/并行（K15–K20m） | 所有权、slice/分析/ME | TODO | 既有串行测试保留 | Threads>1仍拒绝 |
+
+## M9
 
 对应里程碑开工时补全模块表，不提前承诺尚未实现的能力。
