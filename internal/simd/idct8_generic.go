@@ -1,8 +1,8 @@
 package simd
 
-// IDCT8x8 执行 Spec: 8.5.13 的8×8逆变换。
-// 输入输出按光栅顺序，可原地调用；返回 false 表示结果超出 int32。
-func IDCT8x8(dst, src *[64]int32) bool {
+// idct8Generic performs the exact int64 8x8 inverse transform. `written`
+// counts successful stores in the original column-major iteration order.
+func idct8Generic(src [64]int32) (dst [64]int32, written int) {
 	var temp [64]int64
 	for y := range 8 {
 		var line [8]int64
@@ -24,12 +24,23 @@ func IDCT8x8(dst, src *[64]int32) bool {
 		for y, v := range out {
 			v >>= 6
 			if v < -1<<31 || v > 1<<31-1 {
-				return false
+				return dst, written
 			}
 			dst[y*8+x] = int32(v)
+			written++
 		}
 	}
-	return true
+	return dst, written
+}
+
+// IDCT8x8通过绑定的值ABI内核并保持原先的列优先部分写入顺序。
+func IDCT8x8(dst, src *[64]int32) bool {
+	out, written := kernels.idct8(*src)
+	for n := 0; n < written; n++ {
+		x, y := n/8, n%8
+		dst[y*8+x] = out[y*8+x]
+	}
+	return written == 64
 }
 
 func inverse8Line(v [8]int64) [8]int64 {

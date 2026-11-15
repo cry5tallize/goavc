@@ -48,6 +48,7 @@ R3 的白名单是**显式**的：
 ```text
 internal/prediction  internal/transform  internal/motion
 internal/filter      internal/buffer     internal/simd
+internal/picture
 internal/motion/search
 decoder              encoder
 ```

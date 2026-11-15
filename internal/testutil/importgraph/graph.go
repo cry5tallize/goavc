@@ -54,6 +54,7 @@ func (v Violation) String() string {
 // 想用就必须显式修改这张表，从而强制经过一次依赖评审（R3）。
 var simdImporters = map[string]bool{
 	"internal/prediction":    true,
+	"internal/picture":       true,
 	"internal/transform":     true,
 	"internal/motion":        true,
 	"internal/motion/search": true,

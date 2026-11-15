@@ -1,6 +1,7 @@
 package transform
 
 import "github.com/goavc/h264/internal/simd"
+
 // IDCT4x4 做 4×4 整数逆变换（规范 8.5.12.2）。
 // src 是反量化后的系数，dst 是不裁剪的残差值。
 func IDCT4x4(dst *[16]int32, src *[16]int32) {

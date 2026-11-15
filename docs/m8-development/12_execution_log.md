@@ -284,3 +284,69 @@ K10a补充：CGO=0帧间编码fuzz smoke 5s/1432exec退出0；CGO=1 simd/transfo
 ### K10d：4×4/8×8逆变换共享 Generic 迁移
 
 将 `IDCT4x4`、`IDCT4x4DC` 和 `IDCT8x8` 的唯一算术实现迁入 `internal/simd/idct4_generic.go`、`idct8_generic.go`，`internal/transform` 仅保留错误/公共 API 适配。保持原地别名、算术右移顺序、int64 临时域、8×8 溢出分类和不裁剪残差语义。受影响 transform/encoder/decoder 测试、purego 测试、全库 vet/build/test、depscheck 均通过；真实 AVX2/NEON 逆变换后端、量化/去块/残差和 K14 完整边界矩阵仍未完成。
+
+### K10–K14：精确算术后端、共享消费者与全边界矩阵
+
+本轮限定SIMD，不扩展K09插值、池化、并行或Profile支持。保持现有8×8整数正交投影，不改用另一种前向蝶形；正逆变换、量化、重建和滤波仍由encoder/decoder共享一份领域实现。状态表继续使用Partial/WIP，不把本地任务交付当作完整M8退出门禁。
+
+- K10：4×4新增真实AVX2行蝶形；8×8投影以显式SSE2/AVX2/NEON精确乘积批次执行，宽域回退原int64乘法；逆变换和亮度/420/422 DC以64位向量加法部分计算。保留负数算术shift、int64临时域、原地别名、422整块提交与IDCT8晚期溢出的原列优先写入序。除法、归一化、检查和部分蝶形仍为共享Go，不宣称全程SIMD。
+- K11：领域按QP'、矩阵和块类型准备乘子；普通块用直接Go指针入口，间接SIMD调用只传固定值批次，避免局部系数逃逸和整块返回复制。精确32×32→64乘积之后仍执行原整数除法、intra/inter死区和符号恢复；DC宽域保持原int64。Quant8及普通Dequant保留首个错误之前已写的前缀，原地失败时未写后缀不变，不虚构整块原子性。
+- K12：唯一共享亮度/色度滤波算法迁入simd，SSE2/AVX2/NEON仅计算当前line的强弱候选加法；bS、阈值、条件邻域读取、Span1/2/4和逐线顺序不变，不把整条边gather后并行提交。
+- K13：picture重建与encoder真实Subtract接入共享8/10-bit Clip1/减法入口；使用int64累加覆盖int32极端残差，保持10-bit低两位、独立stride、padding和尾部。标量路径不为禁用的向量槽做gather，行切片只在入口验证边界，热循环不反复计算行偏移。R3只精确新增picture消费者。
+- K14：Windows逐行保护页扩展至现有SAD、SATD、正逆变换、量化/DC、滤波、残差和MC；MC覆盖亮度16相位与色度64相位、8/10-bit和最小len。补Unix mmap辅助；本机只执行Windows动态页，其他系统不冒充运行通过。值ABI的栈参数由静态访问范围约束：四通道int32加法输入/输出各16字节，八通道int32或四通道int64/uint64各32字节，Forward4输入/输出各64字节，AVX2行蝶形输入64/输出128字节；均无对齐要求。外部保护页不等价于保护ABI内部栈槽。
+
+#### 已定位并修复的缺陷
+
+1. SSE2的420 DC包装把水平/垂直系数1、2交换：相邻和差批次应按`[p0+p2,p4+p6,p0-p2,p4-p6]`提交。原生直接parity暴露失败；`TestForwardChromaDC_AnalyticMixedSigns`用独立解析值`[1023,-1023,511,-511] → [0,3068,0,1024]`、反号、低两位及int32模运算固定回归，Generic/Auto/SSE2/AVX2通过。
+2. MC函数表中的slice间接调用使边界patch、单采样输出逃逸，即使purego的槽为空也影响静态逃逸，传导为MC每次1次、搜索约17次及编码候选更多堆分配。编译器`-m=2`直接证明调用链；删除未实现的uint16空槽和动态复制槽，改初始化后端选择加静态noescape汇编包装。现有prediction/search/encoder零分配测试在purego、386与强制x86后端全部恢复，不放宽断言。
+3. 量化块值返回和小批gather使普通量化/残差明显慢于原标量。改为直接指针块接口和标量快路，保留真实显式后端；首错与原地后缀用`TestDequantization_FirstFailurePreservesPrefix`、`TestQuant8x8_LateFailurePreservesAliasedSuffix`锁定。
+4. 汇编vet拒绝把数组符号直接当不同宽度的FP标量或不同偏移字段引用；改为先取得准确ABI数组首址，再做有界非对齐加载/存储，不关闭vet。交叉构建发现缺失`forward8NEON`适配，补接真实NEON乘积批次，非Generic假绑定。
+
+#### 已执行的功能验证
+
+日志均位于`tmp/m8-k10-k14/`，保留初次失败日志，不以失败/跳过算通过。
+
+| 验证 | 实际结果 | 原始日志 |
+|---|---|---|
+| 强制Generic/SSE2/AVX2内核、transform解析值及真实encoder候选 | 通过；NEON在本机明确Skip | `tagged-final.txt` |
+| 默认路径六格式、双熵、QP边界、矩阵/B/码控/独立444及8×8三方Oracle | FFmpeg=Go Decoder=本地重建通过；独立色平面沿用既有投影Oracle边界 | `oracle-final.txt` |
+| M7固定编码Packet/metadata/像素指纹 | 六格式×双熵的96帧保持不变，未更新golden | `oracle-final.txt` |
+| purego全库测试 | 修复MC逃逸后全部通过 | `purego-final.txt` |
+| 原生GOARCH=386全库测试 | 修复MC逃逸后全部通过，含保护页 | `386-final.txt` |
+| Windows/Linux/macOS × amd64/arm64 | 全库build、simd汇编vet、带测试标签的simd/transform测试二进制编译通过；非宿主不执行 | `cross-final.txt`中已成功的windows/amd64及`cross-rest.txt`五目标 |
+| 既有decoder fuzz smoke | 5s预算，1280次执行，通过 | `fuzz-decoder.txt` |
+| 既有encoder inter fuzz smoke | 5s预算，329次执行，通过 | `fuzz-encoder.txt` |
+| 常规完整门禁 | CGO=0的vet/build/test、gofmt、35包R1/R2/R3/R5及55条manifest全部通过 | `verify-final.txt` |
+| 完整全库race | CGO=1、GOMAXPROCS=2、`go test -race -count=1 -timeout 45m ./...`通过 | `race-final.txt` |
+
+arm64沿用用户指定的编译验收范围，未运行NEON原生parity/guard-page/分配/Oracle/性能；Unix动态页同样未执行。没有push、tag或release，不以本轮结果声明完整M8或30FPS。
+
+
+#### 最终性能与默认分派
+
+完整race结束后单独执行最终代码基准，环境为Go 1.27.4、Windows/amd64、Ryzen 7 5700X，benchmark默认并发参数为16。命令：
+
+`CGO_ENABLED=0 go test -run '^$' -bench '^(BenchmarkTransformBlocks|BenchmarkQuant4x4_4x4|BenchmarkFilter_4Lines|BenchmarkResidual_8x8|BenchmarkDequantization_8x8)$' -benchtime=50ms -count=5 -benchmem ./internal/simd`
+
+下表为同环境五次中位数，单位ns/op；每项五个原始样本均保留在`bench-final.txt`，全部0 B/op、0 allocs/op。标量比较器为同次运行的`ScalarBefore`实现，并非旧revision整端到端测速。
+
+| 实际块入口 | 标量比较器 | Generic | Auto | 显式SSE2 | 显式AVX2 |
+|---|---:|---:|---:|---:|---:|
+| 4×4正变换 | — | 20.93 | 17.74 | 17.98 | 32.12 |
+| 8×8正变换 | — | 1173 | 997.6 | 12113 | 12959 |
+| 4×4逆变换 | — | 37.61 | 30.45 | 198.3 | 211.3 |
+| 8×8逆变换 | — | 475.1 | 427.5 | 1013 | 1089 |
+| 亮度DC正变换 | — | 36.59 | 33.23 | 184.4 | 206.5 |
+| 420 DC正变换 | — | 8.287 | 7.895 | 18.74 | 42.24 |
+| 422 DC正变换 | — | 14.32 | 14.17 | 57.64 | 62.42 |
+| 4×4量化 | 24.76 | 21.46 | 21.74 | 211.6 | 233.1 |
+| 8×8反量化 | 96.14 | 77.3 | 77.47 | 836.7 | 883.1 |
+| 8×8残差加法/uint16 | 95.63 | 82.67 | 100.1 | 248.5 | 284.1 |
+| 8×8残差减法/uint16 | 38.13 | 71.04 | 76.94 | 216.2 | 241.3 |
+| 4条line弱滤波 | — | 121.4 | 115.8 | 135 | 146.3 |
+| 4条line强滤波 | — | 106.2 | 102.3 | 115.4 | 125.5 |
+
+amd64默认Forward4与SATD选择SSE2；8×8投影、逆变换/DC、量化、去块候选与残差保留Generic直接路径。显式SSE2/AVX2测试仍调用真实SIMD，不能将这些默认Generic结果作为SIMD加速证据。Auto和显式Generic对同一Generic槽的差异反映顺序测量波动，不是另一种算法；尤其残差减法仍慢于内联标量比较器，未计为加速收益。没有新增整端到端吞吐、RSS或GC性能声明。
+
+初始小批量路径的明显回退与修正过程保留在`arithmetic-bench.txt`、`arithmetic-bench-fixed.txt`、`transform-bench.txt`和`blocks-bench-final.txt`；最终代码以`bench-final.txt`为准。其SHA-256为`7f34263a89210899a0d17ff73bc4ba828dc25f8b2619852c6eeb0cbeb50799bb`。其余验证日志摘要见`verification-sha256.txt`，race摘要另存`race-final-sha256.txt`。本轮生成的交叉测试二进制和单独汇编对象已清理，保留文本证据。
+

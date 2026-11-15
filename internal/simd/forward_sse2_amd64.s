@@ -90,3 +90,19 @@ TEXT ·forward4SSE2(SB), NOSPLIT, $0-128
 	MOVOU X3, 48(DI)
 	RET
 
+// 2×2 DC Hadamard的第一轴：相邻通道的和与差。
+// 只读输入16字节，写出固定8通道的32字节结果，不要求对齐。
+TEXT ·forwardChromaDCPairsSSE2(SB), NOSPLIT, $0-48
+	LEAQ src+0(FP), SI
+	LEAQ pairs+16(FP), DI
+	MOVOU (SI), X0
+	MOVOU X0, X1
+	PSHUFD $0xB1, X1, X1
+	MOVOU X0, X2
+	PADDL X1, X2
+	MOVOU X0, X3
+	PSUBL X1, X3
+	MOVOU X2, (DI)
+	MOVOU X3, 16(DI)
+	RET
+

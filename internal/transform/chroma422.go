@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	h264 "github.com/goavc/h264"
+	"github.com/goavc/h264/internal/simd"
 )
 
 // DC2x4Scan 是 4:2:2 色度 DC 的扫描序号到光栅下标（row*2+col）的映射。
@@ -23,7 +24,7 @@ func ForwardChromaDC422(dst, src *[8]int32) error {
 	if dst == nil || src == nil {
 		return fmt.Errorf("transform: nil 422 DC block: %w", h264.ErrInvalidData)
 	}
-	values := hadamardChroma422(src)
+	values := simd.ForwardChromaDC422(*src)
 	var out [8]int32
 	for i, v := range values {
 		if v < -1<<31 || v > 1<<31-1 {
@@ -52,31 +53,11 @@ func DequantChromaDC422WithScaling(dst, levels *[8]int32, qpC int, scale uint8) 
 		return fmt.Errorf("transform: invalid 422 DC scaling: %w", h264.ErrInvalidData)
 	}
 	qpDC := qpC + 3
-	values := hadamardChroma422(levels)
 	mul := int64(levelScale4x4[qpDC%6][0]) * int64(scale) << uint(qpDC/6)
-	var out [8]int32
-	for i, v := range values {
-		v = (v*mul + 32) >> 6
-		if v < -1<<31 || v > 1<<31-1 {
-			return fmt.Errorf("transform: inverse 422 DC coefficient overflows int32: %w", h264.ErrInvalidData)
-		}
-		out[i] = int32(v)
+	out, written := simd.DequantChromaDC422(*levels, mul)
+	if written != len(out) {
+		return fmt.Errorf("transform: inverse 422 DC coefficient overflows int32: %w", h264.ErrInvalidData)
 	}
 	*dst = out
 	return nil
-}
-
-// hadamardChroma422 的两个对称基底满足 H4²=4I、H2²=2I。
-// 直接在八项空间计算；填充十六项再调用亮度 DC 会混入错误的维度和归一化。
-func hadamardChroma422(src *[8]int32) [8]int64 {
-	var tmp, out [8]int64
-	for y := range 4 {
-		a, b := int64(src[2*y]), int64(src[2*y+1])
-		tmp[2*y], tmp[2*y+1] = a+b, a-b
-	}
-	for x := range 2 {
-		a, b, c, d := tmp[x], tmp[2+x], tmp[4+x], tmp[6+x]
-		out[x], out[2+x], out[4+x], out[6+x] = a+b+c+d, a+b-c-d, a-b-c+d, a-b+c-d
-	}
-	return out
 }

@@ -203,11 +203,7 @@ func (s *frameState) analyzeIntra8(addr int) residual {
 			info.modes[r+offset] = int8(bestMode)
 		}
 		var input, coeff [64]int32
-		for j := 0; j < 8; j++ {
-			for i := 0; i < 8; i++ {
-				input[j*8+i] = int32(s.src.Planes[0].Sample(x+bx*8+i, y+by*8+j)) - int32(best[j*8+i])
-			}
-		}
+		subtractPlanes(input[:], &s.src.Planes[0], pl, x+bx*8, y+by*8, 8)
 		transform.Forward8x8(&coeff, &input)
 		transform.Quant8x8WithScaling(&res.luma8[block], &coeff, s.lumaQP(info.qp), s.matrix8(true))
 		if nonzero(res.luma8[block][:]) {

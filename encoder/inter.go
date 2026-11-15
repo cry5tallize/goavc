@@ -192,11 +192,7 @@ func (s *frameState) interResidual(addr int) residual {
 		for block := 0; block < 4; block++ {
 			bx, by := x+(block%2)*8, y+(block/2)*8
 			var input, coeff [64]int32
-			for j := 0; j < 8; j++ {
-				for i := 0; i < 8; i++ {
-					input[j*8+i] = int32(s.src.Planes[0].Sample(bx+i, by+j)) - int32(s.pic.Planes[0].Sample(bx+i, by+j))
-				}
-			}
+			subtractPlanes(input[:], &s.src.Planes[0], &s.pic.Planes[0], bx, by, 8)
 			transform.Forward8x8(&coeff, &input)
 			if info.interDeadZone {
 				transform.QuantInter8x8WithScaling(&res.luma8[block], &coeff, s.lumaQP(info.qp), s.matrix8(false))

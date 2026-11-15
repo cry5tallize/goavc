@@ -40,3 +40,40 @@ func TestIDCT8x8_Generic_WritesOnlyBlock(t *testing.T) {
 		t.Fatal("valid block reported overflow")
 	}
 }
+
+func TestIDCTValueKernels_PreserveAliasAndPartialOrder(t *testing.T) {
+	var src [64]int32
+	for i := range src {
+		src[i] = int32(i*7919 - 250000)
+	}
+	want, written := idct8Generic(src)
+	got := src
+	ok := IDCT8x8(&got, &got)
+	if ok != (written == 64) {
+		t.Fatalf("success=%v written=%d", ok, written)
+	}
+	for n := 0; n < written; n++ {
+		x, y := n/8, n%8
+		if got[y*8+x] != want[y*8+x] {
+			t.Fatalf("column-major output %d: got %d want %d", n, got[y*8+x], want[y*8+x])
+		}
+	}
+}
+
+func TestTransformValueKernels_ZeroAllocs(t *testing.T) {
+	var src4 [16]int32
+	var src8 [64]int32
+	for i := range src4 {
+		src4[i] = int32(i - 8)
+	}
+	for i := range src8 {
+		src8[i] = int32(i - 32)
+	}
+	if n := testing.AllocsPerRun(100, func() {
+		_ = idct4Generic(src4)
+		_ = forward8Generic(src8)
+		_, _ = idct8Generic(src8)
+	}); n != 0 {
+		t.Fatalf("transform kernels allocated: %v", n)
+	}
+}

@@ -5,22 +5,12 @@ package simd
 // 调用者证明len与逻辑图像/场边界；本函数不钳位，也不认识picture对象。
 // dst/ref不重叠，stride以采样计。8/10位共用唯一标量算法。
 func MCLuma[T ~byte | ~uint16](dst []T, ds int, ref []T, rs, w, h, fx, fy, bitDepth int) {
-    if fx == 0 && fy == 0 && w == 16 {
-        var zero T
-        switch any(zero).(type) {
-        case byte:
-            if kernels.mcluma8 != nil {
-                kernels.mcluma8(any(dst).([]byte), ds, any(ref).([]byte), rs, h)
-                return
-            }
-        case uint16:
-            if kernels.mcluma16 != nil {
-                kernels.mcluma16(any(dst).([]uint16), ds, any(ref).([]uint16), rs, h)
-                return
-            }
-        }
-    }
-    mcLumaGeneric(dst, ds, ref, rs, w, h, fx, fy, bitDepth)
+	if fx == 0 && fy == 0 && w == 16 {
+		if d, ok := any(dst).([]byte); ok && copy16Platform(d, ds, any(ref).([]byte), rs, h) {
+			return
+		}
+	}
+	mcLumaGeneric(dst, ds, ref, rs, w, h, fx, fy, bitDepth)
 }
 
 func mcLumaGeneric[T ~byte | ~uint16](dst []T, ds int, ref []T, rs, w, h, fx, fy, bitDepth int) {

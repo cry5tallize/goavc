@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	h264 "github.com/goavc/h264"
+	"github.com/goavc/h264/internal/simd"
 )
 
 // DequantLumaDC 返回每个 4×4 亮度块的 DC，输入输出均为光栅顺序。
@@ -27,36 +28,14 @@ func DequantLumaDCWithScaling(dst *[16]int32, levels *[16]int32, qp int, scale u
 	if qp < 0 || qp > MaxScaledQP {
 		return fmt.Errorf("transform: qp %d out of range 0..%d: %w", qp, MaxScaledQP, h264.ErrInvalidData)
 	}
-	var tmp [16]int64
-	for i := 0; i < 4; i++ {
-		a := int64(levels[i*4+0])
-		b := int64(levels[i*4+1])
-		c := int64(levels[i*4+2])
-		d := int64(levels[i*4+3])
-		s01 := a + b
-		d01 := a - b
-		s23 := c + d
-		d23 := c - d
-		tmp[i*4+0] = s01 + s23
-		tmp[i*4+1] = s01 - s23
-		tmp[i*4+2] = d01 - d23
-		tmp[i*4+3] = d01 + d23
-	}
-	// Spec: 8.5.10。列方向使用相同 Hadamard 矩阵，输出保持空间布局。
 	qmul := dequantMul(levelScale4x4[qp%6][0], qp, scale)
-	for i := 0; i < 4; i++ {
-		s01 := tmp[0*4+i] + tmp[1*4+i]
-		d01 := tmp[0*4+i] - tmp[1*4+i]
-		s23 := tmp[2*4+i] + tmp[3*4+i]
-		d23 := tmp[2*4+i] - tmp[3*4+i]
-		out := [4]int64{s01 + s23, s01 - s23, d01 - d23, d01 + d23}
-		for j := 0; j < 4; j++ {
-			v := (out[j]*qmul + 128) >> 8
-			if v < -1<<31 || v > 1<<31-1 {
-				return fmt.Errorf("transform: luma dc coefficient overflows int32: %w", h264.ErrInvalidData)
-			}
-			dst[j*4+i] = int32(v)
-		}
+	out, written := simd.DequantLumaDC(*levels, qmul)
+	for n := 0; n < written; n++ {
+		i, j := n/4, n%4
+		dst[j*4+i] = out[j*4+i]
+	}
+	if written != 16 {
+		return fmt.Errorf("transform: luma dc coefficient overflows int32: %w", h264.ErrInvalidData)
 	}
 	return nil
 }
@@ -85,20 +64,11 @@ func DequantChromaDCWithScaling(dst *[4]int32, levels *[4]int32, qp int, scale u
 	if qp < 0 || qp > MaxScaledQP {
 		return fmt.Errorf("transform: qp %d out of range 0..%d: %w", qp, MaxScaledQP, h264.ErrInvalidData)
 	}
-	a, b, c, d := int64(levels[0]), int64(levels[1]), int64(levels[2]), int64(levels[3])
 	qmul := dequantMul(levelScale4x4[qp%6][0], qp, scale)
-	sums := [4]int64{
-		a + b + c + d,
-		a - b + c - d,
-		a + b - c - d,
-		a - b - c + d,
-	}
-	for i := range sums {
-		v := (sums[i] * qmul) >> 7
-		if v < -1<<31 || v > 1<<31-1 {
-			return fmt.Errorf("transform: chroma dc coefficient overflows int32: %w", h264.ErrInvalidData)
-		}
-		dst[i] = int32(v)
+	out, written := simd.DequantChromaDC(*levels, qmul)
+	copy(dst[:written], out[:written])
+	if written != len(out) {
+		return fmt.Errorf("transform: chroma dc coefficient overflows int32: %w", h264.ErrInvalidData)
 	}
 	return nil
 }

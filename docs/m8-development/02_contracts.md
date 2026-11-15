@@ -1,6 +1,6 @@
 # 02：架构与接口契约
 
-> 本文中的“拟新增”符号、类型、文件和测试均是后续实施目标，当前不存在。实现前以 gopls 定义/引用核对所有调用点。修改导出符号必须先查引用，不能只文本替换已打开文件。
+> 本文保留设计输入与已冻结的实现契约；各项实际交付和验证范围见 [实施记录](12_execution_log.md)。修改导出符号前用 gopls 定义/引用核对全部调用点。
 
 ## 1. 依赖方向和 Generic 的唯一归属
 
@@ -13,7 +13,7 @@
 
 迁移一个算术内核时，把其 Generic 算术移入 simd，上层只保留验证、表选择和适配；删除被替代的重复循环。没有迁移的内核继续保留原实现，不为填满“注册表”复制一套。simd 不反向 import 上述共享包；尤其不能让 simd import transform 再由 transform import simd。
 
-`internal/testutil/importgraph/graph.go` 的 R3 白名单当前包括 `internal/motion`，**不包括** `internal/motion/search` 或 `internal/picture`。本设计由这两个实际消费者直接调用 simd，因此 K02 必须显式增加这两项并更新依赖测试、架构说明。不得以包名前缀匹配放宽整个 internal，也不新增 motion 中转层制造绕行。`benchmarks` 不直接 import simd；直接后端基准放在 simd 包内。
+`internal/testutil/importgraph/graph.go` 的 R3 白名单已显式包含 `internal/motion/search` 和 `internal/picture`；对应运动搜索与共享重建是直接消费者。新增目录仍须逐项评审，不得以前缀放行整个 internal，也不新增中转层绕过检查。
 
 ## 2. 拟定类型化表
 
@@ -36,6 +36,8 @@
 最终 Go 名称可按现有包风格微调，但参数单位、归属、别名和错误边界不能由各后端独立决定。K02 将实际签名补写到本表对应的代码 godoc，并让 K03 用同一函数类型运行所有后端。
 
 K10a实际`simd.Forward4x4([16]int32) [16]int32`使用固定值参数/返回值，避免间接调用使领域局部残差逃逸；领域`transform.Forward4x4(dst,src *[16]int32)`签名与原地能力保持不变。其余变换接口仍按各任务独立冻结。
+
+K11 的精确部分向量化使用固定值 ABI：`quantMultiply([4]uint64,[4]uint64) [4]uint64`，每项有效位宽32，输出保留完整64位乘积；超出范围先回到原 int64 乘法。QP/矩阵乘子在 transform 按块准备，除法、舍入、符号与错误提交顺序保持唯一共享实现。K12/K13 同样只将固定候选数组传入间接调用，不传借用的 slice，避免领域栈数组逃逸。
 
 对于错误路径：汇编返回小整数/布尔状态或 badIndex；Go 包装负责错误值，不在汇编创建 error。**不要假定所有现有变换/量化都失败原子**：当前实现有逐项写出行为。K02/K10/K11 先记录各入口有效/无效输入的既有契约；若需要更强的写前验证，单独提交共享验证重构并让所有后端一致，不只让某后端回滚。成功结果和 errors.Is 分类必须保持。
 

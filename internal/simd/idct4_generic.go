@@ -1,8 +1,7 @@
 package simd
 
-// IDCT4x4 执行 Spec: 8.5.12.2 的整数逆变换。
-// 临时值使用 int64；输入输出可别名，结果不裁剪。
-func IDCT4x4(dst *[16]int32, src *[16]int32) {
+// idct4Generic is the exact int64 scalar 4x4 inverse transform.
+func idct4Generic(src [16]int32) (dst [16]int32) {
 	var coeff [16]int64
 	for i, v := range src {
 		coeff[i] = int64(v)
@@ -20,7 +19,11 @@ func IDCT4x4(dst *[16]int32, src *[16]int32) {
 		c, d := (temp[4+x]>>1)-temp[12+x], temp[4+x]+(temp[12+x]>>1)
 		dst[x], dst[4+x], dst[8+x], dst[12+x] = int32((a+d)>>6), int32((b+c)>>6), int32((b-c)>>6), int32((a-d)>>6)
 	}
+	return
 }
+
+// IDCT4x4 is the legacy pointer adapter.
+func IDCT4x4(dst, src *[16]int32) { *dst = kernels.idct4(*src) }
 
 func IDCT4x4DC(dc int32) int32 {
 	return int32((int64(dc) + 32) >> 6)

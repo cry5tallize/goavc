@@ -10,6 +10,7 @@ import (
 	"github.com/goavc/h264/internal/motion/search"
 	"github.com/goavc/h264/internal/picture"
 	"github.com/goavc/h264/internal/prediction"
+	"github.com/goavc/h264/internal/simd"
 	"github.com/goavc/h264/internal/transform"
 	"github.com/goavc/h264/nal"
 )
@@ -318,13 +319,18 @@ func (s *frameState) chroma(addr int, res *residual) {
 
 func residualTransform(src, pred *picture.Plane, x, y int) [16]int32 {
 	var residual, coeff [16]int32
-	for j := 0; j < 4; j++ {
-		for i := 0; i < 4; i++ {
-			residual[j*4+i] = int32(src.Sample(x+i, y+j)) - int32(pred.Sample(x+i, y+j))
-		}
-	}
+	subtractPlanes(residual[:], src, pred, x, y, 4)
 	transform.Forward4x4(&coeff, &residual)
 	return coeff
+}
+
+// subtractPlanes 直接处理原生采样，保留场视图的起点和 stride。
+func subtractPlanes(dst []int32, src, pred *picture.Plane, x, y, n int) {
+	if src.BitDepth == 10 {
+		simd.Subtract16(dst, n, src.Data16[src.Index(x, y):], src.Stride, pred.Data16[pred.Index(x, y):], pred.Stride, n, n)
+	} else {
+		simd.Subtract8(dst, n, src.Data[src.Index(x, y):], src.Stride, pred.Data[pred.Index(x, y):], pred.Stride, n, n)
+	}
 }
 
 func reconstruct(pl *picture.Plane, x, y int, levels *[16]int32, qp int, dc *int32) {

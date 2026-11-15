@@ -1,9 +1,13 @@
-//go:build !windows
+//go:build !windows && !linux && !darwin && !freebsd && !netbsd && !openbsd && !dragonfly
 
 package simd
 
 import "testing"
 
-func TestGuardPage_SAD(t *testing.T) {
-	t.Skip("当前保护页辅助只实现Windows；本平台动态越读测试未执行，静态访问证明和最小len parity仍保留")
+const guardPagesAvailable = false
+
+func guardedRows(t *testing.T, _, _, _ int) ([]byte, int) {
+	t.Helper()
+	t.Skip("本平台保护页辅助未实现；动态越读未执行，最小len及静态范围证明仍保留")
+	return nil, 0
 }

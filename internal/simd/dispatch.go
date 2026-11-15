@@ -25,38 +25,80 @@ func (b Backend) String() string {
 	}
 }
 
-type mcluma8Func func(dst []byte, ds int, ref []byte, rs, height int)
-type mcluma16Func func(dst []uint16, ds int, ref []uint16, rs, height int)
 type sad8Func func(a []byte, as int, b []byte, bs, width, height int) int
 type sad16Func func(a []uint16, as int, b []uint16, bs, width, height int) int
 type satd4Func func([16]int32) int
 type forward4Func func([16]int32) [16]int32
+type filterDeltaFunc func([4]int32, [4]int32) [4]int32
+type quantMultiplyFunc func([4]uint64, [4]uint64) [4]uint64
+type forward8Func func([64]int32) [64]int32
+type idct4Func func([16]int32) [16]int32
+type idct8Func func([64]int32) ([64]int32, int)
+type lumaDCFunc func([16]int32) [16]int32
+type chromaDCFunc func([4]int32) [4]int32
+type chromaDC422Func func([8]int32) [8]int64
+type wideAdd4Func func([4]int64, [4]int64) [4]int64
+
 // Backends 是逐槽诊断快照。仅随真实内核迁移增加字段，不预建未来空槽。
 type Backends struct {
-    SAD8, SAD16 Backend
-    SATD4x4     Backend
-    Forward4x4  Backend
-    MCLumaCopy  Backend
+	SAD8, SAD16                                        Backend
+	SATD4x4                                            Backend
+	Forward4x4                                         Backend
+	MCLumaCopy                                         Backend
+	Residual                                           Backend
+	FilterDelta                                        Backend
+	QuantMultiply                                      Backend
+	Forward8x8, IDCT4x4, IDCT8x8                       Backend
+	ForwardLumaDC, ForwardChromaDC, ForwardChromaDC422 Backend
+	WideAdd4                                           Backend
 }
 
 type kernelTable struct {
-    mcluma8  mcluma8Func
-    mcluma16 mcluma16Func
-    sad8     sad8Func
-    sad16    sad16Func
-    satd4    satd4Func
-    forward4 forward4Func
-    backends Backends
+	sad8                        sad8Func
+	sad16                       sad16Func
+	satd4                       satd4Func
+	forward4                    forward4Func
+	residualVector              residualVector
+	filterDelta                 filterDeltaFunc
+	quantMultiply               quantMultiplyFunc
+	forward8                    forward8Func
+	idct4                       idct4Func
+	idct8                       idct8Func
+	forwardLumaDC               lumaDCFunc
+	forwardChromaDC             chromaDCFunc
+	forwardChromaDC422          chromaDC422Func
+	wideAdd4                    wideAdd4Func
+	quantScalar, residualScalar bool
+	backends                    Backends
 }
 
 func genericTable() kernelTable {
-	return kernelTable{sad8: sadGeneric[byte], sad16: sadGeneric[uint16], satd4: satd4Generic, forward4: forward4Generic}
+	return kernelTable{
+		sad8: sadGeneric[byte], sad16: sadGeneric[uint16], satd4: satd4Generic, forward4: forward4Generic,
+		residualVector: residualVectorGeneric,
+		filterDelta:    filterDeltaGeneric,
+		quantMultiply:  quantMultiplyGeneric,
+		forward8:       forward8Generic, idct4: idct4Generic, idct8: idct8Generic,
+		forwardLumaDC: forwardLumaDCGeneric, forwardChromaDC: forwardChromaDCGeneric,
+		forwardChromaDC422: forwardChromaDC422Generic,
+		wideAdd4:           wideAdd4Generic,
+		quantScalar:        true, residualScalar: true,
+	}
 }
 
 // 生产表初始化后不变；测试强制入口将在专用构建标签内提供。
 var kernels = autoKernels(nativeCPU)
 
-func selectKernels(cpu cpuFeatures) kernelTable { return platformKernels(cpu, genericTable()) }
+func selectKernels(cpu cpuFeatures) kernelTable {
+	table := platformKernels(cpu, genericTable())
+	table = installResidualKernels(cpu, table)
+	table = installFilterKernels(cpu, table)
+	table = installQuantKernels(cpu, table)
+	table = installTransformKernels(cpu, table)
+	table.quantScalar = table.backends.QuantMultiply == Generic
+	table.residualScalar = table.backends.Residual == Generic
+	return table
+}
 
 func autoKernels(cpu cpuFeatures) kernelTable {
 	table := selectKernels(cpu)
@@ -65,6 +107,24 @@ func autoKernels(cpu cpuFeatures) kernelTable {
 	if table.backends.SATD4x4 == AVX2 {
 		sse := selectKernels(cpuFeatures{sse2: true})
 		table.satd4, table.backends.SATD4x4 = sse.satd4, sse.backends.SATD4x4
+	}
+	// 五次真实块基准显示小批gather/间接调用更慢；默认保留直接Go标量快路。
+	// 显式后端测试仍绑定真实SIMD，不以Auto的Generic回退冒充向量通过。
+	if cpu.sse2 {
+		sse := selectKernels(cpuFeatures{sse2: true})
+		table.forward4, table.backends.Forward4x4 = sse.forward4, SSE2
+		// 值ABI的小批乘积/宽加法开销高于共享标量；保留真实显式后端，
+		// 不把较慢的部分向量化加入默认编码和解码热路径。
+		table.forward8, table.backends.Forward8x8 = forward8Generic, Generic
+		table.idct4, table.backends.IDCT4x4 = idct4Generic, Generic
+		table.idct8, table.backends.IDCT8x8 = idct8Generic, Generic
+		table.forwardLumaDC, table.backends.ForwardLumaDC = forwardLumaDCGeneric, Generic
+		table.forwardChromaDC, table.backends.ForwardChromaDC = forwardChromaDCGeneric, Generic
+		table.forwardChromaDC422, table.backends.ForwardChromaDC422 = forwardChromaDC422Generic, Generic
+		table.wideAdd4, table.backends.WideAdd4 = wideAdd4Generic, Generic
+		table.quantMultiply, table.backends.QuantMultiply, table.quantScalar = quantMultiplyGeneric, Generic, true
+		table.residualVector, table.backends.Residual, table.residualScalar = residualVectorGeneric, Generic, true
+		table.filterDelta, table.backends.FilterDelta = filterDeltaGeneric, Generic
 	}
 	return table
 }

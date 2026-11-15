@@ -16,22 +16,12 @@ func Forward4x4(dst, src *[16]int32) {
 // ForwardLumaDC 把 16 个子块 DC 变为 I16 Hadamard 系数，输入输出为光栅顺序。
 // Hadamard 增益与逆路径 DequantLumaDC 对偶；(v+1)>>1 是编码侧确定性舍入。
 func ForwardLumaDC(dst, src *[16]int32) {
-	var tmp [16]int32
-	for y := 0; y < 4; y++ {
-		i := 4 * y
-		a, b, c, d := src[i], src[i+1], src[i+2], src[i+3]
-		tmp[i], tmp[i+1], tmp[i+2], tmp[i+3] = a+b+c+d, a+b-c-d, a-b-c+d, a-b+c-d
-	}
-	for x := 0; x < 4; x++ {
-		a, b, c, d := tmp[x], tmp[4+x], tmp[8+x], tmp[12+x]
-		dst[x], dst[4+x], dst[8+x], dst[12+x] = (a+b+c+d+1)>>1, (a+b-c-d+1)>>1, (a-b-c+d+1)>>1, (a-b+c-d+1)>>1
-	}
+	*dst = simd.ForwardLumaDC(*src)
 }
 
 // ForwardChromaDC 为 4:2:0 色度的 2×2 Hadamard，不做归一化。
 func ForwardChromaDC(dst, src *[4]int32) {
-	a, b, c, d := src[0], src[1], src[2], src[3]
-	*dst = [4]int32{a + b + c + d, a - b + c - d, a + b - c - d, a - b - c + d}
+	*dst = simd.ForwardChromaDC(*src)
 }
 
 var quantScale = [6][3]int64{{13107, 8066, 5243}, {11916, 7490, 4660}, {10082, 6554, 4194}, {9362, 5825, 3647}, {8192, 5243, 3355}, {7282, 4559, 2893}}
@@ -65,14 +55,15 @@ func quant4x4WithScaling(dst, src *[16]int32, qp int, scaling *[16]uint8, diviso
 			}
 		}
 	}
-	for i, v := range src {
+	var mul [16]int64
+	for i := range mul {
 		class := (i / 4 % 2) + (i % 2)
-		mul := quantScale[qp%6][class]
+		mul[i] = quantScale[qp%6][class]
 		if scaling != nil {
-			mul = (mul*16 + int64(scaling[i])/2) / int64(scaling[i])
+			mul[i] = (mul[i]*16 + int64(scaling[i])/2) / int64(scaling[i])
 		}
-		dst[i] = quantizeWithDeadZone(v, mul, 15+qp/6, divisor)
 	}
+	simd.Quant4x4(dst, src, &mul, 15+qp/6, divisor)
 	return nil
 }
 
@@ -98,14 +89,9 @@ func quantDCWithScaling(dst, src []int32, qp int, scale uint8, divisor int64) er
 	if scale == 0 {
 		return fmt.Errorf("transform: zero DC quant scaling entry: %w", h264.ErrInvalidData)
 	}
-	for i, v := range src {
-		dst[i] = quantizeWithDeadZone(v, (quantScale[qp%6][0]*16+int64(scale)/2)/int64(scale), 16+qp/6, divisor)
-	}
+	mul := (quantScale[qp%6][0]*16 + int64(scale)/2) / int64(scale)
+	simd.QuantizeCoefficients(dst, src, mul, 16+qp/6, divisor)
 	return nil
-}
-
-func quantize(v int32, mul int64, shift int) int32 {
-	return quantizeWithDeadZone(v, mul, shift, 3)
 }
 
 func quantizeWithDeadZone(v int32, mul int64, shift int, divisor int64) int32 {

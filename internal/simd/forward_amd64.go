@@ -8,6 +8,9 @@ package simd
 func forward4SSE2(src [16]int32) (out [16]int32)
 
 //go:noescape
+func forwardChromaDCPairsSSE2(src [4]int32) (pairs [8]int32)
+
+//go:noescape
 func copy16SSE2(dst []byte, ds int, ref []byte, rs, height int)
 
 //go:noescape

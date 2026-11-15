@@ -164,7 +164,7 @@ func TestCheckR3(t *testing.T) {
 }
 
 func TestCheckR3_ExactSearchConsumer(t *testing.T) {
-	for _, dir := range []string{"internal/motion/search", "internal/motion/search/helper", "internal/picture"} {
+	for _, dir := range []string{"internal/motion/search", "internal/motion/search/helper", "internal/picture", "internal/picture/helper"} {
 		t.Run(dir, func(t *testing.T) {
 			root := newModule(t)
 			writeFile(t, root, "internal/simd/s.go", "package simd\n")
@@ -174,7 +174,7 @@ func TestCheckR3_ExactSearchConsumer(t *testing.T) {
 				t.Fatal(err)
 			}
 			want := 1
-			if dir == "internal/motion/search" {
+			if dir == "internal/motion/search" || dir == "internal/picture" {
 				want = 0
 			}
 			if got := rulesOf(g.Check())["R3"]; got != want {

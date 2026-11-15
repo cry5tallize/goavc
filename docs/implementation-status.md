@@ -243,19 +243,22 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | Module | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|
 | CPU检测（K01） | amd64安全CPUID/XGETBV、arm64基线NEON能力、purego/其他架构回退 | Partial | `simd/cpu_test.go` 的1024组合与 `cpu_purego_test.go` | CPU检测不等于任何向量kernel已实现；arm64仅交叉构建时不记原生执行 |
-| 内核表（K02） | SAD8/16、SATD4×4、Forward4×4、整数相位宽16亮度复制的类型化分发、唯一Generic、真实consumer | Partial | `simd/dispatch_test.go`、search/transform/预测入口、M7输出指纹、MC stride/phase/bit-depth回归 | MC SSE2/AVX2目前只覆盖fx=fy=0且宽16的真实复制；插值仍Generic，NEON与其余MC槽待交付 |
-| parity框架（K03） | 固定种子矩形/stride/offset/最小len、输入不变、测试标签强制及生产包装0分配 | Partial | `simd/parity_test.go`、`backend_testing_test.go`、真实候选后端测试 | x86 SAD/SATD原生，NEON仅交叉构建；保护页当前只覆盖SAD，完整K14未完成 |
-| SSE2 SAD（K04） | byte/原生10-bit矩形，16/8/4窄加载与标量尾部，64位累加 | Partial | 直接后端parity、独立最大值、强制搜索双位深、M7固定指纹 | SAD保护页已由K14a完成；其他内核边界矩阵仍待交付 |
-| AVX2 SAD（K05） | width16的8/10-bit真实AVX2，其他宽度复用SSE2 | Partial | AVX2直接parity、强制搜索、M7指纹 | 逐槽AVX2诊断表示此快路覆盖域，非16宽实际为SSE2；其余kernel未完成 |
+| 内核表（K02） | SAD/SATD、4/8×8正逆变换与DC、精确乘积、去块候选和残差的类型化分发及逐槽诊断 | Partial | 显式Generic/SSE2/AVX2真实consumer；MC用静态noescape平台包装保留scratch零分配 | amd64按实测默认选择SSE2 Forward4/SATD及Generic部分向量化槽；MC仍只加速整数宽16复制，不冒充插值SIMD |
+| parity框架（K03） | 固定种子矩形/stride/offset/最小len、输入不变、强制后端与生产包装0分配 | Partial | x86原生、purego及386全库测试；K14保护页扩展至全部现有内核类别 | NEON仅三系统交叉构建/测试编译，未原生验证；Unix保护页辅助已交付但本机未执行 |
+| SSE2 SAD（K04） | byte/原生10-bit矩形，16/8/4窄加载与标量尾部，64位累加 | Partial | 直接后端parity、独立最大值、强制搜索双位深、M7固定指纹及K14保护页 | NEON与Unix动态执行证据不能由本机x86替代 |
+| AVX2 SAD（K05） | width16的8/10-bit真实AVX2，其他宽度复用SSE2 | Partial | AVX2直接parity、强制搜索、M7指纹及K14保护页 | 逐槽AVX2诊断表示此快路覆盖域，非16宽实际为SSE2 |
 | NEON SAD（K06） | width16的8/10-bit基线NEON，其他矩形复用Generic | WIP | 原生parity/bench测试入口已交付；三种arm64交叉vet/测试构建 | 用户指定只做编译验收；未原生执行，不提供虚构NEON性能或正确性通过声明 |
 | MC块化（K09a） | 唯一共享标量、interior/边界patch、相位一次分解、j中间行复用 | Partial | 旧MC指纹、原六格式/场/权重解析值、M7码流指纹、MC0分配与stride/phase/bit-depth回归 | SSE2/AVX2仅新增整数宽16复制快路；SIMD插值仍待K09b/c/d，不把复制快路标为完整AVX2/NEON MC |
-| MC整数复制快路（K09b前置） | SSE2/AVX2宽16、fx=fy=0、逐行16字节无对齐要求，其他尺寸/相位唯一Generic回退 | Partial | `mc_generic_test.go`、`internal/prediction`生产入口、purego/全库测试 | 仍缺SSE2/AVX2/NEON插值、uint16快路、完整guard-page与K14矩阵 |
+| MC整数复制快路（K09b前置） | SSE2/AVX2宽16、fx=fy=0、逐行16字节无对齐要求，静态noescape包装，其他尺寸/相位唯一Generic回退 | Partial | 全相位边界保护页、预测解析值、purego/386全库测试及prediction/search/encoder现有0分配保护网 | 仍缺SSE2/AVX2/NEON插值与uint16快路，不因K14完成而扩大K09能力 |
 | x86 SATD（K07） | SSE2/AVX2的4×4 Hadamard，真实帧内候选接入，内部值参数 | Partial | 8/10-bit常量/冲激解析值、5000组parity、实际候选、局部残差0分配、M7指纹 | 默认实测优选SSE2；arm64尚未原生验证；矩形仍按原4×4 tiled |
 | NEON SATD（K08） | 基线ASIMD 4×4 Hadamard、同值参数与测试入口 | WIP | arm64交叉vet/构建，原生测试入口已交付 | 用户指定编译验收；未原生运行，不把Generic或跨编译当NEON通过 |
-| 汇编边界基础（K14a） | Windows逐行保护页与子进程协调，SAD尾部/最小len | Partial | 原生Generic/Auto/SSE2/AVX2、purego、386保护页实际执行 | 仅SAD已动态验证；其余kernel和非Windows动态页仍待补齐，不签完整K14 |
-| SSE2正变换（K10a） | 唯一Generic与SSE2 Forward4x4；固定值参数保持原地与局部零分配 | Partial | 独立正负冲激基底、5000组合法/宽域parity、真实transform入口/编码器指纹 | 仅4×4正变换；AVX2、逆变换、8×8及完整K10仍待交付，AVX2机器此槽实际为SSE2；NEON原生仍未验 |
-| NEON正变换（K10b） | 基线ASIMD Forward4x4与真实共享入口分发 | WIP | 三种arm64交叉vet/build/测试编译；原生解析/parity/基准入口已提供 | 用户指定编译验收；原生未执行，无NEON性能/正确性通过声明，完整K10未完成 |
-| 其余SIMD内核（K09b-d/K10其余–K14） | SIMD MC/其余变换/量化/去块/残差、边界证明 | TODO | 待实施 | 不据已完成kernel推定其余范围或端点已完成 |
+| 汇编边界矩阵（K14） | 逐行保护页/子进程、最小len、奇数尺寸/stride、只读源与未写区，覆盖SAD/SATD/变换/量化/去块/残差及现有MC | Partial | Windows原生Generic/Auto/SSE2/AVX2、purego及386保护页执行；六目标汇编vet/build/测试编译 | Unix mmap辅助已交付但本机未运行；arm64遵循用户编译验收范围，无NEON动态越界/性能通过声明；值ABI内部栈访问另有静态范围证明 |
+| x86正逆变换（K10） | 4/8×8及亮度/420/422 DC共享语义，SSE2/AVX2真实部分向量化；保留int64中间域、原地及IDCT8首错写入序 | Partial | 显式后端解析基底/极值/原地/错误与局部0分配；独立420混合符号回归；编码旧指纹及默认路径三方Oracle | 8×8投影乘积及逆/DC宽加法为部分SIMD，其余算术仍Go；实测小批调用较慢，amd64默认仅Forward4选SSE2，其余变换槽选Generic |
+| NEON正逆变换（K10） | 基线ASIMD Forward4、8×8精确投影乘积、逆变换及DC宽加法接入同一共享入口 | WIP | windows/linux/darwin arm64全库build、汇编vet及带测试标签的simd/transform测试编译 | 用户指定编译验收；原生parity、保护页、分配、Oracle和性能未执行，不声明NEON原生正确性通过 |
+| 量化/反量化（K11） | 4/8×8与DC按块准备参数，精确32×32→64乘积，原整数除法/死区/符号与晚期失败前缀；指针块接口避免数组复制 | Partial | 本机Generic/Auto/SSE2/AVX2全QP'0..63、64位乘积、宽域回退、局部0分配、原地保护页及首错前缀/未写后缀回归通过 | SIMD仅负责准确乘积，除法/舍入/错误仍共享Go；amd64默认按实测选择直接Generic，显式后端仍真实SIMD；NEON原生未验 |
+| 去块（K12） | 唯一共享亮度/色度算法，强弱候选部分向量化，保持逐线顺序和条件邻域访问 | Partial | 本机Generic/Auto/SSE2/AVX2强弱、方向/Span1/2/4与最小邻域保护页通过；领域解析测试保留 | 不是整条边全SIMD，不改变bS/阈值/slice权限；amd64默认候选加法保留Generic，实测SIMD较慢；NEON原生未验 |
+| 残差加减（K13） | 8/10-bit共享Clip1和Subtract，picture与编码真实残差循环迁移，R3精确放行picture | Partial | 本机四路径parity、int32极值、低两位、奇数stride/最小len逐行保护页及局部0分配通过 | gather/scatter与不足4采样尾部为Go，值ABI仅向量化加减；amd64默认直接标量避免gather开销，显式后端保留真实SIMD；NEON原生未验 |
+| 其余MC SIMD（K09b-d） | 现有整数复制之外的插值向量化 | TODO | 唯一Generic与全相位边界保护保留 | 不以本轮K10–K14工作冒充K09插值SIMD已完成 |
 | 搜索去逃逸（G01/K18前置） | caller-owned双位深Workspace，真实编码器跨帧/场/Reset复用，结束解除借用 | Partial | 32组改造前Scorer轨迹/结果，64组prepared零分配，强制x86/purego/386/M8指纹 | 仅搜索；完整配置的K18及K16所有权/资源门禁仍待完成 |
 | 残差去逃逸（G02/K18切片） | 具名调用唯一共享量化器、共同444亮度重建入口解除递归逃逸 | Partial | 384组改造前系数/CBP/重建指纹；六格式/场/矩阵/两死区/4与8变换的真实残差和四种帧间分区0分配 | 完整K18未完成，不新增量化策略或SIMD量化 |
 | 帧内邻域（G03a/K18切片） | 调用者栈上固定邻域槽；相同可用性预检避免枚举不可用模式的错误分配 | Partial | 1152个旧I4/I16/I8候选指纹、六格式/场/矩阵/QP的prepared帧内候选0分配、邻域并存/清零解析值 | 完整K18仍待所有配置/正常MB集成门禁，不把单候选零分配扩大为整个库 |

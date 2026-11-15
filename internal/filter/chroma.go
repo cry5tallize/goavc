@@ -1,5 +1,7 @@
 package filter
 
+import "github.com/goavc/h264/internal/simd"
+
 // ChromaEdge 对一条色度边界的像素线段做去块滤波。
 //
 // 4:2:0 下每条边界有 8 行/列，FFmpeg 把每个 bS 应用到 2 条线，
@@ -34,30 +36,10 @@ func chromaEdge[T sample](data []T, q0, lineStep, acrossStep, bS, qp, alphaDiv2,
 			return
 		}
 	}
-	for line := 0; line < lines; line++ {
-		q0i := q0 + line*lineStep
-		p0 := q0i - acrossStep
-		p1 := q0i - 2*acrossStep
-		q1 := q0i + acrossStep
-		if p1 < 0 || q1 >= len(data) {
-			continue
-		}
-		if abs(int(data[p0])-int(data[q0i])) >= alpha ||
-			abs(int(data[p1])-int(data[p0])) >= beta ||
-			abs(int(data[q1])-int(data[q0i])) >= beta {
-			continue
-		}
-		if bS >= 4 {
-			p0v := int(data[p0])
-			p1v := int(data[p1])
-			q0v := int(data[q0i])
-			q1v := int(data[q1])
-			data[p0] = T((2*p1v + p0v + q1v + 2) >> 2)
-			data[q0i] = T((2*q1v + q0v + p1v + 2) >> 2)
-			continue
-		}
-		delta := clipInt((((int(data[q0i])-int(data[p0]))*4)+int(data[p1])-int(data[q1])+4)>>3, -tc, tc)
-		data[p0] = clipPixel[T](int(data[p0])+delta, bitDepth)
-		data[q0i] = clipPixel[T](int(data[q0i])-delta, bitDepth)
+	switch d := any(data).(type) {
+	case []byte:
+		simd.FilterChroma8(d, q0, lineStep, acrossStep, bS, alpha, beta, tc, lines, bitDepth)
+	case []uint16:
+		simd.FilterChroma16(d, q0, lineStep, acrossStep, bS, alpha, beta, tc, lines, bitDepth)
 	}
 }

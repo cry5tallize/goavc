@@ -13,9 +13,9 @@ var forward8Basis64 = [8][8]int64{
 
 var forward8Norm = [8]int64{32768, 36992, 20480, 36992, 32768, 36992, 20480, 36992}
 
-// Forward8x8 是 Spec: 8.5.13 的共享整数正变换 Generic 实现。
-// 输入输出按光栅顺序，可原地调用；int64 中间域保证合法8/10-bit残差不溢出。
-func Forward8x8(dst, src *[64]int32) {
+// forward8Generic is the single exact scalar implementation. Its fixed-array
+// value ABI supports aliasing at the domain boundary without retaining pointers.
+func forward8Generic(src [64]int32) (dst [64]int32) {
 	var temp [64]int64
 	for y := range 8 {
 		for k := range 8 {
@@ -38,7 +38,11 @@ func Forward8x8(dst, src *[64]int32) {
 			dst[ky*8+kx] = int32(value)
 		}
 	}
+	return
 }
+
+// Forward8x8 is the legacy pointer adapter.
+func Forward8x8(dst, src *[64]int32) { *dst = kernels.forward8(*src) }
 
 func absForward8(value int64) int64 {
 	if value < 0 {
