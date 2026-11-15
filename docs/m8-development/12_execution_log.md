@@ -276,3 +276,7 @@ K10a补充：CGO=0帧间编码fuzz smoke 5s/1432exec退出0；CGO=1 simd/transfo
 起点`eb882a1`，只增加forward_arm64声明/汇编/测试和ARM逐槽分发；沿用K10a唯一Generic与领域适配，不改内存GC工作。基线ASIMD四条S4向量完成两轴32位加减/倍增及转置，输入/输出各固定64字节；与SSE2同一C基底、顺序与int32模运算，没有窄化、可选扩展或新的输入域。NEON槽已绑定实际计算，原生解析值/5000组parity/benchmark入口复用checkForward；不会把Generic结果标为NEON。
 
 按用户arm64只需可编译的范围，CGO=0 windows/linux/darwin×arm64分别go vet internal/simd、go build ./...、带goavc_simdtest的simd测试二进制编译。无原生arm64，未执行NEON parity/分配/Oracle/性能，状态WIP。宿主purego simd/transform及完整常规门禁另验证；完整K10仍缺AVX2、逆变换、8×8等，MC/量化/滤波/残差也仍待实现。不签M8、不push/tag/release。内存agent与用户原有文件原样保留。
+
+### K10c前置：Forward8x8共享 Generic 迁移
+
+将 `internal/transform/eight.go` 中唯一的 Forward8x8 正变换实现迁入 `internal/simd/forward8_generic.go`，领域层保留原签名适配；没有新增伪造的 SIMD backend 槽。该迁移保持 `[64]int32` 原地契约、int64 中间域、基底/舍入和输出顺序不变。`CGO_ENABLED=0 go test -count=1 ./internal/simd ./internal/transform ./encoder ./decoder` 通过；AVX2/NEON Forward8x8、逆变换及 K10 完整边界矩阵仍未交付。
