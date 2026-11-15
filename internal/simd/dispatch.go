@@ -25,24 +25,28 @@ func (b Backend) String() string {
 	}
 }
 
+type mcluma8Func func(dst []byte, ds int, ref []byte, rs, height int)
+type mcluma16Func func(dst []uint16, ds int, ref []uint16, rs, height int)
 type sad8Func func(a []byte, as int, b []byte, bs, width, height int) int
 type sad16Func func(a []uint16, as int, b []uint16, bs, width, height int) int
 type satd4Func func([16]int32) int
 type forward4Func func([16]int32) [16]int32
-
 // Backends 是逐槽诊断快照。仅随真实内核迁移增加字段，不预建未来空槽。
 type Backends struct {
-	SAD8, SAD16 Backend
-	SATD4x4     Backend
-	Forward4x4  Backend
+    SAD8, SAD16 Backend
+    SATD4x4     Backend
+    Forward4x4  Backend
+    MCLumaCopy  Backend
 }
 
 type kernelTable struct {
-	sad8     sad8Func
-	sad16    sad16Func
-	satd4    satd4Func
-	forward4 forward4Func
-	backends Backends
+    mcluma8  mcluma8Func
+    mcluma16 mcluma16Func
+    sad8     sad8Func
+    sad16    sad16Func
+    satd4    satd4Func
+    forward4 forward4Func
+    backends Backends
 }
 
 func genericTable() kernelTable {
