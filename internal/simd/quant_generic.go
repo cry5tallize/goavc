@@ -6,6 +6,7 @@ func QuantizeWithDeadZone(v int32, mul int64, shift int, divisor int64) int32 {
 	a := int64(v)
 	if a < 0 {
 		a = -a
+	}
 	q := int32((a*mul + (int64(1)<<shift)/divisor) >> shift)
 	if v < 0 {
 		return -q

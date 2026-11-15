@@ -18,6 +18,7 @@ func TestMCLuma_Generic_StrideAndPhase(t *testing.T) {
 		for i := range ref {
 			ref[i] = byte((i*37 + 11) & 255)
 		}
+		dst := make([]byte, h*stride+7)
 		for i := range dst {
 			dst[i] = 0xa5
 		}
@@ -46,29 +47,29 @@ func TestMCChroma_Generic_AllPhasesAndBitDepth(t *testing.T) {
 					dst[i] = 0xffff
 				}
 				MCChroma(dst[2:], stride, ref[3*stride+2:], stride, 9, 7, fx, fy)
-                for y := range 7 {
-                    for x := range 9 {
-                        v := dst[2+y*stride+x]
-                        i := y*stride + x
-                        a := (8-fx)*(8-fy)
-                        b := fx * (8 - fy)
-                        c := (8-fx)*fy
-                        d := fx * fy
-                        base := 3*stride + 2 + i
-                        want := uint16((a*int(ref[base]) + b*int(ref[base+1]) + c*int(ref[base+stride]) + d*int(ref[base+stride+1]) + 32) >> 6)
-                        if int(v) > (1<<bits)-1 {
-                            t.Fatalf("bits=%d phase=%d/%d out of range: %d", bits, fx, fy, v)
-                        }
-                        if v != want {
-                            t.Fatalf("bits=%d phase=%d/%d at %d,%d: got %d want %d", bits, fx, fy, x, y, v, want)
-                        }
-                    }
-                    for x := 9; x < stride-2; x++ {
-                        if dst[2+y*stride+x] != 0xffff {
-                            t.Fatalf("bits=%d phase=%d/%d overwrote padding", bits, fx, fy)
-                        }
-                    }
-                }
+				for y := range 7 {
+					for x := range 9 {
+						v := dst[2+y*stride+x]
+						i := y*stride + x
+						a := (8 - fx) * (8 - fy)
+						b := fx * (8 - fy)
+						c := (8 - fx) * fy
+						d := fx * fy
+						base := 3*stride + 2 + i
+						want := uint16((a*int(ref[base]) + b*int(ref[base+1]) + c*int(ref[base+stride]) + d*int(ref[base+stride+1]) + 32) >> 6)
+						if int(v) > (1<<bits)-1 {
+							t.Fatalf("bits=%d phase=%d/%d out of range: %d", bits, fx, fy, v)
+						}
+						if v != want {
+							t.Fatalf("bits=%d phase=%d/%d at %d,%d: got %d want %d", bits, fx, fy, x, y, v, want)
+						}
+					}
+					for x := 9; x < stride-2; x++ {
+						if dst[2+y*stride+x] != 0xffff {
+							t.Fatalf("bits=%d phase=%d/%d overwrote padding", bits, fx, fy)
+						}
+					}
+				}
 			}
 		}
 	}
