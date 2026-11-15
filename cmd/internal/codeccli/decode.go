@@ -18,7 +18,7 @@ func Decode(ctx context.Context, args []string, stdin io.Reader, stdout, stderr 
 	var c common
 	c.flags(f)
 	cfg := h264.DefaultDecoderConfig()
-	pixel := f.String("pixel-format", "yuv420p", "输出平面格式；当前解码器仅支持原生 yuv420p")
+	pixel := f.String("pixel-format", "yuv420p", "输出原生平面格式：yuv420p/422p/444p及对应10le；不做格式转换")
 	f.IntVar(&cfg.Threads, "threads", 1, "解码并行度；当前仅支持0或1")
 	f.IntVar(&cfg.MaxWidth, "max-width", cfg.MaxWidth, "最大解码宽度")
 	f.IntVar(&cfg.MaxHeight, "max-height", cfg.MaxHeight, "最大解码高度")

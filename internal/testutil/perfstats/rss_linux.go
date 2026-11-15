@@ -1,6 +1,6 @@
 //go:build linux
 
-package main
+package perfstats
 
 import (
 	"fmt"
@@ -9,7 +9,10 @@ import (
 	"strings"
 )
 
-func residentBytes() (uint64, error) {
+// RSSSource 标识进程驻留内存的实际采样接口。
+const RSSSource = "Linux /proc/self/statm resident pages * page size"
+
+func ResidentBytes() (uint64, error) {
 	data, err := os.ReadFile("/proc/self/statm")
 	if err != nil {
 		return 0, err

@@ -853,3 +853,12 @@ decoder 只复用表示级临时数组，DPB 的 Motion/reference IDs/MBField �
 
 时间约+1.85%，不称吞吐加速；主要收益为同AU内多个QP候选不重复创建/写入加权搜索图和重复源统计。没有自然GC/assist/RSS测量。原始样本 `tmp/m8-k15-k20/k20-before.txt` SHA `fc20690771afbd60cc91b88dc24cac6f27c39666bb2f9b4a99261502c9e04061`，after SHA `82ad96543b36f557eefe8b6e982bfa43cafa93728f2ba3b4b6548524431b17e3`。改动前144帧RC指纹采集日志SHA `46f62eb4186fa0af0e1d46010a36379ccaa3c6b84de5e4b2ae2a5e54c1d3bf1c`，没有更新码流golden或修改QP策略。
 
+
+## 16. M8测试与测量收尾
+
+新增入口为 `scripts/verify_m8.ps1` 的独立validation/performance阶段，详 [测量边界](m8-development/10_performance_and_release.md#8-本轮实际测量入口)。不支持Resume，不自动创建发布标签；Generic端点由purego二进制证明，不把旧基准名当后端诊断。
+
+本轮内核/MC基准入口烟测实际运行501个case，均为0B/op、0allocs/op；一次迭代只证明入口和分配，不用其纳秒值作正式性能结论。`tools/encodebench -measure` 的小型真实B/Lookahead调用完成六帧并报告完整输入/码流SHA、媒体时钟和本机12种runtime GC指标；进程GC包含测量开销且无显式预热，不能记为codec独占或warm-steady。
+
+独立像素保护网的显式300帧长Oracle已执行720p及1080p，两尺寸均通过；它沿用原基线配置，不冒充High/B主目标。全库purego/386/测试标签及27条High10投影已实际执行。测试结果与正式性能样本分别归档，不将测试运行中的计时填入吞吐主表。
+

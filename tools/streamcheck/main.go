@@ -16,6 +16,7 @@ import (
 
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/encoder"
+	"github.com/goavc/h264/internal/testutil/perfstats"
 	"github.com/goavc/h264/stream"
 )
 
@@ -158,7 +159,7 @@ func run() error {
 		runtime.GC()
 		var ms runtime.MemStats
 		runtime.ReadMemStats(&ms)
-		rss, err := residentBytes()
+		rss, err := perfstats.ResidentBytes()
 		if err != nil {
 			return err
 		}

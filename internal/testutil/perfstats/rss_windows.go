@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package perfstats
 
 import (
 	"fmt"
@@ -8,11 +8,14 @@ import (
 	"unsafe"
 )
 
+// RSSSource 标识进程驻留内存的实际采样接口。
+const RSSSource = "Windows GetProcessMemoryInfo.WorkingSetSize"
+
 var getProcessMemoryInfo = syscall.NewLazyDLL("psapi.dll").NewProc("GetProcessMemoryInfo")
 
 // PROCESS_MEMORY_COUNTERS遵循Win32 ABI；cb明确给出结构大小，Windows只在同步
 // 调用期间写入这块固定长度内存，不跨调用持有Go指针；unsafe仅用于系统API边界。
-func residentBytes() (uint64, error) {
+func ResidentBytes() (uint64, error) {
 	var m struct {
 		Size, Faults                             uint32
 		PeakWorkingSet, WorkingSet               uintptr

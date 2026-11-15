@@ -1,6 +1,6 @@
 # 09：验证矩阵、命令与证据规则
 
-> 本章是后续实施时的运行手册；本次仅文档交付，未运行这些Go命令。`purego`、`goavc_simdtest`、TestParity/TestParallel/TestAllocation等为M8待实现机制，不是当前已有能力。执行前核对任务交付，不接受正则零匹配却退出0作为通过。
+> 本章是M8执行手册；`purego`、`goavc_simdtest`、强制后端、保护页和分配保护网已落地，实际执行证据以12为准。K19/K20并行流水线/K20m本轮未实施，不能运行零匹配的TestParallel后宣称通过。脚本入口为 `scripts/verify_m8.ps1`，既不支持Resume，也不自动发布。
 
 ## 1. 分层验证，避免重复和空跑
 
@@ -159,6 +159,9 @@ sha256sum "$work/serial.yuv" "$work/parallel.yuv"
 随机种子固定，尺寸受限，独立结果和资源清理明确；全套运行安全，不依赖用户本地文件或不可访问网络。大型Oracle/性能数据生成到临时目录，大文件不入库，结束清理；已登记语料遵守manifest来源和SHA规则。
 
 最终报告分别列：已通过、失败、明确跳过、环境未执行。只有本章全部必需维度有实际证据后，才讨论K25门禁收尾。
+
+本机剩余测试集中执行：`powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify_m8.ps1 -OutputDirectory <新的临时目录> -Phase validation`。包括非缓存普通门禁与显式两尺寸300帧长Oracle、全库purego/386/测试标签、六目标汇编vet/测试编译、全库及定向purego race、CABAC/B短fuzz、30秒既有PCM留存回归、55条语料真实CLI哈希与六格式×四种码控的实际CLI/FFmpeg像素比较。各日志保留原始跳过项，不将命令成功等同每个子测试都执行。
+
 
 ## 11. 既有Fuzz Smoke保护
 

@@ -1,6 +1,6 @@
 # 10：性能测量、目标复审与发布门禁
 
-对应K21/K22/K23/K24/K25；测量设计从A00开始，不等汇编全部完成。本文所有新工具参数、报告字段和基准均是后续实施要求，不是本次测量结果。
+对应K21/K22/K23/K24/K25；测量设计从A00开始。现有工具/脚本的实际实现与执行见§8及12，未实现的原设计范围继续保留，不把编排入口或编译成功当作门禁通过。
 
 ## 1. 测量原则
 
@@ -153,3 +153,14 @@ Resume若实现，必须核对源码、环境、配置、输入/输出完整长�
 NEON缺原生runner、必需Oracle缺FFmpeg或任何必需项失败时保留未验收，完成其他可达工作，不签完整M8通过。不得以“交叉编译过”绕过硬门禁。
 
 发布提交主题建议 `chore[release]: close milestone m8 gate`，footer标Milestone:M8并引用证据。经明确发布授权后才创建本地注释标签 `v0.9.5`；不自动push或创建远端release。远端CI未跑继续明确写未执行；本地标签不代表完整Profile认证或M9生产化完成。
+
+## 8. 本轮实际测量入口
+
+`scripts/verify_m8.ps1 -OutputDirectory <新的临时目录> -Phase performance`：先完成构建，再串行运行内核五样本、历史端点控制组、1080p Baseline/CAVLC和High/CABAC+B各slice1/4的300帧×五样本、720p代表High/B2/4slice/8×8/权重/Lookahead2的Generic/Auto各300帧×五样本。Generic端点使用purego二进制，不从旧benchmark名字推断后端。240p/480p/1080p/4K另列六帧诊断，不当长序列实时证据。工具不实现Resume；只在全部命令成功后写完成标记。
+
+`tools/encodebench -measure -input <紧密YUV420P> -threads 1 ...` 保留原质量模式，新增无全流留存的连续窗口：输入Frame复用，包逐个哈希/可选写出后丢弃，恰好读满指定帧数并验证EOF。输入/包哈希、文件I/O、轨迹/内存采样不计入Send/Receive/Flush调用时间；自然GC是包含这些开销和New的**进程窗口**，不冒称codec独占或warm-steady。报告原始TotalAlloc/Mallocs/自然NumGC、实际runtime GC CPU/assist和暂停直方图，以及Go堆/RSS采样最大值。Close后单独一次主动GC只用于留存观察，不能混入自然GC差分。RSS实现从streamcheck提取共用，原PCM留存阈值不变。
+
+`BenchmarkDecoder_Sequence` 从 `GOAVC_M8_INPUT` 读取预拆NAL的固定码流，要求 `GOAVC_M8_FRAMES` 和独立原生YUV的 `GOAVC_M8_YUV_SHA256`。每op包含New/逐NAL Send/Receive/Release/Flush/Close；文件读取、拆NAL和逐帧有效像素哈希在计时外。完整显示帧数和外部SHA每op均校验，报告逐槽实际后端。这是cold端点，不是warm-steady；六格式/场/备用表示的正确性仍由已有Oracle/规范解析测试保证。
+
+CPU profile在吞吐测量后独立采集；同机其他本任务的构建、race、长Oracle不得与性能样本重叠。未监控外部负载，CPU利用率未测，不用RSS替代HeapSys，也不把进程GC降低推成汇编或并行提速。
+

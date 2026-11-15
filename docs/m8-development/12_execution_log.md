@@ -434,3 +434,16 @@ K20m范围决定单独提交 `566450e313`。最终生产代码为 `cf1dd8feea`�
 
 所有证据只覆盖本轮精简交付，不补写原生arm64、自然GC/assist/RSS、代表性300帧吞吐、并行实现或M8总门禁通过；原K19/K20流水线/K20m未实现边界保留。没有push、tag或release。
 
+
+### K21/K22验收入口与剩余功能验证
+
+本轮从 `98857f5197` 干净树开始，仅补测试/基准/开发期测量器与CLI帮助，不修改codec算法、不恢复已裁剪并行。内核基准扩展501个实际可执行case，首次1x入口烟测均0B/0alloc；既有DCE风险基准补持久sink，旧结果仍保留历史边界。新增无全流留存的encodebench `-measure`、共用RSS采样、完整序列解码端点和 `scripts/verify_m8.ps1`；实际边界详10§8。
+
+功能验证在 `tmp/m8-closeout/validation/`：CGO=0非缓存普通全库测试及显式720p/1080p各300帧原长Oracle通过；全库purego/原生386/测试标签各25个有测试包通过、11包无测试。27条High10投影和原96帧指纹实际执行。随后六目标全库build、带测试标签的simd汇编vet与测试二进制编译通过；CGO=1完整全库race及decoder/encoder/stream/encodebench的purego定向race通过。CABAC residual fuzz 270238次、B重排fuzz 1305次通过，均为5s smoke而非M9全量。
+
+真实CLI：55条manifest均核对原生有效像素SHA；六格式×CQP/ABR/CBR/VBV共24组，各六帧、CABAC/B2/双slice/8×8/权重/Lookahead2排空，与FFmpeg原生像素及长度相等。10-bit输入低两位独立变化；analytic语料只签既有规范哈希，不伪装成FFmpeg互操作。30秒原PCM留存/取消回归未放宽阈值，Passed=true，取消后goroutine=1；不代表压缩主场景长期无泄漏。
+
+保留并修复两类验收工具失败：初版解码基准外部测试包导入stream，使按目录聚合的依赖检查发现decoder→stream→decoder环；改为唯一底层nal扫描、逐NAL发送，不修改R1–R6，`deps-fixed.txt`显示36包全通过。另Windows PowerShell无BOM误读中文脚本导致解析错误，按既有脚本约定加BOM；原生UTF-8 stdout又被系统代码页损坏，每份早期JSON日志有80行中文事件无法完整解析（purego race为24行），保留原文件与完整ASCII包终态，不将可解析子事件数量当完整用例数。脚本现显式UTF-8原生解码并恢复原环境，定向中文JSON共52事件完整解析通过；失败原始driver日志保留，未重复跑已通过长Oracle来换一份漂亮日志。
+
+首次大脚本停在deps，没有完成标记；修复后仅执行尚未完成部分，原先已通过步骤证据保留，完成标记为 `completed-continuation.json`。这是本次人工续接，不是脚本支持Resume。未执行原生arm64/Unix保护页/远端CI，不签M8或创建v0.9.5标签。
+

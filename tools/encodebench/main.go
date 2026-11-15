@@ -1,4 +1,4 @@
-// encodebench 生成固定六类 YUV 图案，报告码率、PSNR 与编码延迟。
+// encodebench保留六类图案质量报告，并提供raw YUV420P流式性能测量。
 // 仅为开发期测量工具；不参与编解码运行时，不调用外部编解码库。
 package main
 
@@ -55,6 +55,7 @@ type report struct {
 	VBVBufferBits                    int64
 	VBVFullnessSequence              []int64
 	PacketPTS, PacketDTS             []int64
+	PacketDuration                   []int64
 }
 
 func main() {
@@ -64,6 +65,8 @@ func main() {
 	flag.IntVar(&c.QP, "qp", 26, "CQP 0..51")
 	flag.IntVar(&c.GOPSize, "gop", 1, "IDR 间隔，1 为帧内基线")
 	flag.IntVar(&c.FPSNum, "fps", 30, "整数帧率")
+	flag.IntVar(&c.FPSDen, "fps-den", 1, "帧率分母")
+	flag.IntVar(&c.Threads, "threads", 0, "编码线程配置；当前codec不支持大于1")
 	flag.StringVar(&c.Profile, "profile", h264.ProfileBaseline, "baseline/main/high")
 	flag.IntVar(&c.MaxBFrames, "bframes", 0, "连续B帧上限0..16")
 	flag.IntVar(&c.IDRInterval, "idr", 0, "独立IDR间隔，0跟随GOP")
@@ -81,7 +84,12 @@ func main() {
 	pcm := flag.Bool("pcm", false, "强制 I_PCM")
 	output := flag.String("output", "", "可选 Annex-B 输出文件")
 	inputPath := flag.String("input", "", "可选紧密 YUV420P 文件；未指定时生成六类图案")
+	measureMode := flag.Bool("measure", false, "raw YUV420P连续测量；不计算PSNR、不保留全流，不可与verify/recon混用")
 	flag.Parse()
+	if *measureMode && (*inputPath == "" || *verify || *reconPath != "") {
+		fmt.Fprintln(os.Stderr, "measure要求-input raw YUV420P，且不可与-verify/-recon混用")
+		os.Exit(1)
+	}
 	if *cpuProfile != "" {
 		file, err := os.Create(*cpuProfile)
 		if err != nil {
@@ -109,13 +117,13 @@ func main() {
 		os.Exit(1)
 	}
 	var options []encoder.Option
-	if *weight {
+	if !*measureMode && *weight {
 		options = append(options, encoder.WithWeightedPrediction())
 	}
-	if *t8 {
+	if !*measureMode && *t8 {
 		options = append(options, encoder.WithTransform8x8())
 	}
-	if *lookahead > 0 {
+	if !*measureMode && *lookahead > 0 {
 		options = append(options, encoder.WithLookahead(*lookahead))
 	}
 	var reconWriter io.Writer
@@ -140,10 +148,32 @@ func main() {
 		defer f.Close()
 		input = f
 	}
-	result, stream, err := measureConfigured(c, *frames, *slices, *pcm, input, options, reconWriter, *verify)
-	result.Transform8x8, result.WeightedPrediction, result.Lookahead = *t8, *weight, *lookahead
-	if err == nil && *output != "" {
-		err = os.WriteFile(*output, stream, 0644)
+	var result any
+	var err error
+	if *measureMode {
+		var writer io.Writer
+		var file *os.File
+		if *output != "" {
+			file, err = os.Create(*output)
+			if err == nil {
+				writer = file
+			}
+		}
+		if err == nil {
+			result, err = runMeasurement(measurementConfig{Encoder: c, Frames: *frames, SliceCount: *slices, PCM: *pcm, Transform8x8: *t8, WeightedPrediction: *weight, Lookahead: *lookahead, CPUProfile: *cpuProfile != ""}, input, writer)
+		}
+		if file != nil {
+			err = errors.Join(err, file.Close())
+		}
+	} else {
+		var quality report
+		var stream []byte
+		quality, stream, err = measureConfigured(c, *frames, *slices, *pcm, input, options, reconWriter, *verify)
+		quality.Transform8x8, quality.WeightedPrediction, quality.Lookahead = *t8, *weight, *lookahead
+		if err == nil && *output != "" {
+			err = os.WriteFile(*output, stream, 0644)
+		}
+		result = quality
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -301,6 +331,7 @@ func measureConfigured(c h264.EncoderConfig, count, slices int, pcm bool, reader
 			packets++
 			r.PacketPTS = append(r.PacketPTS, p.PTS)
 			r.PacketDTS = append(r.PacketDTS, p.DTS)
+			r.PacketDuration = append(r.PacketDuration, p.Duration)
 			r.FrameBits = append(r.FrameBits, int64(len(p.Data))*8)
 			decoded, err := e.Reconstruction()
 			if err != nil {
