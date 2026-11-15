@@ -884,3 +884,17 @@ decoder 只复用表示级临时数组，DPB 的 Motion/reference IDs/MBField �
 小批值ABI、gather/scatter及部分向量化并不保证提速；这些退化数字保留，不开启默认慢路。现有Auto只在实测获益槽选SSE2/AVX2，其余保留Generic。MC表行只证明整数复制，不是缺失的插值SIMD。Prepared量化的乘子准备在计时外；端点成本另计，不据此声称整个codec零分配。
 
 
+### 16.2 本轮端点实测与收尾
+
+按用户要求结束本轮收尾，不再扩展长测。硬件与Go环境同16.1；端点源码 `71cfd1b6e5`，CGO=0、Threads=1。下表各为同一固定输入300帧、五次样本中位FPS；解码含New/Send/Receive/Release/Flush/Close，组AU和像素哈希在计时外，每次核对300AU/300显示帧及FFmpeg原生像素SHA。编码为High/CABAC/B2/GOP与IDR60/4slice/8×8/权重/Lookahead2/QP26的API调用计时，不含输入I/O和哈希。保留原30FPS目标和实测差距，不为本轮再改算法。
+
+| 场景 | Generic FPS | Auto FPS |
+|---|---:|---:|
+| 1080p Baseline/CAVLC，1slice | 45.86 | 42.27 |
+| 1080p Baseline/CAVLC，4slice | 42.67 | 47.99 |
+| 1080p High/CABAC+B，1slice | 13.55 | 14.44 |
+| 1080p High/CABAC+B，4slice | 14.08 | 15.01 |
+| 720p High/CABAC+B编码 | 1.579 | 中途停止，不计结果 |
+
+编码Generic五次均完整输出300包且码流SHA一致；单次中位API调用时间189.961秒。现有结果足够说明该代表性编码场景仍非30FPS，SAD微核倍率不能当整个编码器倍率。Auto编码第一个样本、扩展分辨率和热点采样停止，不补跑、不生成整批通过标记。自然GC/RSS原始值保留在已完成Generic JSON，未做同协议旧版本比较，不宣称GC改善倍率。完整AU结果目录 `tmp/m8-closeout/endpoints-au/`，逐NAL旧结果不使用。
+

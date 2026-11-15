@@ -277,6 +277,7 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | K15–K20m阶段集成验证 | 各代码项独立常规门禁；受影响purego/386、六目标build、短fuzz与全库race | Partial | 12执行记录含命令/结果/日志SHA，codec生产算法cf1dd8feea | 仅已授权精简切片，不签完整M8；本轮剩余测试与性能证据另列 |
 | K21已实现内核基准 | 501个实际case，覆盖双位深/边界/尾部/矩阵/宽域及真实可用后端 | Partial | 2505个正式100ms样本全部0B/0alloc；完整原始值和SHA见gates/m8_kernel_samples.json | 源码e299d8a125；NEON未原生运行，MC插值仍Generic，不伪称完整后端交付 |
 | M8剩余功能验证 | 非缓存全库、显式双尺寸300帧Oracle、全库purego/386/测试标签、CLI、race | Partial | 全库race及定向purego race、55语料实际CLI、六格式×四码控24组FFmpeg像素和六目标汇编编译通过 | 保留analytic/FFmpeg来源和NEON跳过；早期PS中文JSON事件损伤已登记，不把可解析子事件当完整计数 |
+| 本轮测试与性能收尾 | 按用户要求，以已有通过测试和完成的性能样本结束，不再扩展矩阵 | Partial | 功能验证通过；1080p八组各五样本及720p Generic五样本完成，数字见performance §16.2 | Auto编码未完成样本排除，不宣称30FPS或新增未实现能力；本轮收尾工作已结束 |
 
 ## M9
 
