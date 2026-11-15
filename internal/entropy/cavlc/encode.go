@@ -47,24 +47,9 @@ func encodeBlock(w *bitstream.Writer, src *[16]int32, typ BlockType, nC, maxPref
 		}
 		trailing++
 	}
-	// 先完整编码到局部缓冲，非法 level 不得污染调用方已写好的 slice。
-	b := bitstream.NewWriter()
-	symbol := total*4 + trailing
-	if typ == ChromaDC {
-		b.WriteBits(uint(chromaDCCoeffTokenLen[symbol]), uint64(chromaDCCoeffTokenBits[symbol]))
-	} else if typ == ChromaDC422 {
-		b.WriteBits(uint(chromaDC422CoeffTokenLen[symbol]), uint64(chromaDC422CoeffTokenBits[symbol]))
-	} else {
-		table := coeffTokenTableIndex(max(0, nC))
-		b.WriteBits(uint(coeffTokenLen[table][symbol]), uint64(coeffTokenBits[table][symbol]))
-	}
-	for i := 0; i < trailing; i++ {
-		var sign uint64
-		if levels[total-1-i] < 0 {
-			sign = 1
-		}
-		b.WriteBits(1, sign)
-	}
+	// 唯一可能失败的数据计算是level表示与Profile前缀限额；写任何位之前
+	// 用固定槽准备完整level计划，保留原失败原子性而不为每块创建临时Writer。
+	var plan [16]levelPlan
 	suffix := 0
 	if total > 10 && trailing < 3 {
 		suffix = 1
@@ -83,9 +68,11 @@ func encodeBlock(w *bitstream.Writer, src *[16]int32, typ BlockType, nC, maxPref
 		if first && trailing < 3 {
 			code -= 2
 		}
-		if err := encodeLevel(b, code, suffix, maxPrefix); err != nil {
+		prepared, err := prepareLevel(code, suffix, maxPrefix)
+		if err != nil {
 			return 0, err
 		}
+		plan[i] = prepared
 		if suffix == 0 {
 			suffix = 1
 		}
@@ -93,37 +80,60 @@ func encodeBlock(w *bitstream.Writer, src *[16]int32, typ BlockType, nC, maxPref
 			suffix++
 		}
 	}
+	symbol := total*4 + trailing
+	if typ == ChromaDC {
+		w.WriteBits(uint(chromaDCCoeffTokenLen[symbol]), uint64(chromaDCCoeffTokenBits[symbol]))
+	} else if typ == ChromaDC422 {
+		w.WriteBits(uint(chromaDC422CoeffTokenLen[symbol]), uint64(chromaDC422CoeffTokenBits[symbol]))
+	} else {
+		table := coeffTokenTableIndex(max(0, nC))
+		w.WriteBits(uint(coeffTokenLen[table][symbol]), uint64(coeffTokenBits[table][symbol]))
+	}
+	for i := 0; i < trailing; i++ {
+		var sign uint64
+		if levels[total-1-i] < 0 {
+			sign = 1
+		}
+		w.WriteBits(1, sign)
+	}
+	for i := total - 1 - trailing; i >= 0; i-- {
+		plan[i].write(w)
+	}
 	if total > 0 {
 		zeros := positions[total-1] + 1 - total
 		if total < len(scan) {
 			if typ == ChromaDC {
-				b.WriteBits(uint(chromaDCTotalZerosLen[total-1][zeros]), uint64(chromaDCTotalZerosBits[total-1][zeros]))
+				w.WriteBits(uint(chromaDCTotalZerosLen[total-1][zeros]), uint64(chromaDCTotalZerosBits[total-1][zeros]))
 			} else if typ == ChromaDC422 {
-				b.WriteBits(uint(chromaDC422TotalZerosLen[total-1][zeros]), uint64(chromaDC422TotalZerosBits[total-1][zeros]))
+				w.WriteBits(uint(chromaDC422TotalZerosLen[total-1][zeros]), uint64(chromaDC422TotalZerosBits[total-1][zeros]))
 			} else {
-				b.WriteBits(uint(totalZerosLen[total-1][zeros]), uint64(totalZerosBits[total-1][zeros]))
+				w.WriteBits(uint(totalZerosLen[total-1][zeros]), uint64(totalZerosBits[total-1][zeros]))
 			}
 		}
 		for i := total - 1; i > 0 && zeros > 0; i-- {
 			run := positions[i] - positions[i-1] - 1
 			table := min(zeros, 7) - 1
-			b.WriteBits(uint(runLen[table][run]), uint64(runBits[table][run]))
+			w.WriteBits(uint(runLen[table][run]), uint64(runBits[table][run]))
 			zeros -= run
 		}
-	}
-	raw := b.Bytes()
-	remaining := b.BitsWritten()
-	for _, v := range raw {
-		n := uint(min(remaining, 8))
-		w.WriteBits(n, uint64(v)>>(8-n))
-		remaining -= uint64(n)
 	}
 	return total, nil
 }
 
-// encodeLevel 显式枚举规范前缀区间，避免 suffixLength=0 的两个特殊区间
+type levelPlan struct {
+	value        uint64
+	prefix, size uint8
+}
+
+func (p levelPlan) write(w *bitstream.Writer) {
+	w.WriteBits(uint(p.prefix), 0)
+	w.WriteBit(1)
+	w.WriteBits(uint(p.size), p.value)
+}
+
+// prepareLevel 显式枚举规范前缀区间，避免 suffixLength=0 的两个特殊区间
 // （prefix=14 和 >=15）被普通除法公式吞掉。
-func encodeLevel(w *bitstream.Writer, code int64, suffix, maxPrefix int) error {
+func prepareLevel(code int64, suffix, maxPrefix int) (levelPlan, error) {
 	for prefix := 0; prefix <= 28; prefix++ {
 		size := suffix
 		base := int64(prefix) << suffix
@@ -144,11 +154,9 @@ func encodeLevel(w *bitstream.Writer, code int64, suffix, maxPrefix int) error {
 			continue
 		}
 		if prefix > maxPrefix {
-			return fmt.Errorf("cavlc: level_prefix %d exceeds profile limit %d: %w", prefix, maxPrefix, h264.ErrUnsupported)
+			return levelPlan{}, fmt.Errorf("cavlc: level_prefix %d exceeds profile limit %d: %w", prefix, maxPrefix, h264.ErrUnsupported)
 		}
-		w.WriteBits(uint(prefix), 0)
-		w.WriteBit(1)
-		return w.WriteBits(uint(size), uint64(code-base))
+		return levelPlan{value: uint64(code - base), prefix: uint8(prefix), size: uint8(size)}, nil
 	}
-	return fmt.Errorf("cavlc: level exceeds bounded escape representation: %w", h264.ErrInvalidData)
+	return levelPlan{}, fmt.Errorf("cavlc: level exceeds bounded escape representation: %w", h264.ErrInvalidData)
 }

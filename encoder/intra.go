@@ -40,6 +40,7 @@ type frameState struct {
 	reference       *picture.Picture
 	searchReference *picture.Picture
 	searchWorkspace *search.Workspace
+	trialWriters    *trialWriters
 	weights         *PredictionWeights
 	allow8          bool
 	scaling8        *[6][64]uint8
@@ -112,7 +113,8 @@ func (e *Encoder) encodeIntra(src *picture.Picture, idr bool) ([]byte, *frameSta
 				s.writePCM(w, addr)
 				continue
 			}
-			trial := bitstream.NewWriter()
+			trial := &s.trialWriters.mb
+			trial.Reset()
 			previousQP := qp
 			if err = s.writeMB(trial, addr, &qp, &res); err != nil {
 				return nil, nil, err
@@ -123,7 +125,9 @@ func (e *Encoder) encodeIntra(src *picture.Picture, idr bool) ([]byte, *frameSta
 				qp = previousQP
 				s.writePCM(w, addr)
 			} else {
-				appendBits(w, trial)
+				if err = w.Append(trial); err != nil {
+					return nil, nil, err
+				}
 			}
 		}
 		bitstream.WriteRBSPTrailingBits(w)
@@ -138,15 +142,6 @@ func (e *Encoder) encodeIntra(src *picture.Picture, idr bool) ([]byte, *frameSta
 	s.deblock()
 	s.src = nil
 	return b.Bytes(), s, nil
-}
-
-func appendBits(dst, src *bitstream.Writer) {
-	remaining := src.BitsWritten()
-	for _, v := range src.Bytes() {
-		n := uint(min(8, remaining))
-		dst.WriteBits(n, uint64(v)>>(8-n))
-		remaining -= uint64(n)
-	}
 }
 
 func (s *frameState) writePCM(w *bitstream.Writer, addr int) {

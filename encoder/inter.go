@@ -59,7 +59,8 @@ func (e *Encoder) encodeP(src *picture.Picture) ([]byte, *frameState, error) {
 				s.writePCM(w, addr)
 				continue
 			}
-			trial := bitstream.NewWriter()
+			trial := &s.trialWriters.mb
+			trial.Reset()
 			previousQP := qp
 			if s.info[addr].inter {
 				err = s.writeInter(trial, addr, &qp, &res)
@@ -76,7 +77,9 @@ func (e *Encoder) encodeP(src *picture.Picture) ([]byte, *frameState, error) {
 				s.writePCM(w, addr)
 				s.mv.SetRect(addr%src.MBWidth*4, addr/src.MBWidth*4, 4, 4, motion.MV{}, -1)
 			} else {
-				appendBits(w, trial)
+				if err = w.Append(trial); err != nil {
+					return nil, nil, err
+				}
 			}
 		}
 		if skipRun > 0 {

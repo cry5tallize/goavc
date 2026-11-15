@@ -27,6 +27,8 @@ func TestParity_IntraBackends(t *testing.T) {
 			TestIntra_FrozenCandidates(t)
 			TestAllocation_IntraCandidate(t)
 			TestNeighbors_ScratchLifetimeAndUnavailable(t)
+			TestTrial_FrozenDecisions(t)
+			TestAllocation_ModeDecision(t)
 		})
 	}
 }

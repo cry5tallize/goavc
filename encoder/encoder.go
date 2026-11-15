@@ -23,6 +23,7 @@ type Encoder struct {
 	searchRange               int
 	fullSearch                bool
 	searchWorkspace           *search.Workspace // 一个串行执行 lane；场/独立平面临时通道只借用。
+	trialWriters              *trialWriters
 	maxAUBytes                int
 	adaptiveQP                int
 	cabac                     bool
@@ -155,6 +156,7 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 		return nil, fmt.Errorf("encoder: VUI timing overflows: %w", h264.ErrInvalidData)
 	}
 	e := &Encoder{cfg: cfg, slices: 1, searchRange: 16, searchWorkspace: new(search.Workspace), cabac: cfg.Profile != h264.ProfileBaseline, frameQP: cfg.QP, lastQP: cfg.QP}
+	e.trialWriters = newTrialWriters()
 	if cfg.RateControl == h264.RateControlCBR || cfg.RateControl == h264.RateControlVBV {
 		e.vbvBufferBits = int64(cfg.VBVBufferSize)
 		if e.vbvBufferBits == 0 {
@@ -423,6 +425,10 @@ func (e *Encoder) Reset() error {
 	if e.closed {
 		return h264.ErrEOF
 	}
+	if e.trialWriters != nil {
+		e.trialWriters.rd.Reset()
+		e.trialWriters.mb.Reset()
+	}
 	e.out = nil
 	e.recon = nil
 	e.last = nil
@@ -447,6 +453,7 @@ func (e *Encoder) Reset() error {
 // Close 幂等释放实例资源。
 func (e *Encoder) Close() error {
 	e.searchWorkspace = nil
+	e.trialWriters = nil
 	e.out = nil
 	e.recon = nil
 	e.last = nil

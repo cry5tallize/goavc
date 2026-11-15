@@ -12,6 +12,9 @@ func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
 	if e.searchWorkspace == nil {
 		e.searchWorkspace = new(search.Workspace)
 	}
+	if e.trialWriters == nil {
+		e.trialWriters = newTrialWriters()
+	}
 	pic := e.planeReconstruction
 	if pic == nil {
 		var err error
@@ -23,6 +26,7 @@ func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
 	total := src.MBWidth * src.MBHeight
 	s := &frameState{src: src, pic: pic, info: make([]mbInfo, total), nz: make([]uint8, total*16), mv: motion.NewGrid(src.MBWidth, src.MBHeight)}
 	s.searchWorkspace = e.searchWorkspace
+	s.trialWriters = e.trialWriters
 	s.allowZeroPCM = e.cfg.Profile != h264.ProfileBaseline && e.cfg.Profile != h264.ProfileMain
 	s.separate, s.plane = e.separateColourPlane, e.colourPlaneID
 	s.independent = e.separateColourPlane

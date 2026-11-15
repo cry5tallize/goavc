@@ -7,8 +7,8 @@
 - 分支 `perf/m8-simd`，A00、K01–K05、K07、K09a已逐项提交；K06/K08按用户要求完成实现与交叉编译，原生未验证。SAD与SATD已真实接入，MC当前是唯一Generic块算法，不是SIMD插值。
 - amd64 Auto逐槽选择：SAD宽16为AVX2（其他宽SSE2），SATD4×4优选实测更快的SSE2；purego无项目汇编。没有全局“所有槽均AVX2”的声明。
 - K14a已补Windows SAD逐行保护页；其余内核矩阵未完成。K09b/c/d、K10–K13、K15–K25及K20m仍待实施，K14收尾待所有内核交付。
-- G01/G02/G03a（K18切片）已消除搜索/残差/帧内邻域的反复分配；prepared搜索/MC/SATD、六格式帧间/帧内候选为0分配。P控制中位11029600B/op、212910次/op；仍有RD/正式试写和模式列表分配，不是完整K18。
-- G02代码`bb3c7d8`完整race已通过（含tests/codec 305.297s），G03a另通过encoder race；后续改动仍需按范围验证，不能把旧结果扩大。代表性主目标长矩阵及远端CI未执行；不创建标签、不push/release，不签完整M8。以下各节按实施时间保留当时记录，最新状态以本节和状态矩阵为准。
+- G01/G02/G03a/G03b（K16/K18切片）已消除搜索/残差/邻域/试写反复分配。prepared候选和六格式QP26/flat的真实非空I/P/B决策为0分配；P控制中位4945520B/op、42次/op，主要剩余图像/元数据/独立输出。完整配置/所有权/资源集成门禁仍待补齐，不签完整K18。
+- G03b生产代码完整race通过（tests/codec 291.726s），后续B fuzz测试修复另补新种子race；本轮decoder/P/B短fuzz已执行，原B失败已独立复现/修复，不隐去失败。代表性主目标长矩阵、自然GC指标及远端CI未执行；不创建标签、不push/release，不签完整M8。以下各节按实施时间保留当时记录，最新状态以本节和状态矩阵为准。
 
 ## A00：基线与契约
 
@@ -164,3 +164,31 @@ P独立memprofilerate=1覆盖整个进程（含预热，不能与计时区B/op�
 五次prepared I4/I16/I8中位分别14079→13450、9193→8148、19333→18982ns，640B/20次、640B/20次、368B/14次均降为0。固定1x P中位847895700→870585400ns（+2.7%）、13371880→11029600B、342528→212910次；B四帧/op中位1894669700→1907183200ns（+0.7%）、47529072→40983320B、951160→577199次。保留端点耗时回退，不虚称FPS提高；原始样本、配置引用、边界和SHA见`docs/gates/m8_intra_workspace_samples.json`。仍有captureRD及正式MB试写/列表分配，未完成G03/K18。
 
 定向指纹/分配/邻域、强制Generic/SSE2/AVX2、purego/386 encoder实际执行、六目标全库build、完整常规门禁与encoder race均退出0，日志`tmp/m8-baseline/g03a-{targeted-success,parity,purego,386,verify,race}.txt`。普通CGO=0，race显式CGO=1。之前G02代码的完整`go test -race -count=1 ./...`也退出0（tests/codec 305.297s），完整日志`g02-race.txt`与SHA已登记；该结果只对应G02代码，不能扩大为未来并行实现通过。NEON原生、自然GC、主目标长矩阵及远端CI仍未执行。
+
+### G03b：RD/正式MB试写、有效位追加与CAVLC写前计划
+
+起点`9a126d2`。先通过gopls核对Writer.Bytes和旧appendBits引用（首次行号不正确已修正，未把失败当通过）。真实调用者只有encoder/intra、inter的正式MB追加；保留公共Bytes独立副本契约。新增`(*bitstream.Writer).Append(src *Writer) error`复制全部有效位、不补尾位、不改源，拒绝自身/nil源/浅拷贝共享backing且错误前不写出，无unsafe。对齐与非对齐路径均支持；512种独立位解析值、源继续写不覆盖目标、别名和Reset后别名拒绝、容量足够时0分配通过。
+
+Encoder每串行lane新增一个trialWriters，RD和正式MB各有独立Writer。newFrameState接入、场/独立平面channel借用同一指针；候选前Reset，实例Reset保留容量并清位状态，Close解除指针。旧逐MB NewWriter/Bytes追加包装删除，两个family动态append列表改为相同1/2/可选3顺序的整数循环。最终slice/Packet仍独立，不借用用户输出。
+
+首轮完整决策零分配测试失败，普通I/P/B仍有31/175/36次分配（无8变换）。profile定位到CAVLC每块为事务保证新建临时Writer，而非剩余残差或模式对象。将原level区间计算提取为唯一prepareLevel，固定[16]levelPlan先验证所有level/前缀限额，再按旧序提交token/sign/level/zeros/run。没有第二套量化/熵公式、不改合法域和ErrUnsupported/ErrInvalidData分类，保留整块失败原子性。五类CAVLC块在首/尾非法level和非字节对齐目标下均无部分写出；RD错误后复用与全新Writer逐位一致。原失败及高精度profile日志保留。
+
+算法改动前在9a126d2采集192个六格式×frame/真实场×4/8开关×I/P/B（含共同/独立444）的真实决策SHA `9b37334a5878629110a85858983c82d323913c16a40080ca44da76f4ee644115`，涵盖完整系数/CBP/像素/模式/MV/QP与rate/distortion/cost。所有胜者均为非Skip、非PCM、非空压缩残差。改造后指纹和96帧码流/元数据/三方像素不变，AllocsPerRun=0。此完整决策分配场景为QP26/flat，矩阵/低QP/码控及K16所有权/资源集成门禁仍待补齐，不将本切片签为完整K18。
+
+五次微基准I/P/B中位60982→59236、329115→307734、30444→28795ns，64/316/46次降为报告取整0次。同一基准源码计时包含首个Writer容量增长，P改造后摊销2B/op，不能凭取整称零分配；确定性证据来自预热后的真实任务AllocsPerRun。固定1x端点P中位870585400→805327100ns、11029600→4945520B、212910→42次；B四帧/op中位1907183200→1852161900ns、40983320→26583624B、577199→221次。全部样本、边界、配置引用及SHA见`docs/gates/m8_trial_workspace_samples.json`。
+
+独立memprofilerate=1 profile仍包含输入/预热/关闭，不能与计时窗口B/op混算。原window/residual/blockSamples/CAVLC事务缓冲反复分配已消失，剩余为picture.allocPlane、newFrameState/Grid、slice位串扩容及独立输出；保留profile以供G04/G05/G07。没有测自然GC、assist、pause、RSS，不能将分配降幅称作GC耗时/RSS降幅。
+
+bitstream/CAVLC/encoder定向、goavc_simdtest强制Generic/SSE2/AVX2、purego/386实际执行、六目标全库build、完整常规门禁均退出0；日志`tmp/m8-baseline/g03b-{kernels,packages,targeted-final,parity,purego,386,verify}.txt`。本次集成代码的全库race及fuzz smoke结果在后文追加；普通命令CGO=0，race按仓库例外CGO=1。原用户05/08/README/13文档工作保留不提交。剩余G00自然GC、G04清尾/G05有界池、G06公共Frame、G07/G08所有权/元数据、其余SIMD和并行仍未完成。
+
+G03b补充验证：完整`CGO_ENABLED=1 go test -race -count=1 ./...`退出0，tests/codec 291.726s（`g03b-race.txt`）；随后普通CGO=0 fuzz smoke：decoder 5s/12854exec、P inter 5s/1634exec均通过。B重排5s首次在797exec发现合法AU预算错误，原失败输入/log完整保留，处理见下一段；不把失败次数写成通过。
+
+### 独立修复：B fuzz 的 Level 预算假设
+
+最小输入`[]byte("0\x00!1 \xfb \x8b0")`在旧9a126d2对照树同样复现`access unit 1006 exceeds level budget 1000: ErrResourceLimit`，不是G03b回归。该fuzzer原本要求所有随机低QP/自定义矩阵输入完成十帧重排，却使用会合法拒绝超限AU的Auto Level。修正仅测试配置为显式level_idc=31，保留原样随机输入/QP/工具和所有像素、DTS、所有权断言，不改生产Auto策略/限额、性能基准或96帧golden。最小输入移入第四条f.Add，始终作为普通回归种子执行；原Go fuzz文件副本保留于`tmp/m8-baseline/g03b-b-fuzz-failure.seed`，不新增伪视频manifest条目。
+
+旧代码加相同测试修复后四种子全部通过，证明修复独立于优化；改造后B fuzz重跑5s/835exec通过。最初误用不存在的Level常量/类型导致两次测试编译失败，已按实际`EncoderConfig.Level int`修正为31，未记为通过。日志为`g03b-b-fuzz-before-repro.txt`、`g03b-b-fuzz-harness-before-valid.txt`、`g03b-fuzz-b.txt`（原失败）、`g03b-fuzz-b-pass.txt`（有效重跑）。该修复与性能变更分开提交。
+
+临时对照树在一次后置verify期间尚在tmp，被depscheck正常扫描为70个包并触发4处R3失败；未放宽白名单。对照树已恢复/确认干净后移除。随后`g03b-verify-clean.txt`因PowerShell把Git的CRLF提示当终止异常而中止；仅规范本次文档为LF后，最终完整门禁`g03b-verify-success.txt`退出0，35包依赖及55条manifest通过。新种子`g03b-b-seeds-race.txt`退出0。执行Go门禁前必须先移除仓库内的对照工作树。独立fuzzer修复提交为`dcce7ed`。
+
+已核对并逐文件清理本次及前轮M8生成的41个测试二进制，共202867376字节；只删除已列出的tmp/m8-baseline内文件，不递归清空tmp，不删除profile/样本/失败证据。删除清单`g03b-cleanup.txt`，当前只有主工作树。profile后续可用保存的mem文本符号或按revision重新构建二进制分析；不声称旧exe仍在。没有push/tag/release。

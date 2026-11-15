@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	h264 "github.com/goavc/h264"
-	"github.com/goavc/h264/bitstream"
 	"github.com/goavc/h264/internal/motion"
 	"github.com/goavc/h264/internal/motion/search"
 )
@@ -126,11 +125,11 @@ func (s *frameState) decideRD(addr, previousQP, radius int, full, early bool) (r
 	}
 	// 若零失真胜者已达到所有剩余帧内候选的最小位数，可安全省去其变换。
 	if !early || !(best.distortion == 0 && best.rate <= 9) {
-		families := []int{1, 2}
+		lastFamily := 2
 		if s.allow8 {
-			families = append(families, 3)
+			lastFamily = 3
 		}
-		for _, family := range families {
+		for family := 1; family <= lastFamily; family++ {
 			reset()
 			res := s.analyzeIntra(addr, family)
 			s.mv.SetRect(x, y, 4, 4, motion.MV{}, -1)
@@ -221,7 +220,8 @@ func (s *frameState) captureRD(addr, previousQP, qp int, res residual) (rdCandid
 	if info.pcm && !s.pcmAllowed(addr) {
 		return rdCandidate{}, fmt.Errorf("encoder: zero PCM sample is forbidden by profile: %w", h264.ErrUnsupported)
 	}
-	w := bitstream.NewWriter()
+	w := &s.trialWriters.rd
+	w.Reset()
 	rate := uint64(1)
 	if s.reference == nil {
 		rate = 0
@@ -284,11 +284,11 @@ func (s *frameState) analyzeIntraRD(addr, previousQP int) (residual, error) {
 		}
 		best = rdCandidate{cost: ^uint64(0)}
 	}
-	families := []int{1, 2}
+	lastFamily := 2
 	if s.allow8 {
-		families = append(families, 3)
+		lastFamily = 3
 	}
-	for _, family := range families {
+	for family := 1; family <= lastFamily; family++ {
 		s.info[addr] = base
 		clear(s.nz[addr*16 : addr*16+16])
 		for c := range s.cnz {
