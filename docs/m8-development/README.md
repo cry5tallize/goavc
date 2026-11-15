@@ -27,6 +27,8 @@
 | [09_validation.md](09_validation.md) | 原生/纯 Go/386/race/Oracle/分配/CLI 验证矩阵与命令 | 实现与验收 agent |
 | [10_performance_and_release.md](10_performance_and_release.md) | 基准设计、原始证据格式、性能目标复审、M8 门禁与发布约束 | 性能与发布负责人 |
 | [11_agent_handoff.md](11_agent_handoff.md) | 可直接复制的任务提示词、交接格式、并行编辑规则和完成定义 | 派工人及接手 agent |
+| [12_execution_log.md](12_execution_log.md) | 已实施任务、冻结接口、实际证据与当前交接点 | 全部接手 agent，先于原始待实施描述核对 |
+| [13_gc_reduction_plan.md](13_gc_reduction_plan.md) | 当前源码的 GC 专项：搜索/残差去逃逸、试写复用、有界池、RC/DPB 所有权、G00–G10 派工与验收 | 内存与去分配 agent；优先从 G00/G01 开始 |
 
 本目录是实施层补充，不替代上级门禁。冲突优先级：仓库工作指引 → [Roadmap](../Roadmap.md) → [architecture](../architecture.md) → [Implementation-Plan](../Implementation-Plan.md) → 本目录。发现冲突先登记并由集成负责人裁决，不通过悄悄缩小测试或修改目标消除冲突。
 

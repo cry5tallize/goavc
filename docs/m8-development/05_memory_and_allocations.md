@@ -2,6 +2,8 @@
 
 对应 K15/K16/K17/K18。目标是减少可避免的分配和复制，不将公开所有权变成隐含借用；本章的 API/文件均为待实施设计。
 
+> 当前实际交付与冻结政策以 [12_execution_log.md](12_execution_log.md) 为准。针对当前搜索 window 逃逸、residual 分配、RC/PCM 所有权及 GC 证据的进一步拆解见 [13_gc_reduction_plan.md](13_gc_reduction_plan.md)。该专项细化本章，不新增第二套池；G00/G01/G02可先于完整池化实施。
+
 ## 1. 先画清现有存活关系
 
 ### 1.1 Decoder

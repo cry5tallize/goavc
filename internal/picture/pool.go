@@ -23,10 +23,10 @@ type Pool struct {
 	mu   sync.Mutex
 	free map[key][]*Picture
 
-	gets    uint64
-	puts    uint64
-	allocs  uint64
-	maxFree int
+	gets         uint64
+	puts         uint64
+	allocs       uint64
+	maxFree      int
 	maxFreeBytes uint64
 	freeBytes    uint64
 }
