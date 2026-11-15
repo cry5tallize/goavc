@@ -82,6 +82,7 @@ func (e *Encoder) encodeNextBOutput() error {
 		entry := e.bReady[0]
 		e.bCurrentIndex = entry.index
 		e.encodingB = true
+		oldRecon := e.recon
 		err := e.encodeFrameNow(entry.frame, false)
 		e.encodingB = false
 		if err != nil {
@@ -93,6 +94,7 @@ func (e *Encoder) encodeNextBOutput() error {
 		if len(e.bReady) == 0 {
 			e.bPast, e.bFuture = nil, nil
 		}
+		e.releaseIfUnretained(oldRecon)
 		return nil
 	}
 	if len(e.bInputs) == 0 {
@@ -118,6 +120,7 @@ func (e *Encoder) encodeNextBOutput() error {
 	}
 	flash := e.sceneThreshold > 0 && previousSource != nil && anchor+1 < len(e.bInputs) && framesDiffer(previousSource, entry.frame, e.sceneThreshold) && !framesDiffer(previousSource, e.bInputs[anchor+1].frame, e.sceneThreshold)
 	e.bCurrentIndex = entry.index
+	oldRecon := e.recon
 	if err := e.encodeFrameNow(entry.frame, e.bSceneAt(anchor)); err != nil {
 		return err
 	}
@@ -136,6 +139,7 @@ func (e *Encoder) encodeNextBOutput() error {
 	remaining := append([]bInput(nil), e.bInputs[anchor+1:]...)
 	clear(e.bInputs)
 	e.bInputs = remaining
+	e.releaseIfUnretained(oldRecon)
 	return nil
 }
 

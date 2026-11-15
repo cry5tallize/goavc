@@ -797,3 +797,7 @@ G05 只增加 `picture.Pool` 的空闲 backing 账本与拒收策略，没有改
 ### G06：公共 Frame backing 与调用者迁移
 
 G06 增加公共 Frame 头/租约和 64 MiB backing 缓存，并迁移 decoder、encoder、YUVReader 的真实 Frame 路径；这些分配和清零成本不属于 kernel/MB 零分配门禁。本切片未新增吞吐 before/after 样本，也不把 backing 命中、清零或 `CacheStats` 解释为 RSS、HeapSys 或自然 GC 改善。G07/G08 完成后再按冷启动、稳态和调用者持有输出分别测量。
+
+### G07：encoder 工作图像与 RC 候选
+
+G07 改变候选 Picture 的租约与实例池归还路径，不改变搜索次数、QP 顺序、编码算法或码流；本切片未新增吞吐 before/after、分配计数或 RSS/GC 样本。候选回收测试证明池账本平衡，不等价于完整配置的自然 GC/稳态性能结论。

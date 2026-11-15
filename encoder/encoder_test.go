@@ -23,6 +23,35 @@ func TestEncoder_LevelBudgetIsTransactional(t *testing.T) {
 	if e.reference != nil || e.recon != nil || e.out != nil || e.idr != 0 || e.frameNum != 0 {
 		t.Fatal("failed AU modified state")
 	}
+	gets, puts, _ := e.picturePool.Stats()
+	if gets != puts {
+		t.Fatalf("failed AU leaked pictures: gets=%d puts=%d", gets, puts)
+	}
+}
+
+func TestEncoder_RateControlCandidatesReturnPictures(t *testing.T) {
+	c := h264.DefaultEncoderConfig()
+	c.Width, c.Height = 32, 32
+	c.RateControl, c.Bitrate = h264.RateControlABR, 100_000
+	e, err := New(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Close()
+	if err = e.SendFrame(testFrame(c.Width, c.Height)); err != nil {
+		t.Fatal(err)
+	}
+	gets, puts, _ := e.picturePool.Stats()
+	if gets == 0 || gets-puts != 1 {
+		t.Fatalf("candidate picture ownership: gets=%d puts=%d", gets, puts)
+	}
+	if err = e.Reset(); err != nil {
+		t.Fatal(err)
+	}
+	gets, puts, _ = e.picturePool.Stats()
+	if gets != puts {
+		t.Fatalf("reset retained picture ownership: gets=%d puts=%d", gets, puts)
+	}
 }
 
 func testFrame(w, h int) *h264.Frame {

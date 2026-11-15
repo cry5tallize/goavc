@@ -131,12 +131,18 @@ func (e *Encoder) interlacedStates(src, recon *picture.Picture) ([2]*frameState,
 // 整帧的QP、CABAC状态和CAVLC skip_run在两个场之间连续，不会变成两个独立slice。
 func (e *Encoder) encodeInterlaced(src *picture.Picture, intra, idr bool) ([]byte, *frameState, error) {
 	recon := e.planeReconstruction
+	ownsRecon := false
 	if recon == nil {
 		var err error
-		recon, err = picture.New(src.MBWidth, src.MBHeight, src.Format)
+		if e.picturePool != nil {
+			recon, err = e.picturePool.Get(src.MBWidth, src.MBHeight, src.Format)
+		} else {
+			recon, err = picture.New(src.MBWidth, src.MBHeight, src.Format)
+		}
 		if err != nil {
 			return nil, nil, err
 		}
+		ownsRecon = true
 	}
 	states, past, future, err := e.interlacedStates(src, recon)
 	if err != nil {
@@ -358,5 +364,5 @@ func (e *Encoder) encodeInterlaced(src *picture.Picture, intra, idr bool) ([]byt
 		s.src, s.reference, s.searchReference = nil, nil, nil
 	}
 	// 最近帧的像素快照必须仍为完整交织帧，不能暴露半高场视图。
-	return out.Bytes(), &frameState{pic: recon, fields: states}, nil
+	return out.Bytes(), &frameState{pic: recon, ownsPic: ownsRecon, fields: states}, nil
 }

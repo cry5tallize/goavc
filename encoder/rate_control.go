@@ -71,6 +71,7 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 		tried[qp-minQP] = true
 		data, state, err := e.encodeAtQP(src, intra, idr, qp)
 		if err != nil {
+			releaseFrameState(state)
 			if errors.Is(err, h264.ErrUnsupported) {
 				unsupported = true
 				search.observe(true)
@@ -86,11 +87,13 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 		codedBits := int64(len(data)) * 8
 		data, err = e.padRateControlledAU(data, target)
 		if err != nil {
+			releaseFrameState(state)
 			oversized = true
 			search.observe(true)
 			continue
 		}
 		if len(data) > e.maxAUBytes {
+			releaseFrameState(state)
 			oversized = true
 			search.observe(true)
 			continue
@@ -102,10 +105,13 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 				delta = -delta
 			}
 			if !feasible || delta < bestDelta || delta == bestDelta && e.preferRateQP(qp, bestQP) {
+				releaseFrameState(bestState)
 				best, bestState, bestQP, bestDelta = data, state, qp, delta
+				state = nil
 			}
 			feasible = true
 		}
+		releaseFrameState(state)
 		// Filler只改变传输码量，不能掩盖VCL码量的QP搜索方向。
 		search.observe(codedBits > target)
 	}
@@ -118,6 +124,7 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 			}
 			data, state, err := e.encodeAtQP(src, intra, idr, qp)
 			if err != nil {
+				releaseFrameState(state)
 				if errors.Is(err, h264.ErrUnsupported) {
 					unsupported = true
 					continue
@@ -130,15 +137,18 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 			}
 			data, err = e.padRateControlledAU(data, target)
 			if err != nil {
+				releaseFrameState(state)
 				oversized = true
 				continue
 			}
 			if len(data) > e.maxAUBytes {
+				releaseFrameState(state)
 				oversized = true
 				continue
 			}
 			ok, _ := e.vbvAccept(len(data))
 			if e.cfg.RateControl == h264.RateControlVBV && !ok {
+				releaseFrameState(state)
 				continue
 			}
 			delta := int64(len(data))*8 - target
@@ -146,8 +156,11 @@ func (e *Encoder) encodeRateControlled(src *picture.Picture, intra, idr bool) ([
 				delta = -delta
 			}
 			if !feasible || delta < bestDelta || delta == bestDelta && e.preferRateQP(qp, bestQP) {
+				releaseFrameState(bestState)
 				best, bestState, bestQP, bestDelta = data, state, qp, delta
+				state = nil
 			}
+			releaseFrameState(state)
 			feasible = true
 		}
 	}

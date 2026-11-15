@@ -16,15 +16,21 @@ func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
 		e.trialWriters = newTrialWriters()
 	}
 	pic := e.planeReconstruction
+	ownsPic := false
 	if pic == nil {
 		var err error
-		pic, err = picture.New(src.MBWidth, src.MBHeight, src.Format)
+		if e.picturePool != nil {
+			pic, err = e.picturePool.Get(src.MBWidth, src.MBHeight, src.Format)
+		} else {
+			pic, err = picture.New(src.MBWidth, src.MBHeight, src.Format)
+		}
 		if err != nil {
 			return nil, err
 		}
+		ownsPic = true
 	}
 	total := src.MBWidth * src.MBHeight
-	s := &frameState{src: src, pic: pic, info: make([]mbInfo, total), nz: make([]uint8, total*16), mv: motion.NewGrid(src.MBWidth, src.MBHeight)}
+	s := &frameState{src: src, pic: pic, ownsPic: ownsPic, info: make([]mbInfo, total), nz: make([]uint8, total*16), mv: motion.NewGrid(src.MBWidth, src.MBHeight)}
 	s.searchWorkspace = e.searchWorkspace
 	s.trialWriters = e.trialWriters
 	s.allowZeroPCM = e.cfg.Profile != h264.ProfileBaseline && e.cfg.Profile != h264.ProfileMain
@@ -62,6 +68,7 @@ func (e *Encoder) newFrameState(src *picture.Picture) (*frameState, error) {
 			qp = e.qpAt(addr%src.MBWidth, addr/src.MBWidth)
 		}
 		if qp < -6*(src.Planes[0].BitDepth-8) || qp > 51 {
+			releaseFrameState(s)
 			return nil, fmt.Errorf("encoder: macroblock qp %d: %w", qp, h264.ErrInvalidData)
 		}
 		qp = activityQP(&src.Planes[0], addr%src.MBWidth*16, addr/src.MBWidth*16, qp, e.adaptiveQP)

@@ -74,8 +74,12 @@ func TestBEncoder_FailedSendRetryAndCleanup(t *testing.T) {
 	if err = e.SendFrame(f); !errors.Is(err, h264.ErrResourceLimit) {
 		t.Fatal(err)
 	}
-	if e.bClockSet || e.reference != nil || e.out != nil || e.bNextIndex != 0 || len(e.bInputs) != 0 {
+	if e.reference != nil || e.out != nil || e.bNextIndex != 0 || len(e.bInputs) != 0 {
 		t.Fatal("首帧失败污染调度状态")
+	}
+	gets, puts, _ := e.picturePool.Stats()
+	if gets != puts {
+		t.Fatalf("首帧失败遗留 Picture: gets=%d puts=%d", gets, puts)
 	}
 	e.maxAUBytes = budget
 	if err = e.SendFrame(f); err != nil {

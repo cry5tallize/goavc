@@ -35,6 +35,7 @@ type Encoder struct {
 	separateColourPlane       bool
 	colourPlaneID             int
 	planeReconstruction       *picture.Picture
+	picturePool               *picture.Pool
 	lookahead                 int
 	pendingFrames             []*h264.Frame
 	lookaheadPrevious         *h264.Frame
@@ -155,7 +156,7 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	if uint64(cfg.FPSNum) > uint64(^uint32(0))/2 || uint64(cfg.FPSDen) > uint64(^uint32(0)) {
 		return nil, fmt.Errorf("encoder: VUI timing overflows: %w", h264.ErrInvalidData)
 	}
-	e := &Encoder{cfg: cfg, slices: 1, searchRange: 16, searchWorkspace: new(search.Workspace), cabac: cfg.Profile != h264.ProfileBaseline, frameQP: cfg.QP, lastQP: cfg.QP}
+	e := &Encoder{cfg: cfg, slices: 1, searchRange: 16, searchWorkspace: new(search.Workspace), picturePool: picture.NewPool(4), cabac: cfg.Profile != h264.ProfileBaseline, frameQP: cfg.QP, lastQP: cfg.QP}
 	e.trialWriters = newTrialWriters()
 	if cfg.RateControl == h264.RateControlCBR || cfg.RateControl == h264.RateControlVBV {
 		e.vbvBufferBits = int64(cfg.VBVBufferSize)
@@ -243,6 +244,7 @@ func (e *Encoder) SendFrame(f *h264.Frame) error {
 }
 
 func (e *Encoder) encodeFrameNow(f *h264.Frame, lookaheadScene bool) error {
+	oldRecon := e.recon
 	if e.pcm && (e.cfg.Profile == h264.ProfileBaseline || e.cfg.Profile == h264.ProfileMain) {
 		for comp := 0; comp < 3; comp++ {
 			w, h := f.Format.PlaneDimensions(comp, f.Width, f.Height)
@@ -259,7 +261,13 @@ func (e *Encoder) encodeFrameNow(f *h264.Frame, lookaheadScene bool) error {
 	if e.interlaced {
 		mbHeight = (f.Height + 31) / 32 * 2
 	}
-	pic, err := picture.New((f.Width+15)/16, mbHeight, f.Format)
+	var pic *picture.Picture
+	var err error
+	if e.picturePool != nil {
+		pic, err = e.picturePool.Get((f.Width+15)/16, mbHeight, f.Format)
+	} else {
+		pic, err = picture.New((f.Width+15)/16, mbHeight, f.Format)
+	}
 	if err != nil {
 		return err
 	}
@@ -309,12 +317,18 @@ func (e *Encoder) encodeFrameNow(f *h264.Frame, lookaheadScene bool) error {
 	}
 	data, state, selectedQP, err := e.encodeRateControlled(pic, isIntra, isIDR)
 	if err != nil {
+		pic.Release()
 		return err
 	}
 	if state != nil {
+		if state.pic != pic {
+			pic.Release()
+		}
 		pic = state.pic
 	}
 	if len(data) > e.maxAUBytes {
+		releaseFrameState(state)
+		pic.Release()
 		return fmt.Errorf("encoder: access unit %d exceeds level budget %d: %w", len(data), e.maxAUBytes, h264.ErrResourceLimit)
 	}
 	e.recon = pic
@@ -356,6 +370,9 @@ func (e *Encoder) encodeFrameNow(f *h264.Frame, lookaheadScene bool) error {
 	}
 	if !e.pcm {
 		e.reference = pic
+	}
+	if e.cfg.MaxBFrames == 0 {
+		e.releaseIfUnretained(oldRecon)
 	}
 	return nil
 }
@@ -433,6 +450,7 @@ func (e *Encoder) Reset() error {
 		e.trialWriters.rd.Reset()
 		e.trialWriters.mb.Reset()
 	}
+	e.releaseOwnedPictures()
 	e.out = nil
 	e.recon = nil
 	e.last = nil
@@ -456,6 +474,7 @@ func (e *Encoder) Reset() error {
 
 // Close 幂等释放实例资源。
 func (e *Encoder) Close() error {
+	e.releaseOwnedPictures()
 	e.searchWorkspace = nil
 	e.trialWriters = nil
 	e.out = nil
@@ -464,6 +483,9 @@ func (e *Encoder) Close() error {
 	e.reference = nil
 	e.releaseLookahead()
 	e.releaseBScheduler()
+	if e.picturePool != nil {
+		e.picturePool.Trim()
+	}
 	e.closed = true
 	return nil
 }

@@ -260,6 +260,7 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | 引用清尾（G04） | picture pool、DPB retained metadata、NAL pending、decoder slice entries 的失效引用清理 | Partial | `TestPool_GetClearsReleasedSlotAndEmptyBucket`、`TestReferences_RemoveClearsRetainedState`、`TestAssembler_ClearConsumedUnitSlots`、`TestDecoder_ClearSliceEntries`及四包定向测试 | 仅解除已确认的容器留存；有界缓存、公共Frame backing、编码/解码完整所有权及自然GC/稳态指标仍待完成 |
 | 有界 picture 缓存（G05） | 既有 `picture.Pool` 的实际 backing 字节预算、每桶上限、格式隔离和 Trim 账本 | Partial | `TestPool_BoundsFreeStorageAndCacheStats`、既有池复用/并发/格式隔离测试、picture race | 默认每 Pool 空闲预算 64 MiB，不限制活跃图像或 RSS；公共 Frame backing、encoder/decoder 所有权和全库 GC 证据仍待完成 |
 | 公共 Frame backing（G06） | `NewFrame`、新的 Frame 头、原始 backing 有界池、清零和输入/输出调用者迁移 | Partial | 根包 NewFrame 生命周期/错误/浅拷贝租约测试，decoder/encoder/stream 定向回归及 High10 值域保护 | 公共 Frame 头/租约仍允许少量分配；G07/G08 完整所有权、长期 GC/RSS、CLI 全路径和 M8 最终门禁仍待完成 |
+| encoder 图像/RC 所有权（G07） | Encoder 私有 picture.Pool、候选重建替换、失败/AU 拒绝回收、Reset/Close retained 图像归还 | Partial | `TestEncoder_RateControlCandidatesReturnPictures`、`TestEncoder_LevelBudgetIsTransactional`、编解码定向测试和 encoder race | 底层语法早退状态的完整错误矩阵、自然 GC/RSS 与全配置所有权尚未验收；G08/G09/G10 仍待完成 |
 | 其余池化/去分配/并行（K15–K20m） | 所有权、slice/分析/ME | TODO | 既有串行测试保留 | Threads>1仍拒绝；G00仅补分配基线，完整GC测量待实施 |
 
 ## M9

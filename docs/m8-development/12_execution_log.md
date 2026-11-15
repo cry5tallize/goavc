@@ -231,3 +231,15 @@ G03b补充验证：完整`CGO_ENABLED=1 go test -race -count=1 ./...`退出0，t
 新增 `TestNewFrame_BoundedPooledLifecycle`、`TestNewFrame_RejectsInvalidGeometryAndFormat`、`TestNewFrame_ShallowCopyReturnsBackingOnce`。迁移后的首轮测试发现 YUVReader 丢失原有 High10 值域检查，`TestYUVIO_High10KnownLayout` 复现“非法 10-bit sample accepted”；恢复 `Frame.Validate` 后原失败用例通过，未放宽 0..1023 约束。
 
 验证：`CGO_ENABLED=0 go test -count=1 . ./stream ./decoder ./encoder`、`CGO_ENABLED=1 go test -race -count=1 . ./stream ./decoder ./encoder ./internal/buffer`、以及提交前完整 `gofmt/vet/build/test/depscheck/manifest/diff-check` 均退出 0；常规门禁为 CGO=0，race 按仓库例外使用 CGO=1。当前未把公共 Frame 头、租约和清零成本记为 kernel 零分配，也未宣称 RSS/GC 已下降。G07 encoder 图像/RC 所有权、G08 decoder retained metadata、G09 AU 容量和并行仍待完成。
+
+### G07：encoder 工作图像与 RC 候选所有权
+
+G07 在 `Encoder` 内增加实例私有 `picture.Pool`，源图、候选重建图和最终 reconstruction 均按明确 owner 管理；不改变 QP 搜索顺序、tie-break、码流或公开 Encoder 非并发契约。
+
+- `encodeFrameNow` 从实例池获取源 `Picture`；RC 返回候选后，源图只在候选重建不同于源图时归还，AU 超 level budget 或编码失败均归还源图和候选。
+- `encodeRateControlled` 对快速搜索和穷举中的 Unsupported、ResourceLimit、padding、AU 超限、VBV 拒绝候选立即释放；新最优候选替换旧最优候选前释放旧 `frameState.pic`，最终候选所有权转移给 `e.recon/e.last`。
+- `frameState.ownsPic` 区分新分配的重建图与 MBAFF 借用的 FieldView；连续非 B 帧及 B 调度完成后会归还不再被 `recon/reference/bPast/bFuture/last` 引用的旧图，`Reset`/`Close` 再按地址去重清理 retained 图像，避免同一池图像在重新借出后重复 Release。
+
+新增 `TestEncoder_RateControlCandidatesReturnPictures`，断言 ABR 候选搜索成功后只有最终 reconstruction 借出，Reset 后 `gets == puts`；扩展 `TestEncoder_LevelBudgetIsTransactional` 与 B 输入失败测试，断言拒绝路径不遗留 Picture。`CGO_ENABLED=0 go test -count=1 . ./stream ./decoder ./encoder`、`CGO_ENABLED=1 go test -race -count=1 ./encoder` 和提交前完整 `gofmt/vet/build/test/depscheck/manifest/diff-check` 均退出 0；race 仍只覆盖 encoder 包，非全库 race。
+
+当前 G07 未把自然 GC/RSS 或候选分配 before/after 记为性能证据；编码错误发生在底层语法函数已创建状态之前的极少数路径仍由后续完整错误矩阵覆盖。G08 decoder retained metadata、G09 AU 容量和 G10 集成验收仍待完成。
