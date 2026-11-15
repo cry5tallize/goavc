@@ -1,0 +1,25 @@
+{
+    "base":  "eb882a1",
+    "scope":  "K10b NEON Forward4x4",
+    "host":  "windows/amd64 Go1.27.4",
+    "CGO_ENABLED":  0,
+    "commands":  "For each windows/linux/darwin GOARCH=arm64: go vet ./internal/simd; go build ./...; go test -tags goavc_simdtest -c ./internal/simd",
+    "result":  "all exit0",
+    "artifacts":  [
+                      {
+                          "target":  "windows/arm64",
+                          "sha256":  "65f1919b62bad982c5f4b98b2b4ecd73f8a9b84937f90cb2d3c1f2bcbe1b4210"
+                      },
+                      {
+                          "target":  "linux/arm64",
+                          "sha256":  "631a5e2e1cff42ecef0a8f0a78645f7e0b4bdc10ce7fc174d0fa6b58fd3a4145"
+                      },
+                      {
+                          "target":  "darwin/arm64",
+                          "sha256":  "681aeb791dc3c98e8e3dca6f9fdd4208e508ebb891c2c8f412d75c3de4723b64"
+                      }
+                  ],
+    "nativeExecution":  "not executed, user authorized compile-only",
+    "hostValidation":  "purego simd/transform and full standard gate exit0; deps35 manifest55; tmp/m8-baseline/k10b-verify.txt",
+    "cleanup":  "three generated test binaries removed after checked workspace paths; no memory-agent files touched"
+}

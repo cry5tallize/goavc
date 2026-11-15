@@ -6,6 +6,7 @@
 
 - 分支 `perf/m8-simd`，A00、K01–K05、K07、K09a已逐项提交；K06/K08按用户要求完成实现与交叉编译，原生未验证。SAD与SATD已真实接入，MC当前是唯一Generic块算法，不是SIMD插值。
 - amd64 Auto逐槽选择：SAD宽16为AVX2（其他宽SSE2），SATD4×4优选实测更快的SSE2；purego无项目汇编。没有全局“所有槽均AVX2”的声明。
+- SIMD后续K10a/b：Forward4x4已接入SSE2与NEON；SSE2原生解析/parity/零分配通过，NEON按用户要求仅完成三种arm64编译验证，原生未验。8×8/逆变换和其余内核仍待实现；内存/GC工作由其他agent负责，本轮没有改动其文件。
 - K14a已补Windows SAD逐行保护页；其余内核矩阵未完成。K09b/c/d、K10–K13、K15–K25及K20m仍待实施，K14收尾待所有内核交付。
 - G01/G02/G03a/G03b（K16/K18切片）已消除搜索/残差/邻域/试写反复分配。prepared候选和六格式QP26/flat的真实非空I/P/B决策为0分配；P控制中位4945520B/op、42次/op，主要剩余图像/元数据/独立输出。完整配置/所有权/资源集成门禁仍待补齐，不签完整K18。
 - G03b生产代码完整race通过（tests/codec 291.726s），后续B fuzz测试修复另补新种子race；本轮decoder/P/B短fuzz已执行，原B失败已独立复现/修复，不隐去失败。代表性主目标长矩阵、自然GC指标及远端CI未执行；不创建标签、不push/release，不签完整M8。以下各节按实施时间保留当时记录，最新状态以本节和状态矩阵为准。
@@ -269,3 +270,9 @@ SSE2使用32位加减/倍增、两次4×4转置，输入/输出ABI数组各64字
 CGO=0的simd/transform定向、goavc_simdtest强制真实后端、purego simd/transform/encoder、实际386同包、六目标全库build和完整常规门禁全部退出0（`k10a-{tagged,purego,386,verify}.txt`）。原编码器/六格式/M8固定码流、Oracle、候选零分配保护网继续通过。新增consumer benchmark在同一测试标签编译运行；AVX2/NEON Forward专用路径明确未实现，不算这些后端通过。受影响包race/短fuzz实际结果另补。不宣称完整K10或M8；剩余SIMD MC、其他正逆变换、AVX2/NEON、量化、滤波和残差仍待推进。
 
 K10a补充：CGO=0帧间编码fuzz smoke 5s/1432exec退出0；CGO=1 simd/transform/encoder race退出0（k10a-fuzz.txt、k10a-race.txt）。完整全库race仍留给最终集成验收。
+
+### K10b：NEON 4×4正变换编译交付
+
+起点`eb882a1`，只增加forward_arm64声明/汇编/测试和ARM逐槽分发；沿用K10a唯一Generic与领域适配，不改内存GC工作。基线ASIMD四条S4向量完成两轴32位加减/倍增及转置，输入/输出各固定64字节；与SSE2同一C基底、顺序与int32模运算，没有窄化、可选扩展或新的输入域。NEON槽已绑定实际计算，原生解析值/5000组parity/benchmark入口复用checkForward；不会把Generic结果标为NEON。
+
+按用户arm64只需可编译的范围，CGO=0 windows/linux/darwin×arm64分别go vet internal/simd、go build ./...、带goavc_simdtest的simd测试二进制编译。无原生arm64，未执行NEON parity/分配/Oracle/性能，状态WIP。宿主purego simd/transform及完整常规门禁另验证；完整K10仍缺AVX2、逆变换、8×8等，MC/量化/滤波/残差也仍待实现。不签M8、不push/tag/release。内存agent与用户原有文件原样保留。
