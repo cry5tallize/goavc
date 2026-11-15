@@ -16,6 +16,8 @@ func FuzzEncoder_BReorderRoundTrip(f *testing.F) {
 	f.Add([]byte{0, 26, 1, 3, 255, 0, 128, 91})
 	f.Add([]byte{1, 0, 2, 1, 0, 255, 17, 128})
 	f.Add([]byte{2, 51, 0, 2, 9, 37, 127, 201})
+	// 原Auto Level在此低QP输入下会合法触发AU预算；保留为完整重排回归种子。
+	f.Add([]byte("0\x00!1 \xfb \x8b0"))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		if len(data) < 8 {
 			return
@@ -23,6 +25,10 @@ func FuzzEncoder_BReorderRoundTrip(f *testing.F) {
 		cfg := h264.DefaultEncoderConfig()
 		cfg.Width, cfg.Height = 16, 16
 		cfg.Profile = h264.ProfileHigh
+		// 本入口验证完整重排/像素/所有权；为任意低QP和自定义矩阵保留足够
+		// 的合法Level预算，避免把正常ErrResourceLimit误报为编解码失败。
+		// 生产Auto策略与其资源错误、已有Level预算测试保持不变。
+		cfg.Level = 31
 		cfg.MaxBFrames = 1 + int(data[0]%3)
 		cfg.QP = int(data[1] % 52)
 		cfg.GOPSize, cfg.IDRInterval = 5, 9
