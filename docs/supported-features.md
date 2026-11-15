@@ -173,7 +173,7 @@
 | 搜索工作区复用 | Partial | G01在真实编码器复用双位深Workspace，prepared Integer/Refine/Estimate含Scorer为0分配；旧回调轨迹/码流不变。完整配置的K18、池化与并行尚未完成 |
 | 帧间残差去分配 | Partial | G02在六格式/场/矩阵/两死区/4与8变换下，prepared真实帧间候选与重建0分配，384组改造前指纹不变；完整K18仍未完成 |
 | 帧内邻域去分配 | Partial | G03a的I4/I16/I8真实候选（含六格式、场、矩阵与QP边界）0分配；1152个旧候选指纹一致。完整配置/集成门禁与K18仍未完成 |
-| 真实模式决策试写复用 | Partial | G03b在六格式/场/独立444、QP26/flat下的192个真实非空I/P/B决策0分配，旧率/失真/模式/重建指纹和固定码流不变。CAVLC保持整块失败原子性；整个codec仍有图像/元数据/输出分配，完整K16/K18/M8未完成 |
+| 真实模式决策试写复用 | Partial | G03b/K18收尾保留192个旧非空I/P/B指纹；完整决策0分配矩阵扩至六格式/场/独立444/4与8变换、flat/custom和最小QPY/26/51。端点QP允许合法PCM/全零胜者，但每个family/矩阵组必须覆盖非空压缩；恢复与真实试写在计量内。整个codec和完整M8仍未验收 |
 | 引用清尾与容器留存 | Partial | G04 已解除 picture pool 弹出槽、DPB 图像/运动/场元数据、NAL pending 及 decoder slice entries 的失效引用；池租约与固定码流保护网通过。G05 有界缓存、公共Frame backing、完整 codec 所有权和自然GC/稳态验收仍待完成 |
 | 有界 picture 空闲缓存 | Partial | G05 为既有 `picture.Pool` 增加每 Pool 64 MiB 空闲 backing 预算，按实际 `cap` 计费并保留每桶/格式隔离；超预算合法图像仍可处理但不缓存，`CacheStats` 与 Trim 账本测试通过。不代表活跃内存、RSS、公共 Frame backing 或完整 codec 所有权已完成 |
 | 公共 Frame backing 与迁移 | Partial | G06 提供 `NewFrame`、64 MiB 有界 backing 缓存、新 Frame 头、清零和一次性租约；decoder 输出、encoder Reconstruction/lookahead/B 输入及 YUVReader 已迁移，六格式/奇数尺寸/High10 校验回归通过。公共头/租约分配、G07/G08 所有权和最终 M8 门禁仍待完成 |

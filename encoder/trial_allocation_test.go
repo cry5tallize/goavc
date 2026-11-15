@@ -133,6 +133,74 @@ func TestAllocation_ModeDecision(t *testing.T) {
 	})
 }
 
+// 完整决策不能只以QP26/flat为证据；每次恢复、真实试写和重建都在计量内。
+func TestAllocation_ModeDecisionMatrixAndQP(t *testing.T) {
+	decisionCases(t, func(t *testing.T, s *frameState, ref *picture.Picture, reset func(), kind string) {
+		// 使用强DC差异和独立低两位：低QP仍易压缩，高QP仍有非零系数。
+		// 原QP26平滑向量在极端矩阵/低QP会合法选择PCM，不能据此证明正常路径。
+		limit := uint16((1 << s.src.Format.BitDepth()) - 1)
+		for c := range s.src.Planes {
+			p := &s.src.Planes[c]
+			for y := range p.Height {
+				for x := range p.Width {
+					p.SetSample(x, y, limit-uint16((x+y)&3))
+				}
+			}
+		}
+		matrix4, matrix8 := new([6][16]uint8), new([6][64]uint8)
+		for c := range 6 {
+			for i := range 16 {
+				matrix4[c][i] = uint8(1 + (17*i+31*c)%255)
+			}
+			for i := range 64 {
+				matrix8[c][i] = uint8(1 + (11*i+29*c)%255)
+			}
+		}
+		for _, custom := range []bool{false, true} {
+			nonempty := 0
+			for _, qp := range []int{-6 * (s.src.Format.BitDepth() - 8), 26, 51} {
+				t.Run(fmt.Sprintf("matrix=%v/qp=%d", custom, qp), func(t *testing.T) {
+					s.scaling4, s.scaling8 = nil, nil
+					if custom {
+						s.scaling4, s.scaling8 = matrix4, matrix8
+					}
+					var res residual
+					var err error
+					run := func() {
+						reset()
+						s.info[0].qp = qp
+						s.reference = ref
+						switch kind {
+						case "I":
+							s.reference = nil
+							res, err = s.analyzeIntraRD(0, qp)
+						case "P":
+							res, err = s.analyzeRD(0, qp, 2, false)
+						case "B":
+							res, err = s.analyzeB(0, qp, ref, ref)
+						}
+					}
+					allocs := testing.AllocsPerRun(3, run)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if allocs != 0 {
+						t.Fatalf("%s完整决策分配%g次", kind, allocs)
+					}
+					if !s.info[0].skip && !s.info[0].pcm && res != (residual{}) {
+						nonempty++
+					}
+				})
+			}
+			// 端点QP可以合法选择PCM或全零残差，不能为测试改决策策略。
+			// 每个格式/场/平面/变换/family/矩阵仍必须实际覆盖非空压缩决策。
+			if nonempty == 0 {
+				t.Fatal("整组只有Skip/PCM/空残差，不能证明正常决策路径")
+			}
+		}
+	})
+}
+
 func TestTrial_ErrorThenReuse(t *testing.T) {
 	s, _, reset := preparedDecision(t, h264.YUV420P, false, false, false)
 	base := mbInfo{qp: 26, cbp: 15}

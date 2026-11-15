@@ -262,7 +262,7 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | 搜索去逃逸（G01/K18前置） | caller-owned双位深Workspace，真实编码器跨帧/场/Reset复用，结束解除借用 | Partial | 32组改造前Scorer轨迹/结果，64组prepared零分配，强制x86/purego/386/M8指纹 | 仅搜索；完整配置的K18及K16所有权/资源门禁仍待完成 |
 | 残差去逃逸（G02/K18切片） | 具名调用唯一共享量化器、共同444亮度重建入口解除递归逃逸 | Partial | 384组改造前系数/CBP/重建指纹；六格式/场/矩阵/两死区/4与8变换的真实残差和四种帧间分区0分配 | 完整K18未完成，不新增量化策略或SIMD量化 |
 | 帧内邻域（G03a/K18切片） | 调用者栈上固定邻域槽；相同可用性预检避免枚举不可用模式的错误分配 | Partial | 1152个旧I4/I16/I8候选指纹、六格式/场/矩阵/QP的prepared帧内候选0分配、邻域并存/清零解析值 | 完整K18仍待所有配置/正常MB集成门禁，不把单候选零分配扩大为整个库 |
-| 真实试写（G03b/K16/K18切片） | 串行lane的RD/正式MB独立Writer复用；有效位追加；CAVLC固定level预检保持失败原子性 | Partial | 192个旧非Skip/非PCM I/P/B决策指纹与prepared零分配；Append位解析值、CAVLC坏尾部无写出、错误后复用、M8固定码流 | 当前完整RD分配矩阵为QP26/flat；矩阵/低QP/码控及K16所有权、完整K18收尾另验，不声明整个codec零分配 |
+| 真实试写（G03b/K18收尾） | 串行lane的RD/正式MB独立Writer复用；有效位追加；CAVLC固定level预检 | Partial | 原192个非空决策指纹；新增六格式/场/独立444/4与8变换、flat/custom、最小QPY/26/51完整决策0分配；错误后复用 | 极端QP允许合法PCM/全零胜者，每个矩阵family仍强制覆盖非空压缩；不是整个codec零分配，完整M8未验收 |
 | 引用清尾（G04） | picture pool、DPB retained metadata、NAL pending、decoder slice entries 的失效引用清理 | Partial | `TestPool_GetClearsReleasedSlotAndEmptyBucket`、`TestReferences_RemoveClearsRetainedState`、`TestAssembler_ClearConsumedUnitSlots`、`TestDecoder_ClearSliceEntries`及四包定向测试 | 仅解除已确认的容器留存；有界缓存、公共Frame backing、编码/解码完整所有权及自然GC/稳态指标仍待完成 |
 | 有界 picture 缓存（G05） | 既有 `picture.Pool` 的实际 backing 字节预算、每桶上限、格式隔离和 Trim 账本 | Partial | `TestPool_BoundsFreeStorageAndCacheStats`、既有池复用/并发/格式隔离测试、picture race | 默认每 Pool 空闲预算 64 MiB，不限制活跃图像或 RSS；公共 Frame backing、encoder/decoder 所有权和全库 GC 证据仍待完成 |
 | 公共 Frame backing（G06） | `NewFrame`、新的 Frame 头、原始 backing 有界池、清零和输入/输出调用者迁移 | Partial | 根包 NewFrame 生命周期/错误/浅拷贝租约测试，decoder/encoder/stream 定向回归及 High10 值域保护 | 公共 Frame 头/租约仍允许少量分配；G07/G08 完整所有权、长期 GC/RSS、CLI 全路径和 M8 最终门禁仍待完成 |
