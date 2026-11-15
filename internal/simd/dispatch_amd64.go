@@ -11,9 +11,11 @@ func platformKernels(cpu cpuFeatures, table kernelTable) kernelTable {
         table.forward4, table.backends.Forward4x4 = forward4SSE2, SSE2
     }
     if cpu.sse2 && cpu.avx2 {
+        table.mcluma8 = copy16AVX2
         table.sad8, table.sad16 = sad8AVX2, sad16AVX2
         table.satd4 = satd4AVX2
         table.backends.SAD8, table.backends.SAD16, table.backends.SATD4x4 = AVX2, AVX2, AVX2
+        table.backends.MCLumaCopy = AVX2
     }
     return table
 }

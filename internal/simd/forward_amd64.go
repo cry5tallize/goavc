@@ -9,3 +9,6 @@ func forward4SSE2(src [16]int32) (out [16]int32)
 
 //go:noescape
 func copy16SSE2(dst []byte, ds int, ref []byte, rs, height int)
+
+//go:noescape
+func copy16AVX2(dst []byte, ds int, ref []byte, rs, height int)
