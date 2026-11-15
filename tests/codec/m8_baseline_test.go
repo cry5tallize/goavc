@@ -47,6 +47,12 @@ func TestM8Baseline_SerialOutput(t *testing.T) {
 	}
 }
 
+func TestM8Baseline_WithoutFFmpeg(t *testing.T) {
+	// Oracle缺失只跳过外部比较，不能连已固定的码流/元数据/像素回归一起跳过。
+	t.Setenv("PATH", t.TempDir())
+	TestM8Baseline_SerialOutput(t)
+}
+
 func m8Capture(t *testing.T, format h264.PixelFormat, cabac bool) m8Snapshot {
 	t.Helper()
 	cfg := chromaEncoderConfig(format)
@@ -154,6 +160,8 @@ func m8Capture(t *testing.T, format h264.PixelFormat, cabac bool) m8Snapshot {
 	}
 	snapshot.Input, snapshot.Stream = fmt.Sprintf("%x", input.Sum(nil)), fmt.Sprintf("%x", stream.Sum(nil))
 	snapshot.Metadata, snapshot.Pixels = fmt.Sprintf("%x", metadata.Sum(nil)), fmt.Sprintf("%x", pixels.Sum(nil))
-	chromaEncoderFFmpegCheck(t, encoded, display, format)
+	t.Run(snapshot.Name+"/FFmpeg", func(t *testing.T) {
+		chromaEncoderFFmpegCheck(t, encoded, display, format)
+	})
 	return snapshot
 }

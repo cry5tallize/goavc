@@ -70,3 +70,7 @@ A00：`CGO_ENABLED=0 go test -count=1 -run '^TestM8Baseline_SerialOutput$' ./tes
 ### arm64 验收范围调整
 
 用户明确确认没有arm64机器，要求“做了能过编译就行”。本次arm64工作按实现与六目标交叉构建交付，不等待原生runner；原实施门禁中的NEON原生parity/Oracle/性能仍记未执行，不能据交叉构建宣称这些证据存在。此调整不取消其他平台、正确性、所有权及并行门禁。
+
+### 独立修复：缺 FFmpeg 仍执行基线回归
+
+从 `7caf104` 开始；外部Oracle比较移到子测试，缺工具只跳过该子项，父测试仍校验全部12组固定指纹。新增清空PATH的定向回归，确认缺FFmpeg时父测试通过且各Oracle子项显式跳过；有工具的正常测试继续执行实际比较。`go test -count=1 -run '^TestM8Baseline_' -v ./tests/codec` 和完整常规门禁均退出0，日志 `tmp/m8-baseline/baseline-{no-ffmpeg,fix-verify}.txt`。此项单独fix提交，不与向量功能混合。
