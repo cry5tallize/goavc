@@ -2,83 +2,50 @@ package prediction
 
 import (
 	"github.com/goavc/h264/internal/picture"
+	"github.com/goavc/h264/internal/simd"
 )
 
-// ChromaSample 按双线性插值读取一个色度预测样本（8.4.2.2.2）。
-//
-// cx/cy 是色度整像素坐标，mvx/mvy 仍是亮度四分之一像素偏移：
-// 4:2:0 下 1 个色度像素 = 8 个亮度四分之一像素，故位置以 1/8
-// 色度像素为单位，低 3 位是插值相位。
+// ChromaSample 的MV仍以亮度1/4像素计，420色度为1/8本平面采样。
 func ChromaSample(p *picture.Plane, cx, cy, mvx, mvy int) byte {
 	return ChromaSampleFormat(p, cx, cy, mvx, mvy, 2, 2)
 }
 
-// ChromaSampleHigh 实现高位深 4:2:0 色度的全部 64 个双线性相位。
+// ChromaSampleHigh 直接读取原生10位采样，不借用公共LE存储视图。
 func ChromaSampleHigh(p *picture.Plane, cx, cy, mvx, mvy int) uint16 {
 	return ChromaSampleFormatHigh(p, cx, cy, mvx, mvy, 2, 2)
 }
 
-// ChromaSampleFormat 按平面采样格式插值（Spec: 8.4.2.2）。
-// subW/subH 为亮度与本平面的采样比：420=(2,2)、422=(2,1)、444=(1,1)。
-// cx/cy 是本平面整像素坐标，MV 始终以亮度 1/4 像素计，调用方不得预缩放。
-// 444 复用亮度六抽头；420/422 使用 1/8 水平与 1/(4*subH) 垂直双线性。
+// ChromaSampleFormat 保持420/422双线性与444六抽头的格式语义（Spec: 8.4.2.2）。
 func ChromaSampleFormat(p *picture.Plane, cx, cy, mvx, mvy, subW, subH int) byte {
-	ref := samplePlane[byte]{p.Data, p, 8}
-	return chromaSampleFormat(&ref, cx, cy, mvx, mvy, subW, subH)
+	var out [1]byte
+	MCBlockChromaFormat(out[:], 1, p, cx, cy, 1, 1, mvx, mvy, subW, subH)
+	return out[0]
 }
 
-// ChromaSampleFormatHigh 在 Data16 上插值，BitDepth 控制六抽头最终裁剪。
+// ChromaSampleFormatHigh 与块入口共享完整位深、场寻址和舍入。
 func ChromaSampleFormatHigh(p *picture.Plane, cx, cy, mvx, mvy, subW, subH int) uint16 {
-	ref := samplePlane[uint16]{p.Data16, p, p.BitDepth}
-	return chromaSampleFormat(&ref, cx, cy, mvx, mvy, subW, subH)
+	var out [1]uint16
+	MCBlockChromaFormatHigh(out[:], 1, p, cx, cy, 1, 1, mvx, mvy, subW, subH)
+	return out[0]
 }
 
-func chromaSampleFormat[T sample](p *samplePlane[T], cx, cy, mvx, mvy, subW, subH int) T {
-	if subW == 1 && subH == 1 {
-		return lumaSample(p, cx, cy, mvx, mvy)
-	}
-	return chromaSample(p, cx, cy, mvx*(2/subW), mvy*(2/subH))
-}
-
-func chromaSample[T sample](p *samplePlane[T], cx, cy, mvx, mvy int) T {
-	fullX := cx*8 + mvx
-	fullY := cy*8 + mvy
-	ix := fullX >> 3
-	iy := fullY >> 3
-	fx := fullX & 7
-	fy := fullY & 7
-	if fx == 0 && fy == 0 {
-		return pixClamped(p, ix, iy)
-	}
-	a := (8 - fx) * (8 - fy)
-	b := fx * (8 - fy)
-	c := (8 - fx) * fy
-	d := fx * fy
-	p00 := int(pixClamped(p, ix, iy))
-	p01 := int(pixClamped(p, ix+1, iy))
-	p10 := int(pixClamped(p, ix, iy+1))
-	p11 := int(pixClamped(p, ix+1, iy+1))
-	return T((a*p00 + b*p01 + c*p10 + d*p11 + 32) >> 6)
-}
-
-// MCBlockChroma 填满一个 w×h 的色度预测块。
+// MCBlockChroma 填充420色度块，stride和宽高以本平面采样计。
 func MCBlockChroma(dst []byte, dstStride int, ref *picture.Plane, cx, cy, w, h, mvx, mvy int) {
 	MCBlockChromaFormat(dst, dstStride, ref, cx, cy, w, h, mvx, mvy, 2, 2)
 }
 
-// MCBlockChromaHigh 在原始高位深缓冲上填充 4:2:0 色度预测块。
+// MCBlockChromaHigh 是420的原生高位深入口。
 func MCBlockChromaHigh(dst []uint16, dstStride int, ref *picture.Plane, cx, cy, w, h, mvx, mvy int) {
 	MCBlockChromaFormatHigh(dst, dstStride, ref, cx, cy, w, h, mvx, mvy, 2, 2)
 }
 
-// MCBlockChromaFormat 按 ChromaSampleFormat 的格式语义填充 w×h 色度块。
-// dstStride、ref.Stride、位置与宽高均以本平面采样计；合法采样比由调用方保证。
+// MCBlockChromaFormat 的采样比由调用者校验；444必须复用亮度六抽头。
 func MCBlockChromaFormat(dst []byte, dstStride int, ref *picture.Plane, cx, cy, w, h, mvx, mvy, subW, subH int) {
 	p := samplePlane[byte]{ref.Data, ref, 8}
 	mcBlockChromaFormat(dst, dstStride, &p, cx, cy, w, h, mvx, mvy, subW, subH)
 }
 
-// MCBlockChromaFormatHigh 直接读取 Data16，跨度仍以采样而非字节计。
+// MCBlockChromaFormatHigh 的stride仍以uint16采样计，不在领域层乘2。
 func MCBlockChromaFormatHigh(dst []uint16, dstStride int, ref *picture.Plane, cx, cy, w, h, mvx, mvy, subW, subH int) {
 	p := samplePlane[uint16]{ref.Data16, ref, ref.BitDepth}
 	mcBlockChromaFormat(dst, dstStride, &p, cx, cy, w, h, mvx, mvy, subW, subH)
@@ -89,13 +56,33 @@ func mcBlockChromaFormat[T sample](dst []T, dstStride int, ref *samplePlane[T], 
 		mcBlockLuma(dst, dstStride, ref, cx, cy, w, h, mvx, mvy)
 		return
 	}
-	// 先把 MV 变成 1/8 本平面采样，避免逐像素重复换算。
-	mvx *= 2 / subW
-	mvy *= 2 / subH
-	for j := 0; j < h; j++ {
-		row := dst[j*dstStride : j*dstStride+w]
-		for i := 0; i < w; i++ {
-			row[i] = chromaSample(ref, cx+i, cy+j, mvx, mvy)
+	fullX, fullY := cx*8+mvx*(2/subW), cy*8+mvy*(2/subH)
+	if mcCoordinateWraps(fullX, fullY, w, h, 8) {
+		for j := range h {
+			row := dst[j*dstStride:][:w]
+			for i := range w {
+				var one [1]T
+				mcBlockChromaFormat(one[:], 1, ref, cx+i, cy+j, 1, 1, mvx, mvy, subW, subH)
+				row[i] = one[0]
+			}
+		}
+		return
+	}
+	ix, iy, fx, fy := fullX>>3, fullY>>3, fullX&7, fullY&7
+	right, bottom := 0, 0
+	if fx != 0 {
+		right = 1
+	}
+	if fy != 0 {
+		bottom = 1
+	}
+	var patch [21 * 21]T
+	for by := 0; by < h; by += 16 {
+		th := min(16, h-by)
+		for bx := 0; bx < w; bx += 16 {
+			tw := min(16, w-bx)
+			source, stride := mcPatch(ref, ix+bx, iy+by, tw+right, th+bottom, &patch)
+			simd.MCChroma(dst[by*dstStride+bx:], dstStride, source, stride, tw, th, fx, fy)
 		}
 	}
 }

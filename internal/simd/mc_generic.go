@@ -1,0 +1,160 @@
+package simd
+
+// MCLuma 计算最多16×16的内部亮度块（Spec: 8.4.2.2.1）。ref从所需halo
+// 左上角开始；fx/fy为0..3。非零相位对应轴有左/上2、右/下3采样halo。
+// 调用者证明len与逻辑图像/场边界；本函数不钳位，也不认识picture对象。
+// dst/ref不重叠，stride以采样计。8/10位共用唯一标量算法。
+func MCLuma[T ~byte | ~uint16](dst []T, ds int, ref []T, rs, w, h, fx, fy, bitDepth int) {
+	left, top := 0, 0
+	if fx != 0 {
+		left = 2
+	}
+	if fy != 0 {
+		top = 2
+	}
+	if fx == 0 && fy == 0 {
+		for y := range h {
+			copy(dst[y*ds:][:w], ref[y*rs:][:w])
+		}
+		return
+	}
+	// j只用于至少一个轴恰为半像素的双轴相位；奇/奇相位不能误用j。
+	needJ := fx != 0 && fy != 0 && (fx == 2 || fy == 2)
+	needH := fx != 0 && (fy == 0 || fx == 2 || fy&1 != 0)
+	needV := fy != 0 && (fx == 0 || fx&1 != 0)
+	var rawH [21 * 16]int32
+	var horizontal [17 * 16]T
+	var vertical, diagonal [16 * 16]T
+	if fx != 0 {
+		start, rows := top, h
+		if fy == 3 {
+			rows++
+		}
+		if needJ {
+			start, rows = 0, h+5
+		}
+		for y := range rows {
+			row := ref[(y+start)*rs:]
+			for x := range w {
+				rawH[y*16+x] = sixTap(int32(row[x]), int32(row[x+1]), int32(row[x+2]), int32(row[x+3]), int32(row[x+4]), int32(row[x+5]))
+			}
+		}
+		if needH {
+			rows := h
+			if fy == 3 {
+				rows++
+			}
+			for y := range rows {
+				for x := range w {
+					horizontal[y*16+x] = clipPixel[T]((rawH[(y+top-start)*16+x]+16)>>5, bitDepth)
+				}
+			}
+		}
+		if needJ {
+			for y := range h {
+				for x := range w {
+					i := y*16 + x
+					v := sixTap(rawH[i], rawH[i+16], rawH[i+32], rawH[i+48], rawH[i+64], rawH[i+80])
+					diagonal[i] = clipPixel[T]((v+512)>>10, bitDepth)
+				}
+			}
+		}
+	}
+	if needV {
+		xOffset := left
+		if fx == 3 {
+			xOffset++
+		}
+		for y := range h {
+			for x := range w {
+				i := y*rs + x + xOffset
+				v := sixTap(int32(ref[i]), int32(ref[i+rs]), int32(ref[i+2*rs]), int32(ref[i+3*rs]), int32(ref[i+4*rs]), int32(ref[i+5*rs]))
+				vertical[y*16+x] = clipPixel[T]((v+16)>>5, bitDepth)
+			}
+		}
+	}
+	// 只在块入口选择组合及寻址。最终循环不再分相位，不改变四分之一相位图。
+	var a, b []T
+	as, bs := 16, 16
+	origin := top*rs + left
+	switch fx + 4*fy {
+	case 1:
+		a, as, b = ref[origin:], rs, horizontal[:]
+	case 2:
+		a = horizontal[:]
+	case 3:
+		a, as, b = ref[origin+1:], rs, horizontal[:]
+	case 4:
+		a, as, b = ref[origin:], rs, vertical[:]
+	case 8:
+		a = vertical[:]
+	case 12:
+		a, as, b = ref[origin+rs:], rs, vertical[:]
+	case 5, 7:
+		a, b = horizontal[:], vertical[:]
+	case 13, 15:
+		a, b = horizontal[16:], vertical[:]
+	case 6:
+		a, b = horizontal[:], diagonal[:]
+	case 10:
+		a = diagonal[:]
+	case 14:
+		a, b = horizontal[16:], diagonal[:]
+	case 9, 11:
+		a, b = vertical[:], diagonal[:]
+	}
+	if b == nil {
+		for y := range h {
+			copy(dst[y*ds:][:w], a[y*as:][:w])
+		}
+		return
+	}
+	for y := range h {
+		out, first, second := dst[y*ds:][:w], a[y*as:][:w], b[y*bs:][:w]
+		for x := range w {
+			out[x] = T((int(first[x]) + int(second[x]) + 1) >> 1)
+		}
+	}
+}
+
+// 中间绝对值<=52*1023，第二遍<=52*52*1023，int32域可精确容纳。
+func sixTap(a, b, c, d, e, f int32) int32 { return a - 5*b + 20*c + 20*d - 5*e + f }
+
+func clipPixel[T ~byte | ~uint16](v int32, bitDepth int) T {
+	limit := int32((1 << bitDepth) - 1)
+	return T(min(max(v, 0), limit))
+}
+
+// MCChroma 计算最多16×16双线性块。fx/fy是0..7的本平面1/8相位，
+// 非零轴才要求右/下一个采样。422垂直相位由领域层转换，444不能调用此算法。
+func MCChroma[T ~byte | ~uint16](dst []T, ds int, ref []T, rs, w, h, fx, fy int) {
+	if fx == 0 && fy == 0 {
+		for y := range h {
+			copy(dst[y*ds:][:w], ref[y*rs:][:w])
+		}
+		return
+	}
+	if fx == 0 {
+		for y := range h {
+			for x := range w {
+				dst[y*ds+x] = T(((8-fy)*int(ref[y*rs+x]) + fy*int(ref[(y+1)*rs+x]) + 4) >> 3)
+			}
+		}
+		return
+	}
+	if fy == 0 {
+		for y := range h {
+			for x := range w {
+				dst[y*ds+x] = T(((8-fx)*int(ref[y*rs+x]) + fx*int(ref[y*rs+x+1]) + 4) >> 3)
+			}
+		}
+		return
+	}
+	a, b, c, d := (8-fx)*(8-fy), fx*(8-fy), (8-fx)*fy, fx*fy
+	for y := range h {
+		for x := range w {
+			i := y*rs + x
+			dst[y*ds+x] = T((a*int(ref[i]) + b*int(ref[i+1]) + c*int(ref[i+rs]) + d*int(ref[i+rs+1]) + 32) >> 6)
+		}
+	}
+}

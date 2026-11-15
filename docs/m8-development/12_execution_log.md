@@ -80,3 +80,17 @@ A00：`CGO_ENABLED=0 go test -count=1 -run '^TestM8Baseline_SerialOutput$' ./tes
 从 `360277b` 开始；arm64基线ASIMD，宽16正常生产调用进入真实向量计算。byte每行一个16字节向量，以unsigned max-min求差并扩宽归约后转64位累加；uint16每行两组8采样，分别扩宽到32位归约后转64位累加。其他宽度绑定包装中的唯一Generic，不能将这些fallback记为NEON运算。加入直接后端parity/基准及测试限定强制入口，留待原生环境执行；不含可选扩展，不复制另一份Generic。
 
 按用户明确范围完成编译验收：`CGO_ENABLED=0 GOARCH=arm64 GOOS={windows,linux,darwin} go vet ./internal/simd`、含 `goavc_simdtest` 的 `go test -c` 均退出0。随后windows/linux/darwin × amd64/arm64六目标全库 `go build ./...` 与simd后端测试二进制全部构建成功；native完整常规门禁、purego目标包也退出0（`tmp/m8-baseline/k06-verify.txt`）。没有运行任何arm64二进制，没有NEON五次基准/Oracle/parity数据，支持状态保留WIP。完整M8未完成。
+
+### K09a：块级标量 MC 与边界分离
+
+从 `da8bbbc` 开始，按profile优先于K07/K08推进此共享重构。公共亮度/色度点采样及块入口签名不变；LSP已核对decoder/encoder/search与全部测试调用。唯一六抽头、相位组合、双线性算术迁入 `simd/mc_generic.go`，删除原领域重复循环。领域层只做采样格式/负MV floor分解、逻辑场边界patch和16×16分块；大于16及最小末行len继续支持。整数相位不要求六抽头halo，内部块借用原有效缓冲，边缘固定21×21 scratch；j的水平中间行只算一次且不提前裁剪，块入口只选一次最终组合。独立weighted预测仍在原插值后执行，未改变QP/搜索/候选。
+
+新内部入口为 `simd.MCLuma[T ~byte|~uint16](dst []T, ds int, ref []T, rs,w,h,fx,fy,bitDepth int)` 与 `MCChroma[T](dst []T, ds int, ref []T, rs,w,h,fx,fy int)`；w/h≤16，stride均为采样，ref从精确halo左上角开始，调用者证明实际len。当前只实现唯一Generic，不提前填充SIMD空槽。领域scratch与算法中间缓冲均为调用私有，无新增全局可变数组。极端机器字MV仍走相同内核的单采样路径，保留旧逐采样int回绕/钳位语义；独立宽坐标解析测试在amd64及386执行。
+
+旧MC指纹 `ff62c7838da485c15516101ba5438203a6320500d05f85c6383a458b0209bddd` 在改算法前采集，包括双位深、420/422/444、全部相位、负MV、非对齐/最小len、1/3/7/13/16/17/31矩形及未写padding。改后不变；既有规范解析值、场边缘和固定96帧三方像素/码流/元数据不变。`TestAllocation_MCBlock` 在预备图像/场上下文后运行实际三采样格式、双位深、内部/边缘块且首尾输出必写，AllocsPerRun=0；不能由此推定encoder模式决策已零分配。
+
+最终常规门禁、`CGO_ENABLED=0 go test -tags purego -count=1 ./...`、386实际执行prediction/search/simd、六目标全库build全部退出0；27份High10投影显式用例通过。Fuzz Smoke实际执行decoder 46257次、encoder inter 1317次，均无崩溃；各5秒请求、2 workers，实际结束约6秒。日志 `tmp/m8-baseline/k09a-{verify,purego-all,386,high10-projection,fuzz-decoder,fuzz-encoder}.txt`。首次构建对齐了prediction已有~采样类型约束后重新验证，未删除失败用例。
+
+同机五次MC微基准覆盖interior/border/真实bottom FieldView和双位深；旧源码的固定1x消费者在隔离clean worktree重测，再与最终代码同边界五次比较，旧中位2149919100ns、新中位916330100ns，约2.35倍。保留新首样本1393510500ns等波动，不挑最快值。原始样本、输入SHA及参数见 `docs/gates/m8_mc_samples.json` 和performance§15；原始日志保留于本地tmp，临时工作树已清理。不以此P控制场景替代代表性High/B主目标。
+
+下一项：K07/K08与K09b/c/d仍待实施，K10–K25及K20m未完成；后续SIMD MC必须使用上述唯一Generic与同一边界证明，不能复制一套预测；K18必须解决已登记搜索window逃逸。当前可用SAD测试后端锁和领域parity入口，基准期间不并行跑长测。尚未执行完整race或原生arm64，不签完整M8门禁。

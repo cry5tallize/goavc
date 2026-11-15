@@ -628,3 +628,46 @@ M5目标复审：当前标量策略未达到720p编码30FPS，仍不承诺实时
 保留为M8优化目标；编码功能与本地正确性/质量/码控门禁的通过不等同于
 达到该吞吐。本文保留原始配置、输入和全部结果，未用并发负载数字作独占
 性能结论。
+
+## 15. M8 开发阶段：SAD 与标量 MC 块化
+
+这是阶段记录，不是K23/K24最终报告或完整M8门禁。环境为Go1.27.4、
+Windows/amd64、Ryzen7 5700X、CGO=0、GOAMD64=v1、GOMAXPROCS=16，
+codec实际串行。未同时运行本次其他长任务；外部负载未监控，保留全部五次样本。
+SAD原始样本见 [m8_sad_samples.json](gates/m8_sad_samples.json)，
+初始端点见 [m8_baseline.json](gates/m8_baseline.json)。NEON只有交叉构建证据，
+按用户约定完成编译交付；没有NEON原生正确性或性能数字。
+
+K09a把相位/逻辑边界处理移至块入口，interior直接读取有效halo，边缘构建有界
+patch；双半像素的未裁剪水平中间行按块复用。8/10-bit共用唯一Generic，
+444继续六抽头，420/422继续各自双线性相位；不是SIMD插值快路。
+
+16×16双半像素MC，单位ns/op，五次中位数；各项均0 B/op、0 allocs/op：
+
+| 采样/场景 | 原逐像素钳位 | 块化后 |
+|---|---:|---:|
+| 8-bit interior | 14812 | 1909 |
+| 8-bit border | 14371 | 2365 |
+| 8-bit bottom field | 14652 | 1902 |
+| 10-bit interior | 14738 | 1868 |
+| 10-bit border | 14374 | 2301 |
+| 10-bit bottom field | 14952 | 1870 |
+
+真实P消费者使用同一旧benchmark，固定`-benchtime=1x -count=5`：
+源码`da8bbbc`在clean detached worktree测得2149919100ns/op中位，
+K09a测得916330100ns/op中位，约2.35倍。首次自动校准出现N=1/2混合，
+只作为诊断日志保留，不混入此固定1x对照。五次原始值、波动、计时边界、
+输入SHA、全部参数及复现信息见 [m8_mc_samples.json](gates/m8_mc_samples.json)。
+临时旧工作树已清理。
+
+该控制场景为720p Baseline/CAVLC、QP26、GOP600、B0、单slice、无8×8/
+权重/lookahead，计时只含预热IDR后的一个P帧Send/Receive。旧名称的`_Generic`
+不能表示其SAD后端：新旧此项实际均为AVX2宽16/SSE2其他宽，MC均为Generic。
+它不是High/CABAC/B2/4slice/权重/Lookahead2的主目标，也不证明30FPS达标。
+端点仍约335.76MB和875.5k次分配/op；K02间接调用导致的window逃逸已登记给K18，
+不能将kernel零分配称为完整模式决策或整个库零分配。
+
+旧MC矩形/全部相位/负MV/最小len/大于16的tile指纹、六格式解析值、FieldView、
+96帧固定码流/像素/元数据、原生语料和27份High10投影继续通过。阶段状态及
+精确命令见 [实施记录](m8-development/12_execution_log.md)；后续仍须完成其余
+kernel、池化、去分配、确定性并行及完整端点/门禁矩阵。

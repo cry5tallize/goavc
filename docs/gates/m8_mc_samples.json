@@ -1,0 +1,541 @@
+{
+    "date":  "2026-11-15",
+    "go":  "go1.27.4",
+    "host":  "windows/amd64",
+    "cpu":  "AMD Ryzen 7 5700X",
+    "CGO_ENABLED":  0,
+    "GOAMD64":  "v1",
+    "GOMAXPROCS":  16,
+    "sourceBefore":  "da8bbbc",
+    "sourceAfterBase":  "da8bbbc",
+    "dirtyAfter":  true,
+    "codeSource":  "K09a后继提交，旧版本固定1x在clean detached worktree执行；新旧micro使用同一benchmark源码",
+    "externalLoadMonitored":  false,
+    "note":  "保留五次全部样本，包括首样本波动；初次自动选择迭代次数的端点仅作诊断，不混入固定1x对比。",
+    "mcFixture":  "Y(x,y)=(19*x+31*y) mod (2^bitDepth-1); block16x16; MV=(2,2); interior=(20,21),border=(-2,-3),bottom-field=(20,21); rows valid samples normalized LE",
+    "mcInputs":  [
+                     {
+                         "bitDepth":  8,
+                         "sourceWidth":  64,
+                         "sourceHeight":  128,
+                         "sourceStrideSamples":  128,
+                         "validPlaneSHA256":  "d9b196ebcdca77f559d57b13f5694d8cde4e1fed7a0b9f6037443066872991c7",
+                         "bottomFieldValidPlaneSHA256":  "7dc3d54e1b79d8a732ee596561554c1e0a2b45316f80fff3e0f7ca748dde11b0",
+                         "fieldStrideSamples":  256
+                     },
+                     {
+                         "bitDepth":  10,
+                         "sourceWidth":  64,
+                         "sourceHeight":  128,
+                         "sourceStrideSamples":  128,
+                         "validPlaneSHA256":  "03423c88fcd745fc8c66032ed7406b1a95d270bea7e0ab1cd3cbea8c57149cb6",
+                         "bottomFieldValidPlaneSHA256":  "03a244daa8743ec5dec080755034eb19f8c23d6a0b4283ebba1a22f322790bac",
+                         "fieldStrideSamples":  256
+                     }
+                 ],
+    "mcM7Fingerprint":  "ff62c7838da485c15516101ba5438203a6320500d05f85c6383a458b0209bddd",
+    "microBenchtime":  "200ms",
+    "microRuns":  [
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkMCLuma_16x16_Generic/yuv420p/interior",
+                          "backend":  "Generic",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  16731,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14842,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14686,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14812,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14760,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  14812,
+                          "rawLogSHA256":  "946711ef6fa15f9b667bccbfb6322b6072a1275e9d48e67180164e2914819ccd"
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkMCLuma_16x16_Generic/yuv420p/border",
+                          "backend":  "Generic",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  14371,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14309,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14403,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14368,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14408,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  14371,
+                          "rawLogSHA256":  "946711ef6fa15f9b667bccbfb6322b6072a1275e9d48e67180164e2914819ccd"
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkMCLuma_16x16_Generic/yuv420p/field",
+                          "backend":  "Generic",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  14896,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14652,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  15166,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14584,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14505,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  14652,
+                          "rawLogSHA256":  "946711ef6fa15f9b667bccbfb6322b6072a1275e9d48e67180164e2914819ccd"
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkMCLuma_16x16_Generic/yuv420p10le/interior",
+                          "backend":  "Generic",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  14527,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  15864,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14674,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14822,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14738,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  14738,
+                          "rawLogSHA256":  "946711ef6fa15f9b667bccbfb6322b6072a1275e9d48e67180164e2914819ccd"
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkMCLuma_16x16_Generic/yuv420p10le/border",
+                          "backend":  "Generic",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  14144,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14108,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14723,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14374,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14965,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  14374,
+                          "rawLogSHA256":  "946711ef6fa15f9b667bccbfb6322b6072a1275e9d48e67180164e2914819ccd"
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkMCLuma_16x16_Generic/yuv420p10le/field",
+                          "backend":  "Generic",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  14952,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  15841,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14885,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  15305,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  14577,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  14952,
+                          "rawLogSHA256":  "946711ef6fa15f9b667bccbfb6322b6072a1275e9d48e67180164e2914819ccd"
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkMCLuma_16x16_Generic/yuv420p/interior",
+                          "backend":  "Generic",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  1909,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  2154,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  1998,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  1893,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  1903,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  1909,
+                          "rawLogSHA256":  "25841fd2dca5e6d2fb7b9bc09ad038efc0025e423d93e767219ac051be779029"
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkMCLuma_16x16_Generic/yuv420p/border",
+                          "backend":  "Generic",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  2365,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  2333,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  2415,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  2484,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  2365,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  2365,
+                          "rawLogSHA256":  "25841fd2dca5e6d2fb7b9bc09ad038efc0025e423d93e767219ac051be779029"
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkMCLuma_16x16_Generic/yuv420p/field",
+                          "backend":  "Generic",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  1892,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  1924,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  1897,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  1902,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  2013,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  1902,
+                          "rawLogSHA256":  "25841fd2dca5e6d2fb7b9bc09ad038efc0025e423d93e767219ac051be779029"
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkMCLuma_16x16_Generic/yuv420p10le/interior",
+                          "backend":  "Generic",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  1875,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  1891,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  1868,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  1840,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  1850,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  1868,
+                          "rawLogSHA256":  "25841fd2dca5e6d2fb7b9bc09ad038efc0025e423d93e767219ac051be779029"
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkMCLuma_16x16_Generic/yuv420p10le/border",
+                          "backend":  "Generic",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  2176,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  2301,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  2348,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  2284,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  2344,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  2301,
+                          "rawLogSHA256":  "25841fd2dca5e6d2fb7b9bc09ad038efc0025e423d93e767219ac051be779029"
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkMCLuma_16x16_Generic/yuv420p10le/field",
+                          "backend":  "Generic",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  1835,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  1900,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  1866,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  1870,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  1879,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  1870,
+                          "rawLogSHA256":  "25841fd2dca5e6d2fb7b9bc09ad038efc0025e423d93e767219ac051be779029"
+                      }
+                  ],
+    "endpointConfig":  {
+                           "IDRInterval":  0,
+                           "Format":  "yuv420p",
+                           "Width":  1280,
+                           "Profile":  "baseline",
+                           "GOPSize":  600,
+                           "FPSNum":  30,
+                           "RateControl":  "cqp",
+                           "Height":  720,
+                           "FPSDen":  1,
+                           "Transform8x8":  false,
+                           "QP":  26,
+                           "Timing":  "one SendFrame+ReceivePacket after source/New/IDR warmup, no file IO/hash/Close",
+                           "MaxBFrames":  0,
+                           "SliceCount":  1,
+                           "ThreadsEffective":  1,
+                           "Lookahead":  0,
+                           "SearchRange":  16,
+                           "ThreadsRequested":  0,
+                           "Weighted":  false,
+                           "SADBackend":  "AVX2 (width16), SSE2 otherwise",
+                           "InputSHA256":  "b7fc8e5048a11a8a56e17f10cdc1073c840b8e1850e79f0fce9200b23ca22590"
+                       },
+    "endpointRuns":  [
+                         {
+                             "phase":  "before",
+                             "framesPerOp":  1,
+                             "iterations":  1,
+                             "medianNs":  2149919100,
+                             "samples":  [
+                                             {
+                                                 "nsPerOp":  2147192000,
+                                                 "bytesPerOp":  335762608,
+                                                 "allocationsPerOp":  875535
+                                             },
+                                             {
+                                                 "nsPerOp":  2158435200,
+                                                 "bytesPerOp":  335757248,
+                                                 "allocationsPerOp":  875479
+                                             },
+                                             {
+                                                 "nsPerOp":  2149919100,
+                                                 "bytesPerOp":  335762216,
+                                                 "allocationsPerOp":  875510
+                                             },
+                                             {
+                                                 "nsPerOp":  2146829000,
+                                                 "bytesPerOp":  335759360,
+                                                 "allocationsPerOp":  875501
+                                             },
+                                             {
+                                                 "nsPerOp":  2150390800,
+                                                 "bytesPerOp":  335759120,
+                                                 "allocationsPerOp":  875499
+                                             }
+                                         ],
+                             "rawLogSHA256":  "366e86402337309944e22a8260ed4977d8ce36de65206c671228536f71c2cbd1"
+                         },
+                         {
+                             "phase":  "after",
+                             "framesPerOp":  1,
+                             "iterations":  1,
+                             "medianNs":  916330100,
+                             "samples":  [
+                                             {
+                                                 "nsPerOp":  1393510500,
+                                                 "bytesPerOp":  335756120,
+                                                 "allocationsPerOp":  875488
+                                             },
+                                             {
+                                                 "nsPerOp":  983780800,
+                                                 "bytesPerOp":  335761040,
+                                                 "allocationsPerOp":  875521
+                                             },
+                                             {
+                                                 "nsPerOp":  916330100,
+                                                 "bytesPerOp":  335760784,
+                                                 "allocationsPerOp":  875518
+                                             },
+                                             {
+                                                 "nsPerOp":  893109000,
+                                                 "bytesPerOp":  335762016,
+                                                 "allocationsPerOp":  875530
+                                             },
+                                             {
+                                                 "nsPerOp":  905532100,
+                                                 "bytesPerOp":  335760528,
+                                                 "allocationsPerOp":  875515
+                                             }
+                                         ],
+                             "rawLogSHA256":  "385734069f6697f42359ee2c41fea82ad75759b88e090238cab950c5b7d175ab"
+                         }
+                     ]
+}
