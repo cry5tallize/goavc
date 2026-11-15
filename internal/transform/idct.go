@@ -1,48 +1,13 @@
 package transform
 
+import "github.com/goavc/h264/internal/simd"
 // IDCT4x4 做 4×4 整数逆变换（规范 8.5.12.2）。
-//
-// src 是反量化后的系数（光栅顺序），dst 是残差值（光栅顺序）。
-// 输出不裁剪到 0..255：调用方把残差加到预测值后再统一 Clip1Y，
-// 这与 FFmpeg 的 idct_add 语义一致，也避免在残差阶段提前损失动态范围。
-//
-// 实现细节：FFmpeg 在变换前执行 block[0] += 32，把规范中的
-// (f + 32) >> 6 舍入折叠进 DC 系数；由于 2D 变换的 DC 基函数在所有
-// 输出位置都是 1，这个操作与对每个输出加 32 完全等价。本函数保留
-// 同样的做法，逐比特对齐 Oracle。
-//
-// 行列两遍使用同一组蝶形；第二遍的 >>1 是规范中的 (d[1]>>1)-d[3]
-// 形式，注意 Go 的算术右移对负数是向下取整，与 C 在 x86 上的行为一致。
+// src 是反量化后的系数，dst 是不裁剪的残差值。
 func IDCT4x4(dst *[16]int32, src *[16]int32) {
-	// 反量化可合法返回接近 int32 边界的值；蝶形临时量使用 int64，
-	// 避免在最后的归一化右移之前发生回绕。
-	var b [16]int64
-	for i, v := range src {
-		b[i] = int64(v)
-	}
-	b[0] += 32
-
-	var tmp [16]int64
-	// Spec: 8.5.12.2。光栅系数先按行做水平蝶形，再按列做垂直蝶形。
-	// 含算术右移的整数变换不可交换这两遍顺序。
-	for y := 0; y < 4; y++ {
-		i := y * 4
-		a, b0 := b[i]+b[i+2], b[i]-b[i+2]
-		c, d := (b[i+1]>>1)-b[i+3], b[i+1]+(b[i+3]>>1)
-		tmp[i], tmp[i+1], tmp[i+2], tmp[i+3] = a+d, b0+c, b0-c, a-d
-	}
-	for x := 0; x < 4; x++ {
-		a, b0 := tmp[x]+tmp[8+x], tmp[x]-tmp[8+x]
-		c, d := (tmp[4+x]>>1)-tmp[12+x], tmp[4+x]+(tmp[12+x]>>1)
-		dst[x], dst[4+x], dst[8+x], dst[12+x] = int32((a+d)>>6), int32((b0+c)>>6), int32((b0-c)>>6), int32((a-d)>>6)
-	}
+	simd.IDCT4x4(dst, src)
 }
 
 // IDCT4x4DC 是只含 DC 系数时的快速路径。
-//
-// 当 4×4 块只有 DC 非零时，规范变换的每个输出都等于 dc，
-// 因此残差为 (dc + 32) >> 6。CAVLC 中大量块属于这种情况，
-// 单独提供该函数可避免 16 次蝶形运算；语义与 IDCT4x4 完全一致。
 func IDCT4x4DC(dc int32) int32 {
-	return int32((int64(dc) + 32) >> 6)
+	return simd.IDCT4x4DC(dc)
 }
