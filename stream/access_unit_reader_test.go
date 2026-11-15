@@ -229,6 +229,9 @@ func TestAUReader_ErrorsAndBudgets(t *testing.T) {
 			if p.Valid() || !errors.Is(err, tc.want) {
 				t.Fatal("错误分类或部分AU泄露", err)
 			}
+			if r.size != 0 || r.assembler.Pending() != 0 || r.hasVCL || r.closed {
+				t.Fatal("错误后保留AU容量状态")
+			}
 			calls := src.calls
 			if _, again := r.ReadAccessUnit(); again != err || src.calls != calls {
 				t.Fatal("错误后继续读取", again)

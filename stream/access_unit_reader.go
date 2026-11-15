@@ -153,6 +153,7 @@ func (r *AUReader) take() h264.Packet {
 func (r *AUReader) fail(err error) (h264.Packet, error) {
 	r.err = err
 	r.assembler = nal.NewAssembler()
+	r.size, r.hasVCL, r.closed = 0, false, false
 	r.lastInfo, r.sps, r.pps = nil, nil, nil
 	r.lastUnit = nal.Unit{}
 	return h264.Packet{}, err

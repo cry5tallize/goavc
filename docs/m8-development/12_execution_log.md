@@ -251,3 +251,9 @@ G08 保留现有 DPB/输出顺序和公共 Frame 生命周期，补强失败路�
 新增/扩展 decoder 生命周期测试：损坏输入进入等待 IDR 后不输出失败 P 图；IDR 输出 Release 幂等且 Clone 独立；`Reset` 后断言 `d.pool.Stats()` 的 `gets == puts`，不保留 DPB Picture 或旧参数集。该切片未改变 `toFrame`、DPB Store、POC 或 reorder 行为。
 
 验证：`CGO_ENABLED=0 go test -count=1 . ./stream ./decoder ./encoder`、`CGO_ENABLED=1 go test -race -count=1 ./decoder` 和提交前完整 `gofmt/vet/build/test/depscheck/manifest/diff-check` 均退出 0；常规门禁为 CGO=0，race 按仓库例外使用 CGO=1，未执行全库 race。未把元数据清空解释为完整自然 GC/RSS 证据；G09 AU 容量和 G10 集成验收仍待完成。
+
+### G09：AU 容量与粘性失败状态
+
+现有 `AUReader`、Annex-B/AVCC Writer、pipeline 和 NAL Reader 已在分配/封装前校验单 NAL、NAL 数量、输入 AU 与输出 AU 容量，并保持 Packet.Data 独立归调用方。本切片只补齐 `AUReader.fail` 的失败状态清零：丢弃 assembler、重置 `size/hasVCL/closed`、SPS/PPS 和最后 slice 元数据；粘性错误仍阻止再次读取，不改变合法封装字节。
+
+扩展 `TestAUReader_ErrorsAndBudgets`，验证超限/语法/IO 失败不泄露部分 Packet，失败后容量与 assembler pending 均为零，重复读取返回同一错误且不再次访问源。`CGO_ENABLED=0 go test -count=1 . ./stream ./decoder ./encoder`、`CGO_ENABLED=1 go test -race -count=1 ./stream` 和提交前完整 `gofmt/vet/build/test/depscheck/manifest/diff-check` 均退出 0；常规门禁为 CGO=0，race 按仓库例外使用 CGO=1。G10 集成验收仍待完成。

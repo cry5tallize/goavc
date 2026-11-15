@@ -805,3 +805,7 @@ G07 改变候选 Picture 的租约与实例池归还路径，不改变搜索次�
 ### G08：decoder retained metadata 与 DPB
 
 G08 仅清除失败 frameState 的元数据引用并验证 DPB/输出租约平衡，不改变解码算法或输出路径；本切片未新增吞吐、分配、RSS 或 GC before/after 样本。`gets == puts` 只证明 Reset 后私有 Picture 池账本平衡，不代表全库长期内存稳定性。
+
+### G09：AU 容量与粘性失败状态
+
+G09 只清理 AUReader 失败后的 assembler 与容量元数据，不改变 NAL/AU 封装或容量校验算法；本切片未新增吞吐、分配、RSS 或 GC 样本。既有 writer 原子性与容量测试不等价于端到端集成性能证据。

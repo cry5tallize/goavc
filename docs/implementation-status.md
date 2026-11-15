@@ -262,6 +262,7 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | 公共 Frame backing（G06） | `NewFrame`、新的 Frame 头、原始 backing 有界池、清零和输入/输出调用者迁移 | Partial | 根包 NewFrame 生命周期/错误/浅拷贝租约测试，decoder/encoder/stream 定向回归及 High10 值域保护 | 公共 Frame 头/租约仍允许少量分配；G07/G08 完整所有权、长期 GC/RSS、CLI 全路径和 M8 最终门禁仍待完成 |
 | encoder 图像/RC 所有权（G07） | Encoder 私有 picture.Pool、候选重建替换、失败/AU 拒绝回收、Reset/Close retained 图像归还 | Partial | `TestEncoder_RateControlCandidatesReturnPictures`、`TestEncoder_LevelBudgetIsTransactional`、编解码定向测试和 encoder race | 底层语法早退状态的完整错误矩阵、自然 GC/RSS 与全配置所有权尚未验收；G08/G09/G10 仍待完成 |
 | decoder retained metadata（G08） | frameState 失败状态清尾、DPB Picture Reset 归还、输出/重排队列生命周期保护 | Partial | decoder 生命周期/恢复测试、Reset 后 `d.pool.Stats()` 平衡、decoder race 及编解码定向测试 | 未执行全库 race；自然 GC/RSS、G09 AU 容量与 G10 集成门禁仍待完成 |
+| AU 容量与粘性失败（G09） | AUReader 失败状态清零、NAL/AU 输入输出容量边界和 Packet.Data 独立所有权 | Partial | AU 超限/语法/IO/重复读取测试、Annex-B/AVCC writer 容量测试、stream race | 未新增封装算法；自然 GC/RSS、G10 端到端集成与全库 race 仍待完成 |
 | 其余池化/去分配/并行（K15–K20m） | 所有权、slice/分析/ME | TODO | 既有串行测试保留 | Threads>1仍拒绝；G00仅补分配基线，完整GC测量待实施 |
 
 ## M9
