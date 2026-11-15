@@ -1,0 +1,116 @@
+{
+    "sourceRevision":  "1abfa01dcd94fc580990f25c8c8d8811aabb3c72",
+    "date":  "2026-11-15",
+    "go":  "go1.27.4",
+    "host":  "windows/amd64",
+    "cpu":  "AMD Ryzen 7 5700X",
+    "cores":  8,
+    "logicalProcessors":  16,
+    "CGO_ENABLED":  0,
+    "GOAMD64":  "v1",
+    "GOMAXPROCS":  16,
+    "requestedThreads":  0,
+    "effectiveThreads":  1,
+    "backend":  "Generic",
+    "otherTaskLoad":  false,
+    "externalLoadMonitored":  false,
+    "manifestSHA256":  "128c96e409d9a528ab54458b22cb2428cebca3b8d4bf775742fd1df10c7c2fa9",
+    "runs":  [
+                 {
+                     "name":  "decoder",
+                     "framesPerOp":  3,
+                     "samples":  [
+                                     {
+                                         "nanosecondsPerOp":  108429510,
+                                         "bytesPerOp":  28098635,
+                                         "allocationsPerOp":  27848
+                                     },
+                                     {
+                                         "nanosecondsPerOp":  102279360,
+                                         "bytesPerOp":  28097601,
+                                         "allocationsPerOp":  27846
+                                     },
+                                     {
+                                         "nanosecondsPerOp":  105283620,
+                                         "bytesPerOp":  28097571,
+                                         "allocationsPerOp":  27846
+                                     },
+                                     {
+                                         "nanosecondsPerOp":  104390760,
+                                         "bytesPerOp":  28097571,
+                                         "allocationsPerOp":  27846
+                                     },
+                                     {
+                                         "nanosecondsPerOp":  107651170,
+                                         "bytesPerOp":  28097600,
+                                         "allocationsPerOp":  27846
+                                     }
+                                 ],
+                     "rawLogSHA256":  "1afafa2f5524b95d7e3ac0c291b67dff783feaa445641750257cdb7d5b86a1d8"
+                 },
+                 {
+                     "name":  "encoder-p",
+                     "framesPerOp":  1,
+                     "samples":  [
+                                     {
+                                         "nanosecondsPerOp":  2169168400,
+                                         "bytesPerOp":  293498088,
+                                         "allocationsPerOp":  778292
+                                     },
+                                     {
+                                         "nanosecondsPerOp":  2184875400,
+                                         "bytesPerOp":  293499976,
+                                         "allocationsPerOp":  778311
+                                     },
+                                     {
+                                         "nanosecondsPerOp":  2144861100,
+                                         "bytesPerOp":  293498488,
+                                         "allocationsPerOp":  778296
+                                     },
+                                     {
+                                         "nanosecondsPerOp":  2183259800,
+                                         "bytesPerOp":  293496088,
+                                         "allocationsPerOp":  778269
+                                     },
+                                     {
+                                         "nanosecondsPerOp":  2173442000,
+                                         "bytesPerOp":  293499080,
+                                         "allocationsPerOp":  778301
+                                     }
+                                 ],
+                     "rawLogSHA256":  "e83e07f369d71e3631ea56c3a47fe06d339c7c5fd1a9487757cbcc3c4109519d"
+                 },
+                 {
+                     "name":  "encoder-b",
+                     "framesPerOp":  4,
+                     "samples":  [
+                                     {
+                                         "nanosecondsPerOp":  3348384800,
+                                         "bytesPerOp":  735049632,
+                                         "allocationsPerOp":  2020614
+                                     },
+                                     {
+                                         "nanosecondsPerOp":  3340471000,
+                                         "bytesPerOp":  735036704,
+                                         "allocationsPerOp":  2020576
+                                     },
+                                     {
+                                         "nanosecondsPerOp":  3322973400,
+                                         "bytesPerOp":  735043464,
+                                         "allocationsPerOp":  2020598
+                                     },
+                                     {
+                                         "nanosecondsPerOp":  3416619400,
+                                         "bytesPerOp":  735039824,
+                                         "allocationsPerOp":  2020605
+                                     },
+                                     {
+                                         "nanosecondsPerOp":  3327478300,
+                                         "bytesPerOp":  735042048,
+                                         "allocationsPerOp":  2020628
+                                     }
+                                 ],
+                     "rawLogSHA256":  "bb0d5005ee0a6cca8962becb4991d776a06fdd0b5899507dac31723a7193791a"
+                 }
+             ]
+}
