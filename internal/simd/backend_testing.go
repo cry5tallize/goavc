@@ -31,6 +31,12 @@ func testBackendTable(backend Backend) (kernelTable, error) {
 	if backend == Generic {
 		return genericTable(), nil
 	}
+	if backend == SSE2 && nativeCPU.sse2 {
+		table := selectKernels(cpuFeatures{sse2: true})
+		if table.backends.SAD8 == SSE2 && table.backends.SAD16 == SSE2 {
+			return table, nil
+		}
+	}
 	// 只有交付真实计算后端后才能扩展；CPU支持不能代替实现。
 	return kernelTable{}, ErrBackendUnavailable
 }

@@ -24,6 +24,10 @@ func TestParity_SearchBackends(t *testing.T) {
 			TestSearch_TranslationAndSubpixel(t)
 			TestSearch_DiamondAndBounds(t)
 			TestSearch_CostCallbackPreservesReportedSAD(t)
+			TestSearchHigh_IntegerTranslationLowBits(t)
+			TestSearchHigh_AnalyticSubpixel(t)
+			TestSearchHigh_ScorerReceivesFullRangeSAD(t)
+			TestSearchHigh_SubpixelBounds(t)
 		})
 	}
 }

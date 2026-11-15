@@ -44,7 +44,9 @@ func genericTable() kernelTable {
 }
 
 // 生产表初始化后不变；测试强制入口将在专用构建标签内提供。
-var kernels = genericTable()
+var kernels = selectKernels(nativeCPU)
+
+func selectKernels(cpu cpuFeatures) kernelTable { return platformKernels(cpu, genericTable()) }
 
 // ActiveBackends 返回逐槽实际选择的后端，不向调用者暴露可变函数表。
 func ActiveBackends() Backends { return kernels.backends }

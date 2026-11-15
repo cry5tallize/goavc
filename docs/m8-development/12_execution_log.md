@@ -50,3 +50,11 @@ A00：`CGO_ENABLED=0 go test -count=1 -run '^TestM8Baseline_SerialOutput$' ./tes
 从 `5b9fa20` 开始；固定seed `0x8a7c`，矩形宽高各10种、byte起点0..31/uint16起点0..15、三组不等stride、最小末行len，比较完整输入不变并验证独立解析最大SAD。生产SAD包装在预备输入后 `AllocsPerRun=0`。专用 `goavc_simdtest` 标签提供进程内锁、能力错误及幂等恢复；普通生产构建不含setter，真实搜索用同一锁强制后端。当前只有Generic真实实现，SSE2/AVX2/NEON明确Skip为未执行，不假装回退后通过。
 
 `CGO_ENABLED=0 go test -tags goavc_simdtest -count=1 -v ./internal/simd ./internal/motion/search`、完整常规门禁、`go test -tags purego -count=1 ./internal/simd ./internal/motion/search` 全部退出0；日志 `k03-parity.txt`、`k03-verify.txt` 位于 `tmp/m8-baseline/`。随后独占执行 `go test -run '^$' -bench '^BenchmarkSAD(8|16)_16x16_' -benchmem -count=5 ./internal/simd`，Generic和Auto各五次，均0 B/op、0 allocs/op；原始日志 `k03-sad-bench.txt`。后端专用原生parity及保护页在后续任务补齐，当前不能签K14。
+
+### K04：SSE2 SAD
+
+从 `2a99d40` 开始；8位每行16/8/4/1字节，10位每行8/4/1采样的实际SSE2计算，非对齐加载且不超出width。10位unsigned饱和差两方向合并为绝对差，每对≤2046，立即扩为64位后累加；未使用SSE4或AVX。私有搜索通过已绑定函数真正进入该路径；其他架构及purego保持唯一Generic。
+
+本机SSE2直接后端及强制搜索（含10位低两位、负MV、全幅Scorer）通过；12配置M7码流/元数据/像素指纹不变，FFmpeg逐采样通过。完整常规门禁、purego目标包通过，`go tool objdump -s 'simd.sad(8|16)SSE2'` 得到实际汇编并核对仅SSE2/基线整数指令。首轮构建修正Go汇编使用的PMADDWL名称后重新验证。最小len矩阵和每行最大访问范围已核对；K14保护页尚未执行，不把canary/parity等同动态越读证明。
+
+同机五次微基准及原始日志SHA见 `docs/gates/m8_sad_samples.json`，kernel均0 B/op、0 allocs/op。真实P消费者实际后端SSE2（沿用旧函数名 `_Generic`，不能据名字称其为标量）五次ns/op为2102411500、2101213600、2104698700、2089643800、2099128300，中位2101213600；对照K02中位2243312300。分发造成的额外临时分配仍未解决，不声称整体模式决策零分配。日志在 `tmp/m8-baseline/k04-{parity,verify,sad-bench,encoder-p-bench}.txt`；原生NEON和完整race未执行。

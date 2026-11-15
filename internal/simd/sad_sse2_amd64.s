@@ -1,0 +1,171 @@
+//go:build amd64 && !purego
+
+#include "textflag.h"
+
+// 参数均为采样单位；byte行逐16/8/4/1读取，不跨行取满向量。
+TEXT ·sad8SSE2(SB), NOSPLIT, $0-88
+	MOVQ a_base+0(FP), SI
+	MOVQ as+24(FP), R8
+	MOVQ b_base+32(FP), DI
+	MOVQ bs+56(FP), R9
+	MOVQ width+64(FP), R10
+	MOVQ height+72(FP), R11
+	XORQ AX, AX
+	PXOR X0, X0
+	CMPQ R10, $0
+	JLE sad8_done
+	CMPQ R11, $0
+	JLE sad8_done
+sad8_row:
+	MOVQ SI, R12
+	MOVQ DI, R13
+	MOVQ R10, CX
+sad8_16:
+	CMPQ CX, $16
+	JL sad8_8
+	MOVOU (R12), X1
+	MOVOU (R13), X2
+	PSADBW X2, X1
+	PADDQ X1, X0
+	ADDQ $16, R12
+	ADDQ $16, R13
+	SUBQ $16, CX
+	JMP sad8_16
+sad8_8:
+	CMPQ CX, $8
+	JL sad8_4
+	MOVQ (R12), X1
+	MOVQ (R13), X2
+	PSADBW X2, X1
+	PADDQ X1, X0
+	ADDQ $8, R12
+	ADDQ $8, R13
+	SUBQ $8, CX
+sad8_4:
+	CMPQ CX, $4
+	JL sad8_tail
+	MOVL (R12), DX
+	MOVQ DX, X1
+	MOVL (R13), DX
+	MOVQ DX, X2
+	PSADBW X2, X1
+	PADDQ X1, X0
+	ADDQ $4, R12
+	ADDQ $4, R13
+	SUBQ $4, CX
+sad8_tail:
+	TESTQ CX, CX
+	JE sad8_next_row
+	MOVBQZX (R12), DX
+	MOVBQZX (R13), BX
+	SUBQ BX, DX
+	JGE sad8_positive
+	NEGQ DX
+sad8_positive:
+	ADDQ DX, AX
+	INCQ R12
+	INCQ R13
+	DECQ CX
+	JMP sad8_tail
+sad8_next_row:
+	ADDQ R8, SI
+	ADDQ R9, DI
+	DECQ R11
+	JNZ sad8_row
+sad8_done:
+	MOVQ X0, DX
+	ADDQ DX, AX
+	PSRLDQ $8, X0
+	MOVQ X0, DX
+	ADDQ DX, AX
+	MOVQ AX, ret+80(FP)
+	RET
+
+// 10位差值<=1023；PMADDWL每对<=2046，然后立即扩为64位累加。
+// 不让总矩形SAD进入16/32位累加器。uint16 stride只在此转字节。
+TEXT ·sad16SSE2(SB), NOSPLIT, $0-88
+	MOVQ a_base+0(FP), SI
+	MOVQ as+24(FP), R8
+	MOVQ b_base+32(FP), DI
+	MOVQ bs+56(FP), R9
+	SHLQ $1, R8
+	SHLQ $1, R9
+	MOVQ width+64(FP), R10
+	MOVQ height+72(FP), R11
+	XORQ AX, AX
+	PXOR X0, X0
+	PXOR X5, X5
+	PCMPEQW X4, X4
+	PSRLW $15, X4
+	CMPQ R10, $0
+	JLE sad16_done
+	CMPQ R11, $0
+	JLE sad16_done
+sad16_row:
+	MOVQ SI, R12
+	MOVQ DI, R13
+	MOVQ R10, CX
+sad16_8:
+	CMPQ CX, $8
+	JL sad16_4
+	MOVOU (R12), X1
+	MOVOU (R13), X2
+	MOVOU X1, X3
+	PSUBUSW X2, X1
+	PSUBUSW X3, X2
+	POR X2, X1
+	PMADDWL X4, X1
+	MOVOU X1, X2
+	PUNPCKLLQ X5, X1
+	PUNPCKHLQ X5, X2
+	PADDQ X2, X1
+	PADDQ X1, X0
+	ADDQ $16, R12
+	ADDQ $16, R13
+	SUBQ $8, CX
+	JMP sad16_8
+sad16_4:
+	CMPQ CX, $4
+	JL sad16_tail
+	MOVQ (R12), X1
+	MOVQ (R13), X2
+	MOVOU X1, X3
+	PSUBUSW X2, X1
+	PSUBUSW X3, X2
+	POR X2, X1
+	PMADDWL X4, X1
+	MOVOU X1, X2
+	PUNPCKLLQ X5, X1
+	PUNPCKHLQ X5, X2
+	PADDQ X2, X1
+	PADDQ X1, X0
+	ADDQ $8, R12
+	ADDQ $8, R13
+	SUBQ $4, CX
+sad16_tail:
+	TESTQ CX, CX
+	JE sad16_next_row
+	MOVWQZX (R12), DX
+	MOVWQZX (R13), BX
+	SUBQ BX, DX
+	JGE sad16_positive
+	NEGQ DX
+sad16_positive:
+	ADDQ DX, AX
+	ADDQ $2, R12
+	ADDQ $2, R13
+	DECQ CX
+	JMP sad16_tail
+sad16_next_row:
+	ADDQ R8, SI
+	ADDQ R9, DI
+	DECQ R11
+	JNZ sad16_row
+sad16_done:
+	MOVQ X0, DX
+	ADDQ DX, AX
+	PSRLDQ $8, X0
+	MOVQ X0, DX
+	ADDQ DX, AX
+	MOVQ AX, ret+80(FP)
+	RET
