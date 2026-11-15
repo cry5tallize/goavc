@@ -2,6 +2,14 @@
 
 本页记录实际任务、接口与证据；01–11 是原始设计输入，不代表实施完成。
 
+## 当前交接点
+
+- 分支 `perf/m8-simd`，A00、K01–K05、K07、K09a已逐项提交；K06/K08按用户要求完成实现与交叉编译，原生未验证。SAD与SATD已真实接入，MC当前是唯一Generic块算法，不是SIMD插值。
+- amd64 Auto逐槽选择：SAD宽16为AVX2（其他宽SSE2），SATD4×4优选实测更快的SSE2；purego无项目汇编。没有全局“所有槽均AVX2”的声明。
+- K14a已补Windows SAD逐行保护页；其余内核矩阵未完成。K09b/c/d、K10–K13、K15–K25及K20m仍待实施，K14收尾待所有内核交付。
+- 当前已知成本：SAD间接调用导致搜索window逃逸，P控制场景约875.5k分配/op，须由K18的typed workspace复用解决；MC和SATD的已准备生产调用均0分配。
+- 尚未执行完整race/代表性主目标长矩阵或远端CI；不创建标签、不push/release，不签完整M8。以下各节按实施时间保留当时的下一项与原始数据，最新状态以本节和状态矩阵为准。
+
 ## A00：基线与契约
 
 - 原始算法 revision：`1abfa01dcd94fc580990f25c8c8d8811aabb3c72`；开工分支 `perf/m8-simd`。原有未跟踪实施文档原样单独提交为 `37ca7f1`，未混入算法改动。
@@ -110,3 +118,9 @@ SSE2以32位蝶形/转置/绝对值归约，不夹SSE4/AVX；AVX2以双行YMM蝶
 从 `317a0cb` 开始，按K07同一64字节值参数实现ASIMD两轴32位Hadamard/转置/绝对值归约；输入合法域±1023，归约不进入16位累加器，最后按旧int32归约及算术右移返回。不使用可选扩展；固定加载0..63字节，无外部指针。ARM分发SATD槽已绑定真实NEON，Generic及矩形tiled语义仍唯一，原生parity/基准和真实候选测试入口均可用。
 
 遵照用户“能过编译就行”的arm64范围：三种arm64 GOOS的 `go vet ./internal/simd`、全库 `go build ./...`、带 `goavc_simdtest` 的simd测试二进制全部交叉构建成功；本机完整常规门禁和purego simd/transform通过，退出0，日志 `tmp/m8-baseline/k08-verify.txt`。未执行NEON原生parity/Oracle/分配/性能，不生成虚构数据，状态WIP；无发布或标签操作。
+
+### K14a：逐行 SAD 保护页
+
+从 `59d3e45` 开始；Windows子进程在pin的无指针Go byte backing内部设置PAGE_NOACCESS，保证每一行（不只最后一行）的最后有效采样紧邻保护页。恢复原页属性后才unpin，不把Go指针藏入整数再转换回来；uint16视图限定偶数起点/len、同对象内。保护页不覆盖对象头或相邻对象，纯标准库/CGO=0，unsafe理由与边界在测试源码中说明。子进程异常由父测试报告，不杀死整个协调器。
+
+宽1/3/4/7/8/13/15/16/17/31、高1/3/16/17、byte/uint16共80几何；本机Generic/Auto/SSE2/AVX2四路径共320调用实际通过，解析期望分别为w*h*255/1023。最小len覆盖所有末行，无依赖padding的通过条件；原随机输入不变/非对齐stride矩阵继续保留。`go test -count=1 -run '^TestGuardPage_SAD$' -v ./internal/simd`、完整常规门禁、purego和386实际执行均退出0；六目标simd测试二进制编译通过。日志 `tmp/m8-baseline/k14a-{guard,verify}.txt`。其他OS动态页明确Skip为未执行，NEON不作原生声明；这不是完整K14或汇编race证明。
