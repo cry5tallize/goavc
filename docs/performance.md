@@ -898,15 +898,18 @@ decoder 只复用表示级临时数组，DPB 的 Motion/reference IDs/MBField �
 
 编码Generic五次均完整输出300包且码流SHA一致；单次中位API调用时间189.961秒。现有结果足够说明该代表性编码场景仍非30FPS，SAD微核倍率不能当整个编码器倍率。Auto编码第一个样本、扩展分辨率和热点采样停止，不补跑、不生成整批通过标记。自然GC/RSS原始值保留在已完成Generic JSON，未做同协议旧版本比较，不宣称GC改善倍率。完整AU结果目录 `tmp/m8-closeout/endpoints-au/`，逐NAL旧结果不使用。
 
-## 17. 去块热路径：逐边准备参数
+## 17. 去块热路径：逐边准备与直接标量
 
 2026-11-16，HW-M2、Go1.27.4 windows/amd64、CGO=0、GOAMD64=v1、GOMAXPROCS=16，
 实例Threads=1；Auto的去块候选加法仍为Generic。基线生产源码
 `0d89f0fa2bbbddd5eaeb1865a634c4dcb24a06c4`，新增测试/基准在改实现前先运行。
-外部负载未监控；两阶段均没有同时运行其他本轮长测。完整五次样本（包括波动和
+外部负载未监控；各阶段均没有同时运行其他本轮长测。完整五次样本（包括波动和
 B/op、allocs/op）见 [deblock_edge_samples.json](gates/deblock_edge_samples.json)。
 
-逐边准备阶段把四段bS在亮度/色度之间复用；帧内/PCM边直接准备3或4；QP、
+### 17.1 逐边准备参数
+
+逐边准备阶段（`b0ab646a0e3ad4c9922d5facca545396feef55e2`）把四段bS在亮度/色度之间复用；
+帧内/PCM边直接准备3或4；QP、
 alpha/beta/tc0每分量每边只准备一次。宏块光栅、先垂直后水平、slice权限、
 transform8边选择与原生位深语义不变；混合MBAFF几何仍走原入口。
 
@@ -950,4 +953,50 @@ Remove-Item Env:GOAVC_BENCH_INPUT
 语料清单校验。首次依赖检查发现直接AU测试放在decoder目录会形成目录级测试环，
 已移至现有benchmarks包并通过受影响测试和依赖检查；原始计时在移动前采集。
 本阶段未执行race，未改并发模型；最终直接标量阶段另行验证。
+
+### 17.2 Generic直接计算滤波候选
+
+在逐边准备阶段基础上，Generic直接计算少量候选加法，不再逐像素线构造小数组并
+间接调用值ABI。函数表的nil明确表示直接标量路径，显式SSE2/AVX2/NEON仍使用真实
+候选内核；阈值判断、逐线顺序、条件邻域访问、舍入和Clip1共用原流程。
+CABAC、IDCT与残差重建未改动。
+
+计时协议和输入同17.1；最终阶段的直接AU基准位于benchmarks包。
+以下为五次ns/op中位数，相对原始基线的整体改善：
+
+| 场景 | 原实现 | 两项优化后 | 耗时变化 |
+|---|---:|---:|---:|
+| 合成去块，全帧内 | 35,328,887 | 22,255,375 | -37.0% |
+| 合成去块，混合 | 16,656,029 | 10,730,030 | -35.6% |
+| High IDR，直接AU | 65,763,938 | 51,393,340 | -21.9% |
+| High I/P/B，32个直接AU | 2,108,426,100 | 1,866,791,100 | -11.5% |
+
+短端点吞吐分别为IDR 15.21→19.46帧/秒，I/P/B 15.18→17.14帧/秒。
+最终合成去块仍为0 B/op、0 allocs/op；IDR中位23,801 allocs/op，32帧中位42,190，
+与逐边准备阶段相同。未测P95、RSS或长期流，不据此更新§16.2的300帧吞吐数字。
+
+四类Generic真实块入口微基准（每项五次200ms，ns/op中位数，全部0 B/op/0 allocs/op）：
+
+| 入口 | 8-bit 原→后 | 10-bit 原→后 |
+|---|---:|---:|
+| LumaWeakHorizontalSpan4 | 101.70→59.29 | 102.60→60.22 |
+| LumaStrongVerticalSpan4 | 83.24→46.04 | 89.59→56.31 |
+| ChromaWeakVerticalSpan4 | 61.97→32.75 | 65.92→30.84 |
+| ChromaStrongHorizontalSpan1 | 20.29→11.16 | 24.04→13.19 |
+
+```powershell
+$env:CGO_ENABLED='0'; $env:GOAMD64='v1'; $env:GOMAXPROCS='16'
+go test ./internal/simd -run '^TestFilter_DirectScalarParity$' -bench '^BenchmarkDeblockSpans/(LumaWeakHorizontalSpan4|LumaStrongVerticalSpan4|ChromaWeakVerticalSpan4|ChromaStrongHorizontalSpan1)/(8bit|10bit)/(Generic|Auto-Generic)$' -benchtime=200ms -count=5 -benchmem
+```
+
+JSON同时保存Generic和Auto-Generic的全部独立样本，不挑选两者较快值。
+原值ABI的filterDeltaGeneric作为等价测试参考，新增直接标量与旧候选路径对比，
+覆盖双位深、强弱、方向和Span1/2/4；最终IDR与32帧High输入均通过逐像素FFmpeg Oracle。
+
+最终实现通过CGO=0的gofmt/vet/build、`go test ./... -count=1`、36包依赖检查和55条
+语料清单校验；`go test -tags purego ./internal/simd ./internal/filter ./decoder -count=1`
+通过。按仓库开发期例外用CGO=1执行
+`go test -race ./internal/simd ./internal/filter ./decoder -count=1`通过；本轮未重跑全库race、
+300帧长Oracle或NEON原生测试。ffprobe确认现场输入为High/1920×1080/yuv420p，
+32帧输入实际包含I/P/B；没有修改Profile支持状态。
 

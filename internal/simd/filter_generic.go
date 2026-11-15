@@ -59,12 +59,24 @@ func filterChroma[T filterSample](data []T, q0, lineStep, acrossStep, bS, alpha,
 		p0v, p1v := int(data[p0]), int(data[p1])
 		q0v, q1v := int(data[q0i]), int(data[q1])
 		if bS >= 4 {
-			sums := calc([4]int32{int32(2*p1v + p0v), int32(2*q1v + q0v)}, [4]int32{int32(q1v + 2), int32(p1v + 2)})
-			data[p0], data[q0i] = T(sums[0]>>2), T(sums[1]>>2)
+			var ps, qs int
+			if calc == nil {
+				ps, qs = 2*p1v+p0v+q1v+2, 2*q1v+q0v+p1v+2
+			} else {
+				sums := calc([4]int32{int32(2*p1v + p0v), int32(2*q1v + q0v)}, [4]int32{int32(q1v + 2), int32(p1v + 2)})
+				ps, qs = int(sums[0]), int(sums[1])
+			}
+			data[p0], data[q0i] = T(ps>>2), T(qs>>2)
 			continue
 		}
-		sums := calc([4]int32{int32((q0v - p0v) * 4)}, [4]int32{int32(p1v - q1v + 4)})
-		delta := filterClipInt(int(sums[0]>>3), -tc, tc)
+		var sum int
+		if calc == nil {
+			sum = (q0v-p0v)*4 + p1v - q1v + 4
+		} else {
+			sums := calc([4]int32{int32((q0v - p0v) * 4)}, [4]int32{int32(p1v - q1v + 4)})
+			sum = int(sums[0])
+		}
+		delta := filterClipInt(sum>>3, -tc, tc)
 		data[p0] = filterClipPixel[T](int(data[p0])+delta, bitDepth)
 		data[q0i] = filterClipPixel[T](int(data[q0i])-delta, bitDepth)
 	}
@@ -83,23 +95,31 @@ func weakLumaLine[T filterSample](data []T, p0, p1, p2, q0, q1, q2, tcOrig, beta
 	p0v, p1v, p2v := int(data[p0]), int(data[p1]), int(data[p2])
 	q0v, q1v, q2v := int(data[q0]), int(data[q1]), int(data[q2])
 	avg := (p0v + q0v + 1) >> 1
-	sums := calc([4]int32{int32((q0v - p0v) * 4), int32(p2v), int32(q2v)}, [4]int32{int32(p1v - q1v + 4), int32(avg), int32(avg)})
+	// Generic直接计算候选，避免为每条像素线构造数组并通过值ABI间接调用。
+	// 显式SIMD仍计算原候选；阈值、裁剪和条件邻域访问共用下方唯一流程。
+	var deltaSum, pSum, qSum int
+	if calc == nil {
+		deltaSum, pSum, qSum = (q0v-p0v)*4+p1v-q1v+4, p2v+avg, q2v+avg
+	} else {
+		sums := calc([4]int32{int32((q0v - p0v) * 4), int32(p2v), int32(q2v)}, [4]int32{int32(p1v - q1v + 4), int32(avg), int32(avg)})
+		deltaSum, pSum, qSum = int(sums[0]), int(sums[1]), int(sums[2])
+	}
 	tc := tcOrig
 	if filterAbs(p2v-p0v) < beta {
 		if tcOrig != 0 {
-			avg := int(sums[1] >> 1)
+			avg := pSum >> 1
 			data[p1] = filterClipPixel[T](p1v+filterClipInt(avg-p1v, -tcOrig, tcOrig), bitDepth)
 		}
 		tc++
 	}
 	if filterAbs(q2v-q0v) < beta {
 		if tcOrig != 0 {
-			avg := int(sums[2] >> 1)
+			avg := qSum >> 1
 			data[q1] = filterClipPixel[T](q1v+filterClipInt(avg-q1v, -tcOrig, tcOrig), bitDepth)
 		}
 		tc++
 	}
-	delta := filterClipInt(int(sums[0]>>3), -tc, tc)
+	delta := filterClipInt(deltaSum>>3, -tc, tc)
 	data[p0] = filterClipPixel[T](p0v+delta, bitDepth)
 	data[q0] = filterClipPixel[T](q0v-delta, bitDepth)
 }
@@ -111,10 +131,17 @@ func weakLumaLine[T filterSample](data []T, p0, p1, p2, q0, q1, q2, tcOrig, beta
 func strongLumaLine[T filterSample](data []T, p0, p1, p2, q0, q1, q2, acrossStep, alpha, beta int, calc func([4]int32, [4]int32) [4]int32) {
 	p0v, p1v, p2v := int(data[p0]), int(data[p1]), int(data[p2])
 	q0v, q1v, q2v := int(data[q0]), int(data[q1]), int(data[q2])
-	sums := calc(
-		[4]int32{int32(2*p1v + p0v), int32(2*q1v + q0v), int32(p2v + 2*p1v + 2*p0v), int32(q2v + 2*q1v + 2*q0v)},
-		[4]int32{int32(q1v + 2), int32(p1v + 2), int32(2*q0v + q1v + 4), int32(2*p0v + p1v + 4)},
-	)
+	var pShort, qShort, pLong, qLong int
+	if calc == nil {
+		pShort, qShort = 2*p1v+p0v+q1v+2, 2*q1v+q0v+p1v+2
+		pLong, qLong = p2v+2*p1v+2*p0v+2*q0v+q1v+4, q2v+2*q1v+2*q0v+2*p0v+p1v+4
+	} else {
+		sums := calc(
+			[4]int32{int32(2*p1v + p0v), int32(2*q1v + q0v), int32(p2v + 2*p1v + 2*p0v), int32(q2v + 2*q1v + 2*q0v)},
+			[4]int32{int32(q1v + 2), int32(p1v + 2), int32(2*q0v + q1v + 4), int32(2*p0v + p1v + 4)},
+		)
+		pShort, qShort, pLong, qLong = int(sums[0]), int(sums[1]), int(sums[2]), int(sums[3])
+	}
 	// alpha 已按位深缩放；规范的 +2 与各平均式的舍入常量不缩放。
 	if filterAbs(p0v-q0v) < (alpha>>2)+2 {
 		if filterAbs(p2v-p0v) < beta {
@@ -123,13 +150,13 @@ func strongLumaLine[T filterSample](data []T, p0, p1, p2, q0, q1, q2, acrossStep
 			if p3 >= 0 {
 				p3v = int(data[p3])
 			}
-			data[p0] = T(sums[2] >> 3)
+			data[p0] = T(pLong >> 3)
 			data[p1] = T((p2v + p1v + p0v + q0v + 2) >> 2)
 			if p3 >= 0 {
 				data[p2] = T((2*p3v + 3*p2v + p1v + p0v + q0v + 4) >> 3)
 			}
 		} else {
-			data[p0] = T(sums[0] >> 2)
+			data[p0] = T(pShort >> 2)
 		}
 		if filterAbs(q2v-q0v) < beta {
 			q3 := q2 + acrossStep
@@ -137,18 +164,18 @@ func strongLumaLine[T filterSample](data []T, p0, p1, p2, q0, q1, q2, acrossStep
 			if q3 < len(data) {
 				q3v = int(data[q3])
 			}
-			data[q0] = T(sums[3] >> 3)
+			data[q0] = T(qLong >> 3)
 			data[q1] = T((p0v + q0v + q1v + q2v + 2) >> 2)
 			if q3 < len(data) {
 				data[q2] = T((2*q3v + 3*q2v + q1v + q0v + p0v + 4) >> 3)
 			}
 		} else {
-			data[q0] = T(sums[1] >> 2)
+			data[q0] = T(qShort >> 2)
 		}
 		return
 	}
-	data[p0] = T(sums[0] >> 2)
-	data[q0] = T(sums[1] >> 2)
+	data[p0] = T(pShort >> 2)
+	data[q0] = T(qShort >> 2)
 }
 
 func filterAbs(v int) int {

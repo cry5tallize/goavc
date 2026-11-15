@@ -258,6 +258,7 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | 量化/反量化（K11） | 4/8×8与DC按块准备参数，精确32×32→64乘积，原整数除法/死区/符号与晚期失败前缀；指针块接口避免数组复制 | Partial | 本机Generic/Auto/SSE2/AVX2全QP'0..63、64位乘积、宽域回退、局部0分配、原地保护页及首错前缀/未写后缀回归通过 | SIMD仅负责准确乘积，除法/舍入/错误仍共享Go；amd64默认按实测选择直接Generic，显式后端仍真实SIMD；NEON原生未验 |
 | 去块（K12） | 唯一共享亮度/色度算法，强弱候选部分向量化，保持逐线顺序和条件邻域访问 | Partial | 本机Generic/Auto/SSE2/AVX2强弱、方向/Span1/2/4与最小邻域保护页通过；领域解析测试保留 | 不是整条边全SIMD，不改变bS/阈值/slice权限；amd64默认候选加法保留Generic，实测SIMD较慢；NEON原生未验 |
 | 去块逐边参数复用 | decoder普通边四段bS跨亮色度复用，QP/阈值按分量逐边准备；旧单段入口保留 | Partial | 六格式原调度像素回归、B参考交换、准备边负QP/偏移/stride/零分配；1080p High IDR及32帧I/P/B直接AU逐像素FFmpeg一致；五样本见performance §17 | 混合MBAFF几何保留原路径；未新增SIMD、并行或Profile支持，短端点不替代300帧主矩阵 |
+| 去块Generic直接算术 | 默认/纯Go去块直接计算强弱候选，显式SIMD继续使用原候选后端；阈值/裁剪/邻域流程共享 | Partial | 直接标量与原值ABI候选双位深/方向/Span等价；最终High IDR和32帧I/P/B直接AU逐像素FFmpeg一致；三阶段五样本见performance §17.2 | 未改CABAC、IDCT、重建或并发模型；NEON原生性能未测 |
 | 残差加减（K13） | 8/10-bit共享Clip1和Subtract，picture与编码真实残差循环迁移，R3精确放行picture | Partial | 本机四路径parity、int32极值、低两位、奇数stride/最小len逐行保护页及局部0分配通过 | gather/scatter与不足4采样尾部为Go，值ABI仅向量化加减；amd64默认直接标量避免gather开销，显式后端保留真实SIMD；NEON原生未验 |
 | 其余MC SIMD（K09b-d） | 现有整数复制之外的插值向量化 | TODO | 唯一Generic与全相位边界保护保留 | 不以本轮K10–K14工作冒充K09插值SIMD已完成 |
 | 搜索去逃逸（G01/K18前置） | caller-owned双位深Workspace，真实编码器跨帧/场/Reset复用，结束解除借用 | Partial | 32组改造前Scorer轨迹/结果，64组prepared零分配，强制x86/purego/386/M8指纹 | 该行仅搜索；完整决策保护网见G03b，K16仍是串行租约复用，未开并行 |

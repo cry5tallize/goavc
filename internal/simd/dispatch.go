@@ -59,7 +59,7 @@ type kernelTable struct {
 	satd4                       satd4Func
 	forward4                    forward4Func
 	residualVector              residualVector
-	filterDelta                 filterDeltaFunc
+	filterDelta                 filterDeltaFunc // nil明确选择直接标量算术，非缺失后端回退。
 	quantMultiply               quantMultiplyFunc
 	forward8                    forward8Func
 	idct4                       idct4Func
@@ -76,7 +76,6 @@ func genericTable() kernelTable {
 	return kernelTable{
 		sad8: sadGeneric[byte], sad16: sadGeneric[uint16], satd4: satd4Generic, forward4: forward4Generic,
 		residualVector: residualVectorGeneric,
-		filterDelta:    filterDeltaGeneric,
 		quantMultiply:  quantMultiplyGeneric,
 		forward8:       forward8Generic, idct4: idct4Generic, idct8: idct8Generic,
 		forwardLumaDC: forwardLumaDCGeneric, forwardChromaDC: forwardChromaDCGeneric,
@@ -124,7 +123,7 @@ func autoKernels(cpu cpuFeatures) kernelTable {
 		table.wideAdd4, table.backends.WideAdd4 = wideAdd4Generic, Generic
 		table.quantMultiply, table.backends.QuantMultiply, table.quantScalar = quantMultiplyGeneric, Generic, true
 		table.residualVector, table.backends.Residual, table.residualScalar = residualVectorGeneric, Generic, true
-		table.filterDelta, table.backends.FilterDelta = filterDeltaGeneric, Generic
+		table.filterDelta, table.backends.FilterDelta = nil, Generic
 	}
 	return table
 }

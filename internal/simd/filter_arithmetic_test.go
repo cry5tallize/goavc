@@ -74,3 +74,12 @@ func BenchmarkFilterArithmeticGeneric(b *testing.B) {
 		filterDeltaGeneric(x, y)
 	}
 }
+
+func TestFilter_DirectScalarParity(t *testing.T) {
+	// nil是生产Generic的显式路由；非nil的filterDeltaGeneric保留旧值ABI路径，
+	// 用同样的阈值、方向、跨度和邻域比较直接算术与原候选计算。
+	checkFilterEdges(t, nil)
+	if got := genericTable(); got.filterDelta != nil || got.backends.FilterDelta != Generic {
+		t.Fatal("Generic没有选择直接标量去块")
+	}
+}
