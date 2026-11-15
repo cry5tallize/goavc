@@ -104,3 +104,9 @@ SSE2以32位蝶形/转置/绝对值归约，不夹SSE4/AVX；AVX2以双行YMM蝶
 独立常量/冲激解析值含±1023、低两位±3，固定seed5000组逐后端parity；强制Generic/SSE2/AVX2分别执行真实8/10位帧内候选，NEON SATD未交付时不把Generic槽记成NEON通过。生产包装及领域循环内局部残差的AllocsPerRun均0，M7固定96帧码流/像素/元数据不变。完整常规门禁、purego目标包、386实际执行simd/transform及六平台simd测试二进制构建均退出0；日志 `tmp/m8-baseline/k07-{verify,purego,consumer-parity}.txt`。
 
 同机五次初测SSE2约7.262ns、AVX2约16.02ns、Generic约21.61ns；因此生产初始化按槽优选SSE2 SATD，SAD仍为AVX2。显式测试仍可选择真正AVX2 SATD。选择前后的全部微基准/固定1x P样本见 `docs/gates/m8_satd_samples.json`，均0 kernel分配，不删除较慢数字。初始Auto AVX2端点中位936393400ns，改为SSE2后878243300ns；不据此保证其他CPU或代表性High/B主场景收益。完整race、NEON原生仍未执行。
+
+### K08：NEON SATD 编译交付
+
+从 `317a0cb` 开始，按K07同一64字节值参数实现ASIMD两轴32位Hadamard/转置/绝对值归约；输入合法域±1023，归约不进入16位累加器，最后按旧int32归约及算术右移返回。不使用可选扩展；固定加载0..63字节，无外部指针。ARM分发SATD槽已绑定真实NEON，Generic及矩形tiled语义仍唯一，原生parity/基准和真实候选测试入口均可用。
+
+遵照用户“能过编译就行”的arm64范围：三种arm64 GOOS的 `go vet ./internal/simd`、全库 `go build ./...`、带 `goavc_simdtest` 的simd测试二进制全部交叉构建成功；本机完整常规门禁和purego simd/transform通过，退出0，日志 `tmp/m8-baseline/k08-verify.txt`。未执行NEON原生parity/Oracle/分配/性能，不生成虚构数据，状态WIP；无发布或标签操作。
