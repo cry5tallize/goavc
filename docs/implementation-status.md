@@ -244,7 +244,7 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 |---|---|---|---|---|
 | CPU检测（K01） | amd64安全CPUID/XGETBV、arm64基线NEON能力、purego/其他架构回退 | Partial | `simd/cpu_test.go` 的1024组合与 `cpu_purego_test.go` | CPU检测不等于任何向量kernel已实现；arm64仅交叉构建时不记原生执行 |
 | 内核表（K02） | SAD8/16类型化分发、唯一Generic、真实search两路consumer | Partial | `simd/dispatch_test.go`、search解析用例、M7输出指纹 | 当前槽均为Generic，不等于已实现SIMD；完整parity框架属K03 |
-| parity框架（K03） | 后端对照、测试限定强制、分配检查 | TODO | 待实施 | 不将独立解析测试等同全部后端矩阵 |
+| parity框架（K03） | 固定种子矩形/stride/offset/最小len、输入不变、测试标签强制及生产包装0分配 | Partial | `simd/parity_test.go`、`backend_testing_test.go`、search后端测试 | 当前仅Generic实际执行；向量后端按交付追加，guard-page在K14补齐 |
 | SIMD内核（K04–K14） | SSE2/AVX2/NEON、边界证明 | TODO | 待实施 | 尚无向量计算快路 |
 | 池化/去分配/并行（K15–K20m） | 所有权、slice/分析/ME | TODO | 既有串行测试保留 | Threads>1仍拒绝 |
 
