@@ -393,3 +393,10 @@ K17提交前CGO=0完整常规门禁与CGO=1的上述P/B/非法分区定向race�
 
 K18定向完整决策/旧指纹/错误后复用、CGO=0完整常规门禁、purego与原生386同一分配矩阵、CGO=1新增矩阵定向race均退出0。常规日志 `tmp/m8-k15-k20/k18-verify.txt`；未改变生产逻辑，未新增虚构性能样本，未执行本项arm64原生测试。
 
+
+### K19 收益准入：本轮暂不实施worker
+
+起点 `f384fe40a3`。实际执行CGO=0的h264probe：现有1080p基准三帧全部Slices=1；320×240多slice语料六帧全部Slices=2。前者无法通过slice调度加速，后者不足以证明代表性1080p/High多slice的收益。原始JSON在 `tmp/m8-k15-k20/k19-1080p-probe.json`、`k19-multislice-probe.json`，命令均退出0。
+
+按已授权的可行性裁剪，本轮不实现K19 worker、不顺手增加owner框架。保留06的原始并行设计与未来准入条件；不宣称多slice无收益、不把原K19标完成，也不将Threads>1改为假支持。本项仅文档/实际负载调查，不重复Go全门禁。
+

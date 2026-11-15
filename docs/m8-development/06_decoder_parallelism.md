@@ -124,3 +124,10 @@ PAFF等M7原Unsupported保持原错误分类；不能将合法高级工具因调
 `decoder/decoder_test.go` 的生命周期与覆盖用例，`fmo_normative_test.go` 的跨slice/MVP所有权用例，`data_partition_normative_test.go`、`redundant_normative_test.go`、`mbaff_normative_test.go`、`high444_oracle_test.go`、全55条原生哈希与27份High10投影。测试名称开工时按源码确认，不能把未存在的新测试写成已通过证据。
 
 最后做定向race和完整race；SIMD汇编内存不受race插桩，仍需要owner证明及强制Generic运行的并行race。完整命令见 [09](09_validation.md)。
+
+## 8. 本轮收益准入决定
+
+K15–K18串行内存切片交付后，本轮暂不实现K19 worker。实际 `h264probe` 确认现有1080p冷基准三帧分别只有一个slice，slice并行对此输入没有可分任务；320×240多slice语料六帧各两个slice，只能证明存在候选负载，不能替代1080p/High代表性多slice的阶段占比与吞吐证据。原始输出保留于 `tmp/m8-k15-k20/k19-{1080p,multislice}-probe.json`。
+
+这不是宣布多slice并行不可行或没有收益，也不删除原K19范围。当前仍缺owner-first全链路、任务私有Grid/共同444执行状态和代表性多slice基准；不为没有端点收益证据的调度投入提前建设通用执行器。后续以真实大尺寸多slice负载及重建阶段占比重新准入，按本章完整正确性矩阵实施。当前Threads>1仍返回原ErrUnsupported，不能把串行兼容或配置放行冒充并行实现完成。
+
