@@ -173,6 +173,7 @@
 | 有界 picture 空闲缓存 | Partial | G05 为既有 `picture.Pool` 增加每 Pool 64 MiB 空闲 backing 预算，按实际 `cap` 计费并保留每桶/格式隔离；超预算合法图像仍可处理但不缓存，`CacheStats` 与 Trim 账本测试通过。不代表活跃内存、RSS、公共 Frame backing 或完整 codec 所有权已完成 |
 | 公共 Frame backing 与迁移 | Partial | G06 提供 `NewFrame`、64 MiB 有界 backing 缓存、新 Frame 头、清零和一次性租约；decoder 输出、encoder Reconstruction/lookahead/B 输入及 YUVReader 已迁移，六格式/奇数尺寸/High10 校验回归通过。公共头/租约分配、G07/G08 所有权和最终 M8 门禁仍待完成 |
 | encoder 图像与 RC 候选所有权 | Partial | G07 为 Encoder 增加实例私有 picture.Pool；RC 快速/穷举候选、AU 拒绝、Reset/Close 的 Picture 租约回收测试通过，QP 搜索和固定码流顺序不变。底层语法早退全矩阵、自然 GC/RSS 与完整 M8 门禁仍待完成 |
+| decoder retained metadata 与 DPB 所有权 | Partial | G08 清空失败 frameState 的图像/场视图/运动/reference-ID 元数据，Reset 后 DPB Picture 归还池，错误恢复、输出 Release/Clone 和 decoder race 通过；未执行全库 race 与自然 GC/RSS 门禁 |
 
 ## 10. 流式I/O（M6）
 

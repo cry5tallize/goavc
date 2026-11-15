@@ -801,3 +801,7 @@ G06 增加公共 Frame 头/租约和 64 MiB backing 缓存，并迁移 decoder�
 ### G07：encoder 工作图像与 RC 候选
 
 G07 改变候选 Picture 的租约与实例池归还路径，不改变搜索次数、QP 顺序、编码算法或码流；本切片未新增吞吐 before/after、分配计数或 RSS/GC 样本。候选回收测试证明池账本平衡，不等价于完整配置的自然 GC/稳态性能结论。
+
+### G08：decoder retained metadata 与 DPB
+
+G08 仅清除失败 frameState 的元数据引用并验证 DPB/输出租约平衡，不改变解码算法或输出路径；本切片未新增吞吐、分配、RSS 或 GC before/after 样本。`gets == puts` 只证明 Reset 后私有 Picture 池账本平衡，不代表全库长期内存稳定性。

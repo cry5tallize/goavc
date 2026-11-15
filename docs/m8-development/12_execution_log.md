@@ -243,3 +243,11 @@ G07 在 `Encoder` 内增加实例私有 `picture.Pool`，源图、候选重建�
 新增 `TestEncoder_RateControlCandidatesReturnPictures`，断言 ABR 候选搜索成功后只有最终 reconstruction 借出，Reset 后 `gets == puts`；扩展 `TestEncoder_LevelBudgetIsTransactional` 与 B 输入失败测试，断言拒绝路径不遗留 Picture。`CGO_ENABLED=0 go test -count=1 . ./stream ./decoder ./encoder`、`CGO_ENABLED=1 go test -race -count=1 ./encoder` 和提交前完整 `gofmt/vet/build/test/depscheck/manifest/diff-check` 均退出 0；race 仍只覆盖 encoder 包，非全库 race。
 
 当前 G07 未把自然 GC/RSS 或候选分配 before/after 记为性能证据；编码错误发生在底层语法函数已创建状态之前的极少数路径仍由后续完整错误矩阵覆盖。G08 decoder retained metadata、G09 AU 容量和 G10 集成验收仍待完成。
+
+### G08：decoder 失败状态与 DPB 所有权
+
+G08 保留现有 DPB/输出顺序和公共 Frame 生命周期，补强失败路径的状态清尾：`frameState.release` 归还唯一 `framePic` 后清空 SPS/PPS、FieldView、残差、邻域、运动和 reference-ID 切片；`Reset` 继续先释放输出/重排队列，再重置 DPB，确保 DPB retained Picture 回到 decoder 私有池。
+
+新增/扩展 decoder 生命周期测试：损坏输入进入等待 IDR 后不输出失败 P 图；IDR 输出 Release 幂等且 Clone 独立；`Reset` 后断言 `d.pool.Stats()` 的 `gets == puts`，不保留 DPB Picture 或旧参数集。该切片未改变 `toFrame`、DPB Store、POC 或 reorder 行为。
+
+验证：`CGO_ENABLED=0 go test -count=1 . ./stream ./decoder ./encoder`、`CGO_ENABLED=1 go test -race -count=1 ./decoder` 和提交前完整 `gofmt/vet/build/test/depscheck/manifest/diff-check` 均退出 0；常规门禁为 CGO=0，race 按仓库例外使用 CGO=1，未执行全库 race。未把元数据清空解释为完整自然 GC/RSS 证据；G09 AU 容量和 G10 集成验收仍待完成。

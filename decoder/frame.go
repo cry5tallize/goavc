@@ -188,13 +188,32 @@ func newFrameStateForPicture(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFram
 	return fs, nil
 }
 
-// release 把图像归还缓冲池；仅用于解码失败路径。
+// release 把图像归还缓冲池并清空失败状态的借用引用；仅用于解码失败路径。
 func (fs *frameState) release() {
-	if fs != nil && fs.framePic != nil {
-		fs.framePic.Release()
-		fs.framePic = nil
-		fs.pic = nil
+	if fs == nil {
+		return
 	}
+	if fs.framePic != nil {
+		fs.framePic.Release()
+	}
+	fs.framePic = nil
+	fs.pic = nil
+	fs.sps = nil
+	fs.pps = nil
+	fs.fullResidual = nil
+	fs.fieldPics = nil
+	fs.fieldFlags = nil
+	fs.info = nil
+	fs.referenceIDs = [2][]*dpb.Identity{}
+	fs.mv, fs.mv1 = nil, nil
+	fs.mvd, fs.mvd1 = nil, nil
+	fs.directBlocks = nil
+	fs.decoded = nil
+	fs.groupMap = nil
+	fs.sliceOwners = nil
+	fs.lumaNZ = nil
+	fs.chromaNZ = [2][]uint8{}
+	fs.dcCoded = [3][]bool{}
 }
 
 // parseSlice 为单个 NAL 解析参数集引用和完整头部，不分配图像缓冲。

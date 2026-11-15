@@ -115,6 +115,10 @@ func TestDecoder_LifecycleAndRecovery(t *testing.T) {
 	if err := d.Reset(); err != nil {
 		t.Fatal(err)
 	}
+	gets, puts, _ := d.pool.Stats()
+	if gets != puts {
+		t.Fatalf("Reset leaked DPB pictures: gets=%d puts=%d", gets, puts)
+	}
 	if err := d.SendPacket(h264.Packet{Data: annex(idr...)}); !errors.Is(err, h264.ErrInvalidData) {
 		t.Fatal("Reset retained parameter sets", err)
 	}
