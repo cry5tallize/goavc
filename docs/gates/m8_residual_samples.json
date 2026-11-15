@@ -1,0 +1,1048 @@
+{
+    "date":  "2026-11-15",
+    "go":  "go1.27.4",
+    "host":  "windows/amd64",
+    "cpu":  "AMD Ryzen 7 5700X",
+    "CGO_ENABLED":  0,
+    "GOAMD64":  "v1",
+    "GOMAXPROCS":  16,
+    "effectiveCodecThreads":  1,
+    "sourceBefore":  "11b902e",
+    "sourceAfterBase":  "11b902e",
+    "dirtyAfter":  true,
+    "source":  "G02 successor commit; micro benchmark/fingerprint helper added before algorithm changes; pre-existing GC planning docs preserved",
+    "inputSHA256":  "b7fc8e5048a11a8a56e17f10cdc1073c840b8e1850e79f0fce9200b23ca22590",
+    "input":  "pattern.Frame(1280,720,1); B assigns PTS=0..3 Duration=1; P retains pattern metadata",
+    "pConfig":  "YUV420P/Baseline/LevelAuto/CAVLC/CQP/QP26, FPS30/1, GOP600, IDR requested0 effective600, B0, Threads requested0 effective1, slices1, search16 diamond, no transform8/weights/lookahead/AQ/PCM; setup/input/IDR warmup excluded; one P Send/Receive timed",
+    "bConfig":  "YUV420P/High/LevelAuto/CABAC/CQP/QP26, FPS30/1, GOP30, IDR requested0 effective30, B2, Threads requested0 effective1, transform8, slices1, search16 diamond, no weights/lookahead/AQ/PCM; one op Reset+4 Send/drain+Flush/drain; setup/input/deferred Close excluded",
+    "defaultsReference":  "config_defaults.go and encoder/benchmark_test.go, unchanged",
+    "endpointCommand":  "CGO_ENABLED=0 go test -run \u0027^$\u0027 -bench \u0027^(BenchmarkEncoderP_720p_Generic|BenchmarkEncoderB_720p_Generic)$\u0027 -benchtime=1x -benchmem -count=5 ./encoder",
+    "microCommand":  "CGO_ENABLED=0 go test -run \u0027^$\u0027 -bench \u0027^BenchmarkInterResidual_16x16_Auto$\u0027 -benchtime=100ms -benchmem -count=5 ./encoder",
+    "microFixture":  "encoder/residual_allocation_test.go preparedResidual: six native formats, frame32x64, restored 16x16 macroblock, QP26 interDeadZone, flat matrices, 4x4/8x8; restore+real interResidual+result assignment timed, constructor and final assertion excluded",
+    "backends":  "SAD Auto AVX2 width16/SSE2 otherwise, SATD4x4 SSE2, MC Generic; quant/transform unchanged Generic",
+    "isolation":  "No other task benchmark/build/test ran concurrently; external load unmonitored; high-performance power scheme retained",
+    "runs":  [
+                 {
+                     "phase":  "before",
+                     "name":  "BenchmarkEncoderP_720p_Generic",
+                     "framesPerOp":  1,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  880950400,
+                                         "bytesPerOp":  293495064,
+                                         "allocationsPerOp":  778259
+                                     },
+                                     {
+                                         "nsPerOp":  863677800,
+                                         "bytesPerOp":  293497320,
+                                         "allocationsPerOp":  778281
+                                     },
+                                     {
+                                         "nsPerOp":  865611000,
+                                         "bytesPerOp":  293497608,
+                                         "allocationsPerOp":  778286
+                                     },
+                                     {
+                                         "nsPerOp":  859720700,
+                                         "bytesPerOp":  293498760,
+                                         "allocationsPerOp":  778297
+                                     },
+                                     {
+                                         "nsPerOp":  864596000,
+                                         "bytesPerOp":  293499176,
+                                         "allocationsPerOp":  778302
+                                     }
+                                 ],
+                     "medianNs":  864596000,
+                     "medianBytes":  293497608,
+                     "medianAllocs":  778286
+                 },
+                 {
+                     "phase":  "before",
+                     "name":  "BenchmarkEncoderB_720p_Generic",
+                     "framesPerOp":  4,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  1886617500,
+                                         "bytesPerOp":  735039216,
+                                         "allocationsPerOp":  2020595
+                                     },
+                                     {
+                                         "nsPerOp":  1995764200,
+                                         "bytesPerOp":  735043024,
+                                         "allocationsPerOp":  2020636
+                                     },
+                                     {
+                                         "nsPerOp":  1979717200,
+                                         "bytesPerOp":  735043488,
+                                         "allocationsPerOp":  2020642
+                                     },
+                                     {
+                                         "nsPerOp":  1950709500,
+                                         "bytesPerOp":  735044552,
+                                         "allocationsPerOp":  2020629
+                                     },
+                                     {
+                                         "nsPerOp":  1991541600,
+                                         "bytesPerOp":  735040088,
+                                         "allocationsPerOp":  2020628
+                                     }
+                                 ],
+                     "medianNs":  1979717200,
+                     "medianBytes":  735043024,
+                     "medianAllocs":  2020629
+                 },
+                 {
+                     "phase":  "after",
+                     "name":  "BenchmarkEncoderP_720p_Generic",
+                     "framesPerOp":  1,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  802595100,
+                                         "bytesPerOp":  13372312,
+                                         "allocationsPerOp":  342532
+                                     },
+                                     {
+                                         "nsPerOp":  847895700,
+                                         "bytesPerOp":  13371928,
+                                         "allocationsPerOp":  342529
+                                     },
+                                     {
+                                         "nsPerOp":  869385700,
+                                         "bytesPerOp":  13371880,
+                                         "allocationsPerOp":  342528
+                                     },
+                                     {
+                                         "nsPerOp":  839669000,
+                                         "bytesPerOp":  13371176,
+                                         "allocationsPerOp":  342520
+                                     },
+                                     {
+                                         "nsPerOp":  849608600,
+                                         "bytesPerOp":  13371192,
+                                         "allocationsPerOp":  342520
+                                     }
+                                 ],
+                     "medianNs":  847895700,
+                     "medianBytes":  13371880,
+                     "medianAllocs":  342528
+                 },
+                 {
+                     "phase":  "after",
+                     "name":  "BenchmarkEncoderB_720p_Generic",
+                     "framesPerOp":  4,
+                     "samples":  [
+                                     {
+                                         "nsPerOp":  1916589300,
+                                         "bytesPerOp":  47528624,
+                                         "allocationsPerOp":  951156
+                                     },
+                                     {
+                                         "nsPerOp":  1894516600,
+                                         "bytesPerOp":  47529104,
+                                         "allocationsPerOp":  951161
+                                     },
+                                     {
+                                         "nsPerOp":  1866821800,
+                                         "bytesPerOp":  47529072,
+                                         "allocationsPerOp":  951160
+                                     },
+                                     {
+                                         "nsPerOp":  1894669700,
+                                         "bytesPerOp":  47528992,
+                                         "allocationsPerOp":  951160
+                                     },
+                                     {
+                                         "nsPerOp":  1943318900,
+                                         "bytesPerOp":  47529296,
+                                         "allocationsPerOp":  951162
+                                     }
+                                 ],
+                     "medianNs":  1894669700,
+                     "medianBytes":  47529072,
+                     "medianAllocs":  951160
+                 }
+             ],
+    "microRuns":  [
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv420p/t8=false",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  4429,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  4247,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  4354,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  4142,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  4353,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          }
+                                      ],
+                          "medianNs":  4353,
+                          "medianBytes":  7072,
+                          "medianAllocs":  11
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv420p/t8=true",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  7492,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  9304,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  9807,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  7817,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  7749,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          }
+                                      ],
+                          "medianNs":  7817,
+                          "medianBytes":  7072,
+                          "medianAllocs":  11
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv420p10le/t8=false",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  4167,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  4577,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  4267,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  4286,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  4111,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          }
+                                      ],
+                          "medianNs":  4267,
+                          "medianBytes":  7072,
+                          "medianAllocs":  11
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv420p10le/t8=true",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  7502,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  7337,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  7537,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  7572,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          },
+                                          {
+                                              "nsPerOp":  7542,
+                                              "bytesPerOp":  7072,
+                                              "allocationsPerOp":  11
+                                          }
+                                      ],
+                          "medianNs":  7537,
+                          "medianBytes":  7072,
+                          "medianAllocs":  11
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv422p/t8=false",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  5403,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  5646,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  5445,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  5636,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  5501,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          }
+                                      ],
+                          "medianNs":  5501,
+                          "medianBytes":  7616,
+                          "medianAllocs":  19
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv422p/t8=true",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  8687,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  8530,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  8522,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  8588,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  8574,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          }
+                                      ],
+                          "medianNs":  8574,
+                          "medianBytes":  7616,
+                          "medianAllocs":  19
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv422p10le/t8=false",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  5231,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  5513,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  5427,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  5463,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  5623,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          }
+                                      ],
+                          "medianNs":  5463,
+                          "medianBytes":  7616,
+                          "medianAllocs":  19
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv422p10le/t8=true",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  8998,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  8637,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  10206,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  8919,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          },
+                                          {
+                                              "nsPerOp":  8435,
+                                              "bytesPerOp":  7616,
+                                              "allocationsPerOp":  19
+                                          }
+                                      ],
+                          "medianNs":  8919,
+                          "medianBytes":  7616,
+                          "medianAllocs":  19
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv444p/t8=false",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  8839,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  8763,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  8616,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  8619,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  8088,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          }
+                                      ],
+                          "medianNs":  8619,
+                          "medianBytes":  19584,
+                          "medianAllocs":  3
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv444p/t8=true",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  18881,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  19432,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  18754,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  19213,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  18819,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          }
+                                      ],
+                          "medianNs":  18881,
+                          "medianBytes":  19584,
+                          "medianAllocs":  3
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv444p10le/t8=false",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  8542,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  8603,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  8305,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  8274,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  8690,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          }
+                                      ],
+                          "medianNs":  8542,
+                          "medianBytes":  19584,
+                          "medianAllocs":  3
+                      },
+                      {
+                          "phase":  "before",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv444p10le/t8=true",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  19003,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  19157,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  18556,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  18693,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          },
+                                          {
+                                              "nsPerOp":  19036,
+                                              "bytesPerOp":  19584,
+                                              "allocationsPerOp":  3
+                                          }
+                                      ],
+                          "medianNs":  19003,
+                          "medianBytes":  19584,
+                          "medianAllocs":  3
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv420p/t8=false",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  3359,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  3898,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  3710,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  3465,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  2849,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  3465,
+                          "medianBytes":  0,
+                          "medianAllocs":  0
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv420p/t8=true",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  6792,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  6988,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  6528,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  6797,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  6184,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  6792,
+                          "medianBytes":  0,
+                          "medianAllocs":  0
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv420p10le/t8=false",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  3828,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  3358,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  3050,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  3485,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  2762,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  3358,
+                          "medianBytes":  0,
+                          "medianAllocs":  0
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv420p10le/t8=true",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  6110,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  6498,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  7012,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  6814,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  6275,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  6498,
+                          "medianBytes":  0,
+                          "medianAllocs":  0
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv422p/t8=false",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  5102,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  3732,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  3747,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  5110,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  4129,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  4129,
+                          "medianBytes":  0,
+                          "medianAllocs":  0
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv422p/t8=true",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  7452,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  8008,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  8290,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  7630,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  8267,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  8008,
+                          "medianBytes":  0,
+                          "medianAllocs":  0
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv422p10le/t8=false",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  4155,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  5063,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  3633,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  4151,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  5087,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  4155,
+                          "medianBytes":  0,
+                          "medianAllocs":  0
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv422p10le/t8=true",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  7411,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  7329,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  7095,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  7095,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  7768,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  7329,
+                          "medianBytes":  0,
+                          "medianAllocs":  0
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv444p/t8=false",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  7279,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  8075,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  8136,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  7895,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  8155,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  8075,
+                          "medianBytes":  0,
+                          "medianAllocs":  0
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv444p/t8=true",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  16601,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  18140,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  18116,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  17410,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  17784,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  17784,
+                          "medianBytes":  0,
+                          "medianAllocs":  0
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv444p10le/t8=false",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  6913,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  8075,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  7776,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  6510,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  7656,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  7656,
+                          "medianBytes":  0,
+                          "medianAllocs":  0
+                      },
+                      {
+                          "phase":  "after",
+                          "name":  "BenchmarkInterResidual_16x16_Auto/yuv444p10le/t8=true",
+                          "samples":  [
+                                          {
+                                              "nsPerOp":  17728,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  17185,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  17353,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  17828,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          },
+                                          {
+                                              "nsPerOp":  17318,
+                                              "bytesPerOp":  0,
+                                              "allocationsPerOp":  0
+                                          }
+                                      ],
+                          "medianNs":  17353,
+                          "medianBytes":  0,
+                          "medianAllocs":  0
+                      }
+                  ],
+    "artifacts":  [
+                      {
+                          "path":  "tmp/m8-baseline/g01-encoder-after.txt",
+                          "sha256":  "b7a7f8223148250d8f28873ff4506bea3255e7e16b5b855eb0ae36faa083b017"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g02-encoder-after.txt",
+                          "sha256":  "2a3874a1c94ae06731641b8eda8aa2ae56f9f957fa5d48fe77b69f9fa34b4327"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g02-micro-before.txt",
+                          "sha256":  "20d078902c7c4f37b46894113c508e613e8792364e6df4981f57566b0bf28aab"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g02-micro-after.txt",
+                          "sha256":  "32f79f69d463792c2a754445506f511e59ff2a86150fed4151f4bc5ed90e3cef"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g02-frozen-before.txt",
+                          "sha256":  "5d326429c1c9a4132186294a76bc49e007c4351c72b62c53ee7b944c0aa3f36f"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g02-encoder-escape-before.txt",
+                          "sha256":  "60972edb3062a9e95558ef22fd1e5d1cc03e0dd1bdbc9c0053fe231bcb52125d"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g02-encoder-escape-intermediate.txt",
+                          "sha256":  "7a8005cc4da5ef6e4ee2da5b5610e9e02371917730d586f551c25688e21309fe"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g02-encoder-escape-after.txt",
+                          "sha256":  "6357a1120697d5ba3a218f10615abf6e47a4d45fe038aebea8f3527185a08d46"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g02-targeted.txt",
+                          "sha256":  "4c95eb713a15aa8e6f437f776680b7f36172808d7d4420c66c69e28e417754e3"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g02-targeted-final.txt",
+                          "sha256":  "16e0ae19afb542d2b90b11cd9a3dba9138f464ea12edc0f4909a0b726c98715d"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g01-alloc-space.txt",
+                          "sha256":  "27f6e0c7dd8151478418f0da0ac9fda7262b526621316de0bb4d50feb8f82cbd"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g02-alloc-space.txt",
+                          "sha256":  "e9afe60c4bb30dad25a5f50e132c9f3fdfeb3d59163429e2f35e8342393fc46e"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g01-alloc-objects.txt",
+                          "sha256":  "0c7cb0c07cefc08703fbb6792a97e555f42cfc43061fb8576d571f794e441062"
+                      },
+                      {
+                          "path":  "tmp/m8-baseline/g02-alloc-objects.txt",
+                          "sha256":  "a5353dd5360e9fc4bb381676db6b448b27cd1df1440eb316288c8eb9c6ffc6a2"
+                      }
+                  ],
+    "frozenResidualSHA256":  "bb4e1a6cc1f3fc24cbd8f4567634d6765add07174b8d105f5c6f065da39f84e0",
+    "frozenResidualCases":  384,
+    "frozenResidualScope":  "six formats, frame/bottom-field, flat/custom scaling, QPmin/26/51, transform4/8, both dead zones, joint/independent444; every coefficient/CBP/reconstructed valid sample frozen before changes",
+    "failuresRetained":  "First zero-allocation test found 2 allocations in joint444 reconstruction; compiler evidence traced local plane through recursive reconstructInter/reconstructChroma444. Extracted shared luma-only reconstruction entry; frozen output unchanged. Original failed log retained.",
+    "profileBoundary":  "Separate memprofilerate=1 process includes prewarm/setup and cannot be mixed with timed B/op. Original residual/analyzeIntra/subsampledChromaResidual flat allocations disappear; remaining writer/blockSamples/picture/metadata.",
+    "limitations":  "Full RD capture/normal mode decision still allocates writers and neighbors; G02 is partial K18. No native NEON evidence or GC-cycle/assist/pause percentage claimed."
+}

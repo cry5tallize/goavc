@@ -7,7 +7,7 @@
 - 分支 `perf/m8-simd`，A00、K01–K05、K07、K09a已逐项提交；K06/K08按用户要求完成实现与交叉编译，原生未验证。SAD与SATD已真实接入，MC当前是唯一Generic块算法，不是SIMD插值。
 - amd64 Auto逐槽选择：SAD宽16为AVX2（其他宽SSE2），SATD4×4优选实测更快的SSE2；purego无项目汇编。没有全局“所有槽均AVX2”的声明。
 - K14a已补Windows SAD逐行保护页；其余内核矩阵未完成。K09b/c/d、K10–K13、K15–K25及K20m仍待实施，K14收尾待所有内核交付。
-- G01（K18前置）已用caller-owned搜索Workspace消除window/Scorer闭包反复逃逸；P控制场景中位778286分配/op，prepared搜索/MC/SATD为0分配。残差、邻域和试写仍是主要分配来源；不是完整K18。
+- G01/G02（K18切片）已消除搜索window/Scorer闭包和残差量化临时量反复逃逸；prepared搜索/MC/SATD、六格式帧间残差/重建/四分区候选为0分配。P控制中位13371880B/op、342528次/op；仍有邻域与RD/正式试写分配，不是完整K18。
 - 尚未执行完整race/代表性主目标长矩阵或远端CI；不创建标签、不push/release，不签完整M8。以下各节按实施时间保留当时的下一项与原始数据，最新状态以本节和状态矩阵为准。
 
 ## A00：基线与契约
@@ -140,3 +140,15 @@ TestAllocation_PreparedSearch覆盖双位深×真实场/帧×边界/内部×full
 P独立memprofilerate=1覆盖整个进程（含预热，不能与计时区B/op混算）：搜索两阶段原各20250KiB和32400对象已从top栈消失，Scorer调用者的32400闭包对象亦消失。剩余主要为interResidual、analyzeIntra、subsampledChromaResidual、Writer.WriteBits和blockSamples。search的-m=2不再报告局部window搬堆或生产Scorer逃逸；测试框架闭包准备分配单列。没有测自然GC，不能给GC次数/暂停下降百分比。
 
 验证全部退出0：`go test -count=1 ./internal/motion/search ./encoder`；`go test -tags goavc_simdtest -count=1 -run '^(TestParity_SearchBackends|TestWorkspace_)' -v ./internal/motion/search ./encoder`；`go test -tags purego -count=1 ./internal/motion/search ./encoder`；实际`GOARCH=386 go test -count=1 ./internal/motion/search ./encoder`；Windows/Linux/macOS × amd64/arm64全库build；完整常规门禁gofmt/vet/build/test/depscheck/55条manifest/diff-check。普通命令均CGO_ENABLED=0，日志`tmp/m8-baseline/g01-{targeted,parity,purego,386,verify}.txt`。未执行NEON原生、完整race、长矩阵、远端CI；没有push/tag/release。下一项优先G02残差逃逸，之后G03试写/邻域，再有界池和所有权；剩余SIMD任务仍保留。
+
+### G02：残差量化与共同444重建去逃逸
+
+起点`11b902e`，保留原有05/08/README/13文档修改。本任务只改encoder/inter.go、chroma.go及相关验证，不动transform量化公式、死区/候选策略、共享SIMD分发或线程。先用encoder的-m=2与G01的独立memprofilerate=1逐行归因，确认局部res经量化函数变量逃逸，420/422色度coeff/had亦有反复分配；原analyzeIntra经色度调用也保守逃逸。改为直接具名调用原4/8/DC量化器，不增加池、不隐藏指针、不改变返回残差的独立值语义。
+
+首次零分配测试发现共同444的重建仍有2次分配，失败日志`g02-targeted.txt`原样保留。中间-m=2把reconstructChroma444的局部plane经reconstructInter递归图保守逃逸定位出来；提取唯一reconstructInterLuma，普通入口和共同444均调用它，保持4/8块顺序与同一共享反量化/逆变换。中间分配诊断日志也保留，未降低测试要求。
+
+在算法修改前以新测试在11b902e采集384组完整系数/CBP/重建采样SHA：`bb4e1a6cc1f3fc24cbd8f4567634d6765add07174b8d105f5c6f065da39f84e0`，修改后逐项聚合不变，无更新开关。六原生格式、frame/真实bottom-field、flat/自定义矩阵、QP最小值/26/51、4/8变换、两死区、共同/独立444均覆盖。TestAllocation_InterResidual含每次预测/CBP恢复和真实重建为0分配；TestAllocation_InterCandidate在同矩阵运行四个实际分区、真实搜索/MC/残差/重建也为0分配。RD capture/整个模式决策仍因Writer/邻域分配而未满足完整K18。
+
+五次prepared微基准12场景原420为7072B/11次、422为7616B/19次、444为19584B/3次，均降为0；耗时全部中位降低，见performance。相同固定1x端点：P中位864596000→847895700ns、293497608→13371880B、778286→342528次；B四帧/op中位1979717200→1894669700ns、735043024→47529072B、2020629→951160次。完整样本、配置、输入SHA、源码状态和日志SHA见`docs/gates/m8_residual_samples.json`。profile单独测量，含预热不能与计时窗口混算；原残差相关flat栈消失，剩余writer/blockSamples/picture/metadata。没有自然GC/assist/暂停数据，不宣称其下降百分比，也不签30FPS。
+
+定向真实候选/指纹、goavc_simdtest强制Generic/SSE2/AVX2、purego encoder、386 encoder实际运行、六OS/架构全库build、完整常规gofmt/vet/build/test/depscheck/55条manifest/diff-check均退出0；日志`tmp/m8-baseline/g02-{targeted-complete,parity,purego,386,verify}.txt`。NEON本机不可用明确Skip，交叉构建不替代原生。全库race在本次集成后单独运行，实际结果另行追加。下一项G03试写/邻域复用，剩余SIMD/池化/并行仍待交付。

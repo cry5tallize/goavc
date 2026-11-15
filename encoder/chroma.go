@@ -48,17 +48,19 @@ func (s *frameState) subsampledChromaResidual(addr int, res *residual, intra, re
 	w, h := s.planeMBSize(1)
 	x, y := addr%s.pic.MBWidth*w, addr/s.pic.MBWidth*h
 	qpc := s.chromaQP(info.qp)
-	quant, quantDC := transform.Quant4x4WithScaling, transform.QuantDCWithScaling
-	if !intra && info.interDeadZone {
-		quant, quantDC = transform.QuantInter4x4WithScaling, transform.QuantInterDCWithScaling
-	}
+	// 块入口确定策略，具名调用使res/coeff/DC保持栈上；不改共享量化公式。
+	interDeadZone := !intra && info.interDeadZone
 	cbp := 0
 	for c := range 2 {
 		var dc [8]int32
 		for r := range w * h / 16 {
 			coeff := residualTransform(&s.src.Planes[c+1], &s.pic.Planes[c+1], x+r%2*4, y+r/2*4)
 			dc[r], coeff[0] = coeff[0], 0
-			quant(&res.chroma[c][r], &coeff, qpc, s.matrix4(intra, c+1))
+			if interDeadZone {
+				transform.QuantInter4x4WithScaling(&res.chroma[c][r], &coeff, qpc, s.matrix4(intra, c+1))
+			} else {
+				transform.Quant4x4WithScaling(&res.chroma[c][r], &coeff, qpc, s.matrix4(intra, c+1))
+			}
 			if nonzero(res.chroma[c][r][:]) {
 				cbp = 2
 			}
@@ -67,12 +69,20 @@ func (s *frameState) subsampledChromaResidual(addr int, res *residual, intra, re
 			var had [8]int32
 			// 输入采样与合法 QP 已限界，八点变换不会触及 int32 上限。
 			_ = transform.ForwardChromaDC422(&had, &dc)
-			quantDC(res.chromaDC[c][:8], had[:], qpc+3, scalingDC(s.matrix4(intra, c+1)))
+			if interDeadZone {
+				transform.QuantInterDCWithScaling(res.chromaDC[c][:8], had[:], qpc+3, scalingDC(s.matrix4(intra, c+1)))
+			} else {
+				transform.QuantDCWithScaling(res.chromaDC[c][:8], had[:], qpc+3, scalingDC(s.matrix4(intra, c+1)))
+			}
 		} else {
 			var input, had [4]int32
 			copy(input[:], dc[:4])
 			transform.ForwardChromaDC(&had, &input)
-			quantDC(res.chromaDC[c][:4], had[:], qpc, scalingDC(s.matrix4(intra, c+1)))
+			if interDeadZone {
+				transform.QuantInterDCWithScaling(res.chromaDC[c][:4], had[:], qpc, scalingDC(s.matrix4(intra, c+1)))
+			} else {
+				transform.QuantDCWithScaling(res.chromaDC[c][:4], had[:], qpc, scalingDC(s.matrix4(intra, c+1)))
+			}
 		}
 		if cbp == 0 && nonzero(res.chromaDC[c][:]) {
 			cbp = 1
@@ -137,7 +147,7 @@ func (s *frameState) reconstructChroma444(addr int, res *residual) {
 		s.pic.Planes[0], s.pic.Planes[c] = s.pic.Planes[c], s.pic.Planes[0]
 		s.plane, s.separate = c, true
 		plane := residual{luma: res.chroma[c-1], lumaDC: res.chromaDC[c-1], luma8: res.chroma8[c-1]}
-		s.reconstructInter(addr, &plane)
+		s.reconstructInterLuma(addr, &plane)
 		s.pic.Planes[0], s.pic.Planes[c] = s.pic.Planes[c], s.pic.Planes[0]
 	}
 }

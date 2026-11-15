@@ -168,19 +168,19 @@ func (s *frameState) mc(addr int, p partition, mv motion.MV) {
 func (s *frameState) interResidual(addr int) residual {
 	x, y := addr%s.pic.MBWidth*16, addr/s.pic.MBWidth*16
 	info := &s.info[addr]
-	quant4 := transform.Quant4x4WithScaling
-	quant8 := transform.Quant8x8WithScaling
-	if info.interDeadZone {
-		quant4 = transform.QuantInter4x4WithScaling
-		quant8 = transform.QuantInter8x8WithScaling
-	}
+	// 直接调用唯一共享量化器，避免经函数变量传入局部数组地址而逃逸。
+	// 两种死区仍由原候选标志决定，不改变任何系数公式或候选集合。
 	var res residual
 	for r := 0; r < 16; r++ {
 		if info.transform8 {
 			break
 		}
 		coeff := residualTransform(&s.src.Planes[0], &s.pic.Planes[0], x+r%4*4, y+r/4*4)
-		quant4(&res.luma[r], &coeff, s.lumaQP(info.qp), s.matrix4(false, 0))
+		if info.interDeadZone {
+			transform.QuantInter4x4WithScaling(&res.luma[r], &coeff, s.lumaQP(info.qp), s.matrix4(false, 0))
+		} else {
+			transform.Quant4x4WithScaling(&res.luma[r], &coeff, s.lumaQP(info.qp), s.matrix4(false, 0))
+		}
 		if nonzero(res.luma[r][:]) {
 			info.cbp |= 1 << ((r/4/2)*2 + r%4/2)
 		}
@@ -195,7 +195,11 @@ func (s *frameState) interResidual(addr int) residual {
 				}
 			}
 			transform.Forward8x8(&coeff, &input)
-			quant8(&res.luma8[block], &coeff, s.lumaQP(info.qp), s.matrix8(false))
+			if info.interDeadZone {
+				transform.QuantInter8x8WithScaling(&res.luma8[block], &coeff, s.lumaQP(info.qp), s.matrix8(false))
+			} else {
+				transform.Quant8x8WithScaling(&res.luma8[block], &coeff, s.lumaQP(info.qp), s.matrix8(false))
+			}
 			if nonzero(res.luma8[block][:]) {
 				info.cbp |= 1 << block
 			}
@@ -217,6 +221,20 @@ func (s *frameState) clearMotion(addr int) { // 下一候选的“未来块”�
 }
 
 func (s *frameState) reconstructInter(addr int, res *residual) {
+	s.reconstructInterLuma(addr, res)
+	if !s.separate {
+		if s.chromaArrayType() == 3 {
+			s.reconstructChroma444(addr, res)
+		} else {
+			s.reconstructSubsampledChroma(addr, res, false)
+		}
+	}
+}
+
+// 共同444借用亮度Plane时只重建该平面。显式入口解除
+// reconstructInter↔reconstructChroma444的递归调用图，避免局部plane保守逃逸；
+// 仍用同一套共享反量化/逆变换与原有逐块顺序。
+func (s *frameState) reconstructInterLuma(addr int, res *residual) {
 	x, y := addr%s.pic.MBWidth*16, addr/s.pic.MBWidth*16
 	qp := s.info[addr].qp
 	for r := 0; r < 16; r++ {
@@ -228,13 +246,6 @@ func (s *frameState) reconstructInter(addr int, res *residual) {
 	if s.info[addr].transform8 {
 		for block := 0; block < 4; block++ {
 			reconstruct8(&s.pic.Planes[0], x+(block%2)*8, y+(block/2)*8, &res.luma8[block], s.lumaQP(qp), s.matrix8(false))
-		}
-	}
-	if !s.separate {
-		if s.chromaArrayType() == 3 {
-			s.reconstructChroma444(addr, res)
-		} else {
-			s.reconstructSubsampledChroma(addr, res, false)
 		}
 	}
 }

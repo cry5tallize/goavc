@@ -27,3 +27,21 @@ func TestParity_IntraBackends(t *testing.T) {
 		})
 	}
 }
+
+func TestParity_ResidualBackends(t *testing.T) {
+	for _, backend := range []simd.Backend{simd.Generic, simd.SSE2, simd.AVX2, simd.NEON} {
+		t.Run(backend.String(), func(t *testing.T) {
+			restore, err := simd.ForceBackendForTesting(backend)
+			if errors.Is(err, simd.ErrBackendUnavailable) {
+				t.Skip("后端不可用，未执行")
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer restore()
+			TestResidual_FrozenCandidates(t)
+			TestAllocation_InterResidual(t)
+			TestAllocation_InterCandidate(t)
+		})
+	}
+}

@@ -166,6 +166,7 @@
 | 自适应 QP | Conformant | M5b 活动度 QP 选项 0..6、QP 0..51 裁剪，默认关闭，显式回调/PCM 冲突拒绝 |
 | SSE2 / AVX2 / NEON | Partial | M8的8/10-bit SAD：SSE2通用矩形、AVX2宽16；x86 SATD4×4默认优选SSE2并保留AVX2。NEON SAD宽16/SATD4×4已交叉构建，原生未验证（用户指定编译验收）。其余kernel待实施，不声明完整M8通过 |
 | 搜索工作区复用 | Partial | G01在真实编码器复用双位深Workspace，prepared Integer/Refine/Estimate含Scorer为0分配；旧回调轨迹/码流不变。仅搜索路径，完整模式决策零分配、池化与并行尚未完成 |
+| 帧间残差去分配 | Partial | G02在六格式/场/矩阵/两死区/4与8变换下，prepared真实帧间候选与重建0分配，384组改造前指纹不变；RD试写、邻域及完整K18仍未完成 |
 
 ## 10. 流式I/O（M6）
 
