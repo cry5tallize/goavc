@@ -67,7 +67,14 @@ func assignSliceOwnership(entries []sliceEntry, states [3]*frameState, planeCoun
 		fs := states[plane]
 		fs.groupMap = groupMap
 		if groupMap != nil {
-			fs.sliceOwners = make([]int, fs.total)
+			t := fs.temporary
+			if cap(t.sliceOwners) < fs.total {
+				t.sliceOwners = make([]int, fs.total)
+			} else {
+				t.sliceOwners = t.sliceOwners[:fs.total]
+				clear(t.sliceOwners)
+			}
+			fs.sliceOwners = t.sliceOwners
 		}
 	}
 	for i := range entries {

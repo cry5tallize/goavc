@@ -121,6 +121,13 @@ DPB保留元数据采用明确lease/独占转移；参考淘汰时释放，临�
 
 共享 buffer 包不认识 codec 私有 mbInfo/residual 类型；这些typed scratch留在各codec包，避免为了“统一池”暴露内部类型或引入依赖环。
 
+### 5.3 本轮精简实施边界
+
+本轮不为尚未通过收益准入的并行预建任务系统。decoder 先复用表示级临时元数据，Motion/reference IDs/MBField 仍按原契约转交 DPB；临时存储只能在完整重建、覆盖检查与去块完成后回收。encoder 的 attempt、best、committed 及场/平面通道各自独占元数据；释放旧元数据不等于释放仍作为参考的像素。
+
+两侧 typed 元数据空闲缓存各以 16 MiB、最多三个槽为上限，按实际 capacity 计费；活跃合法工作不受空闲预算拒绝。Reset 可保留有界缓存，Close 解除实例缓存。不复用公共对象头，不使用全局在用注册表，不把清除引用冒充 retained backing 已池化。
+
+
 ## 6. K17/K18：零分配门禁边界
 
 ### 必须为0

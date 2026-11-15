@@ -24,6 +24,7 @@ type Encoder struct {
 	fullSearch                bool
 	searchWorkspace           *search.Workspace // 一个串行执行 lane；场/独立平面临时通道只借用。
 	trialWriters              *trialWriters
+	frameStorage              *frameStoragePool // Owner shared by shallow field/plane channels.
 	maxAUBytes                int
 	adaptiveQP                int
 	cabac                     bool
@@ -158,6 +159,7 @@ func New(cfg h264.EncoderConfig, options ...Option) (*Encoder, error) {
 	}
 	e := &Encoder{cfg: cfg, slices: 1, searchRange: 16, searchWorkspace: new(search.Workspace), picturePool: picture.NewPool(4), cabac: cfg.Profile != h264.ProfileBaseline, frameQP: cfg.QP, lastQP: cfg.QP}
 	e.trialWriters = newTrialWriters()
+	e.ensureFrameStorage()
 	if cfg.RateControl == h264.RateControlCBR || cfg.RateControl == h264.RateControlVBV {
 		e.vbvBufferBits = int64(cfg.VBVBufferSize)
 		if e.vbvBufferBits == 0 {
@@ -339,7 +341,9 @@ func (e *Encoder) encodeFrameNow(f *h264.Frame, lookaheadScene bool) error {
 		e.rateQP[kind], e.rateQPKnown[kind] = e.frameQP, true
 	}
 	e.reconPTS, e.reconDuration = f.PTS, f.Duration
+	previousState := e.last
 	e.last = state
+	releaseFrameMetadata(previousState)
 	e.reconKeyFrame = isIDR
 	e.out = &h264.Packet{Data: data, PTS: f.PTS, DTS: f.PTS, Duration: f.Duration, KeyFrame: isIDR}
 	if e.cfg.MaxBFrames > 0 {
@@ -451,6 +455,7 @@ func (e *Encoder) Reset() error {
 		e.trialWriters.mb.Reset()
 	}
 	e.releaseOwnedPictures()
+	releaseFrameMetadata(e.last)
 	e.out = nil
 	e.recon = nil
 	e.last = nil
@@ -475,6 +480,8 @@ func (e *Encoder) Reset() error {
 // Close 幂等释放实例资源。
 func (e *Encoder) Close() error {
 	e.releaseOwnedPictures()
+	releaseFrameMetadata(e.last)
+	e.frameStorage = nil
 	e.searchWorkspace = nil
 	e.trialWriters = nil
 	e.out = nil

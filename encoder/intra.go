@@ -36,6 +36,7 @@ type residual struct {
 type frameState struct {
 	src, pic        *picture.Picture
 	ownsPic         bool
+	storage         *frameStorage
 	info            []mbInfo
 	nz              []uint8
 	cnz             [2][]uint8

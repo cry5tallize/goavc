@@ -815,3 +815,16 @@ G08 仅清除失败 frameState 的元数据引用并验证 DPB/输出租约平�
 ### G09：AU 容量与粘性失败状态
 
 G09 只清理 AUReader 失败后的 assembler 与容量元数据，不改变 NAL/AU 封装或容量校验算法；本切片未新增吞吐、分配、RSS 或 GC 样本。既有 writer 原子性与容量测试不等价于端到端集成性能证据。
+
+### K16：有界临时元数据复用
+
+起点 `45d74432b0`；同机 Go1.27.4 windows/amd64、Ryzen 7 5700X、CGO=0、默认 GOMAXPROCS=16。沿用原 benchmark 全部输入/配置及计时边界，`-benchtime=1x -count=5 -benchmem`；测量时未运行本次其他构建/测试，未监控外部负载。旧名 Generic 实际使用当前 Auto 分派。decoder 为含 New/三帧/Flush/Release/Close 的冷序列，encoder B 为含 Reset 的四帧 IDR/P/B/B，不是稳态主目标。
+
+| 五次中位 | 前ns/op | 后ns/op | 前B/op | 后B/op | 前allocs/op | 后allocs/op |
+|---|---:|---:|---:|---:|---:|---:|
+| decoder 1080p三帧 | 139137600 | 104716600 | 18710576 | 17384256 | 27851 | 27837 |
+| encoder B 720p四帧 | 2897201200 | 2249012700 | 15991752 | 12854392 | 215 | 194 |
+
+原始五样本在 `tmp/m8-k15-k20/k16-{decoder,encoder}-{before,after}.txt`；保留首轮公共缓存冷启动的大分配样本，不丢弃离群值。四份日志SHA-256依次为 decoder-before `63195761001817c5783469d51d07a37faf732af0af606b43a4eb76e4f837bc4a`、decoder-after `852930e2c2a728f12d68fc763b40aaaeed8f6bf70a822dc74b7cc7d80212cbc4`、encoder-before `c3ce4fecb23a143f586582afbc48a0ba78c8a99b981a57a5f81c71c2c91d124f`、encoder-after `8e078a741b55f8254bf6706673e4e11c5a7375b50c3787bb0836f3de2529503f`。decoder输入沿用§5的固定SHA；encoder仍用原pattern.Frame(1280,720,1)。时间为本次观测，不将其全部归因于分配变化；无自然GC/assist/RSS或长期稳态测量，不宣称30FPS达标。
+
+decoder 只复用表示级临时数组，DPB 的 Motion/reference IDs/MBField 未池化；encoder 的元数据独占租约在候选淘汰、旧状态替换及Reset/Close归还，不释放仍被参考角色借用的像素。各实例空闲元数据预算16MiB/最多三槽，不是RSS上限。

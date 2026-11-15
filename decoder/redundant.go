@@ -29,8 +29,19 @@ func (d *Decoder) reconstructRepresentation(entries []sliceEntry, top, bottom, p
 	}
 	success := false
 	defer func() {
+		// 必须遍历已建states而不是planeCount：失败返回值可能将计数设为0。
+		for _, state := range states {
+			state.releaseTemporary()
+		}
 		if !success {
 			fs.release()
+			for comp := 1; comp < len(states); comp++ {
+				if states[comp] != nil {
+					// 独立平面共享同一图像，只由首平面释放一次。
+					states[comp].framePic = nil
+					states[comp].release()
+				}
+			}
 		}
 	}()
 	fs.poc, fs.framePOC, fs.fieldPOC = poc, poc, [2]int32{top, bottom}

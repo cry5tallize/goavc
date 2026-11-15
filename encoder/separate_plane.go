@@ -10,6 +10,7 @@ import (
 // encodeSeparate 将三个独立 colour_plane_id slice 集合写入同一个 AU。
 // 每次只替换 Plane 描述符，I/P/B、熵编码、RD 与滤波仍走同一内核。
 func (e *Encoder) encodeSeparate(src *picture.Picture, intra, idr bool, qp int) ([]byte, *frameState, error) {
+	e.ensureFrameStorage()
 	var recon *picture.Picture
 	var err error
 	if e.picturePool != nil {
@@ -20,14 +21,15 @@ func (e *Encoder) encodeSeparate(src *picture.Picture, intra, idr bool, qp int) 
 	if err != nil {
 		return nil, nil, err
 	}
+	var first *frameState
 	success := false
 	defer func() {
 		if !success {
+			releaseFrameMetadata(first)
 			recon.Release()
 		}
 	}()
 	var data []byte
-	var first *frameState
 	for comp := range 3 {
 		channel := *e
 		channel.frameQP, channel.colourPlaneID = qp, comp
@@ -64,14 +66,17 @@ func (e *Encoder) encodeSeparate(src *picture.Picture, intra, idr bool, qp int) 
 		if err != nil {
 			return nil, nil, err
 		}
+		if comp == 0 {
+			first = state
+		} else {
+			// 仅首平面保留诊断元数据；其余平面的分析、熵写出和去块均已完成。
+			releaseFrameMetadata(state)
+		}
 		// 三集合共用一个AU预算，不能把每个集合各自的上限相加。
 		if len(bytes) > e.maxAUBytes-len(data) {
 			return nil, nil, fmt.Errorf("encoder: separate colour plane access unit exceeds %d bytes: %w", e.maxAUBytes, h264.ErrResourceLimit)
 		}
 		data = append(data, bytes...)
-		if comp == 0 {
-			first = state
-		}
 	}
 	if first == nil {
 		first = &frameState{}

@@ -31,6 +31,9 @@ type Decoder struct {
 	dpb  *dpb.DPB
 	poc  *dpb.POCState
 
+	// 最多三个独立平面的实例私有临时slot；空闲backing容量总计不超过16MiB。
+	temporary [3]frameTemporary
+
 	out            []*h264.Frame
 	pending        []orderedFrame
 	hasEmitted     bool
@@ -267,6 +270,7 @@ func (d *Decoder) Close() error {
 	}
 	_ = d.Reset()
 	d.pool.Trim()
+	d.temporary = [3]frameTemporary{}
 	d.closed = true
 	return nil
 }

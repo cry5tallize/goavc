@@ -358,3 +358,14 @@ K15 继续使用既有 Picture/Frame 池，不新增池或改变公共所有权�
 
 新增组合测试通过公开 SendFrame 在后续场/平面拒绝 QP，检查失败不发布、重试成功只保留一个图像 owner、Reset 后池账本平衡。定向测试、`CGO_ENABLED=0 bash scripts/verify.sh` 完整门禁（35包依赖、55条manifest）及四类失败/重试用例的 `CGO_ENABLED=1 go test -race -count=1` 均退出0；日志 `tmp/m8-k15-k20/k15-verify.txt`。尚未测自然 GC/RSS，不把所有权修复解释为吞吐提升。
 
+
+### K16 精简：串行元数据独占复用
+
+起点 `45d74432b0`。decoder 的三个表示级 temporary slot 复用 decoded/info/NZ/DC/MVD/direct/FMO owners/共同444残差；完整覆盖检查、去块和扩边后归还，失败遍历所有已建平面，清除Grid对owner表的借用。Motion/reference IDs/MBField仍按原契约交DPB，不冒充retained metadata已池化。encoder 的 typed storage 独占 info/NZ/DC/MVD/Grid；attempt/best/committed及场通道不能共享同一租约，旧e.last仅归还元数据，不归还仍借用的像素。独立平面非首通道结束后回收，Reset保留有界空闲缓存，Close清空。
+
+两侧分别按实际cap计费，空闲上限16MiB/最多三槽；合法活跃工作可超过该缓存预算。只以unsafe.Sizeof作编译期类型尺寸记账，不转换指针、不访问原始内存。未引入worker、公共API或通用对象池。
+
+新增decoder六格式/FMO脏缓存完整像素、失败恢复、热初始化0分配和预算测试；encoder六格式/场/独立平面、RC best/attempt保持及活跃运动消费者测试。定向测试通过。五次原端点before/after中位：decoder三帧18710576→17384256 B、27851→27837次；encoder B四帧15991752→12854392 B、215→194次。时间与原始样本SHA见performance的K16节，不宣称GC/RSS或完整K16原始并行隔离门禁通过。
+
+K16提交前 `CGO_ENABLED=0 bash scripts/verify.sh` 完整门禁退出0（35包依赖、55条manifest，包含既有三方Oracle与固定码流保护网）；新增decoder Temporary与encoder元数据消费者用例的 `CGO_ENABLED=1 go test -race -count=1` 退出0。日志 `tmp/m8-k15-k20/k16-verify.txt`。不是全库race或原生arm64验收。
+

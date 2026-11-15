@@ -2,6 +2,26 @@ package encoder
 
 import "github.com/goavc/h264/internal/picture"
 
+// releaseFrameMetadata 只归还独占的临时存储；像素仍可能由reference/bPast借用，
+// 因而替换e.last不能顺便释放其像素。
+func releaseFrameMetadata(s *frameState) {
+	if s == nil {
+		return
+	}
+	for _, field := range s.fields {
+		releaseFrameMetadata(field)
+	}
+	s.fields = [2]*frameState{}
+	if s.storage != nil {
+		storage := s.storage
+		s.storage = nil
+		s.info, s.nz, s.mvd, s.mv = nil, nil, nil, nil
+		s.cnz, s.dcCoded = [2][]uint8{}, [3][]bool{}
+		storage.owner.put(storage)
+	}
+	s.src, s.reference, s.searchReference = nil, nil, nil
+}
+
 // releaseFrameState 释放候选重建图像；src/reference 是借用引用，不在这里归还。
 func releaseFrameState(s *frameState) {
 	if s == nil {
@@ -11,10 +31,7 @@ func releaseFrameState(s *frameState) {
 		s.pic.Release()
 		s.pic = nil
 	}
-	s.src = nil
-	s.reference = nil
-	s.searchReference = nil
-	s.fields = [2]*frameState{}
+	releaseFrameMetadata(s)
 }
 
 // releaseOwnedPictures 只释放编码器当前持有的唯一图像。Picture.Release

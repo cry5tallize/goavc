@@ -74,6 +74,7 @@ func (s *frameState) predictFieldPartition(addr, kind, index int) motion.MV {
 func (e *Encoder) interlacedStates(src, recon *picture.Picture) ([2]*frameState, [2]*picture.Picture, [2]*picture.Picture, error) {
 	var states [2]*frameState
 	var past, future [2]*picture.Picture
+	e.ensureFrameStorage()
 	channel := *e
 	if e.autoWeights && e.reference != nil && !e.encodingB {
 		weights := estimatePredictionWeights(src, e.reference, 3-2*flag(e.separateColourPlane))
@@ -144,10 +145,16 @@ func (e *Encoder) encodeInterlaced(src *picture.Picture, intra, idr bool) ([]byt
 		}
 		ownsRecon = true
 	}
+	var states [2]*frameState
 	success := false
 	defer func() {
-		if ownsRecon && !success {
-			recon.Release()
+		if !success {
+			for _, s := range states {
+				releaseFrameMetadata(s)
+			}
+			if ownsRecon {
+				recon.Release()
+			}
 		}
 	}()
 	states, past, future, err := e.interlacedStates(src, recon)

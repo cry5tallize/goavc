@@ -180,6 +180,7 @@
 | encoder 图像与 RC 候选所有权 | Partial | G07/K15收尾覆盖实例私有池、普通/场/独立平面候选、创建层失败及RC最佳候选fatal回收；后续通道拒绝QP、成功重试和Reset租约平衡有回归。不改变QP搜索、码流或公共输出；自然GC/RSS及完整M8门禁未验收 |
 | decoder retained metadata 与 DPB 所有权 | Partial | G08 清空失败 frameState 的图像/场视图/运动/reference-ID 元数据，Reset 后 DPB Picture 归还池，错误恢复、输出 Release/Clone 和 decoder race 通过；未执行全库 race 与自然 GC/RSS 门禁 |
 | AU 容量与粘性错误状态 | Partial | G09 保持 Annex-B/AVCC 单NAL、NAL数量、输入/输出AU预算在封装前校验，AUReader 失败后清空 assembler/容量/参数集状态并禁止重复读取；超限与 writer 原子性测试、stream race 通过。G10 集成与全库 race 仍待完成 |
+| 串行临时元数据复用 | Partial | K16精简复用decoder表示级临时数组及encoder帧/候选元数据，活跃租约独占；各实例空闲缓存16MiB/最多三槽。DPB retained Motion/reference IDs/MBField仍按原生命周期，未做slice并行或宣称全codec零分配；前后端点与边界见performance及实施记录 |
 
 ## 10. 流式I/O（M6）
 

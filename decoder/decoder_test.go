@@ -391,3 +391,221 @@ func TestDecoder_ClearSliceEntries(t *testing.T) {
 		t.Fatalf("slice entry after clear = %#v, want zero value", entries[0])
 	}
 }
+
+// 污染所有可复用分量后，经公共解码入口比较完整原生像素，而非只检查切片长度。
+func TestDecoder_TemporaryDirtyReuse(t *testing.T) {
+	for _, path := range []string{
+		"../testdata/main/main_64x48_yuv420p_cabac_ipb_001.264",
+		"../testdata/high10/high10_48x32_yuv420p10le_cabac_ipb_002.264",
+		"../testdata/advanced/high422_64x64_yuv422p_cavlc_ipb_progressive_001.264",
+		"../testdata/advanced/high422_64x64_yuv422p10le_cabac_ipb_progressive_003.264",
+		"../testdata/advanced/high444_64x64_yuv444p_cavlc_ipb_progressive_005.264",
+		"../testdata/advanced/high444_64x64_yuv444p10le_cabac_ipb_progressive_007.264",
+		"../testdata/advanced/extended_64x64_yuv420p_cavlc_fmo6_007.264",
+	} {
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			want := decodeFile(t, path)
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			d := mustDecoder(t, h264.DecoderConfig{})
+			for range 2 {
+				poisonDecoderTemporary(t, d)
+				if err := d.SendPacket(h264.Packet{Data: data}); err != nil {
+					t.Fatal(err)
+				}
+				if err := d.Flush(); err != nil {
+					t.Fatal(err)
+				}
+				var got []byte
+				for {
+					f, err := d.ReceiveFrame()
+					if errors.Is(err, h264.ErrEOF) {
+						break
+					}
+					if err != nil {
+						t.Fatal(err)
+					}
+					for c, pl := range f.Planes {
+						_, rows := f.Format.PlaneDimensions(c, f.Width, f.Height)
+						rowBytes := f.Format.RowBytes(c, f.Width)
+						for y := range rows {
+							got = append(got, pl.Data[y*pl.Stride:y*pl.Stride+rowBytes]...)
+						}
+					}
+					f.Release()
+				}
+				if !bytes.Equal(got, want) {
+					t.Fatalf("dirty scratch changed native pixels: got %d bytes, want %d", len(got), len(want))
+				}
+				if err := d.Reset(); err != nil {
+					t.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
+func poisonDecoderTemporary(t *testing.T, d *Decoder) {
+	t.Helper()
+	sps := &syntax.SPS{ProfileIDC: 244, ChromaFormatIDC: 3, FrameMbsOnlyFlag: true, PicWidthInMbsMinus1: 7, PicHeightInMapUnitsMinus1: 7}
+	pps := &syntax.PPS{EntropyCodingModeFlag: true}
+	fs, err := newFrameState(d, sps, pps, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fs.temporary.sliceOwners = make([]int, fs.total)
+	for i := range fs.temporary.sliceOwners {
+		fs.temporary.sliceOwners[i] = 77
+	}
+	for i := range fs.decoded {
+		fs.decoded[i] = true
+		fs.info[i] = mbInfo{intra: true, transform8: true, sliceID: 77, qp: 51}
+	}
+	for i := range fs.lumaNZ {
+		fs.lumaNZ[i] = 16
+		fs.chromaNZ[0][i], fs.chromaNZ[1][i] = 16, 16
+		fs.mvd[i].X, fs.mvd[i].Y = 127, -127
+		fs.mvd1[i] = fs.mvd[i]
+		fs.directBlocks[i] = true
+	}
+	for c := range fs.dcCoded {
+		for i := range fs.dcCoded[c] {
+			fs.dcCoded[c][i] = true
+		}
+	}
+	for c := range fs.fullResidual {
+		for i := range fs.fullResidual[c].luma {
+			for j := range fs.fullResidual[c].luma[i] {
+				fs.fullResidual[c].luma[i][j] = 12345
+			}
+		}
+		for i := range fs.fullResidual[c].lumaDC {
+			fs.fullResidual[c].lumaDC[i] = 12345
+		}
+		for i := range fs.fullResidual[c].luma8 {
+			for j := range fs.fullResidual[c].luma8[i] {
+				fs.fullResidual[c].luma8[i][j] = 12345
+			}
+		}
+	}
+	fs.release()
+}
+
+func TestDecoder_TemporaryDirtyFailureRecovery(t *testing.T) {
+	d := mustDecoder(t, h264.DecoderConfig{})
+	poisonDecoderTemporary(t, d)
+	var idr nal.Unit
+	for _, u := range baselineUnits(t) {
+		if u.Header.Type == nal.TypeSPS || u.Header.Type == nal.TypePPS {
+			if err := d.SendPacket(h264.Packet{Data: annex(u)}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if u.Header.IsIDR() {
+			idr = u
+		}
+	}
+	entry, err := d.parseSlice(idr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry.hdr.FirstMBInSlice = 1 // 第0个MB缺失，dirty info不能掩盖覆盖错误。
+	if err := d.decodeFrame([]sliceEntry{entry}, h264.Packet{}); !errors.Is(err, h264.ErrInvalidData) {
+		t.Fatalf("missing macroblock: %v", err)
+	}
+	entry, err = d.parseSlice(idr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry.data = bitstream.NewReader(nil) // 已建slot后在宏块重建内部失败。
+	if err := d.decodeFrame([]sliceEntry{entry}, h264.Packet{}); !errors.Is(err, h264.ErrInvalidData) {
+		t.Fatalf("truncated macroblock: %v", err)
+	}
+	for i := range d.temporary {
+		if d.temporary[i].inUse {
+			t.Fatalf("failure retained temporary slot %d", i)
+		}
+	}
+	want := decodeFile(t, "../testdata/baseline/baseline_64x48_yuv420p_cavlc_ipp_001.264")
+	if err := d.SendPacket(h264.Packet{Data: annex(idr)}); err != nil {
+		t.Fatal(err)
+	}
+	f, err := d.ReceiveFrame()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []byte
+	for c, pl := range f.Planes {
+		_, rows := f.Format.PlaneDimensions(c, f.Width, f.Height)
+		rowBytes := f.Format.RowBytes(c, f.Width)
+		for y := range rows {
+			got = append(got, pl.Data[y*pl.Stride:y*pl.Stride+rowBytes]...)
+		}
+	}
+	f.Release()
+	if len(want) < len(got) || len(got) == 0 || !bytes.Equal(got, want[:len(got)]) {
+		t.Fatal("recovery IDR pixels differ after dirty failure")
+	}
+	if err := d.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if d.idleTemporaryBytes() != 0 {
+		t.Fatal("Close retained temporary storage")
+	}
+}
+
+func TestDecoder_TemporaryWarmInitializationAllocations(t *testing.T) {
+	d := mustDecoder(t, h264.DecoderConfig{})
+	sps := &syntax.SPS{ChromaFormatIDC: 3}
+	pps := &syntax.PPS{EntropyCodingModeFlag: true}
+	init := func() {
+		fs := frameState{d: d, sps: sps, pps: pps, total: 64, chromaBlocks: 16}
+		fs.acquireTemporary(true)
+		fs.releaseTemporary()
+	}
+	init()
+	if n := testing.AllocsPerRun(20, init); n != 0 {
+		t.Fatalf("warm temporary initialization allocated %g times", n)
+	}
+}
+
+func TestDecoder_TemporarySlotsAndBudget(t *testing.T) {
+	d := mustDecoder(t, h264.DecoderConfig{})
+	sps := &syntax.SPS{ChromaFormatIDC: 3, SeparateColourPlaneFlag: true}
+	pps := &syntax.PPS{EntropyCodingModeFlag: true}
+	var states [3]frameState
+	for i := range states {
+		states[i] = frameState{d: d, sps: sps, pps: pps, total: 16384, chromaBlocks: 16}
+		states[i].acquireTemporary(true)
+		states[i].info[0].sliceID = i
+	}
+	for i := range states {
+		if states[i].info[0].sliceID != i {
+			t.Fatal("independent planes alias temporary storage")
+		}
+	}
+	// 三个合法平面的活动工作集可以超过预算；只允许淘汰已归还存储。
+	for i := range states {
+		states[i].releaseTemporary()
+		if d.idleTemporaryBytes() > decoderTemporaryBudget {
+			t.Fatal("idle temporary backing exceeds budget")
+		}
+		for j := i + 1; j < len(states); j++ {
+			if states[j].info[0].sliceID != j {
+				t.Fatal("returning a plane discarded an active plane")
+			}
+		}
+	}
+	if d.idleTemporaryBytes() == 0 {
+		t.Fatal("bounded storage was not retained")
+	}
+	// 用很短的有效域和超预算的实际cap防止账本误按len计费。
+	d.temporary = [3]frameTemporary{}
+	d.temporary[0].decoded = make([]bool, 1, decoderTemporaryBudget+1)
+	d.trimTemporary()
+	if d.idleTemporaryBytes() != 0 {
+		t.Fatal("oversized backing was charged by length instead of capacity")
+	}
+}

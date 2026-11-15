@@ -3,6 +3,7 @@ package decoder
 import (
 	"encoding/binary"
 	"fmt"
+	"unsafe"
 
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/bitstream"
@@ -59,6 +60,8 @@ type frameState struct {
 	poc     int32
 	scaling syntax.ScalingMatrices
 
+	temporary *frameTemporary
+
 	mbW, mbH, total  int
 	subW, subH       int
 	chromaW, chromaH int
@@ -86,6 +89,182 @@ type frameState struct {
 	mv1              *motion.Grid
 	mvd1             []motion.MV
 	directBlocks     []bool
+}
+
+const decoderTemporaryBudget = 16 << 20
+
+// frameTemporary只含重建、覆盖验证和去块结束前使用的无指针元素数组。
+// Motion、referenceIDs和MBField会交给DPB，绝不能放进此缓存。
+type frameTemporary struct {
+	inUse        bool
+	decoded      []bool
+	info         []mbInfo
+	lumaNZ       []uint8
+	chromaNZ     [2][]uint8
+	dcCoded      [3][]bool
+	mvd          [2][]motion.MV
+	directBlocks []bool
+	sliceOwners  []int
+	fullResidual *[2]planeResidual
+}
+
+func (t *frameTemporary) bytes() int {
+	// unsafe.Sizeof仅作编译期类型大小记账；不做指针转换或内存访问。
+	n := cap(t.decoded)*int(unsafe.Sizeof(bool(false))) + cap(t.info)*int(unsafe.Sizeof(mbInfo{})) + cap(t.lumaNZ)
+	for _, nz := range t.chromaNZ {
+		n += cap(nz)
+	}
+	for _, dc := range t.dcCoded {
+		n += cap(dc) * int(unsafe.Sizeof(bool(false)))
+	}
+	for _, mvd := range t.mvd {
+		n += cap(mvd) * int(unsafe.Sizeof(motion.MV{}))
+	}
+	n += cap(t.directBlocks)*int(unsafe.Sizeof(bool(false))) + cap(t.sliceOwners)*int(unsafe.Sizeof(int(0)))
+	if t.fullResidual != nil {
+		n += int(unsafe.Sizeof([2]planeResidual{}))
+	}
+	return n
+}
+
+func (d *Decoder) idleTemporaryBytes() int {
+	n := 0
+	for i := range d.temporary {
+		if !d.temporary[i].inUse {
+			n += d.temporary[i].bytes()
+		}
+	}
+	return n
+}
+
+func (d *Decoder) trimTemporary() {
+	n := d.idleTemporaryBytes()
+	for i := range d.temporary {
+		t := &d.temporary[i]
+		if n <= decoderTemporaryBudget {
+			break
+		}
+		if !t.inUse {
+			n -= t.bytes()
+			*t = frameTemporary{}
+		}
+	}
+}
+
+func (fs *frameState) acquireTemporary(bFrame bool) {
+	// 串行表示最多同时持有三个独立平面，每平面独占一个slot。
+	for i := range fs.d.temporary {
+		t := &fs.d.temporary[i]
+		// 优先已有的大容量slot，避免预算淘汰留下的空slot触发无谓分配。
+		if !t.inUse && (fs.temporary == nil || cap(t.info) > cap(fs.temporary.info)) {
+			fs.temporary = t
+		}
+	}
+	if fs.temporary == nil {
+		panic("decoder: more than three active temporary planes")
+	}
+	t := fs.temporary
+	t.inUse = true
+	n := fs.total
+	if cap(t.decoded) < n {
+		t.decoded = make([]bool, n)
+	} else {
+		t.decoded = t.decoded[:n]
+		clear(t.decoded)
+	}
+	if cap(t.info) < n {
+		t.info = make([]mbInfo, n)
+	} else {
+		t.info = t.info[:n]
+	}
+	for i := range t.info {
+		t.info[i] = mbInfo{sliceID: -1, intraModes: [16]int8{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, chromaMode: -1}
+	}
+	if cap(t.lumaNZ) < n*16 {
+		t.lumaNZ = make([]uint8, n*16)
+	} else {
+		t.lumaNZ = t.lumaNZ[:n*16]
+		clear(t.lumaNZ)
+	}
+	fs.decoded, fs.info, fs.lumaNZ = t.decoded, t.info, t.lumaNZ
+	if !fs.sps.SeparateColourPlaneFlag {
+		for c := range t.chromaNZ {
+			if cap(t.chromaNZ[c]) < n*fs.chromaBlocks {
+				t.chromaNZ[c] = make([]uint8, n*fs.chromaBlocks)
+			} else {
+				t.chromaNZ[c] = t.chromaNZ[c][:n*fs.chromaBlocks]
+				clear(t.chromaNZ[c])
+			}
+		}
+		fs.chromaNZ = t.chromaNZ
+	}
+	if fs.sps.ChromaFormatIDC == 3 && !fs.sps.SeparateColourPlaneFlag {
+		if t.fullResidual == nil {
+			t.fullResidual = new([2]planeResidual)
+		} else {
+			*t.fullResidual = [2]planeResidual{}
+		}
+		fs.fullResidual = t.fullResidual
+	}
+	if bFrame {
+		if cap(t.directBlocks) < n*16 {
+			t.directBlocks = make([]bool, n*16)
+		} else {
+			t.directBlocks = t.directBlocks[:n*16]
+			clear(t.directBlocks)
+		}
+		fs.directBlocks = t.directBlocks
+	}
+	if fs.pps.EntropyCodingModeFlag {
+		for c := range t.dcCoded {
+			if cap(t.dcCoded[c]) < n {
+				t.dcCoded[c] = make([]bool, n)
+			} else {
+				t.dcCoded[c] = t.dcCoded[c][:n]
+				clear(t.dcCoded[c])
+			}
+		}
+		fs.dcCoded = t.dcCoded
+		for list := range 1 + boolToInt(bFrame) {
+			if cap(t.mvd[list]) < n*16 {
+				t.mvd[list] = make([]motion.MV, n*16)
+			} else {
+				t.mvd[list] = t.mvd[list][:n*16]
+				clear(t.mvd[list])
+			}
+		}
+		fs.mvd = t.mvd[0]
+		if bFrame {
+			fs.mvd1 = t.mvd[1]
+		}
+	}
+}
+
+// releaseTemporary在归还slot之前解除所有临时别名与只读元数据引用。
+// 成功路径在覆盖验证、deblock和FillBorders之后调用，不影响DPB retained数组。
+func (fs *frameState) releaseTemporary() {
+	if fs == nil || fs.temporary == nil {
+		return
+	}
+	d, t := fs.d, fs.temporary
+	if fs.sliceOwners != nil {
+		// 包括失败路径，先解除Grid对可复用sliceOwners的借用。
+		if fs.mv != nil {
+			fs.mv.BeginSlice(0)
+		}
+		if fs.mv1 != nil {
+			fs.mv1.BeginSlice(0)
+		}
+	}
+	fs.temporary = nil
+	fs.d, fs.sps, fs.pps = nil, nil, nil
+	fs.decoded, fs.info, fs.lumaNZ = nil, nil, nil
+	fs.chromaNZ = [2][]uint8{}
+	fs.dcCoded = [3][]bool{}
+	fs.mvd, fs.mvd1, fs.directBlocks = nil, nil, nil
+	fs.fullResidual, fs.groupMap, fs.sliceOwners = nil, nil, nil
+	t.inUse = false
+	d.trimTemporary()
 }
 
 func newFrameState(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFrame bool) (*frameState, error) {
@@ -139,10 +318,7 @@ func newFrameStateForPicture(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFram
 		total:    total,
 		subW:     subW, subH: subH,
 		chromaW: chromaW, chromaH: chromaH, chromaBlocks: chromaBlocks,
-		decoded: make([]bool, total),
-		info:    make([]mbInfo, total),
-		lumaNZ:  make([]uint8, total*16),
-		mv:      motion.NewGrid(mbW, mbH),
+		mv: motion.NewGrid(mbW, mbH),
 	}
 	if fs.mbaff {
 		fs.fieldPics = new([2]picture.Picture)
@@ -157,63 +333,31 @@ func newFrameStateForPicture(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFram
 			}
 		}
 	}
-	if sps.ChromaFormatIDC == 3 && !sps.SeparateColourPlaneFlag {
-		fs.fullResidual = new([2]planeResidual)
-	}
-	if !sps.SeparateColourPlaneFlag {
-		fs.chromaNZ[0] = make([]uint8, total*chromaBlocks)
-		fs.chromaNZ[1] = make([]uint8, total*chromaBlocks)
-	}
+	fs.acquireTemporary(bFrame)
 	fs.referenceIDs[0] = make([]*dpb.Identity, total*16)
 	if bFrame {
 		fs.mv1 = motion.NewGrid(mbW, mbH)
 		fs.referenceIDs[1] = make([]*dpb.Identity, total*16)
-		fs.directBlocks = make([]bool, total*16)
-		if pps.EntropyCodingModeFlag {
-			fs.mvd1 = make([]motion.MV, total*16)
-		}
-	}
-	if pps.EntropyCodingModeFlag {
-		for i := range fs.dcCoded {
-			fs.dcCoded[i] = make([]bool, total)
-		}
-		fs.mvd = make([]motion.MV, total*16)
-	}
-	for i := range fs.info {
-		fs.info[i].sliceID = -1
-		fs.info[i].intraModes = [16]int8{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
-		fs.info[i].chromaMode = -1
 	}
 	fs.mv.Reset()
 	return fs, nil
 }
 
-// release 把图像归还缓冲池并清空失败状态的借用引用；仅用于解码失败路径。
+// release归还尚未交给DPB的图像与临时存储，可重复调用。
 func (fs *frameState) release() {
 	if fs == nil {
 		return
 	}
+	fs.releaseTemporary()
 	if fs.framePic != nil {
 		fs.framePic.Release()
 	}
 	fs.framePic = nil
 	fs.pic = nil
-	fs.sps = nil
-	fs.pps = nil
-	fs.fullResidual = nil
 	fs.fieldPics = nil
 	fs.fieldFlags = nil
-	fs.info = nil
 	fs.referenceIDs = [2][]*dpb.Identity{}
 	fs.mv, fs.mv1 = nil, nil
-	fs.mvd, fs.mvd1 = nil, nil
-	fs.directBlocks = nil
-	fs.decoded = nil
-	fs.groupMap = nil
-	fs.sliceOwners = nil
-	fs.lumaNZ = nil
-	fs.chromaNZ = [2][]uint8{}
-	fs.dcCoded = [3][]bool{}
 }
 
 // parseSlice 为单个 NAL 解析参数集引用和完整头部，不分配图像缓冲。
