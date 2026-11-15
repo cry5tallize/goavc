@@ -145,8 +145,9 @@ try {
         # 全部构建先完成；测量期间不再启动Go编译、Oracle或其他长测。
         Run-Go 'compile-simd' @('test','-c','-o',(Join-Path $dir 'simd.test.exe'),'./internal/simd')
         Run-Go 'compile-prediction' @('test','-c','-o',(Join-Path $dir 'prediction.test.exe'),'./internal/prediction')
-        Run-Go 'compile-decoder-auto' @('test','-c','-o',(Join-Path $dir 'decoder-auto.test.exe'),'./decoder')
-        Run-Go 'compile-decoder-generic' @('test','-tags','purego','-c','-o',(Join-Path $dir 'decoder-generic.test.exe'),'./decoder')
+        Run-Go 'compile-decoder-auto' @('test','-c','-o',(Join-Path $dir 'decoder-auto.test.exe'),'./benchmarks')
+        Run-Go 'compile-decoder-generic' @('test','-tags','purego','-c','-o',(Join-Path $dir 'decoder-generic.test.exe'),'./benchmarks')
+        Run-Go 'compile-decoder-control' @('test','-c','-o',(Join-Path $dir 'decoder-control.test.exe'),'./decoder')
         Run-Go 'compile-encoder-control' @('test','-c','-o',(Join-Path $dir 'encoder-control.test.exe'),'./encoder')
         Run-Go 'compile-encoder-auto' @('build','-o',(Join-Path $dir 'encodebench-auto.exe'),'./tools/encodebench')
         Run-Go 'compile-encoder-generic' @('build','-tags','purego','-o',(Join-Path $dir 'encodebench-generic.exe'),'./tools/encodebench')
@@ -155,7 +156,7 @@ try {
         Run-Benchmark 'encoder-controls-auto' (Join-Path $dir 'encoder-control.test.exe') '^BenchmarkEncoder(P|B)_720p_Generic$' '1x'
         # 原基准相对包目录读取语料；保持go test ./decoder的原工作目录语义。
         Push-Location 'decoder'
-        try { Run-Benchmark 'decoder-control-auto' (Join-Path $dir 'decoder-auto.test.exe') '^BenchmarkDecoder_1080p_Generic$' '1x' }
+        try { Run-Benchmark 'decoder-control-auto' (Join-Path $dir 'decoder-control.test.exe') '^BenchmarkDecoder_1080p_Generic$' '1x' }
         finally { Pop-Location }
         foreach ($profile in @('baseline','high')) {
             foreach ($slices in @(1,4)) {

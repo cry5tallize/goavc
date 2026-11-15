@@ -1,4 +1,4 @@
-package decoder_test
+package benchmarks_test
 
 import (
 	"bytes"
@@ -13,11 +13,10 @@ import (
 
 	h264 "github.com/goavc/h264"
 	"github.com/goavc/h264/decoder"
-	"github.com/goavc/h264/internal/simd"
-	"github.com/goavc/h264/nal"
+	"github.com/goavc/h264/stream"
 )
 
-// BenchmarkDecoder_Sequence测完整固定序列，输入拆NAL与像素哈希不计时。
+// BenchmarkDecoder_Sequence测完整固定序列，输入组AU与像素哈希不计时。
 // 每op独立实例，包含New/Send/Receive/Release/Flush/Close，是cold端点而非稳态。
 // 外部FFmpeg有效像素SHA为必填，不允许漏帧或无验证的吞吐样本。
 func BenchmarkDecoder_Sequence(b *testing.B) {
@@ -37,22 +36,29 @@ func BenchmarkDecoder_Sequence(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	nr := nal.NewAnnexBScanner(bytes.NewReader(data))
+	nr, err := stream.NewAnnexBReader(bytes.NewReader(data), 0)
+	if err != nil {
+		b.Fatal(err)
+	}
+	ar, err := stream.NewAccessUnitReader(nr, stream.AccessUnitConfig{})
+	if err != nil {
+		b.Fatal(err)
+	}
 	var packets []h264.Packet
 	for {
-		u, err := nr.Next()
+		p, err := ar.ReadAccessUnit()
 		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
 			b.Fatal(err)
 		}
-		payload := make([]byte, len(u.Payload)+5)
-		payload[3], payload[4] = 1, u.Header.Byte()
-		copy(payload[5:], u.Payload)
-		packets = append(packets, h264.Packet{Data: payload})
+		packets = append(packets, p)
 	}
-	b.Logf("input=%s sha256=%x frames=%d actual_backends=%+v", path, sha256.Sum256(data), frames, simd.ActiveBackends())
+	if len(packets) != frames {
+		b.Fatalf("AU数%d，需%d", len(packets), frames)
+	}
+	b.Logf("input=%s sha256=%x frames=%d AUs=%d", path, sha256.Sum256(data), frames, len(packets))
 	b.ReportAllocs()
 	hash := sha256.New()
 	b.ResetTimer()

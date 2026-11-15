@@ -160,7 +160,7 @@ NEON缺原生runner、必需Oracle缺FFmpeg或任何必需项失败时保留未�
 
 `tools/encodebench -measure -input <紧密YUV420P> -threads 1 ...` 保留原质量模式，新增无全流留存的连续窗口：输入Frame复用，包逐个哈希/可选写出后丢弃，恰好读满指定帧数并验证EOF。输入/包哈希、文件I/O、轨迹/内存采样不计入Send/Receive/Flush调用时间；自然GC是包含这些开销和New的**进程窗口**，不冒称codec独占或warm-steady。报告原始TotalAlloc/Mallocs/自然NumGC、实际runtime GC CPU/assist和暂停直方图，以及Go堆/RSS采样最大值。Close后单独一次主动GC只用于留存观察，不能混入自然GC差分。RSS实现从streamcheck提取共用，原PCM留存阈值不变。
 
-`BenchmarkDecoder_Sequence` 从 `GOAVC_M8_INPUT` 读取预拆NAL的固定码流，要求 `GOAVC_M8_FRAMES` 和独立原生YUV的 `GOAVC_M8_YUV_SHA256`。每op包含New/逐NAL Send/Receive/Release/Flush/Close；文件读取、拆NAL和逐帧有效像素哈希在计时外。完整显示帧数和外部SHA每op均校验，报告逐槽实际后端。这是cold端点，不是warm-steady；六格式/场/备用表示的正确性仍由已有Oracle/规范解析测试保证。
+`benchmarks/BenchmarkDecoder_Sequence` 从 `GOAVC_M8_INPUT` 读取经既有AUReader预组装的固定码流，要求 `GOAVC_M8_FRAMES` 和独立原生YUV的 `GOAVC_M8_YUV_SHA256`。每op包含New/逐AU Send/Receive/Release/Flush/Close；文件读取、组AU和逐帧有效像素哈希在计时外。AU数、完整显示帧数和外部SHA每op均校验；Generic由purego构建证明，逐槽Auto来源见同源码内核报告，端点不为打印诊断引入新的SIMD白名单。跨流水线基准只放benchmarks，不从decoder引入stream。该数据是cold端点而非warm-steady；六格式/场/备用表示的正确性仍由已有Oracle/规范解析测试保证。
 
 CPU profile在吞吐测量后独立采集；同机其他本任务的构建、race、长Oracle不得与性能样本重叠。未监控外部负载，CPU利用率未测，不用RSS替代HeapSys，也不把进程GC降低推成汇编或并行提速。
 
