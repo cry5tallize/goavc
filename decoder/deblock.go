@@ -31,45 +31,33 @@ func (fs *frameState) deblockMB(mbx, mby int) error {
 	if info.deblockIDC == 1 {
 		return nil
 	}
-	// 垂直边。
-	for _, edgeX := range []int{0, 4, 8, 12} {
-		boundary := edgeX == 0
-		if boundary {
-			if mbx == 0 || fs.skipSliceBoundary(mbx, mby, mbx-1, mby) {
+	for dir := range 2 {
+		vertical := dir == 0
+		sub := fs.subH
+		if vertical {
+			sub = fs.subW
+		}
+		for edge := 0; edge < 16; edge += 4 {
+			boundary := edge == 0
+			if boundary && (vertical && (mbx == 0 || fs.skipSliceBoundary(mbx, mby, mbx-1, mby)) ||
+				!vertical && (mby == 0 || fs.skipSliceBoundary(mbx, mby, mbx, mby-1))) {
 				continue
 			}
-		}
-		if !info.transform8 || edgeX%8 == 0 {
-			if err := fs.filterLumaVertical(mbx, mby, edgeX, boundary); err != nil {
-				return err
-			}
-		}
-		if fs.sps == nil || fs.sps.ChromaFormatIDC != 3 {
-			if edgeX%(4*fs.subW) == 0 {
-				if err := fs.filterChromaVertical(mbx, mby, edgeX, boundary); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	// 水平边。
-	for _, edgeY := range []int{0, 4, 8, 12} {
-		boundary := edgeY == 0
-		if boundary {
-			if mby == 0 || fs.skipSliceBoundary(mbx, mby, mbx, mby-1) {
+			luma := !info.transform8 || edge%8 == 0
+			chroma := (fs.sps == nil || fs.sps.ChromaFormatIDC != 3) && edge%(4*sub) == 0
+			if !luma && !chroma {
 				continue
 			}
-		}
-		if !info.transform8 || edgeY%8 == 0 {
-			if err := fs.filterLumaHorizontal(mbx, mby, edgeY, boundary); err != nil {
-				return err
+			// bS只依赖元数据，跨分量复用不会改变相邻边的像素读写顺序。
+			strengths := fs.edgeStrengths(mbx, mby, edge, vertical)
+			if strengths == [4]uint8{} {
+				continue
 			}
-		}
-		if fs.sps == nil || fs.sps.ChromaFormatIDC != 3 {
-			if edgeY%(4*fs.subH) == 0 {
-				if err := fs.filterChromaHorizontal(mbx, mby, edgeY, boundary); err != nil {
-					return err
-				}
+			if luma {
+				fs.filterLumaEdge(mbx, mby, edge, vertical, strengths)
+			}
+			if chroma {
+				fs.filterChromaEdge(mbx, mby, edge, vertical, strengths)
 			}
 		}
 	}
@@ -86,108 +74,72 @@ func (fs *frameState) skipSliceBoundary(mbx, mby, nbx, nby int) bool {
 	return info.sliceID != other.sliceID
 }
 
-func (fs *frameState) filterLumaVertical(mbx, mby, edgeX int, boundary bool) error {
+// edgeStrengths 每条边只推导一次四段bS。帧内/PCM的强度与非零系数、MV无关；
+// 此入口也供MBAFF的纯帧邻域复用，混合帧/场边仍由mbaff_deblock.go独立定位。
+func (fs *frameState) edgeStrengths(mbx, mby, edge int, vertical bool) (strengths [4]uint8) {
+	addr := mby*fs.mbW + mbx
+	intra := fs.info[addr].intra || fs.info[addr].pcm
+	if edge == 0 {
+		other := addr - fs.mbW
+		if vertical {
+			other = addr - 1
+		}
+		intra = intra || fs.info[other].intra || fs.info[other].pcm
+	}
+	if intra {
+		bs := uint8(3)
+		if edge == 0 {
+			bs = 4
+		}
+		return [4]uint8{bs, bs, bs, bs}
+	}
+	for seg := range 4 {
+		px, py := mbx*4+edge/4-1, mby*4+seg
+		qx, qy := px+1, py
+		if !vertical {
+			px, py = mbx*4+seg, mby*4+edge/4-1
+			qx, qy = px, py+1
+		}
+		strengths[seg] = uint8(fs.bSAtBlocks(px, py, qx, qy, edge == 0))
+	}
+	return
+}
+
+func (fs *frameState) filterLumaEdge(mbx, mby, edge int, vertical bool, strengths [4]uint8) {
 	pl := &fs.pic.Planes[fs.component]
-	baseX := mbx * 16
-	for r := 0; r < 4; r++ {
-		pbx, pby := mbx*4+edgeX/4-1, mby*4+r
-		qbx, qby := pbx+1, pby
-		bS := fs.bSAtBlocks(pbx, pby, qbx, qby, boundary)
-		if bS <= 0 {
-			continue
-		}
-		qp := fs.edgeQP(mbx, mby, boundary, edgeX == 0)
-		info := &fs.info[mby*fs.mbW+mbx]
-		x := baseX + edgeX
-		y := mby*16 + r*4
-		if pl.BitDepth == 10 {
-			filter.LumaEdgeHigh(pl.Data16, pl.Index(x, y), pl.Stride, 1, bS, qp,
-				int(info.alphaDiv2), int(info.betaDiv2), pl.BitDepth)
-		} else {
-			filter.LumaEdge(pl.Data, pl.Index(x, y), pl.Stride, 1, bS, qp,
-				int(info.alphaDiv2), int(info.betaDiv2))
-		}
-	}
-	return nil
-}
-
-func (fs *frameState) filterLumaHorizontal(mbx, mby, edgeY int, boundary bool) error {
-	pl := &fs.pic.Planes[fs.component]
-	for c := 0; c < 4; c++ {
-		pbx, pby := mbx*4+c, mby*4+edgeY/4-1
-		qbx, qby := pbx, pby+1
-		bS := fs.bSAtBlocks(pbx, pby, qbx, qby, boundary)
-		if bS <= 0 {
-			continue
-		}
-		qp := fs.edgeQP(mbx, mby, boundary, false)
-		info := &fs.info[mby*fs.mbW+mbx]
-		x := mbx*16 + c*4
-		y := mby*16 + edgeY
-		if pl.BitDepth == 10 {
-			filter.LumaEdgeHigh(pl.Data16, pl.Index(x, y), 1, pl.Stride, bS, qp,
-				int(info.alphaDiv2), int(info.betaDiv2), pl.BitDepth)
-		} else {
-			filter.LumaEdge(pl.Data, pl.Index(x, y), 1, pl.Stride, bS, qp,
-				int(info.alphaDiv2), int(info.betaDiv2))
-		}
-	}
-	return nil
-}
-
-func (fs *frameState) filterChromaVertical(mbx, mby, lumaEdgeX int, boundary bool) error {
-	chromaX := lumaEdgeX / fs.subW
 	info := &fs.info[mby*fs.mbW+mbx]
-	for r := 0; r < 4; r++ {
-		pbx, pby := mbx*4+lumaEdgeX/4-1, mby*4+r
-		qbx, qby := pbx+1, pby
-		bS := fs.bSAtBlocks(pbx, pby, qbx, qby, boundary)
-		if bS <= 0 {
-			continue
-		}
-		for comp := 0; comp < 2; comp++ {
-			qpc := fs.edgeChromaQP(mbx, mby, boundary, boundary, comp)
-			pl := &fs.pic.Planes[comp+1]
-			x := mbx*fs.chromaW + chromaX
-			y := mby*fs.chromaH + r*4/fs.subH
-			if pl.BitDepth == 10 {
-				filter.ChromaEdgeHigh(pl.Data16, pl.Index(x, y), pl.Stride, 1, bS, qpc,
-					int(info.alphaDiv2), int(info.betaDiv2), 4/fs.subH, pl.BitDepth)
-			} else {
-				filter.ChromaEdge(pl.Data, pl.Index(x, y), pl.Stride, 1, bS, qpc,
-					int(info.alphaDiv2), int(info.betaDiv2), 4/fs.subH)
-			}
-		}
+	qp := fs.edgeQP(mbx, mby, edge == 0, vertical)
+	params := filter.PrepareEdge(qp, int(info.alphaDiv2), int(info.betaDiv2), pl.BitDepth)
+	x, y, along, across := mbx*16+edge, mby*16, pl.Stride, 1
+	if !vertical {
+		x, y, along, across = mbx*16, mby*16+edge, 1, pl.Stride
 	}
-	return nil
+	if pl.BitDepth == 10 {
+		params.Luma16(pl.Data16, pl.Index(x, y), along, across, strengths)
+	} else {
+		params.Luma8(pl.Data, pl.Index(x, y), along, across, strengths)
+	}
 }
 
-func (fs *frameState) filterChromaHorizontal(mbx, mby, lumaEdgeY int, boundary bool) error {
-	chromaY := lumaEdgeY / fs.subH
-	// 水平边界的另一侧在上方，不是左侧；这里必须传 false。
+func (fs *frameState) filterChromaEdge(mbx, mby, edge int, vertical bool, strengths [4]uint8) {
 	info := &fs.info[mby*fs.mbW+mbx]
-	for c := 0; c < 4; c++ {
-		pbx, pby := mbx*4+c, mby*4+lumaEdgeY/4-1
-		qbx, qby := pbx, pby+1
-		bS := fs.bSAtBlocks(pbx, pby, qbx, qby, boundary)
-		if bS <= 0 {
-			continue
+	for comp := range 2 {
+		pl := &fs.pic.Planes[comp+1]
+		qp := fs.edgeChromaQP(mbx, mby, edge == 0, vertical, comp)
+		params := filter.PrepareEdge(qp, int(info.alphaDiv2), int(info.betaDiv2), pl.BitDepth)
+		x, y, along, across, lines := mbx*fs.chromaW, mby*fs.chromaH, pl.Stride, 1, 4/fs.subH
+		if vertical {
+			x += edge / fs.subW
+		} else {
+			y += edge / fs.subH
+			along, across, lines = 1, pl.Stride, 4/fs.subW
 		}
-		for comp := 0; comp < 2; comp++ {
-			qpc := fs.edgeChromaQP(mbx, mby, boundary, false, comp)
-			pl := &fs.pic.Planes[comp+1]
-			x := mbx*fs.chromaW + c*4/fs.subW
-			y := mby*fs.chromaH + chromaY
-			if pl.BitDepth == 10 {
-				filter.ChromaEdgeHigh(pl.Data16, pl.Index(x, y), 1, pl.Stride, bS, qpc,
-					int(info.alphaDiv2), int(info.betaDiv2), 4/fs.subW, pl.BitDepth)
-			} else {
-				filter.ChromaEdge(pl.Data, pl.Index(x, y), 1, pl.Stride, bS, qpc,
-					int(info.alphaDiv2), int(info.betaDiv2), 4/fs.subW)
-			}
+		if pl.BitDepth == 10 {
+			params.Chroma16(pl.Data16, pl.Index(x, y), along, across, strengths, lines)
+		} else {
+			params.Chroma8(pl.Data, pl.Index(x, y), along, across, strengths, lines)
 		}
 	}
-	return nil
 }
 
 // edgeChromaQP 返回色度边界使用的 QP。

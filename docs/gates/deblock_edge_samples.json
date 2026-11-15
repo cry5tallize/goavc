@@ -1,0 +1,31 @@
+{
+  "base_revision": "0d89f0fa2bbbddd5eaeb1865a634c4dcb24a06c4",
+  "environment": {"cpu":"AMD Ryzen 7 5700X","os":"Windows 11 IoT Enterprise Insider 10.0.26200 amd64","go":"go1.27.4","cgo":0,"goamd64":"v1","gomaxprocs":16,"codec_threads":1,"external_load_monitored":false},
+  "inputs": [{"name":"high-idr","frames":1,"sha256":"b6f836c52d00a644b4cf5906e1b726b3d0bed713d2b2fdf940cb6c99133e59a9"},{"name":"high-ipb","frames":32,"sha256":"e175d84a84d1ec065420cc4292650c04976393dcfea0588357b264ca4fa9583f"}],
+  "samples": [
+    {"stage":"before-idr","case":"BenchmarkDeblock_1080p_Auto/intra=true-16","iterations":[15,15,15,15,15],"ns_op":[33863053,35328887,36299807,34368993,35775367],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-idr","case":"BenchmarkDeblock_1080p_Auto/intra=false-16","iterations":[33,32,33,34,34],"ns_op":[18041818,17553125,16274121,16656029,16348353],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-idr","case":"BenchmarkDecoder_DirectAU_Auto-16","iterations":[8,8,8,8,8],"ns_op":[65763938,64538925,64206825,67425288,66011150],"b_op":[9214304,9214300,9214300,9214300,9214318],"allocs_op":[23801,23801,23801,23801,23801]},
+    {"stage":"prepared-idr","case":"BenchmarkDeblock_1080p_Auto/intra=true-16","iterations":[16,16,16,18,16],"ns_op":[31883244,32593994,32425431,32139472,32497412],"b_op":[1,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"prepared-idr","case":"BenchmarkDeblock_1080p_Auto/intra=false-16","iterations":[38,37,38,39,40],"ns_op":[14441018,14928651,14122676,14642700,14976188],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"prepared-idr","case":"BenchmarkDecoder_DirectAU_Auto-16","iterations":[8,8,9,9,8],"ns_op":[69141512,63740488,62354722,63362100,63945975],"b_op":[9214318,9214300,9214298,9214302,9214302],"allocs_op":[23801,23801,23801,23801,23801]},
+    {"stage":"before-ipb","case":"BenchmarkDecoder_DirectAU_Auto-16","iterations":[1,1,1,1,1],"ns_op":[2108426100,2168559100,2110512800,2086865800,2094900000],"b_op":[154452776,154452744,154452680,154452712,154452680],"allocs_op":[42190,42190,42189,42189,42189]},
+    {"stage":"prepared-ipb","case":"BenchmarkDecoder_DirectAU_Auto-16","iterations":[1,1,1,1,1],"ns_op":[1994846800,2094023600,1917945300,1980173400,1961943700],"b_op":[154452760,154452840,154452760,154452728,154452824],"allocs_op":[42191,42190,42190,42189,42190]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/LumaWeakHorizontalSpan4/8bit/Generic-16","iterations":[2389611,2290441,2391619,2368299,2386658],"ns_op":[102.8,102.7,100.6,101.7,100.3],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/LumaStrongVerticalSpan4/8bit/Generic-16","iterations":[2780895,2938086,2917467,2627199,2810511],"ns_op":[85.63,81.54,82.33,88.64,83.24],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/ChromaWeakVerticalSpan4/8bit/Generic-16","iterations":[3797636,3956301,3856696,3893397,3894206],"ns_op":[62.75,61.27,62.13,61.49,61.97],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/ChromaStrongHorizontalSpan1/8bit/Generic-16","iterations":[11690778,12105438,12030074,11725390,11733129],"ns_op":[20.35,19.83,20.05,20.29,20.39],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/LumaWeakHorizontalSpan4/10bit/Generic-16","iterations":[2345414,2298501,2338041,2348214,2332812],"ns_op":[102.4,102.6,103.4,102.6,102.5],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/LumaStrongVerticalSpan4/10bit/Generic-16","iterations":[2922438,2659538,2678902,2533574,2676766],"ns_op":[82.35,89.94,89.59,98.63,86.83],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/ChromaWeakVerticalSpan4/10bit/Generic-16","iterations":[3639324,3659724,3633583,3668154,3586092],"ns_op":[66.03,65.65,66.24,65.62,65.92],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/ChromaStrongHorizontalSpan1/10bit/Generic-16","iterations":[10349689,8479246,9830343,11357720,9912766],"ns_op":[24.6,24.93,24.04,22.85,24],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/LumaWeakHorizontalSpan4/8bit/Auto-Generic-16","iterations":[2418974,2378726,2416460,2381660,2360182],"ns_op":[99.27,100.6,99.58,100.8,101.2],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/LumaStrongVerticalSpan4/8bit/Auto-Generic-16","iterations":[2836554,2954616,2825790,2885648,2883048],"ns_op":[86.34,82.19,86.26,86.99,83.79],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/ChromaWeakVerticalSpan4/8bit/Auto-Generic-16","iterations":[3845179,3856201,3852945,3882664,3839667],"ns_op":[61.57,62.28,62.11,61.44,62.39],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/ChromaStrongHorizontalSpan1/8bit/Auto-Generic-16","iterations":[12199212,11715488,11772322,11736514,12178660],"ns_op":[20.04,20.09,20,20.42,19.47],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/LumaWeakHorizontalSpan4/10bit/Auto-Generic-16","iterations":[2301843,2382842,2349938,2385628,2301140],"ns_op":[104.4,101,102.5,100.5,104.3],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/LumaStrongVerticalSpan4/10bit/Auto-Generic-16","iterations":[2689641,2668700,2685007,2651344,2891464],"ns_op":[86.86,87.51,89.88,90.07,82.95],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/ChromaWeakVerticalSpan4/10bit/Auto-Generic-16","iterations":[3637950,3658748,3654085,3661114,3593599],"ns_op":[65.58,65.49,65.32,65.5,66.34],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"before-kernels","case":"BenchmarkDeblockSpans/ChromaStrongHorizontalSpan1/10bit/Auto-Generic-16","iterations":[11210395,11130950,9650917,9743422,8658726],"ns_op":[21.46,22.87,24.43,24.67,23.66],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]}
+  ]
+}

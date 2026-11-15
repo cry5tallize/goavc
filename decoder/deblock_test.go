@@ -53,9 +53,15 @@ func TestDeblock_BReferenceSwap(t *testing.T) {
 	if got := fs.bSAtBlocks(3, 0, 4, 0, true); got != 0 {
 		t.Fatal("swapped references must match", got)
 	}
+	if got := fs.edgeStrengths(1, 0, 0, true)[0]; got != 0 {
+		t.Fatal("准备边必须保留B参考交换匹配", got)
+	}
 	fs.mv1.SetRect(4, 0, 1, 1, motion.MV{X: 8}, 1)
 	if got := fs.bSAtBlocks(3, 0, 4, 0, true); got != 1 {
 		t.Fatal("MV difference must raise strength", got)
+	}
+	if got := fs.edgeStrengths(1, 0, 0, true)[0]; got != 1 {
+		t.Fatal("准备边必须保留B运动差异", got)
 	}
 	fs.referenceIDs[0][4], fs.referenceIDs[1][4] = a, b
 	fs.mv.SetRect(4, 0, 1, 1, motion.MV{X: 4}, 0)

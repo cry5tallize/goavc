@@ -898,3 +898,56 @@ decoder 只复用表示级临时数组，DPB 的 Motion/reference IDs/MBField �
 
 编码Generic五次均完整输出300包且码流SHA一致；单次中位API调用时间189.961秒。现有结果足够说明该代表性编码场景仍非30FPS，SAD微核倍率不能当整个编码器倍率。Auto编码第一个样本、扩展分辨率和热点采样停止，不补跑、不生成整批通过标记。自然GC/RSS原始值保留在已完成Generic JSON，未做同协议旧版本比较，不宣称GC改善倍率。完整AU结果目录 `tmp/m8-closeout/endpoints-au/`，逐NAL旧结果不使用。
 
+## 17. 去块热路径：逐边准备参数
+
+2026-11-16，HW-M2、Go1.27.4 windows/amd64、CGO=0、GOAMD64=v1、GOMAXPROCS=16，
+实例Threads=1；Auto的去块候选加法仍为Generic。基线生产源码
+`0d89f0fa2bbbddd5eaeb1865a634c4dcb24a06c4`，新增测试/基准在改实现前先运行。
+外部负载未监控；两阶段均没有同时运行其他本轮长测。完整五次样本（包括波动和
+B/op、allocs/op）见 [deblock_edge_samples.json](gates/deblock_edge_samples.json)。
+
+逐边准备阶段把四段bS在亮度/色度之间复用；帧内/PCM边直接准备3或4；QP、
+alpha/beta/tc0每分量每边只准备一次。宏块光栅、先垂直后水平、slice权限、
+transform8边选择与原生位深语义不变；混合MBAFF几何仍走原入口。
+
+以下均为五次ns/op中位数。合成去块含每次像素重置，编码尺寸1920×1088；
+intra=true为全帧内4×4，false混合帧内/帧间、4/8×8、变QP和idc=0/1/2，
+不是视频吞吐。直接AU端点含New/Send/Receive/Release/Flush/Close，
+不含文件I/O、组AU或Oracle，显示尺寸1920×1080；一op分别为1帧和32帧。
+
+| 场景 | 原实现 | 逐边准备 | 耗时变化 |
+|---|---:|---:|---:|
+| 合成去块，全帧内 | 35,328,887 | 32,425,431 | -8.2% |
+| 合成去块，混合 | 16,656,029 | 14,642,700 | -12.1% |
+| High IDR，直接AU | 65,763,938 | 63,740,488 | -3.1% |
+| High I/P/B，32个直接AU | 2,108,426,100 | 1,980,173,400 | -6.1% |
+
+合成去块各样本0 allocs/op；准备阶段全帧内第一样本为1 B/op，其余0 B/op。
+IDR端点两阶段中位均23,801 allocs/op；32帧端点42,189→42,190，未减少端点分配。
+两份现场输入各阶段均与FFmpeg逐像素一致，不纳入版本化语料清单。
+
+复现输入（FFmpeg 8.0的libx264，testsrc2、30FPS、QP26、High/CABAC、B2、ref3、
+GOP60、四slice、8×8变换；两输入的SHA登记在样本JSON）：
+
+```powershell
+New-Item -ItemType Directory -Force tmp/deblock-perf | Out-Null
+foreach ($n in 1,32) {
+  $name = if ($n -eq 1) { 'high-idr' } else { 'high-ipb' }
+  ffmpeg -v error -f lavfi -i 'testsrc2=size=1920x1080:rate=30' -frames:v $n -pix_fmt yuv420p -c:v libx264 -preset veryfast -profile:v high -qp 26 -x264-params 'keyint=60:min-keyint=60:scenecut=0:bframes=2:ref=3:slices=4:threads=1:aud=1:8x8dct=1' -f h264 "tmp/deblock-perf/$name.264"
+}
+$env:CGO_ENABLED='0'; $env:GOAMD64='v1'; $env:GOMAXPROCS='16'
+$env:GOAVC_BENCH_INPUT = (Resolve-Path tmp/deblock-perf/high-idr.264).Path
+go test ./decoder -run '^$' -bench '^BenchmarkDeblock_1080p_Auto$' -benchtime=500ms -count=5 -benchmem
+go test ./benchmarks -run '^TestDecoder_DirectAUPerformanceOracle$' -bench '^BenchmarkDecoder_DirectAU_Auto$' -benchtime=500ms -count=5 -benchmem
+$env:GOAVC_BENCH_INPUT = (Resolve-Path tmp/deblock-perf/high-ipb.264).Path
+go test ./benchmarks -run '^TestDecoder_DirectAUPerformanceOracle$' -bench '^BenchmarkDecoder_DirectAU_Auto$' -benchtime=1x -count=5 -benchmem
+Remove-Item Env:GOAVC_BENCH_INPUT
+```
+
+新增六格式调度回归、B参考交换、负QP/偏移/非对齐stride准备边逐段比较与零分配测试。
+短IDR和32帧端点用于本轮优化归因，不替换§16.2的300帧主矩阵。
+逐边准备阶段已通过CGO=0的gofmt/vet/build、非缓存全库测试、36包依赖检查及55条
+语料清单校验。首次依赖检查发现直接AU测试放在decoder目录会形成目录级测试环，
+已移至现有benchmarks包并通过受影响测试和依赖检查；原始计时在移动前采集。
+本阶段未执行race，未改并发模型；最终直接标量阶段另行验证。
+

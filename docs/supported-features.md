@@ -170,6 +170,7 @@
 | SIMD 4/8×8正逆变换与DC | Partial | K10接入SSE2/AVX2/NEON，保留原8×8整数投影、int64逆变换、亮度/420/422 DC及晚期失败语义。x86显式后端解析值/原地/边界/0分配通过；修复SSE2的420 DC系数顺序错误。amd64默认按实测仅Forward4优选SSE2，其余变换槽保留Generic；NEON仅编译验收 |
 | SIMD量化/反量化 | Partial | K11为4/8×8与DC提供精确32×32→64乘积；除法/死区/符号/溢出提交由共享Go保持，宽域回退int64，不使用近似倒数。指针块接口保留首错前缀及原地未写后缀；x86显式后端验证通过，amd64默认按实测选择直接Generic；NEON原生未验 |
 | SIMD去块候选 | Partial | K12仅向量化同一条line的强弱候选加法；阈值、条件访问、逐线/跨边顺序与帧场几何不变。x86方向/Span及最小邻域保护页通过；实测SIMD较慢，amd64默认保留Generic，不宣称整条边全SIMD |
+| 去块逐边参数复用 | Partial | decoder普通边复用四段bS及每分量QP/阈值，保留旧单段入口和混合MBAFF路径；六格式调度/准备边回归及1080p High IDR、32帧I/P/B直接AU的FFmpeg像素一致，性能见[performance.md §17](performance.md)；不扩展Profile或并行支持 |
 | SIMD残差加减 | Partial | K13接入picture重建与真实encoder减法，保持int32极端Clip1、10-bit低两位、各自stride及未写区域；SSE2/AVX2/NEON为固定值向量算术，尾部与gather/scatter由Go完成。x86保护页/局部0分配通过，amd64默认直接标量避免gather开销；NEON原生未验 |
 | SIMD边界矩阵 | Partial | K14覆盖所有现有内核类别及MC全相位，Windows Generic/Auto/SSE2/AVX2、purego、386保护页执行通过；Unix mmap辅助和六目标汇编vet/build/测试编译已交付。未执行Unix/NEON原生动态页验证，值ABI栈范围另以静态访问证明记录 |
 | 搜索工作区复用 | Partial | G01在真实编码器复用双位深Workspace，prepared Integer/Refine/Estimate含Scorer为0分配；旧回调轨迹/码流不变。决策集成见G03b/K18，K16仍限串行复用，未开启内部并行 |
