@@ -369,3 +369,16 @@ K15 继续使用既有 Picture/Frame 池，不新增池或改变公共所有权�
 
 K16提交前 `CGO_ENABLED=0 bash scripts/verify.sh` 完整门禁退出0（35包依赖、55条manifest，包含既有三方Oracle与固定码流保护网）；新增decoder Temporary与encoder元数据消费者用例的 `CGO_ENABLED=1 go test -race -count=1` 退出0。日志 `tmp/m8-k15-k20/k16-verify.txt`。不是全库race或原生arm64验收。
 
+
+### K17：正常 P/B 宏块分区去分配
+
+起点 `cf87f09d87`。P/B 分区改为固定四组、总共十六个分区的栈 backing，组只持有不重叠的slice视图；不改候选、参考索引/MVD读取顺序、MC或残差算法。首轮B虽然固定数组仍有2次分配，编译器 `-m=2` 证明通过动态append组的指针字段赋值使partBacking/directBacking逃逸；改成静态初始化组视图、按规范上限索引填充后归零，不把数组搬到全局池。报告 `tmp/m8-k15-k20/k17-escape.txt` 保留。
+
+新增 prepared 正常P/B宏块测试覆盖CAVLC/CABAC、8/10位、全部P/B分区与子类型、混合direct和空间/时间direct。实际解码非零残差并验证像素、MV、参考身份、NZ及读端终点，AllocsPerRun=0。混合temporal-direct首组的零MVD后继须继承非零MVP（Spec:8.4.1.3），首版测试错误期望零MV已按手算邻域修正，未修改生产预测或删减向量。
+
+端点沿用K16后三帧冷基准作before。第一次after时间较早样本慢超过5%，按政策保留原样并复查；同环境从只读历史 `cf87f09` 导出的临时源码重新测量，旧中位122040300ns、新复查115726700ns，说明早期104716600ns不能直接当稳定对照。临时源码已清理。旧复查17384288B/27839次，新复查17275776B/25811次；不将本项解释为30FPS或自然GC/RSS达标。全部样本在 `tmp/m8-k15-k20/k17-{decoder-after,decoder-review,baseline-review}.txt`，比较边界及限制见performance。
+
+本项只签已测P/B正常宏块去分配；没有把每slice初始化、MBAFF首次场引用、全部配置的完整K17或整个decoder零分配记为通过。
+
+K17提交前CGO=0完整常规门禁与CGO=1的上述P/B/非法分区定向race均退出0；日志 `tmp/m8-k15-k20/k17-verify.txt`。after/review/baseline-review样本SHA-256依次为 `5adfc107434b858d25cfa7ac85606f8dab94f4563fb671126c1b2948b0d41eb4`、`3747741c085e8512a4f4f84e42694dd5752a2836a8724518f801e31e40c58172`、`e60e79d2084445b2d91a280255edfd0cb069c17473383796c340353946a29fd3`。
+

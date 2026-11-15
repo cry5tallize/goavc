@@ -828,3 +828,15 @@ G09 只清理 AUReader 失败后的 assembler 与容量元数据，不改变 NAL
 原始五样本在 `tmp/m8-k15-k20/k16-{decoder,encoder}-{before,after}.txt`；保留首轮公共缓存冷启动的大分配样本，不丢弃离群值。四份日志SHA-256依次为 decoder-before `63195761001817c5783469d51d07a37faf732af0af606b43a4eb76e4f837bc4a`、decoder-after `852930e2c2a728f12d68fc763b40aaaeed8f6bf70a822dc74b7cc7d80212cbc4`、encoder-before `c3ce4fecb23a143f586582afbc48a0ba78c8a99b981a57a5f81c71c2c91d124f`、encoder-after `8e078a741b55f8254bf6706673e4e11c5a7375b50c3787bb0836f3de2529503f`。decoder输入沿用§5的固定SHA；encoder仍用原pattern.Frame(1280,720,1)。时间为本次观测，不将其全部归因于分配变化；无自然GC/assist/RSS或长期稳态测量，不宣称30FPS达标。
 
 decoder 只复用表示级临时数组，DPB 的 Motion/reference IDs/MBField 未池化；encoder 的元数据独占租约在候选淘汰、旧状态替换及Reset/Close归还，不释放仍被参考角色借用的像素。各实例空闲元数据预算16MiB/最多三槽，不是RSS上限。
+
+### K17：有界 P/B 分区栈存储
+
+沿用K16环境及原三帧1080p冷序列。所有阶段各五次、CGO=0、`-benchtime=1x -benchmem`。最初K17中位116161600ns，相对早期K16的104716600ns超过5%复查线；复查K17中位115726700ns。为区分环境漂移，从 `cf87f09` 只读导出历史源码，在同环境另测五次中位122040300ns，原基线亦变慢；不丢弃任一组数字，不拿较早最快基线推导稳定退化或挑最快样本承诺加速。
+
+| 同环境复查，三帧/op | ns/op | B/op | allocs/op |
+|---|---:|---:|---:|
+| cf87f09历史基线 | 122040300 | 17384288 | 27839 |
+| K17复查 | 115726700 | 17275776 | 25811 |
+
+原始样本 `tmp/m8-k15-k20/k17-decoder-after.txt`、`k17-decoder-review.txt`、`k17-baseline-review.txt`；原K16样本原样保留。分配下降来自已测正常P/B分区容器，prepared双熵/双位深非空宏块0分配另有确定性断言。时间仅为观测；不保证所有配置的速度、自然GC/RSS或完整M8主目标。
+

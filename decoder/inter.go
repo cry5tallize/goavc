@@ -21,14 +21,27 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 		return fmt.Errorf("decoder: P macroblock without reference list: %w", h264.ErrInvalidData)
 	}
 	baseX, baseY := mbx*4, fs.motionY(mby)
-	var groups []pGroup
+	var partBacking [16]pPartition
+	// 每组独占四个槽，避免仍存活的子分区视图互相覆盖。
+	groupBacking := [4]pGroup{
+		{parts: partBacking[0:0:4]},
+		{parts: partBacking[4:4:8]},
+		{parts: partBacking[8:8:12]},
+		{parts: partBacking[12:12:16]},
+	}
+	groups := groupBacking[:0]
 	switch pType {
 	case 0:
-		groups = []pGroup{{pPartition: pPartition{0, 0, 4, 4}}}
+		groups = groupBacking[:1]
+		groups[0].pPartition = pPartition{0, 0, 4, 4}
 	case 1:
-		groups = []pGroup{{pPartition: pPartition{0, 0, 4, 2}}, {pPartition: pPartition{0, 2, 4, 2}}}
+		groups = groupBacking[:2]
+		groups[0].pPartition = pPartition{0, 0, 4, 2}
+		groups[1].pPartition = pPartition{0, 2, 4, 2}
 	case 2:
-		groups = []pGroup{{pPartition: pPartition{0, 0, 2, 4}}, {pPartition: pPartition{2, 0, 2, 4}}}
+		groups = groupBacking[:2]
+		groups[0].pPartition = pPartition{0, 0, 2, 4}
+		groups[1].pPartition = pPartition{2, 0, 2, 4}
 	case 3, 4:
 		var types [4]uint32
 		for i := range types {
@@ -41,20 +54,30 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 			}
 			types[i] = v
 		}
+		groups = groupBacking[:4]
 		for i, typ := range types {
 			x, y := (i%2)*2, (i/2)*2
-			g := pGroup{pPartition: pPartition{x, y, 2, 2}}
+			g := &groups[i]
+			g.pPartition = pPartition{x, y, 2, 2}
 			switch typ {
 			case 0:
-				g.parts = []pPartition{{x, y, 2, 2}}
+				g.parts = g.parts[:1:1]
+				g.parts[0] = pPartition{x, y, 2, 2}
 			case 1:
-				g.parts = []pPartition{{x, y, 2, 1}, {x, y + 1, 2, 1}}
+				g.parts = g.parts[:2:2]
+				g.parts[0] = pPartition{x, y, 2, 1}
+				g.parts[1] = pPartition{x, y + 1, 2, 1}
 			case 2:
-				g.parts = []pPartition{{x, y, 1, 2}, {x + 1, y, 1, 2}}
+				g.parts = g.parts[:2:2]
+				g.parts[0] = pPartition{x, y, 1, 2}
+				g.parts[1] = pPartition{x + 1, y, 1, 2}
 			case 3:
-				g.parts = []pPartition{{x, y, 1, 1}, {x + 1, y, 1, 1}, {x, y + 1, 1, 1}, {x + 1, y + 1, 1, 1}}
+				g.parts = g.parts[:4:4]
+				g.parts[0] = pPartition{x, y, 1, 1}
+				g.parts[1] = pPartition{x + 1, y, 1, 1}
+				g.parts[2] = pPartition{x, y + 1, 1, 1}
+				g.parts[3] = pPartition{x + 1, y + 1, 1, 1}
 			}
-			groups = append(groups, g)
 		}
 	default:
 		return fmt.Errorf("decoder: P mb_type %d: %w", pType, h264.ErrInvalidData)
@@ -74,18 +97,21 @@ func decodeInterMacroblock(fs *frameState, addr, mbx, mby, pType int, s *sliceEn
 			}
 		}
 		if len(g.parts) == 0 {
-			g.parts = []pPartition{g.pPartition}
+			g.parts = g.parts[:1:1]
+			g.parts[0] = g.pPartition
 		}
 	}
 	fs.info[addr].allow8 = true
-	for _, g := range groups {
+	for i := range groups {
+		g := &groups[i]
 		for _, p := range g.parts {
 			if p.w < 2 || p.h < 2 {
 				fs.info[addr].allow8 = false
 			}
 		}
 	}
-	for gi, g := range groups {
+	for gi := range groups {
+		g := &groups[gi]
 		for _, p := range g.parts {
 			x, y := baseX+p.x, baseY+p.y
 			var pred motion.MV

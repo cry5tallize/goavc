@@ -270,6 +270,7 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | decoder retained metadata（G08） | frameState 失败状态清尾、DPB Picture Reset 归还、输出/重排队列生命周期保护 | Partial | decoder 生命周期/恢复测试、Reset 后 `d.pool.Stats()` 平衡、decoder race 及编解码定向测试 | 未执行全库 race；自然 GC/RSS、G09 AU 容量与 G10 集成门禁仍待完成 |
 | AU 容量与粘性失败（G09） | AUReader 失败状态清零、NAL/AU 输入输出容量边界和 Packet.Data 独立所有权 | Partial | AU 超限/语法/IO/重复读取测试、Annex-B/AVCC writer 容量测试、stream race | 未新增封装算法；自然 GC/RSS、G10 端到端集成与全库 race 仍待完成 |
 | 串行元数据复用（K16精简） | decoder临时与DPB retained分离；encoder候选/场/平面独占租约；各实例空闲16MiB/三槽 | Partial | 六格式脏缓存像素、错误恢复、RC best保持与租约/预算测试；原端点五次before/after | 不是完整slice执行状态隔离；未池化DPB retained backing，未开启内部并行，GC/RSS与长稳未测 |
+| 正常P/B宏块去分配（K17切片） | 栈上固定分区backing，保留全部分区/子类型与读取顺序 | Partial | prepared CAVLC/CABAC、8/10位、P/B非零残差、空间/时间direct的像素/MV/身份/读端与0分配 | 不含每slice初始化、MBAFF首次场引用等完整K17配置门禁；不是整个decoder零分配 |
 | 其余池化/去分配/并行（K15–K20m） | 所有权、slice/分析/ME | TODO | 既有串行测试保留 | Threads>1仍拒绝；G00仅补分配基线，完整GC测量待实施 |
 
 ## M9

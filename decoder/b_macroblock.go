@@ -24,24 +24,38 @@ func decodeBMacroblock(fs *frameState, addr, mbx, mby, typ int, s *sliceEntry, q
 		return fmt.Errorf("decoder: missing B motion grid: %w", h264.ErrInvalidData)
 	}
 	baseX, baseY := mbx*4, fs.motionY(mby)
-	var groups []bGroup
+	var partBacking [16]bPart
+	// 只有整MB direct的首组使用16槽；多组路径每组最多四槽，活跃视图不重叠。
+	groupBacking := [4]bGroup{
+		{parts: partBacking[0:0:16]},
+		{parts: partBacking[4:4:8]},
+		{parts: partBacking[8:8:12]},
+		{parts: partBacking[12:12:16]},
+	}
+	groups := groupBacking[:0]
 	switch {
 	case typ == 0:
-		groups = []bGroup{{pPartition: pPartition{0, 0, 4, 4}, direct: true}}
+		groups = groupBacking[:1]
+		groups[0].pPartition = pPartition{0, 0, 4, 4}
+		groups[0].direct = true
 		fs.info[addr].direct = true
 	case typ <= 3:
-		groups = []bGroup{{pPartition: pPartition{0, 0, 4, 4}, mask: typ}}
+		groups = groupBacking[:1]
+		groups[0].pPartition = pPartition{0, 0, 4, 4}
+		groups[0].mask = typ
 	case typ <= 21:
 		masks := [9][2]int{{1, 1}, {2, 2}, {1, 2}, {2, 1}, {1, 3}, {2, 3}, {3, 1}, {3, 2}, {3, 3}}
 		pair := masks[(typ-4)/2]
+		groups = groupBacking[:2]
 		for i := 0; i < 2; i++ {
 			p := pPartition{0, i * 2, 4, 2}
 			if typ%2 == 1 {
 				p = pPartition{i * 2, 0, 2, 4}
 			}
-			groups = append(groups, bGroup{pPartition: p, mask: pair[i]})
+			groups[i].pPartition, groups[i].mask = p, pair[i]
 		}
 	case typ == 22:
+		groups = groupBacking[:4]
 		for i := 0; i < 4; i++ {
 			v, err := s.readBSubType()
 			if err != nil {
@@ -51,7 +65,8 @@ func decodeBMacroblock(fs *frameState, addr, mbx, mby, typ int, s *sliceEntry, q
 				return fmt.Errorf("decoder: B sub_mb_type %d: %w", v, h264.ErrInvalidData)
 			}
 			x, y := (i%2)*2, (i/2)*2
-			g := bGroup{pPartition: pPartition{x, y, 2, 2}, direct: v == 0}
+			g := &groups[i]
+			g.pPartition, g.direct = pPartition{x, y, 2, 2}, v == 0
 			w, h := 2, 2
 			switch v {
 			case 1, 4, 5, 10:
@@ -70,12 +85,16 @@ func decodeBMacroblock(fs *frameState, addr, mbx, mby, typ int, s *sliceEntry, q
 					w = 1
 				}
 			}
-			for yy := y; yy < y+2; yy += h {
-				for xx := x; xx < x+2; xx += w {
-					g.parts = append(g.parts, bPart{pPartition: pPartition{xx, yy, w, h}})
+			if !g.direct {
+				g.parts = g.parts[:(2/w)*(2/h)]
+				n := 0
+				for yy := y; yy < y+2; yy += h {
+					for xx := x; xx < x+2; xx += w {
+						g.parts[n] = bPart{pPartition: pPartition{xx, yy, w, h}}
+						n++
+					}
 				}
 			}
-			groups = append(groups, g)
 		}
 	default:
 		return fmt.Errorf("decoder: B macroblock type %d: %w", typ, h264.ErrInvalidData)
@@ -108,7 +127,8 @@ func decodeBMacroblock(fs *frameState, addr, mbx, mby, typ int, s *sliceEntry, q
 		g := &groups[i]
 		g.refs = [2]int8{-1, -1}
 		if g.direct {
-			g.parts = nil
+			g.parts = g.parts[:g.w*g.h]
+			n := 0
 			for yy := g.y; yy < g.y+g.h; yy++ {
 				for xx := g.x; xx < g.x+g.w; xx++ {
 					r := yy*4 + xx
@@ -117,12 +137,14 @@ func decodeBMacroblock(fs *frameState, addr, mbx, mby, typ int, s *sliceEntry, q
 						p.refs[l] = direct.refs[l][r]
 						p.mvs[l] = direct.mvs[l][r]
 					}
-					g.parts = append(g.parts, p)
+					g.parts[n] = p
+					n++
 					fs.directBlocks[(baseY+yy)*fs.mv.BlockW+baseX+xx] = true
 				}
 			}
 		} else if len(g.parts) == 0 {
-			g.parts = []bPart{{pPartition: g.pPartition}}
+			g.parts = g.parts[:1]
+			g.parts[0] = bPart{pPartition: g.pPartition}
 		}
 	}
 	// 参考索引按 list 外层、分区内层读取，随后 MVD 也遵守该顺序。
