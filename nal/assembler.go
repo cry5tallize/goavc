@@ -128,12 +128,14 @@ func (a *Assembler) append(u Unit, info *SliceInfo) {
 func (a *Assembler) takePending() *AccessUnit {
 	units := make([]Unit, len(a.pending))
 	copy(units, a.pending)
+	clear(a.pending)
 	a.pending = a.pending[:0]
 	return &AccessUnit{Units: units}
 }
 
 // reset 清空所有状态（保留已分配容量）。
 func (a *Assembler) reset() {
+	clear(a.pending)
 	a.pending = a.pending[:0]
 	a.last = Unit{}
 	a.hasLast = false

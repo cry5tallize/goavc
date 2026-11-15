@@ -785,3 +785,7 @@ P控制分配中位从335761024B/875520次变为4945520B/42次；耗时873234900
 此控制场景仍不是代表性High/B/多slice/lookahead主目标，不表示30FPS。
 剩余分配profile主要是图像、帧元数据、独立输出及slice位串扩容；自然GC/assist/
 暂停/RSS尚未测量，不能将分配降幅当作GC时间或RSS降幅。
+
+### G04：清除无效引用与容器尾槽
+
+本切片处理 picture pool、DPB retained metadata、NAL pending 和 decoder slice entries 的失效引用，不改变计时路径或编码/解码策略，因此没有新增 before/after 吞吐样本。定向四包测试通过；G04 只证明容器槽和长期引用在消费、释放或压缩后解除，不证明自然 GC 周期、扫描量、assist、暂停、RSS 或稳态 HeapAlloc 已下降。上述指标留待 G00/G05–G10 的独立测量，不能由 G01–G04 的分配减少直接推导。

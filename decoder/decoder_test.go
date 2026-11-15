@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	h264 "github.com/goavc/h264"
@@ -374,4 +375,15 @@ func FuzzDecoder_NoPanic(f *testing.F) {
 			frame.Release()
 		}
 	})
+}
+
+func TestDecoder_ClearSliceEntries(t *testing.T) {
+	entries := []sliceEntry{{
+		unit: nal.Unit{Payload: []byte{1, 2, 3}},
+		rbsp: []byte{4, 5, 6},
+	}}
+	clearSliceEntries(entries)
+	if !reflect.DeepEqual(entries[0], sliceEntry{}) {
+		t.Fatalf("slice entry after clear = %#v, want zero value", entries[0])
+	}
 }

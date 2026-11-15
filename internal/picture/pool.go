@@ -63,9 +63,15 @@ func (p *Pool) Get(mbWidth, mbHeight int, format h264.PixelFormat) (*Picture, er
 	k := key{mbWidth, mbHeight, format}
 	p.mu.Lock()
 	if list := p.free[k]; len(list) > 0 {
-		pic := list[len(list)-1]
-		p.free[k] = list[:len(list)-1]
-		// Release 会把 pool 置空以标记“已归还”，复用时必须重新绑定，
+		last := len(list) - 1
+		pic := list[last]
+		list[last] = nil
+		list = list[:last]
+		if len(list) == 0 {
+			delete(p.free, k)
+		} else {
+			p.free[k] = list
+		}
 		// 否则第二次 Release 会被误判为非池化图像而泄漏。
 		pic.pool = p
 		p.gets++

@@ -166,12 +166,24 @@ func (d *DPB) Modify(list []*Reference, current uint32, commands []syntax.RefLis
 func (d *DPB) remove(index int) {
 	r := d.references[index]
 	if r.Picture != nil {
+		if d.ref == r.Picture {
+			d.ref = nil
+		}
 		r.Picture.Release()
 		r.Picture = nil
 	}
 	r.Motion = [2]*motion.Grid{}
 	r.BlockReferences = [2][]*Identity{}
-	d.references = append(d.references[:index], d.references[index+1:]...)
+	r.ChromaMotion = [2][2]*motion.Grid{}
+	r.ChromaBlockReferences = [2][2][]*Identity{}
+	r.MBField = nil
+	r.ChromaMBField = [2][]bool{}
+	r.FrameReference = nil
+	r.fields = [2]*Reference{}
+	last := len(d.references) - 1
+	copy(d.references[index:], d.references[index+1:])
+	d.references[last] = nil
+	d.references = d.references[:last]
 }
 
 func (d *DPB) removeLong(index uint32) {

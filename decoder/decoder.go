@@ -65,6 +65,11 @@ func New(cfg h264.DecoderConfig) (*Decoder, error) {
 	return d, nil
 }
 
+// clearSliceEntries 解除一次 SendPacket 内已消费 slice 的数据与元数据引用。
+func clearSliceEntries(entries []sliceEntry) {
+	clear(entries)
+}
+
 // SendPacket 送入一个访问单元（Annex-B）。
 //
 // 返回 nil 表示输入已被消费，调用方应继续调用 ReceiveFrame 取输出。
@@ -85,6 +90,7 @@ func (d *Decoder) SendPacket(p h264.Packet) error {
 			return nil
 		}
 		err := d.decodeFrame(entries, p)
+		clearSliceEntries(entries)
 		entries = entries[:0]
 		return err
 	}

@@ -192,3 +192,16 @@ G03b补充验证：完整`CGO_ENABLED=1 go test -race -count=1 ./...`退出0，t
 临时对照树在一次后置verify期间尚在tmp，被depscheck正常扫描为70个包并触发4处R3失败；未放宽白名单。对照树已恢复/确认干净后移除。随后`g03b-verify-clean.txt`因PowerShell把Git的CRLF提示当终止异常而中止；仅规范本次文档为LF后，最终完整门禁`g03b-verify-success.txt`退出0，35包依赖及55条manifest通过。新种子`g03b-b-seeds-race.txt`退出0。执行Go门禁前必须先移除仓库内的对照工作树。独立fuzzer修复提交为`dcce7ed`。
 
 已核对并逐文件清理本次及前轮M8生成的41个测试二进制，共202867376字节；只删除已列出的tmp/m8-baseline内文件，不递归清空tmp，不删除profile/样本/失败证据。删除清单`g03b-cleanup.txt`，当前只有主工作树。profile后续可用保存的mem文本符号或按revision重新构建二进制分析；不声称旧exe仍在。没有push/tag/release。
+
+### G04：清除无效引用与容器尾槽
+
+起点为 `b0d9615` 的 G03b/B fuzz 修复交接点；保留工作区中既有的 05/08/README/13 文档修改。本任务只处理已经确认的容器留存，不改变编码策略、DPB 语义或输出所有权。
+
+- `internal/picture.Pool.Get` 弹出空闲图像前清零 backing slice 的已消费槽；最后一张图取出后删除空桶，避免池 map 和底层数组继续持有已借出图像。
+- `internal/dpb.remove` 在释放图像后解除 `Motion`、`BlockReferences`、独立色平面运动/引用、MBAFF 场标记和派生场缓存；若删除当前 `d.ref`，同步清除该指针；压缩 reference 列表后清零尾槽。`Identity` 保留为其他共位引用可借用的轻量身份，不提前清空。
+- `nal.Assembler.takePending/reset` 在复制独立 AU 后清掉已消费的 `Unit` 槽，并保留 `takePending` 到调用方完成边界判定所需的 `last/lastInfo` 语义；直接 reset 也解除 pending payload。
+- `decoder.SendPacket` 完成一次 `decodeFrame` 后清空本次 `entries` 的全部 slice/header/RBSP/分区引用，再复用切片容量；不跨公开调用保留输入数据。
+
+新增/扩展行为测试：`TestPool_GetClearsReleasedSlotAndEmptyBucket`、`TestReferences_RemoveClearsRetainedState`、`TestAssembler_ClearConsumedUnitSlots`、`TestDecoder_ClearSliceEntries`。测试检查池租约平衡、DPB 图像与 retained metadata 解除、NAL 独立 AU 不受影响，以及 decoder slice 容器清零。
+
+定向命令 `CGO_ENABLED=0 go test -count=1 ./internal/picture ./internal/dpb ./nal ./decoder` 退出 0。该任务没有新增性能样本；自然 GC、scan/assist/pause、RSS 和稳态留存实验仍未执行。G05 有界缓存、G06 公共 Frame backing、G07/G08 所有权和 K19/K20/K20m 并行仍未完成。

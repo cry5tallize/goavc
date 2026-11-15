@@ -3,6 +3,7 @@ package dpb
 import (
 	"errors"
 	h264 "github.com/goavc/h264"
+	"github.com/goavc/h264/internal/motion"
 	"github.com/goavc/h264/internal/picture"
 	"github.com/goavc/h264/syntax"
 	"testing"
@@ -58,6 +59,50 @@ func TestReferences_DefaultListsAndSlidingWindow(t *testing.T) {
 	gets, puts, _ = pool.Stats()
 	if gets != puts {
 		t.Fatal("DPB leaked pictures")
+	}
+}
+
+func TestReferences_RemoveClearsRetainedState(t *testing.T) {
+	d := New(16, false)
+	pool := picture.NewPool(1)
+	pic, err := pool.Get(1, 2, h264.YUV420P)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := d.NewReference(pic, 1, 2)
+	if _, err := r.FieldReference(false); err != nil {
+		t.Fatal(err)
+	}
+	r.Motion = [2]*motion.Grid{new(motion.Grid), new(motion.Grid)}
+	r.BlockReferences = [2][]*Identity{{{ID: 2}}, {{ID: 3}}}
+	r.ChromaMotion[0][0] = new(motion.Grid)
+	r.ChromaBlockReferences[0][0] = []*Identity{{ID: 4}}
+	r.MBField = []bool{true}
+	r.ChromaMBField[0] = []bool{false}
+	d.ref = r.Picture
+	refs := []*Reference{r}
+	d.references = refs
+
+	d.remove(0)
+
+	if len(d.references) != 0 || refs[0] != nil {
+		t.Fatal("removed reference remains reachable from DPB storage")
+	}
+	if d.ref != nil || r.Picture != nil {
+		t.Fatal("removed reference still owns picture state")
+	}
+	if r.Motion != [2]*motion.Grid{} || r.ChromaMotion != [2][2]*motion.Grid{} {
+		t.Fatal("removed reference retains motion grids")
+	}
+	if r.BlockReferences[0] != nil || r.BlockReferences[1] != nil || r.ChromaBlockReferences[0][0] != nil || r.ChromaBlockReferences[0][1] != nil || r.ChromaBlockReferences[1][0] != nil || r.ChromaBlockReferences[1][1] != nil {
+		t.Fatal("removed reference retains block identities")
+	}
+	if r.MBField != nil || r.ChromaMBField[0] != nil || r.ChromaMBField[1] != nil || r.fields != [2]*Reference{} {
+		t.Fatal("removed reference retains field metadata")
+	}
+	gets, puts, _ := pool.Stats()
+	if gets != 1 || puts != 1 {
+		t.Fatalf("picture ownership = gets %d puts %d, want 1/1", gets, puts)
 	}
 }
 

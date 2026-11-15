@@ -192,6 +192,29 @@ func TestAssembler_FlushAndReset(t *testing.T) {
 	}
 }
 
+func TestAssembler_ClearConsumedUnitSlots(t *testing.T) {
+	a := NewAssembler()
+	u := unitOf(TypeSPS, 3)
+	u.Payload = []byte{1, 2, 3}
+	a.Push(u, nil)
+	backing := a.pending
+	if au := a.Flush(); au == nil {
+		t.Fatal("Flush 应返回挂起的 AU")
+	}
+	if backing[0].Payload != nil {
+		t.Fatal("已交付 AU 的 pending 槽仍保留 payload")
+	}
+
+	u = unitOf(TypePPS, 3)
+	u.Payload = []byte{4, 5, 6}
+	a.Push(u, nil)
+	backing = a.pending
+	a.reset()
+	if backing[0].Payload != nil {
+		t.Fatal("reset 后的 pending 槽仍保留 payload")
+	}
+}
+
 // TestAccessUnit_Helpers 验证 AU 查询方法。
 func TestAccessUnit_Helpers(t *testing.T) {
 	au := &AccessUnit{Units: []Unit{

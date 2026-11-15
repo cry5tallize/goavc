@@ -69,6 +69,41 @@ func TestPool_ReuseAndStats(t *testing.T) {
 		t.Fatalf("free list length = %d, want 2", free)
 	}
 }
+func TestPool_GetClearsReleasedSlotAndEmptyBucket(t *testing.T) {
+	pool := NewPool(1)
+	pic, err := pool.Get(1, 1, h264.YUV420P)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pic.Release()
+
+	k := key{1, 1, h264.YUV420P}
+	pool.mu.Lock()
+	list := pool.free[k]
+	if len(list) != 1 || list[0] != pic {
+		pool.mu.Unlock()
+		t.Fatalf("free list = %#v, want released picture", list)
+	}
+	pool.mu.Unlock()
+
+	reused, err := pool.Get(1, 1, h264.YUV420P)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reused != pic {
+		t.Fatal("pool did not reuse released picture")
+	}
+	if list[0] != nil {
+		t.Fatal("popped free-list slot still retains picture")
+	}
+	pool.mu.Lock()
+	_, exists := pool.free[k]
+	pool.mu.Unlock()
+	if exists {
+		t.Fatal("empty free-list bucket was retained")
+	}
+	reused.Release()
+}
 
 func TestPool_ConcurrentGetPut(t *testing.T) {
 	pool := NewPool(8)
