@@ -30,4 +30,5 @@ codec Threads1。微基准各100ms×5，包含三平面固定重置和真实`app
 复现：`CGO_ENABLED=0 go test ./decoder -run '^$' -bench '^BenchmarkPWeights_16_Auto$' -benchtime=100ms -count=5 -benchmem`。
 端点仍包含New/Send/Receive/Release/Flush/Close，不含I/O或组AU；IDR500ms、I/P/B1x，
 每对奇数before先、偶数after先，各侧独立进程count1。300帧主矩阵留到A07；
-本轮purego/386/race及跨平台集成证据在A06结束集中检查，不把未执行项计为通过。
+本轮受影响五包purego/386/race及六目标build/测试编译已在[A06集成验证](a06_deblocking_batch.md)通过；
+不扩大Unix/arm64原生证据，300帧仍留A07。

@@ -1,0 +1,904 @@
+{
+  "schema_version": 1,
+  "work_item": "A06",
+  "measured_date": "2026-11-17",
+  "baseline_revision": "4bd8638175e891afe0b799c6a73161f233cdd78c",
+  "measured_source": "Before: A05 plus new benchmark fixtures, no production changes. After: experimental uncommitted bS batch candidate with on-demand GetLinear, subsequently rejected. Accepted tree restores A05 production code; the rejected diff is retained at tmp/a06/rejected_candidate.patch.",
+  "environment": {
+    "hardware": "HW-M2",
+    "cpu": "AMD Ryzen 7 5700X",
+    "os": "Windows 11 10.0.26200 amd64",
+    "go": "go1.27.4",
+    "cgo": 0,
+    "goamd64": "v1",
+    "gomaxprocs": 16,
+    "codec_threads": 1,
+    "external_load_monitored": false,
+    "own_build_test_oracle_jobs_during_timing": 0
+  },
+  "inputs": {
+    "source": "docs/performance.md sections17/18; same files, unchanged generation settings",
+    "idr": {
+      "path": "tmp/deblock-perf/high-idr.264",
+      "sha256": "b6f836c52d00a644b4cf5906e1b726b3d0bed713d2b2fdf940cb6c99133e59a9",
+      "frames_per_op": 1
+    },
+    "ipb": {
+      "path": "tmp/deblock-perf/high-ipb.264",
+      "sha256": "e175d84a84d1ec065420cc4292650c04976393dcfea0588357b264ca4fa9583f",
+      "frames_per_op": 32
+    }
+  },
+  "timing": {
+    "kernels": "five100ms samples, fixed destination reset included; fixture preparation/verification excluded; details in the work-item report",
+    "endpoints": "New/Send/Receive/Release/Flush/Close; IO/AU assembly excluded; five interleaved pairs of frozen before/after executables, alternating order. Count1 per process, IDR500ms/IPB1x. No other own timing/compile/test/Oracle jobs overlapped."
+  },
+  "kernel_before": [
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/p/verticaltrue-16",
+      "iterations": [1849425, 1690628, 1631488, 1611510, 1657284],
+      "ns_op": [65.43, 67.91, 72.1, 72.45, 70.07],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 70.07
+    },
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/p/verticalfalse-16",
+      "iterations": [1789161, 1683673, 1721085, 1622498, 1653082],
+      "ns_op": [69.13, 69.03, 68.46, 73.22, 69.75],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 69.13
+    },
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/b/verticaltrue-16",
+      "iterations": [933019, 909288, 1000000, 758006, 905980],
+      "ns_op": [132, 138.9, 135.5, 134.8, 130.9],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 134.8
+    },
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/b/verticalfalse-16",
+      "iterations": [911230, 1000000, 766576, 1000000, 1000000],
+      "ns_op": [149.4, 142.9, 141.9, 146.2, 142.7],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 142.9
+    },
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/b_nz/verticaltrue-16",
+      "iterations": [1000000, 1048195, 942802, 1045297, 1000000],
+      "ns_op": [119.3, 114.4, 113.7, 113.6, 112.5],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 113.7
+    },
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/b_nz/verticalfalse-16",
+      "iterations": [1000000, 1000000, 953077, 1000000, 1037760],
+      "ns_op": [118.3, 122.1, 123.2, 112.5, 117.2],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 118.3
+    },
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/b_transform8/verticaltrue-16",
+      "iterations": [1334053, 1318411, 1363082, 1319512, 1333645],
+      "ns_op": [91.74, 92.32, 91.14, 91.86, 90.32],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 91.74
+    },
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/b_transform8/verticalfalse-16",
+      "iterations": [1000000, 1024208, 1542265, 1458643, 1543328],
+      "ns_op": [105.3, 100.2, 78.93, 80.76, 78.17],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 80.76
+    },
+    {
+      "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+      "iterations": [8, 8, 8, 9, 8],
+      "ns_op": [12955750, 12939500, 13325412, 13832767, 14553788],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 13325412
+    },
+    {
+      "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+      "iterations": [10, 10, 10, 10, 10],
+      "ns_op": [10543170, 10934020, 11055200, 10707320, 14534320],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 10934020
+    }
+  ],
+  "kernel_after": [
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/p/verticaltrue-16",
+      "iterations": [2240732, 2366961, 2280141, 2313154, 2244441],
+      "ns_op": [52.47, 55.9, 52.84, 51.62, 52.41],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 52.47
+    },
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/p/verticalfalse-16",
+      "iterations": [2213253, 2169926, 2232582, 2238667, 2265997],
+      "ns_op": [53.19, 55.29, 53.93, 54.02, 51.72],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 53.93
+    },
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/b/verticaltrue-16",
+      "iterations": [1000000, 1000000, 1000000, 1000000, 1000000],
+      "ns_op": [110.9, 108, 109.9, 112.7, 112.1],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 110.9
+    },
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/b/verticalfalse-16",
+      "iterations": [1000000, 1000000, 1000000, 851970, 1000000],
+      "ns_op": [119.7, 123, 117, 119.9, 118.3],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 119.7
+    },
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/b_nz/verticaltrue-16",
+      "iterations": [1000000, 1225909, 1237431, 1225624, 1211731],
+      "ns_op": [101.9, 97.03, 97.01, 97.23, 98.72],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 97.23
+    },
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/b_nz/verticalfalse-16",
+      "iterations": [1000000, 1000000, 1000000, 1000000, 1000000],
+      "ns_op": [102.6, 111, 104.8, 101.8, 103.2],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 103.2
+    },
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/b_transform8/verticaltrue-16",
+      "iterations": [1706923, 1699561, 1700036, 1617008, 1652793],
+      "ns_op": [68.62, 69.5, 70.92, 73.13, 74.05],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 70.92
+    },
+    {
+      "case": "BenchmarkEdgeStrengths_1080p_Auto/b_transform8/verticalfalse-16",
+      "iterations": [1534508, 1607174, 1669650, 1691614, 1601310],
+      "ns_op": [78.93, 75.49, 72.81, 73.67, 74.37],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 74.37
+    },
+    {
+      "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+      "iterations": [8, 8, 8, 8, 8],
+      "ns_op": [13890688, 13853100, 13382638, 13299100, 12991962],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 13382638
+    },
+    {
+      "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+      "iterations": [13, 14, 14, 13, 13],
+      "ns_op": [8638192, 9078614, 8646129, 8115038, 8856115],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 8646129
+    }
+  ],
+  "paired": {
+    "idr": {
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [15],
+            "ns_op": [37851727],
+            "b_op": [8078077],
+            "allocs_op": [116],
+            "median_ns_op": 37851727
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [14],
+            "ns_op": [37546543],
+            "b_op": [8078122],
+            "allocs_op": [116],
+            "median_ns_op": 37546543
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [15],
+            "ns_op": [37424467],
+            "b_op": [8078417],
+            "allocs_op": [116],
+            "median_ns_op": 37424467
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [14],
+            "ns_op": [37026121],
+            "b_op": [8077750],
+            "allocs_op": [115],
+            "median_ns_op": 37026121
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [14],
+            "ns_op": [37220179],
+            "b_op": [8078120],
+            "allocs_op": [116],
+            "median_ns_op": 37220179
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [15],
+            "ns_op": [37035333],
+            "b_op": [8078064],
+            "allocs_op": [116],
+            "median_ns_op": 37035333
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [14],
+            "ns_op": [37088671],
+            "b_op": [8078134],
+            "allocs_op": [116],
+            "median_ns_op": 37088671
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [14],
+            "ns_op": [38038464],
+            "b_op": [8078129],
+            "allocs_op": [116],
+            "median_ns_op": 38038464
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [14],
+            "ns_op": [37545157],
+            "b_op": [8078493],
+            "allocs_op": [117],
+            "median_ns_op": 37545157
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [15],
+            "ns_op": [37305693],
+            "b_op": [8078433],
+            "allocs_op": [117],
+            "median_ns_op": 37305693
+          }
+        }
+      ],
+      "median_before_ns_op": 37424467,
+      "median_after_ns_op": 37305693,
+      "change_percent": -0.31736991738586795
+    },
+    "ipb": {
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1029041400],
+            "b_op": [162032336],
+            "allocs_op": [4418],
+            "median_ns_op": 1029041400
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1056576500],
+            "b_op": [162032208],
+            "allocs_op": [4417],
+            "median_ns_op": 1056576500
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [965184400],
+            "b_op": [162037336],
+            "allocs_op": [4423],
+            "median_ns_op": 965184400
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1029860400],
+            "b_op": [162032256],
+            "allocs_op": [4417],
+            "median_ns_op": 1029860400
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1003191900],
+            "b_op": [162032240],
+            "allocs_op": [4417],
+            "median_ns_op": 1003191900
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1019137300],
+            "b_op": [162032240],
+            "allocs_op": [4417],
+            "median_ns_op": 1019137300
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [968998100],
+            "b_op": [162027368],
+            "allocs_op": [4413],
+            "median_ns_op": 968998100
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [998113400],
+            "b_op": [162027368],
+            "allocs_op": [4413],
+            "median_ns_op": 998113400
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [958450100],
+            "b_op": [162032464],
+            "allocs_op": [4419],
+            "median_ns_op": 958450100
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [989778700],
+            "b_op": [162027384],
+            "allocs_op": [4413],
+            "median_ns_op": 989778700
+          }
+        }
+      ],
+      "median_before_ns_op": 968998100,
+      "median_after_ns_op": 1019137300,
+      "change_percent": 5.174334191160956,
+      "repeat": {
+        "pairs": [
+          {
+            "pair": 1,
+            "order": [
+              "before",
+              "after"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [933177600],
+              "b_op": [162027144],
+              "allocs_op": [4411],
+              "median_ns_op": 933177600
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [974759600],
+              "b_op": [162032384],
+              "allocs_op": [4418],
+              "median_ns_op": 974759600
+            }
+          },
+          {
+            "pair": 2,
+            "order": [
+              "after",
+              "before"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [908456800],
+              "b_op": [162027160],
+              "allocs_op": [4411],
+              "median_ns_op": 908456800
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [951895700],
+              "b_op": [162027160],
+              "allocs_op": [4411],
+              "median_ns_op": 951895700
+            }
+          },
+          {
+            "pair": 3,
+            "order": [
+              "before",
+              "after"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [967095300],
+              "b_op": [162032272],
+              "allocs_op": [4417],
+              "median_ns_op": 967095300
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [940254100],
+              "b_op": [162032256],
+              "allocs_op": [4417],
+              "median_ns_op": 940254100
+            }
+          },
+          {
+            "pair": 4,
+            "order": [
+              "after",
+              "before"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [950101000],
+              "b_op": [162032224],
+              "allocs_op": [4417],
+              "median_ns_op": 950101000
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [994235700],
+              "b_op": [162032240],
+              "allocs_op": [4417],
+              "median_ns_op": 994235700
+            }
+          },
+          {
+            "pair": 5,
+            "order": [
+              "before",
+              "after"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [920602800],
+              "b_op": [162032240],
+              "allocs_op": [4417],
+              "median_ns_op": 920602800
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [999291400],
+              "b_op": [162027144],
+              "allocs_op": [4411],
+              "median_ns_op": 999291400
+            }
+          }
+        ],
+        "median_before_ns_op": 933177600,
+        "median_after_ns_op": 974759600,
+        "change_percent": 4.455957794100507
+      }
+    }
+  },
+  "pilot": {
+    "source": "initial eager Read4 edge snapshots; sparse NZ cases regressed, replaced with on-demand linear loads; excluded from final adoption claims",
+    "kernel_after": [
+      {
+        "case": "BenchmarkEdgeStrengths_1080p_Auto/p/verticaltrue-16",
+        "iterations": [1904872, 1943754, 1983572, 2032406, 2019192],
+        "ns_op": [62.27, 60.41, 61.5, 59.49, 59.59],
+        "b_op": [0, 0, 0, 0, 0],
+        "allocs_op": [0, 0, 0, 0, 0],
+        "median_ns_op": 60.41
+      },
+      {
+        "case": "BenchmarkEdgeStrengths_1080p_Auto/p/verticalfalse-16",
+        "iterations": [1961251, 2065119, 1938306, 2018247, 1982601],
+        "ns_op": [60.4, 57.94, 61.42, 60.71, 61.11],
+        "b_op": [0, 0, 0, 0, 0],
+        "allocs_op": [0, 0, 0, 0, 0],
+        "median_ns_op": 60.71
+      },
+      {
+        "case": "BenchmarkEdgeStrengths_1080p_Auto/b/verticaltrue-16",
+        "iterations": [1000000, 879184, 942246, 907646, 1000000],
+        "ns_op": [127.4, 125.6, 128.1, 125.9, 126.1],
+        "b_op": [0, 0, 0, 0, 0],
+        "allocs_op": [0, 0, 0, 0, 0],
+        "median_ns_op": 126.1
+      },
+      {
+        "case": "BenchmarkEdgeStrengths_1080p_Auto/b/verticalfalse-16",
+        "iterations": [962232, 991161, 994447, 976165, 937646],
+        "ns_op": [135, 138.2, 139.1, 134.3, 137.5],
+        "b_op": [0, 0, 0, 0, 0],
+        "allocs_op": [0, 0, 0, 0, 0],
+        "median_ns_op": 137.5
+      },
+      {
+        "case": "BenchmarkEdgeStrengths_1080p_Auto/b_nz/verticaltrue-16",
+        "iterations": [946371, 997423, 981434, 999084, 1000000],
+        "ns_op": [124.3, 121.9, 128.9, 127.7, 125.8],
+        "b_op": [0, 0, 0, 0, 0],
+        "allocs_op": [0, 0, 0, 0, 0],
+        "median_ns_op": 125.8
+      },
+      {
+        "case": "BenchmarkEdgeStrengths_1080p_Auto/b_nz/verticalfalse-16",
+        "iterations": [981594, 997920, 766282, 859849, 881638],
+        "ns_op": [142.2, 137.3, 135.6, 139.4, 134.3],
+        "b_op": [0, 0, 0, 0, 0],
+        "allocs_op": [0, 0, 0, 0, 0],
+        "median_ns_op": 137.3
+      },
+      {
+        "case": "BenchmarkEdgeStrengths_1080p_Auto/b_transform8/verticaltrue-16",
+        "iterations": [1323014, 1294813, 1309248, 1360256, 1345051],
+        "ns_op": [91.22, 92.84, 92.03, 87.5, 90.95],
+        "b_op": [0, 0, 0, 0, 0],
+        "allocs_op": [0, 0, 0, 0, 0],
+        "median_ns_op": 91.22
+      },
+      {
+        "case": "BenchmarkEdgeStrengths_1080p_Auto/b_transform8/verticalfalse-16",
+        "iterations": [1000000, 1209201, 1190158, 1217638, 1206150],
+        "ns_op": [103.7, 99.48, 100.2, 98.68, 98.83],
+        "b_op": [0, 0, 0, 0, 0],
+        "allocs_op": [0, 0, 0, 0, 0],
+        "median_ns_op": 99.48
+      },
+      {
+        "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+        "iterations": [8, 9, 8, 8, 9],
+        "ns_op": [12985275, 12302167, 13143288, 13092762, 12738989],
+        "b_op": [0, 0, 0, 0, 0],
+        "allocs_op": [0, 0, 0, 0, 0],
+        "median_ns_op": 12985275
+      },
+      {
+        "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+        "iterations": [12, 14, 13, 12, 14],
+        "ns_op": [8788008, 8771307, 8607600, 9554625, 8945607],
+        "b_op": [0, 0, 0, 0, 0],
+        "allocs_op": [0, 0, 0, 0, 0],
+        "median_ns_op": 8788008
+      }
+    ],
+    "paired": {
+      "idr": {
+        "pairs": [
+          {
+            "pair": 1,
+            "order": [
+              "before",
+              "after"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [15],
+              "ns_op": [38109333],
+              "b_op": [8077384],
+              "allocs_op": [115],
+              "median_ns_op": 38109333
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [14],
+              "ns_op": [40488943],
+              "b_op": [8078118],
+              "allocs_op": [116],
+              "median_ns_op": 40488943
+            }
+          },
+          {
+            "pair": 2,
+            "order": [
+              "after",
+              "before"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [14],
+              "ns_op": [37651736],
+              "b_op": [8077761],
+              "allocs_op": [115],
+              "median_ns_op": 37651736
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [15],
+              "ns_op": [38897133],
+              "b_op": [8078078],
+              "allocs_op": [116],
+              "median_ns_op": 38897133
+            }
+          },
+          {
+            "pair": 3,
+            "order": [
+              "before",
+              "after"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [16],
+              "ns_op": [36019756],
+              "b_op": [8078027],
+              "allocs_op": [116],
+              "median_ns_op": 36019756
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [15],
+              "ns_op": [36101833],
+              "b_op": [8077383],
+              "allocs_op": [115],
+              "median_ns_op": 36101833
+            }
+          },
+          {
+            "pair": 4,
+            "order": [
+              "after",
+              "before"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [15],
+              "ns_op": [36952687],
+              "b_op": [8078062],
+              "allocs_op": [116],
+              "median_ns_op": 36952687
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [14],
+              "ns_op": [36914543],
+              "b_op": [8077754],
+              "allocs_op": [115],
+              "median_ns_op": 36914543
+            }
+          },
+          {
+            "pair": 5,
+            "order": [
+              "before",
+              "after"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [15],
+              "ns_op": [35553813],
+              "b_op": [8077382],
+              "allocs_op": [115],
+              "median_ns_op": 35553813
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [15],
+              "ns_op": [37594073],
+              "b_op": [8078068],
+              "allocs_op": [116],
+              "median_ns_op": 37594073
+            }
+          }
+        ],
+        "median_before_ns_op": 36952687,
+        "median_after_ns_op": 37594073,
+        "change_percent": 1.7356951606793736
+      },
+      "ipb": {
+        "pairs": [
+          {
+            "pair": 1,
+            "order": [
+              "before",
+              "after"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [997312000],
+              "b_op": [162032368],
+              "allocs_op": [4418],
+              "median_ns_op": 997312000
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [993551400],
+              "b_op": [162032480],
+              "allocs_op": [4419],
+              "median_ns_op": 993551400
+            }
+          },
+          {
+            "pair": 2,
+            "order": [
+              "after",
+              "before"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [994834100],
+              "b_op": [162032240],
+              "allocs_op": [4417],
+              "median_ns_op": 994834100
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [991130300],
+              "b_op": [162032256],
+              "allocs_op": [4417],
+              "median_ns_op": 991130300
+            }
+          },
+          {
+            "pair": 3,
+            "order": [
+              "before",
+              "after"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [1011132300],
+              "b_op": [162027368],
+              "allocs_op": [4413],
+              "median_ns_op": 1011132300
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [1043061600],
+              "b_op": [162032240],
+              "allocs_op": [4417],
+              "median_ns_op": 1043061600
+            }
+          },
+          {
+            "pair": 4,
+            "order": [
+              "after",
+              "before"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [927740800],
+              "b_op": [162032352],
+              "allocs_op": [4418],
+              "median_ns_op": 927740800
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [968251000],
+              "b_op": [162027144],
+              "allocs_op": [4411],
+              "median_ns_op": 968251000
+            }
+          },
+          {
+            "pair": 5,
+            "order": [
+              "before",
+              "after"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [949042000],
+              "b_op": [162032560],
+              "allocs_op": [4420],
+              "median_ns_op": 949042000
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [1033799500],
+              "b_op": [162032480],
+              "allocs_op": [4419],
+              "median_ns_op": 1033799500
+            }
+          }
+        ],
+        "median_before_ns_op": 994834100,
+        "median_after_ns_op": 993551400,
+        "change_percent": -0.12893607084839553
+      }
+    }
+  },
+  "decision": {
+    "adopted": false,
+    "reason": "Five interleaved pairs: IPB+5.17%; one planned repeat:+4.46%. Despite core/synthetic gains, production endpoint repeatedly regresses. Both experimental configurations and all samples retained; no new motion API or batch route remains in production.",
+    "profile": "Separate3x profiles: before4.00s CPU/deblock0.94s; after4.04s CPU/deblock0.92s. Short sampling does not explain the repeated formal endpoint regression. Local profiles/top reports retained under tmp/a06; not substituted for throughput samples."
+  }
+}

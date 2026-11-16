@@ -29,7 +29,8 @@ IDR仍500ms、I/P/B1x，各侧独立进程count1；构建/测试/Oracle不与正
 1..31宽/奇数尾部，局部栈数组0分配。`TestGuardPage_AverageBlockSSE2` 直接执行新8/16-bit
 汇编，逐行保护页及65535极值通过。共享块对单样本公式、两份直接AU的FFmpeg像素、
 显式加权编码三方Oracle和CGO0完整gofmt/vet/build/test/deps/manifest门禁通过。
-额外purego/386/race/六目标集成检查留到A06结束，300帧主矩阵仍在A07。
+受影响五包purego/386/race及六目标build/测试编译已在[A06集成验证](a06_deblocking_batch.md)通过，
+300帧主矩阵仍在A07，Unix/arm64原生未验。
 
 复现微基准：`CGO_ENABLED=0 go test ./internal/prediction -run '^$' -bench '^BenchmarkWeightBlocks_4To16_Auto$/(8bit|10bit)/(4x4|8x8|16x16|7x5)/bi_average$' -benchtime=100ms -count=5 -benchmem`。
 定向验证：`CGO_ENABLED=0 go test ./internal/simd ./internal/prediction -run 'Test(AverageBlock|GuardPage_AverageBlock|WeightBlock)' -count=1`。

@@ -44,7 +44,8 @@ IDR500ms、I/P/B1x，每侧独立进程count1，奇偶对交替先后。构建/�
 - 共享入口对原单样本公式、原地/部分重叠、其他位深及超规范参数的int64回退通过；
   局部数组实际单/双向加权0分配。SSE2和purego的相关包测试通过。
 - CGO0完整gofmt/vet/build/全库test、36包deps、55条manifest，两个High直接AU FFmpeg
-  像素Oracle和显式加权编码三方Oracle均通过。完整跨平台/race集成检查在A06收尾；300帧留A07。
+  像素Oracle和显式加权编码三方Oracle均通过。受影响五包purego/386/race及六目标build/测试编译
+  已在[A06集成验证](a06_deblocking_batch.md)通过；300帧留A07，Unix/arm64原生未验。
 
 微基准复现：`CGO_ENABLED=0 go test ./internal/prediction -run '^$' -bench '^BenchmarkWeightBlocks_4To16_Auto$' -benchtime=100ms -count=5 -benchmem`。
 定向验证：`CGO_ENABLED=0 go test ./internal/simd ./internal/prediction -run 'Test(WeightBlock|GuardPage_WeightBlock)' -count=1`。

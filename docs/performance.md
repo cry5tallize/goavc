@@ -1256,3 +1256,13 @@ FFmpeg像素Oracle、CGO=0完整工程门禁、受影响包purego/386/race及六
 局部栈缓冲0分配。保留奇数/宽域/部分重叠标量路径；初测奇数形状额外调用成本已修正并保留证据。
 交错五对短I/P/B耗时下降5.3%，IDR持平；完整条件及原始数据见[A05记录](gates/a05_weight_blocks.md)
 和[a05_samples.json](gates/a05_samples.json)。
+
+## 25. A06：bS批量候选未采纳
+
+第二候选单边bS基准快7.9%–25.1%、合成inter去块快20.9%，但32帧I/P/B两轮五对分别
+慢5.2%/4.5%，未通过端点门禁，已恢复A05原生产bS链。没有启用更慢的默认路径。
+完整负结果、候选范围和原始样本见[A06评估](gates/a06_deblocking_batch.md)及[a06_samples.json](gates/a06_samples.json)。
+
+实际采纳的A03–A05已通过各项CGO0完整门禁及最终受影响五包purego/386/race、六目标
+build和SIMD测试编译；集成范围见[A06记录](gates/a06_deblocking_batch.md)。300帧主矩阵仍待A07，
+未扩大Unix/arm64原生或长期吞吐结论。
