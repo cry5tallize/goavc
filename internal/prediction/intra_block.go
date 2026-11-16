@@ -29,6 +29,9 @@ type intraBlockSamples[T sample] struct {
 }
 
 // Intra16x16 计算 16×16 帧内预测。
+// 保留具名跨包边界：导入泛型shape的保守逃逸会把调用方邻域切片的局部数组移到堆上。
+//
+//go:noinline
 func Intra16x16(dst []byte, stride, mode int, s IntraBlockSamples, topAvail, leftAvail bool) error {
 	return intra16x16(dst, stride, mode, s, topAvail, leftAvail, 8)
 }
@@ -66,6 +69,9 @@ func Chroma8x8High(dst []uint16, stride, mode int, s IntraBlockSamples16, topAva
 
 // Chroma422 计算 4:2:2 的 8×16 色度帧内预测（Spec: 8.3.4）。
 // Top 至少 8 个样本，Left 至少 16 个样本；跨度以采样计。
+// 与Intra16x16保持同样的具名跨包边界，避免导入shape使调用方局部邻域逃逸。
+//
+//go:noinline
 func Chroma422(dst []byte, stride, mode int, s IntraBlockSamples, topAvail, leftAvail bool) error {
 	return chromaBlock(dst, stride, 16, mode, s, topAvail, leftAvail, 8)
 }
