@@ -1249,3 +1249,10 @@ FFmpeg像素Oracle、CGO=0完整工程门禁、受影响包purego/386/race及六
 实际BiWeightBlock均值分支接入8/16-bit SSE2，已测4/8/16宽和7×5尾部均值内核下降15.6%–75.7%，
 0B/0alloc。两短端点交错五对视为持平，保持原像素、别名和尾部语义；采用已获益形状Auto。
 实现、测试范围及全部样本见[A04记录](gates/a04_average_blocks.md)和[a04_samples.json](gates/a04_samples.json)。
+
+## 24. A05：整块单/双向加权SSE2
+
+相对A04 `160a0a3`，4倍数宽单/双向完整加权接入SSE2；16×16真实权重代表格下降68.6%–81.9%，
+局部栈缓冲0分配。保留奇数/宽域/部分重叠标量路径；初测奇数形状额外调用成本已修正并保留证据。
+交错五对短I/P/B耗时下降5.3%，IDR持平；完整条件及原始数据见[A05记录](gates/a05_weight_blocks.md)
+和[a05_samples.json](gates/a05_samples.json)。

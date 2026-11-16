@@ -1,0 +1,120 @@
+//go:build amd64 && !purego
+
+#include "textflag.h"
+
+// Spec:8.4.3.2。4样本/批，以PMADDWL生成32位和，后移位、加offset、Clip1。
+// 8-bit最宽分子<=65408；uint16经补偿后绝对值<=16777088，均精确落在int32。
+// width是4的正倍数，每次只读取4/8字节；b=nil的单向不访问第二源。
+TEXT ·weightBlock8SSE2(SB), NOSPLIT, $0-120
+	MOVQ dst_base+0(FP),DI
+	MOVQ ds+24(FP),R8
+	MOVQ a_base+32(FP),SI
+	MOVQ b_base+56(FP),BX
+	MOVQ ss+80(FP),R9
+	MOVQ w+88(FP),R10
+	MOVQ h+96(FP),R11
+	MOVL coeff+104(FP),AX
+	MOVD AX,X10
+	PSHUFD $0,X10,X10
+	MOVL bias+108(FP),AX
+	MOVD AX,X11
+	PSHUFD $0,X11,X11
+	MOVL offset+112(FP),AX
+	MOVD AX,X12
+	PSHUFD $0,X12,X12
+	MOVL shift+116(FP),AX
+	MOVD AX,X13
+	PXOR X15,X15
+weight8_row:
+	XORQ CX,CX
+weight8_batch:
+	MOVL (SI)(CX*1),X0
+	PUNPCKLBW X15,X0
+	PXOR X1,X1
+	TESTQ BX,BX
+	JEQ weight8_calc
+	MOVL (BX)(CX*1),X1
+	PUNPCKLBW X15,X1
+weight8_calc:
+	PUNPCKLWL X1,X0
+	PMADDWL X10,X0
+	PADDL X11,X0
+	PSRAL X13,X0
+	PADDL X12,X0
+	PACKSSLW X0,X0
+	PACKUSWB X0,X0
+	MOVL X0,(DI)(CX*1)
+	ADDQ $4,CX
+	CMPQ CX,R10
+	JLT weight8_batch
+	ADDQ R8,DI
+	ADDQ R9,SI
+	TESTQ BX,BX
+	JEQ weight8_next
+	ADDQ R9,BX
+weight8_next:
+	DECQ R11
+	JNE weight8_row
+	RET
+
+TEXT ·weightBlock16SSE2(SB), NOSPLIT, $0-124
+	MOVQ dst_base+0(FP),DI
+	MOVQ ds+24(FP),R8
+	MOVQ a_base+32(FP),SI
+	MOVQ b_base+56(FP),BX
+	MOVQ ss+80(FP),R9
+	SHLQ $1,R8
+	SHLQ $1,R9
+	MOVQ w+88(FP),R10
+	MOVQ h+96(FP),R11
+	MOVL coeff+104(FP),AX
+	MOVD AX,X10
+	PSHUFD $0,X10,X10
+	MOVL bias+108(FP),AX
+	MOVD AX,X11
+	PSHUFD $0,X11,X11
+	MOVL offset+112(FP),AX
+	MOVD AX,X12
+	PSHUFD $0,X12,X12
+	MOVL shift+116(FP),AX
+	MOVD AX,X13
+	MOVL maximum+120(FP),AX
+	MOVD AX,X14
+	PSHUFLW $0,X14,X14
+	PSHUFD $0,X14,X14
+	MOVQ $0x8000800080008000,AX
+	MOVQ AX,X9
+	PXOR X15,X15
+weight16_row:
+	XORQ CX,CX
+weight16_batch:
+	MOVQ (SI)(CX*2),X0
+	PXOR X9,X0
+	PXOR X1,X1
+	TESTQ BX,BX
+	JEQ weight16_calc
+	MOVQ (BX)(CX*2),X1
+	PXOR X9,X1
+weight16_calc:
+	PUNPCKLWL X1,X0
+	PMADDWL X10,X0
+	PADDL X11,X0
+	PSRAL X13,X0
+	PADDL X12,X0
+	// 先饱和到int16再夹到[0,max]，与直接Clip1到8/10-bit等价。
+	PACKSSLW X0,X0
+	PMAXSW X15,X0
+	PMINSW X14,X0
+	MOVQ X0,(DI)(CX*2)
+	ADDQ $4,CX
+	CMPQ CX,R10
+	JLT weight16_batch
+	ADDQ R8,DI
+	ADDQ R9,SI
+	TESTQ BX,BX
+	JEQ weight16_next
+	ADDQ R9,BX
+weight16_next:
+	DECQ R11
+	JNE weight16_row
+	RET

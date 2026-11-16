@@ -261,6 +261,7 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | 去块Generic直接算术 | 默认/纯Go去块直接计算强弱候选，显式SIMD继续使用原候选后端；阈值/裁剪/邻域流程共享 | Partial | 直接标量与原值ABI候选双位深/方向/Span等价；最终High IDR和32帧I/P/B直接AU逐像素FFmpeg一致；三阶段五样本见performance §17.2 | 未改CABAC、IDCT、重建或并发模型；NEON原生性能未测 |
 | 8-bit 420色度整边（A02） | 逐行解码和编码本地重建共用八线SSE2；独立FilterChromaEdge槽及Generic回退 | Partial | 两方向/混合bS/严格阈值/tc0+1/饱和裁剪解析值与全缓冲差分；新内核保护页、包装层栈缓冲0分配；High直接AU及编码三方Oracle通过；五样本见performance §21 | 10-bit、422/444、场/MBAFF保留原入口；原生仅Windows/amd64，其他平台构建证据另列；Profile与并发状态不变 |
 | 整块均值（A04） | 实际8/10-bit双向均值共用Average8/16 SSE2槽，保留精确原地和部分重叠顺序 | Partial | 奇数尾部/stride/最小len/完整uint16域差分、直接保护页、栈缓冲0分配及FFmpeg像素Oracle通过；五样本见gates/a04_average_blocks.md | width<4及不适合SIMD的几何用Generic；额外集成门禁在A06收尾；原生NEON未验 |
+| 整块单/双向加权（A05） | 实际WeightBlock/BiWeightBlock非均值分支进入Weight8/16 SSE2槽，4样本批量32位乘加/移位/Clip1 | Partial | 规范参数、全uint16域、负数舍入/offset缩放解析值及直接保护页；旧宽域/部分重叠回退、局部0分配、FFmpeg像素Oracle通过，见gates/a05_weight_blocks.md | 奇数宽、其他参数和不合适别名继续原int64；NEON原生未验，Profile状态不变 |
 | 残差加减（K13） | 8/10-bit共享Clip1和Subtract，picture与编码真实残差循环迁移，R3精确放行picture | Partial | 本机四路径parity、int32极值、低两位、奇数stride/最小len逐行保护页及局部0分配通过 | gather/scatter与不足4采样尾部为Go，值ABI仅向量化加减；amd64默认直接标量避免gather开销，显式后端保留真实SIMD；NEON原生未验 |
 | 其余MC SIMD（K09b-d） | 现有整数复制之外的插值向量化 | TODO | 唯一Generic与全相位边界保护保留 | 不以本轮K10–K14工作冒充K09插值SIMD已完成 |
 | 搜索去逃逸（G01/K18前置） | caller-owned双位深Workspace，真实编码器跨帧/场/Reset复用，结束解除借用 | Partial | 32组改造前Scorer轨迹/结果，64组prepared零分配，强制x86/purego/386/M8指纹 | 该行仅搜索；完整决策保护网见G03b，K16仍是串行租约复用，未开并行 |

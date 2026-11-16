@@ -11,6 +11,9 @@ func BiWeightBlock8(dst []byte, ds int, a, b []byte, ss, w, h int, weights, offs
 		simd.AverageBlock8(dst, ds, a, b, ss, w, h)
 		return
 	}
+	if w >= 4 && w%4 == 0 && simd.TryBiWeightBlock8(dst, ds, a, b, ss, w, h, weights, offsets, denom) {
+		return
+	}
 	biWeightBlock(dst, ds, a, b, ss, w, h, weights, offsets, denom, 8)
 }
 
@@ -20,6 +23,9 @@ func BiWeightBlock8(dst []byte, ds int, a, b []byte, ss, w, h int, weights, offs
 func BiWeightBlock16(dst []uint16, ds int, a, b []uint16, ss, w, h int, weights, offsets [2]int32, denom uint32, depth int) {
 	if weightBlockIsAverage(weights, offsets, denom, depth) {
 		simd.AverageBlock16(dst, ds, a, b, ss, w, h)
+		return
+	}
+	if w >= 4 && w%4 == 0 && simd.TryBiWeightBlock16(dst, ds, a, b, ss, w, h, weights, offsets, denom, depth) {
 		return
 	}
 	biWeightBlock(dst, ds, a, b, ss, w, h, weights, offsets, denom, depth)
@@ -46,6 +52,9 @@ func biWeightBlock[T sample](dst []T, ds int, a, b []T, ss, w, h int, weights, o
 //
 //go:noinline
 func WeightBlock8(dst []byte, ds int, src []byte, ss, w, h int, weight, offset int32, denom uint32) {
+	if w >= 4 && w%4 == 0 && simd.TryWeightBlock8(dst, ds, src, ss, w, h, weight, offset, denom) {
+		return
+	}
 	weightBlock(dst, ds, src, ss, w, h, weight, offset, denom, 8)
 }
 
@@ -53,6 +62,9 @@ func WeightBlock8(dst []byte, ds int, src []byte, ss, w, h int, weight, offset i
 //
 //go:noinline
 func WeightBlock16(dst []uint16, ds int, src []uint16, ss, w, h int, weight, offset int32, denom uint32, depth int) {
+	if w >= 4 && w%4 == 0 && simd.TryWeightBlock16(dst, ds, src, ss, w, h, weight, offset, denom, depth) {
+		return
+	}
 	weightBlock(dst, ds, src, ss, w, h, weight, offset, denom, depth)
 }
 

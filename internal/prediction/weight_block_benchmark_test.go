@@ -118,7 +118,7 @@ var weightBenchmarkSink8 [23 * 17]byte
 var weightBenchmarkSink16 [23 * 17]uint16
 
 // 每op处理完整w×h矩形，统一包含目标重置成本，原地场景不会反复加权到饱和。
-// 当前实际块实现为Generic；将来新增SIMD时需在此记录真实加权/均值槽位。
+// 日志分别报告实际均值/加权槽；具体几何和参数不满足准入时继续Generic。
 func BenchmarkWeightBlocks_4To16_Auto(b *testing.B) {
 	for _, depth := range []int{8, 10} {
 		for _, size := range weightBenchmarkSizes {
@@ -126,7 +126,7 @@ func BenchmarkWeightBlocks_4To16_Auto(b *testing.B) {
 				w, h := size[0], size[1]
 				b.Run(fmt.Sprintf("%dbit/%dx%d/%s", depth, w, h, c.name), func(b *testing.B) {
 					f := checkWeightBenchmark(b, c, depth, w, h)
-					b.Logf("均值槽8/16=%s/%s，非均值为Generic；计时含固定目标重置和完整块入口", simd.ActiveBackends().Average8, simd.ActiveBackends().Average16)
+					b.Logf("均值槽8/16=%s/%s，加权槽8/16=%s/%s；计时含固定目标重置和完整块入口", simd.ActiveBackends().Average8, simd.ActiveBackends().Average16, simd.ActiveBackends().Weight8, simd.ActiveBackends().Weight16)
 					b.ReportAllocs()
 					if depth == 8 {
 						var dst [23 * 17]byte
