@@ -21,3 +21,12 @@ func AddResidual8x8(p *Plane, x, y int, residual *[64]int32) {
 		simd.AddResidual8(p.Data[p.Index(x, y):], p.Stride, residual[:], 8, 8, 8)
 	}
 }
+
+// AddResidualDC4x4 接收每像素常量残差，调用方已按IDCT4x4DC完成+32和>>6。
+func AddResidualDC4x4(p *Plane, x, y int, dc int32) {
+	if p.BitDepth == 10 {
+		simd.AddResidualDC16(p.Data16[p.Index(x, y):], p.Stride, 4, 4, dc)
+	} else {
+		simd.AddResidualDC8(p.Data[p.Index(x, y):], p.Stride, 4, 4, dc)
+	}
+}

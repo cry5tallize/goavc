@@ -256,6 +256,16 @@ func addResidual4x4(pl *picture.Plane, x, y int, levels *[16]int32, qp int, alre
 		}
 		src = &dequant
 	}
+	// Spec: 8.5.12.2。反量化及其错误检查先完成；只有AC全零才可使用
+	// 常量残差。I16/色度的派生DC可能非零，不能用AC计数直接跳过整块。
+	ac := int32(0)
+	for _, v := range src[1:] {
+		ac |= v
+	}
+	if ac == 0 {
+		picture.AddResidualDC4x4(pl, x, y, transform.IDCT4x4DC(src[0]))
+		return nil
+	}
 	var out [16]int32
 	transform.IDCT4x4(&out, src)
 	picture.AddResidual4x4(pl, x, y, &out)
