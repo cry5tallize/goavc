@@ -240,6 +240,10 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 
 基线与接口冻结见 `m8-development/12_execution_log.md`；本地逐任务推进，未通过完整M8门禁，远端CI未执行。
 
+A07已完成原300帧八格与统一v1.0.2基线的五对测量，High Auto单/四slice为31.17/31.93FPS；
+报告、实际消费链和原始数据见[gates/a07_decoder_block_results.md](gates/a07_decoder_block_results.md)。
+A01局部数组经包装层仍1alloc/op、encoder亮度/均值/权重整块入口尚未迁移，不能将性能目标达成等同完整门禁通过。
+
 | Module | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|
 | CPU检测（K01） | amd64安全CPUID/XGETBV、arm64基线NEON能力、purego/其他架构回退 | Partial | `simd/cpu_test.go` 的1024组合与 `cpu_purego_test.go` | CPU检测不等于任何向量kernel已实现；arm64仅交叉构建时不记原生执行 |
@@ -259,9 +263,11 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | 去块（K12） | 唯一共享亮度/色度算法，强弱候选部分向量化，保持逐线顺序和条件邻域访问 | Partial | 本机Generic/Auto/SSE2/AVX2强弱、方向/Span1/2/4与最小邻域保护页通过；领域解析测试保留 | 不是整条边全SIMD，不改变bS/阈值/slice权限；amd64默认候选加法保留Generic，实测SIMD较慢；NEON原生未验 |
 | 去块逐边参数复用 | decoder普通边四段bS跨亮色度复用，QP/阈值按分量逐边准备；旧单段入口保留 | Partial | 六格式原调度像素回归、B参考交换、准备边负QP/偏移/stride/零分配；1080p High IDR及32帧I/P/B直接AU逐像素FFmpeg一致；五样本见performance §17 | 混合MBAFF几何保留原路径；A06进一步bS批量候选因重复端点退化未采纳，见gates/a06_deblocking_batch.md；并行/Profile状态不变，短端点不替代300帧主矩阵 |
 | 去块Generic直接算术 | 默认/纯Go去块直接计算强弱候选，显式SIMD继续使用原候选后端；阈值/裁剪/邻域流程共享 | Partial | 直接标量与原值ABI候选双位深/方向/Span等价；最终High IDR和32帧I/P/B直接AU逐像素FFmpeg一致；三阶段五样本见performance §17.2 | 未改CABAC、IDCT、重建或并发模型；NEON原生性能未测 |
+| 8-bit亮度类整边（A01） | decoder完整16线亮度类边使用SSE2，含满足几何的444分量及MBAFF纯帧MB | Partial | 强弱/方向/混合bS/完整缓冲差分和Oracle通过；固定目标复用0alloc；A07实际覆盖审计见gates/a07_decoder_block_results.md | encoder亮度仍分段；包装层closure内新建局部数组实测1alloc/op，局部栈缓冲门禁未闭合；A01短端点A00来源归因已撤回 |
 | 8-bit 420色度整边（A02） | 逐行解码和编码本地重建共用八线SSE2；独立FilterChromaEdge槽及Generic回退 | Partial | 两方向/混合bS/严格阈值/tc0+1/饱和裁剪解析值与全缓冲差分；新内核保护页、包装层栈缓冲0分配；High直接AU及编码三方Oracle通过；五样本见performance §21 | 10-bit、422/444、场/MBAFF保留原入口；原生仅Windows/amd64，其他平台构建证据另列；Profile与并发状态不变 |
-| 整块均值（A04） | 实际8/10-bit双向均值共用Average8/16 SSE2槽，保留精确原地和部分重叠顺序 | Partial | 奇数尾部/stride/最小len/完整uint16域差分、直接保护页、栈缓冲0分配及FFmpeg像素Oracle通过；五样本见gates/a04_average_blocks.md | width<4及不适合SIMD的几何用Generic；受影响purego/386/race及六目标构建/测试编译通过；Unix/NEON原生未验 |
-| 整块单/双向加权（A05） | 实际WeightBlock/BiWeightBlock非均值分支进入Weight8/16 SSE2槽，4样本批量32位乘加/移位/Clip1 | Partial | 规范参数、全uint16域、负数舍入/offset缩放解析值及直接保护页；旧宽域/部分重叠回退、局部0分配、FFmpeg像素Oracle通过，见gates/a05_weight_blocks.md | 奇数宽、其他参数和不合适别名继续原int64；NEON原生未验，Profile状态不变 |
+| P权重分量快路（A03） | decoder逐分量恒等跳过，非恒等复用共享块入口 | Partial | 六格式、场ref、独立平面和单样本公式对照、加权Oracle；阶段数据见gates/a03_p_weights.md | encoder自己的逐样本权重循环未迁移；不扩展Profile功能范围 |
+| 整块均值（A04） | decoder B块均值使用Average8/16 SSE2槽，保留精确原地和部分重叠顺序 | Partial | 奇数尾部/stride/最小len/完整uint16域差分、直接保护页、栈缓冲0分配及FFmpeg像素Oracle通过；五样本见gates/a04_average_blocks.md | width<4及不适合SIMD的几何用Generic；encoder仍逐样本均值；受影响purego/386/race及六目标构建/测试编译通过，Unix/NEON原生未验 |
+| 整块单/双向加权（A05） | decoder P非恒等与B块非均值权重进入Weight8/16 SSE2槽，4样本批量32位乘加/移位/Clip1 | Partial | 规范参数、全uint16域、负数舍入/offset缩放解析值及直接保护页；旧宽域/部分重叠回退、局部0分配、FFmpeg像素Oracle通过，见gates/a05_weight_blocks.md | 奇数宽、其他参数和不合适别名继续原int64；encoder仍逐样本权重；NEON原生未验，Profile状态不变 |
 | 残差加减（K13） | 8/10-bit共享Clip1和Subtract，picture与编码真实残差循环迁移，R3精确放行picture | Partial | 本机四路径parity、int32极值、低两位、奇数stride/最小len逐行保护页及局部0分配通过 | gather/scatter与不足4采样尾部为Go，值ABI仅向量化加减；amd64默认直接标量避免gather开销，显式后端保留真实SIMD；NEON原生未验 |
 | 其余MC SIMD（K09b-d） | 现有整数复制之外的插值向量化 | TODO | 唯一Generic与全相位边界保护保留 | 不以本轮K10–K14工作冒充K09插值SIMD已完成 |
 | 搜索去逃逸（G01/K18前置） | caller-owned双位深Workspace，真实编码器跨帧/场/Reset复用，结束解除借用 | Partial | 32组改造前Scorer轨迹/结果，64组prepared零分配，强制x86/purego/386/M8指纹 | 该行仅搜索；完整决策保护网见G03b，K16仍是串行租约复用，未开并行 |

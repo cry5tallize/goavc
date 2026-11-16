@@ -1,0 +1,1840 @@
+{
+  "schema_version": 1,
+  "work_item": "A07: final decoder endpoint and actual coverage report",
+  "measured_date": "2026-11-17",
+  "current_revision": "ff46b517cf601174a19ea306b2023e2f997a05b7",
+  "current_production_revision": "4bd8638 (ff46b51 adds tests/documents only)",
+  "baseline_production_revision": "0e29cc366e659a495de3ec9f0c546ef8f7f87b64",
+  "baseline_binary_provenance": {
+    "source": "A00 frozen binaries and build logs; docs/gates/a00_baseline_samples.json",
+    "build_source": "1b146473bcff95199efb4cad8735f7a738ff540f plus A00 benchmark-only additions; production remains v1.0.2",
+    "auto": "tmp/a00/decoder-auto.test.exe",
+    "generic": "tmp/a00/decoder-generic.test.exe",
+    "buildinfo_verified": "Go1.27.4, windows/amd64, CGO0, GOAMD64v1; Generic explicitly -tags=purego"
+  },
+  "current_binaries": {
+    "auto": "tmp/a07/current-auto.test.exe",
+    "generic": "tmp/a07/current-generic.test.exe (-tags=purego)",
+    "source_changes_during_run": "No production edits; existing document line-ending and script BOM changes were not used. Temporary allocation probe was deleted before formal runs."
+  },
+  "environment": {
+    "hardware": "HW-M2",
+    "cpu": "AMD Ryzen 7 5700X",
+    "os": "Windows 11 10.0.26200 amd64",
+    "go": "go1.27.4",
+    "cgo": 0,
+    "goamd64": "v1",
+    "gomaxprocs": 16,
+    "codec_threads": 1,
+    "external_load_or_cpu_clock_monitored": false,
+    "own_other_measurement_or_build_jobs_during_timing": 0,
+    "gogc": "unset (Go default)",
+    "gomemlimit": "unset (Go default)",
+    "goflags": "unset"
+  },
+  "timing": {
+    "main": "Existing BenchmarkDecoder_Sequence, 300 frames/op; New/Send/Receive/Release/Flush/Close included; file IO, AU assembly and independent native-pixel SHA checks excluded. Every op checks300 AUs/frames and expected FFmpeg YUV SHA.",
+    "sampling": "Five interleaved pairs per cell, alternating baseline/current order; count1 per independent process. Original A00 historical count5 series retained separately, not mixed with this fresh paired baseline.",
+    "short": "Same direct-AU inputs as performance sections17/18; 1/32 frames per op; IDR500ms and IPB1x; IO/AU assembly excluded.",
+    "order": "baseline profile s1/s4, then high s1/s4; each Generic then Auto, five paired rounds; short endpoints follow main; profiles follow all timings"
+  },
+  "dispatch_auto": "    dispatch_test.go:28: 实际后端：{SAD8:AVX2 SAD16:AVX2 SATD4x4:SSE2 Forward4x4:SSE2 MCLumaCopy:AVX2 Residual:Generic FilterDelta:Generic FilterLumaEdge:SSE2 FilterChromaEdge:SSE2 Average8:SSE2 Average16:SSE2 Weight8:SSE2 Weight16:SSE2 QuantMultiply:Generic Forward8x8:Generic IDCT4x4:Generic IDCT8x8:Generic ForwardLumaDC:Generic ForwardChromaDC:Generic ForwardChromaDC422:Generic WideAdd4:Generic}",
+  "dispatch_purego": "    dispatch_test.go:28: 实际后端：{SAD8:Generic SAD16:Generic SATD4x4:Generic Forward4x4:Generic MCLumaCopy:Generic Residual:Generic FilterDelta:Generic FilterLumaEdge:Generic FilterChromaEdge:Generic Average8:Generic Average16:Generic Weight8:Generic Weight16:Generic QuantMultiply:Generic Forward8x8:Generic IDCT4x4:Generic IDCT8x8:Generic ForwardLumaDC:Generic ForwardChromaDC:Generic ForwardChromaDC422:Generic WideAdd4:Generic}",
+  "main": [
+    {
+      "name": "decode-1080p-baseline-s1",
+      "profile": "baseline",
+      "slices": 1,
+      "backend": "generic",
+      "frames_per_op": 300,
+      "input_sha256": "7b6fd4b472cb659e20d516b34a4253ffa7bcc3b0da0d25942178cb94c4addee0",
+      "expected_yuv_sha256": "abb4939af9d710e39c89b36a64f7230b78ba47758401d91f1d4573129f67801a",
+      "input_parameters": "FFmpeg8/libx264 veryfast testsrc2 1920x1080@30,300frames,QP26,keyint/min60,scenecut0,ref2,threads1; BaselineB0/CAVLC/weightp0/8x8off; HighB2/CABAC/b-adapt0/b-pyramidnone/weightp1/8x8on; slice1/4",
+      "historical_a00_ns_op": [4430505000, 4726033400, 4568184400, 4588866800, 4785901400],
+      "median_baseline_ns_op": 5078615500,
+      "median_current_ns_op": 5044467400,
+      "baseline_fps": 59.071217342600555,
+      "current_fps": 59.471095005986164,
+      "change_percent": -0.6723899456456239,
+      "median_pair_change_percent": -0.6723899456456239,
+      "median_baseline_b_op": 836439504,
+      "median_current_b_op": 836439504,
+      "median_baseline_allocs_op": 12053,
+      "median_current_allocs_op": 12053,
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4831262100,
+            "b_op": 836439504,
+            "allocs_op": 12053,
+            "log": "tmp/a07/decode-1080p-baseline-s1-generic-pair1-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 62.1
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4747454100,
+            "b_op": 836444552,
+            "allocs_op": 12056,
+            "log": "tmp/a07/decode-1080p-baseline-s1-generic-pair1-current.txt",
+            "frames_op": 300,
+            "frames_s": 63.19
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 5395396200,
+            "b_op": 836439264,
+            "allocs_op": 12050,
+            "log": "tmp/a07/decode-1080p-baseline-s1-generic-pair2-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 55.6
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4846605400,
+            "b_op": 836439600,
+            "allocs_op": 12053,
+            "log": "tmp/a07/decode-1080p-baseline-s1-generic-pair2-current.txt",
+            "frames_op": 300,
+            "frames_s": 61.9
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 5246879500,
+            "b_op": 836444376,
+            "allocs_op": 12057,
+            "log": "tmp/a07/decode-1080p-baseline-s1-generic-pair3-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 57.18
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 5277041600,
+            "b_op": 836439248,
+            "allocs_op": 12049,
+            "log": "tmp/a07/decode-1080p-baseline-s1-generic-pair3-current.txt",
+            "frames_op": 300,
+            "frames_s": 56.85
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 5000148800,
+            "b_op": 836439504,
+            "allocs_op": 12053,
+            "log": "tmp/a07/decode-1080p-baseline-s1-generic-pair4-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 60
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 5153870000,
+            "b_op": 836439280,
+            "allocs_op": 12051,
+            "log": "tmp/a07/decode-1080p-baseline-s1-generic-pair4-current.txt",
+            "frames_op": 300,
+            "frames_s": 58.21
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 5078615500,
+            "b_op": 836439536,
+            "allocs_op": 12055,
+            "log": "tmp/a07/decode-1080p-baseline-s1-generic-pair5-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 59.07
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 5044467400,
+            "b_op": 836439504,
+            "allocs_op": 12053,
+            "log": "tmp/a07/decode-1080p-baseline-s1-generic-pair5-current.txt",
+            "frames_op": 300,
+            "frames_s": 59.47
+          }
+        }
+      ],
+      "input_path": "tmp/m8-closeout/endpoints-au/decode-1080p-baseline-s1.264"
+    },
+    {
+      "name": "decode-1080p-baseline-s1",
+      "profile": "baseline",
+      "slices": 1,
+      "backend": "auto",
+      "frames_per_op": 300,
+      "input_sha256": "7b6fd4b472cb659e20d516b34a4253ffa7bcc3b0da0d25942178cb94c4addee0",
+      "expected_yuv_sha256": "abb4939af9d710e39c89b36a64f7230b78ba47758401d91f1d4573129f67801a",
+      "input_parameters": "FFmpeg8/libx264 veryfast testsrc2 1920x1080@30,300frames,QP26,keyint/min60,scenecut0,ref2,threads1; BaselineB0/CAVLC/weightp0/8x8off; HighB2/CABAC/b-adapt0/b-pyramidnone/weightp1/8x8on; slice1/4",
+      "historical_a00_ns_op": [4714743900, 4829611700, 4738329800, 4636078000, 4681633100],
+      "median_baseline_ns_op": 4923308400,
+      "median_current_ns_op": 4651256100,
+      "baseline_fps": 60.9346349296339,
+      "current_fps": 64.49870605920839,
+      "change_percent": -5.525802527422419,
+      "median_pair_change_percent": -5.684468886557282,
+      "median_baseline_b_op": 836444536,
+      "median_current_b_op": 836439440,
+      "median_baseline_allocs_op": 12060,
+      "median_current_allocs_op": 12053,
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 5240045800,
+            "b_op": 836444712,
+            "allocs_op": 12060,
+            "log": "tmp/a07/decode-1080p-baseline-s1-auto-pair1-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 57.25
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4651256100,
+            "b_op": 836439440,
+            "allocs_op": 12053,
+            "log": "tmp/a07/decode-1080p-baseline-s1-auto-pair1-current.txt",
+            "frames_op": 300,
+            "frames_s": 64.5
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4923308400,
+            "b_op": 836444712,
+            "allocs_op": 12060,
+            "log": "tmp/a07/decode-1080p-baseline-s1-auto-pair2-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 60.93
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4731723500,
+            "b_op": 836439376,
+            "allocs_op": 12051,
+            "log": "tmp/a07/decode-1080p-baseline-s1-auto-pair2-current.txt",
+            "frames_op": 300,
+            "frames_s": 63.4
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 5000162200,
+            "b_op": 836439376,
+            "allocs_op": 12051,
+            "log": "tmp/a07/decode-1080p-baseline-s1-auto-pair3-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 60
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4571335700,
+            "b_op": 836439600,
+            "allocs_op": 12053,
+            "log": "tmp/a07/decode-1080p-baseline-s1-auto-pair3-current.txt",
+            "frames_op": 300,
+            "frames_s": 65.63
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4871089000,
+            "b_op": 836444536,
+            "allocs_op": 12061,
+            "log": "tmp/a07/decode-1080p-baseline-s1-auto-pair4-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 61.59
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4667038500,
+            "b_op": 836439600,
+            "allocs_op": 12053,
+            "log": "tmp/a07/decode-1080p-baseline-s1-auto-pair4-current.txt",
+            "frames_op": 300,
+            "frames_s": 64.28
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4885793300,
+            "b_op": 836439280,
+            "allocs_op": 12051,
+            "log": "tmp/a07/decode-1080p-baseline-s1-auto-pair5-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 61.4
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4608061900,
+            "b_op": 836439280,
+            "allocs_op": 12051,
+            "log": "tmp/a07/decode-1080p-baseline-s1-auto-pair5-current.txt",
+            "frames_op": 300,
+            "frames_s": 65.1
+          }
+        }
+      ],
+      "input_path": "tmp/m8-closeout/endpoints-au/decode-1080p-baseline-s1.264"
+    },
+    {
+      "name": "decode-1080p-baseline-s4",
+      "profile": "baseline",
+      "slices": 4,
+      "backend": "generic",
+      "frames_per_op": 300,
+      "input_sha256": "1cc5306c2a5f23e4f423a8bdcaa9089627f72eac467d69eea256e51c1997e155",
+      "expected_yuv_sha256": "dc8392c147d9ac425e5c730163683ff4326bc7584c0cb45d0dae271a1e5d9418",
+      "input_parameters": "FFmpeg8/libx264 veryfast testsrc2 1920x1080@30,300frames,QP26,keyint/min60,scenecut0,ref2,threads1; BaselineB0/CAVLC/weightp0/8x8off; HighB2/CABAC/b-adapt0/b-pyramidnone/weightp1/8x8on; slice1/4",
+      "historical_a00_ns_op": [4610649200, 4495631600, 4458216800, 4559786300, 4467634000],
+      "median_baseline_ns_op": 4991853200,
+      "median_current_ns_op": 4931530200,
+      "baseline_fps": 60.09792114880301,
+      "current_fps": 60.83304528886389,
+      "change_percent": -1.2084289658197522,
+      "median_pair_change_percent": -0.9261695291905014,
+      "median_baseline_b_op": 831195032,
+      "median_current_b_op": 831195256,
+      "median_baseline_allocs_op": 23745,
+      "median_current_allocs_op": 23747,
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4839437000,
+            "b_op": 831195000,
+            "allocs_op": 23743,
+            "log": "tmp/a07/decode-1080p-baseline-s4-generic-pair1-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 61.99
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4922801600,
+            "b_op": 831195000,
+            "allocs_op": 23743,
+            "log": "tmp/a07/decode-1080p-baseline-s4-generic-pair1-current.txt",
+            "frames_op": 300,
+            "frames_s": 60.94
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4922241400,
+            "b_op": 831194904,
+            "allocs_op": 23743,
+            "log": "tmp/a07/decode-1080p-baseline-s4-generic-pair2-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 60.95
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4876653100,
+            "b_op": 831195256,
+            "allocs_op": 23747,
+            "log": "tmp/a07/decode-1080p-baseline-s4-generic-pair2-current.txt",
+            "frames_op": 300,
+            "frames_s": 61.52
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4991853200,
+            "b_op": 831195336,
+            "allocs_op": 23746,
+            "log": "tmp/a07/decode-1080p-baseline-s4-generic-pair3-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 60.1
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 5024505300,
+            "b_op": 831200240,
+            "allocs_op": 23752,
+            "log": "tmp/a07/decode-1080p-baseline-s4-generic-pair3-current.txt",
+            "frames_op": 300,
+            "frames_s": 59.71
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 5135264900,
+            "b_op": 831195032,
+            "allocs_op": 23745,
+            "log": "tmp/a07/decode-1080p-baseline-s4-generic-pair4-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 58.42
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4931530200,
+            "b_op": 831200112,
+            "allocs_op": 23750,
+            "log": "tmp/a07/decode-1080p-baseline-s4-generic-pair4-current.txt",
+            "frames_op": 300,
+            "frames_s": 60.83
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 5109933800,
+            "b_op": 831195256,
+            "allocs_op": 23747,
+            "log": "tmp/a07/decode-1080p-baseline-s4-generic-pair5-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 58.71
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4994336200,
+            "b_op": 831195000,
+            "allocs_op": 23743,
+            "log": "tmp/a07/decode-1080p-baseline-s4-generic-pair5-current.txt",
+            "frames_op": 300,
+            "frames_s": 60.07
+          }
+        }
+      ],
+      "input_path": "tmp/m8-closeout/endpoints-au/decode-1080p-baseline-s4.264"
+    },
+    {
+      "name": "decode-1080p-baseline-s4",
+      "profile": "baseline",
+      "slices": 4,
+      "backend": "auto",
+      "frames_per_op": 300,
+      "input_sha256": "1cc5306c2a5f23e4f423a8bdcaa9089627f72eac467d69eea256e51c1997e155",
+      "expected_yuv_sha256": "dc8392c147d9ac425e5c730163683ff4326bc7584c0cb45d0dae271a1e5d9418",
+      "input_parameters": "FFmpeg8/libx264 veryfast testsrc2 1920x1080@30,300frames,QP26,keyint/min60,scenecut0,ref2,threads1; BaselineB0/CAVLC/weightp0/8x8off; HighB2/CABAC/b-adapt0/b-pyramidnone/weightp1/8x8on; slice1/4",
+      "historical_a00_ns_op": [4535344900, 4741975600, 4585445700, 4626300500, 4553321300],
+      "median_baseline_ns_op": 4946390100,
+      "median_current_ns_op": 4664224800,
+      "baseline_fps": 60.65029120934073,
+      "current_fps": 64.3193698554152,
+      "change_percent": -5.704469204723662,
+      "median_pair_change_percent": -5.715837308227945,
+      "median_baseline_b_op": 831195368,
+      "median_current_b_op": 831195256,
+      "median_baseline_allocs_op": 23748,
+      "median_current_allocs_op": 23747,
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 5011862200,
+            "b_op": 831195384,
+            "allocs_op": 23749,
+            "log": "tmp/a07/decode-1080p-baseline-s4-auto-pair1-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 59.86
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4486455600,
+            "b_op": 831195256,
+            "allocs_op": 23747,
+            "log": "tmp/a07/decode-1080p-baseline-s4-auto-pair1-current.txt",
+            "frames_op": 300,
+            "frames_s": 66.87
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4946986500,
+            "b_op": 831194968,
+            "allocs_op": 23747,
+            "log": "tmp/a07/decode-1080p-baseline-s4-auto-pair2-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 60.64
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4664224800,
+            "b_op": 831195160,
+            "allocs_op": 23747,
+            "log": "tmp/a07/decode-1080p-baseline-s4-auto-pair2-current.txt",
+            "frames_op": 300,
+            "frames_s": 64.32
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4915951400,
+            "b_op": 831195368,
+            "allocs_op": 23748,
+            "log": "tmp/a07/decode-1080p-baseline-s4-auto-pair3-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 61.03
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4543119100,
+            "b_op": 831195288,
+            "allocs_op": 23749,
+            "log": "tmp/a07/decode-1080p-baseline-s4-auto-pair3-current.txt",
+            "frames_op": 300,
+            "frames_s": 66.03
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4946390100,
+            "b_op": 831195176,
+            "allocs_op": 23748,
+            "log": "tmp/a07/decode-1080p-baseline-s4-auto-pair4-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 60.65
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4698903600,
+            "b_op": 831200048,
+            "allocs_op": 23752,
+            "log": "tmp/a07/decode-1080p-baseline-s4-auto-pair4-current.txt",
+            "frames_op": 300,
+            "frames_s": 63.84
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4798965600,
+            "b_op": 831200592,
+            "allocs_op": 23756,
+            "log": "tmp/a07/decode-1080p-baseline-s4-auto-pair5-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 62.51
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 4705478400,
+            "b_op": 831195240,
+            "allocs_op": 23746,
+            "log": "tmp/a07/decode-1080p-baseline-s4-auto-pair5-current.txt",
+            "frames_op": 300,
+            "frames_s": 63.76
+          }
+        }
+      ],
+      "input_path": "tmp/m8-closeout/endpoints-au/decode-1080p-baseline-s4.264"
+    },
+    {
+      "name": "decode-1080p-high-s1",
+      "profile": "high",
+      "slices": 1,
+      "backend": "generic",
+      "frames_per_op": 300,
+      "input_sha256": "2ea2eb0581f1aa6d79fcd9d3f194c9b4172e8deb95f133c4418c6e14c16c39b4",
+      "expected_yuv_sha256": "f574eabd36b903729d65d0f2b6ff3941df5244c01b1ad30c330ece1d5b05c385",
+      "input_parameters": "FFmpeg8/libx264 veryfast testsrc2 1920x1080@30,300frames,QP26,keyint/min60,scenecut0,ref2,threads1; BaselineB0/CAVLC/weightp0/8x8off; HighB2/CABAC/b-adapt0/b-pyramidnone/weightp1/8x8on; slice1/4",
+      "historical_a00_ns_op": [10260526400, 10208704800, 10282696000, 10677228200, 10535099500],
+      "median_baseline_ns_op": 10963669600,
+      "median_current_ns_op": 10109944200,
+      "baseline_fps": 27.36310112811134,
+      "current_fps": 29.673754282442033,
+      "change_percent": -7.786858151945763,
+      "median_pair_change_percent": -5.433327767406548,
+      "median_baseline_b_op": 1279639232,
+      "median_current_b_op": 1279639360,
+      "median_baseline_allocs_op": 15707,
+      "median_current_allocs_op": 15709,
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 11096085600,
+            "b_op": 1279639360,
+            "allocs_op": 15709,
+            "log": "tmp/a07/decode-1080p-high-s1-generic-pair1-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 27.04
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10493198900,
+            "b_op": 1279639360,
+            "allocs_op": 15709,
+            "log": "tmp/a07/decode-1080p-high-s1-generic-pair1-current.txt",
+            "frames_op": 300,
+            "frames_s": 28.59
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 12005990300,
+            "b_op": 1279639360,
+            "allocs_op": 15709,
+            "log": "tmp/a07/decode-1080p-high-s1-generic-pair2-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 24.99
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10109944200,
+            "b_op": 1279639456,
+            "allocs_op": 15709,
+            "log": "tmp/a07/decode-1080p-high-s1-generic-pair2-current.txt",
+            "frames_op": 300,
+            "frames_s": 29.67
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10963669600,
+            "b_op": 1279639232,
+            "allocs_op": 15707,
+            "log": "tmp/a07/decode-1080p-high-s1-generic-pair3-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 27.36
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 9779277700,
+            "b_op": 1279639472,
+            "allocs_op": 15710,
+            "log": "tmp/a07/decode-1080p-high-s1-generic-pair3-current.txt",
+            "frames_op": 300,
+            "frames_s": 30.68
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10264849500,
+            "b_op": 1279639120,
+            "allocs_op": 15706,
+            "log": "tmp/a07/decode-1080p-high-s1-generic-pair4-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 29.23
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 9921296400,
+            "b_op": 1279639264,
+            "allocs_op": 15709,
+            "log": "tmp/a07/decode-1080p-high-s1-generic-pair4-current.txt",
+            "frames_op": 300,
+            "frames_s": 30.24
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10350978900,
+            "b_op": 1279639008,
+            "allocs_op": 15705,
+            "log": "tmp/a07/decode-1080p-high-s1-generic-pair5-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 28.98
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10345043100,
+            "b_op": 1279639136,
+            "allocs_op": 15707,
+            "log": "tmp/a07/decode-1080p-high-s1-generic-pair5-current.txt",
+            "frames_op": 300,
+            "frames_s": 29
+          }
+        }
+      ],
+      "input_path": "tmp/m8-closeout/endpoints-au/decode-1080p-high-s1.264"
+    },
+    {
+      "name": "decode-1080p-high-s1",
+      "profile": "high",
+      "slices": 1,
+      "backend": "auto",
+      "frames_per_op": 300,
+      "input_sha256": "2ea2eb0581f1aa6d79fcd9d3f194c9b4172e8deb95f133c4418c6e14c16c39b4",
+      "expected_yuv_sha256": "f574eabd36b903729d65d0f2b6ff3941df5244c01b1ad30c330ece1d5b05c385",
+      "input_parameters": "FFmpeg8/libx264 veryfast testsrc2 1920x1080@30,300frames,QP26,keyint/min60,scenecut0,ref2,threads1; BaselineB0/CAVLC/weightp0/8x8off; HighB2/CABAC/b-adapt0/b-pyramidnone/weightp1/8x8on; slice1/4",
+      "historical_a00_ns_op": [10205830900, 10402203600, 10232060200, 10403580700, 10485796200],
+      "median_baseline_ns_op": 11021750200,
+      "median_current_ns_op": 9624806700,
+      "baseline_fps": 27.218907574225373,
+      "current_fps": 31.16945714868227,
+      "change_percent": -12.674425337638295,
+      "median_pair_change_percent": -12.404663416373019,
+      "median_baseline_b_op": 1279644344,
+      "median_current_b_op": 1279639472,
+      "median_baseline_allocs_op": 15713,
+      "median_current_allocs_op": 15710,
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 11129986800,
+            "b_op": 1279644344,
+            "allocs_op": 15714,
+            "log": "tmp/a07/decode-1080p-high-s1-auto-pair1-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 26.95
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 9528392100,
+            "b_op": 1279639472,
+            "allocs_op": 15710,
+            "log": "tmp/a07/decode-1080p-high-s1-auto-pair1-current.txt",
+            "frames_op": 300,
+            "frames_s": 31.48
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 11299527400,
+            "b_op": 1279644424,
+            "allocs_op": 15713,
+            "log": "tmp/a07/decode-1080p-high-s1-auto-pair2-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 26.55
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 9291999700,
+            "b_op": 1279644328,
+            "allocs_op": 15713,
+            "log": "tmp/a07/decode-1080p-high-s1-auto-pair2-current.txt",
+            "frames_op": 300,
+            "frames_s": 32.29
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10927303400,
+            "b_op": 1279639248,
+            "allocs_op": 15708,
+            "log": "tmp/a07/decode-1080p-high-s1-auto-pair3-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 27.45
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 9711524600,
+            "b_op": 1279649424,
+            "allocs_op": 15719,
+            "log": "tmp/a07/decode-1080p-high-s1-auto-pair3-current.txt",
+            "frames_op": 300,
+            "frames_s": 30.89
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10987807200,
+            "b_op": 1279639120,
+            "allocs_op": 15706,
+            "log": "tmp/a07/decode-1080p-high-s1-auto-pair4-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 27.3
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 9624806700,
+            "b_op": 1279639472,
+            "allocs_op": 15710,
+            "log": "tmp/a07/decode-1080p-high-s1-auto-pair4-current.txt",
+            "frames_op": 300,
+            "frames_s": 31.17
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 11021750200,
+            "b_op": 1279644920,
+            "allocs_op": 15720,
+            "log": "tmp/a07/decode-1080p-high-s1-auto-pair5-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 27.22
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 9686970400,
+            "b_op": 1279639344,
+            "allocs_op": 15708,
+            "log": "tmp/a07/decode-1080p-high-s1-auto-pair5-current.txt",
+            "frames_op": 300,
+            "frames_s": 30.97
+          }
+        }
+      ],
+      "input_path": "tmp/m8-closeout/endpoints-au/decode-1080p-high-s1.264"
+    },
+    {
+      "name": "decode-1080p-high-s4",
+      "profile": "high",
+      "slices": 4,
+      "backend": "generic",
+      "frames_per_op": 300,
+      "input_sha256": "1fec982aa3a2ad36932fbd6853bf9d5951878d9ab44ba3207d636988c8e4f32f",
+      "expected_yuv_sha256": "909bf6a96d63c37facad746d63e08cb2a98026fdf58f164c7e9a2c6dec8f5158",
+      "input_parameters": "FFmpeg8/libx264 veryfast testsrc2 1920x1080@30,300frames,QP26,keyint/min60,scenecut0,ref2,threads1; BaselineB0/CAVLC/weightp0/8x8off; HighB2/CABAC/b-adapt0/b-pyramidnone/weightp1/8x8on; slice1/4",
+      "historical_a00_ns_op": [10512376800, 10247334100, 10121360200, 9965871000, 9766607800],
+      "median_baseline_ns_op": 10956211400,
+      "median_current_ns_op": 10273761300,
+      "baseline_fps": 27.381727957531012,
+      "current_fps": 29.200600562911657,
+      "change_percent": -6.228887660929949,
+      "median_pair_change_percent": -6.3727149000811885,
+      "median_baseline_b_op": 1276900096,
+      "median_current_b_op": 1276895352,
+      "median_baseline_allocs_op": 33517,
+      "median_current_allocs_op": 33515,
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 11281889100,
+            "b_op": 1276900096,
+            "allocs_op": 33517,
+            "log": "tmp/a07/decode-1080p-high-s4-generic-pair1-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 26.59
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10273761300,
+            "b_op": 1276895352,
+            "allocs_op": 33515,
+            "log": "tmp/a07/decode-1080p-high-s4-generic-pair1-current.txt",
+            "frames_op": 300,
+            "frames_s": 29.2
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10747753700,
+            "b_op": 1276895480,
+            "allocs_op": 33517,
+            "log": "tmp/a07/decode-1080p-high-s4-generic-pair2-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 27.91
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10370872600,
+            "b_op": 1276900464,
+            "allocs_op": 33522,
+            "log": "tmp/a07/decode-1080p-high-s4-generic-pair2-current.txt",
+            "frames_op": 300,
+            "frames_s": 28.93
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10874483200,
+            "b_op": 1276900368,
+            "allocs_op": 33522,
+            "log": "tmp/a07/decode-1080p-high-s4-generic-pair3-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 27.59
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10451202500,
+            "b_op": 1276895240,
+            "allocs_op": 33514,
+            "log": "tmp/a07/decode-1080p-high-s4-generic-pair3-current.txt",
+            "frames_op": 300,
+            "frames_s": 28.7
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10963481200,
+            "b_op": 1276895048,
+            "allocs_op": 33514,
+            "log": "tmp/a07/decode-1080p-high-s4-generic-pair4-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 27.36
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10264809800,
+            "b_op": 1276895464,
+            "allocs_op": 33516,
+            "log": "tmp/a07/decode-1080p-high-s4-generic-pair4-current.txt",
+            "frames_op": 300,
+            "frames_s": 29.23
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10956211400,
+            "b_op": 1276905320,
+            "allocs_op": 33525,
+            "log": "tmp/a07/decode-1080p-high-s4-generic-pair5-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 27.38
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 10200677600,
+            "b_op": 1276895144,
+            "allocs_op": 33514,
+            "log": "tmp/a07/decode-1080p-high-s4-generic-pair5-current.txt",
+            "frames_op": 300,
+            "frames_s": 29.41
+          }
+        }
+      ],
+      "input_path": "tmp/m8-closeout/endpoints-au/decode-1080p-high-s4.264"
+    },
+    {
+      "name": "decode-1080p-high-s4",
+      "profile": "high",
+      "slices": 4,
+      "backend": "auto",
+      "frames_per_op": 300,
+      "input_sha256": "1fec982aa3a2ad36932fbd6853bf9d5951878d9ab44ba3207d636988c8e4f32f",
+      "expected_yuv_sha256": "909bf6a96d63c37facad746d63e08cb2a98026fdf58f164c7e9a2c6dec8f5158",
+      "input_parameters": "FFmpeg8/libx264 veryfast testsrc2 1920x1080@30,300frames,QP26,keyint/min60,scenecut0,ref2,threads1; BaselineB0/CAVLC/weightp0/8x8off; HighB2/CABAC/b-adapt0/b-pyramidnone/weightp1/8x8on; slice1/4",
+      "historical_a00_ns_op": [9940502800, 9946317700, 10467953000, 9987275300, 10091068100],
+      "median_baseline_ns_op": 11375700600,
+      "median_current_ns_op": 9395844500,
+      "baseline_fps": 26.372002090139397,
+      "current_fps": 31.92900861652191,
+      "change_percent": -17.404256402458408,
+      "median_pair_change_percent": -17.404256402458408,
+      "median_baseline_b_op": 1276900128,
+      "median_current_b_op": 1276895144,
+      "median_baseline_allocs_op": 33519,
+      "median_current_allocs_op": 33514,
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 11595818000,
+            "b_op": 1276895256,
+            "allocs_op": 33515,
+            "log": "tmp/a07/decode-1080p-high-s4-auto-pair1-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 25.87
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 9059239300,
+            "b_op": 1276895016,
+            "allocs_op": 33512,
+            "log": "tmp/a07/decode-1080p-high-s4-auto-pair1-current.txt",
+            "frames_op": 300,
+            "frames_s": 33.12
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 11096677800,
+            "b_op": 1276895352,
+            "allocs_op": 33515,
+            "log": "tmp/a07/decode-1080p-high-s4-auto-pair2-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 27.04
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 8674534700,
+            "b_op": 1276895144,
+            "allocs_op": 33514,
+            "log": "tmp/a07/decode-1080p-high-s4-auto-pair2-current.txt",
+            "frames_op": 300,
+            "frames_s": 34.58
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 11433076500,
+            "b_op": 1276900144,
+            "allocs_op": 33520,
+            "log": "tmp/a07/decode-1080p-high-s4-auto-pair3-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 26.24
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 9845146000,
+            "b_op": 1276895464,
+            "allocs_op": 33516,
+            "log": "tmp/a07/decode-1080p-high-s4-auto-pair3-current.txt",
+            "frames_op": 300,
+            "frames_s": 30.47
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 11149818100,
+            "b_op": 1276900288,
+            "allocs_op": 33523,
+            "log": "tmp/a07/decode-1080p-high-s4-auto-pair4-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 26.91
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 9698451800,
+            "b_op": 1276895128,
+            "allocs_op": 33513,
+            "log": "tmp/a07/decode-1080p-high-s4-auto-pair4-current.txt",
+            "frames_op": 300,
+            "frames_s": 30.93
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 11375700600,
+            "b_op": 1276900128,
+            "allocs_op": 33519,
+            "log": "tmp/a07/decode-1080p-high-s4-auto-pair5-baseline.txt",
+            "frames_op": 300,
+            "frames_s": 26.37
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_Sequence-16",
+            "iterations": 1,
+            "ns_op": 9395844500,
+            "b_op": 1276900240,
+            "allocs_op": 33520,
+            "log": "tmp/a07/decode-1080p-high-s4-auto-pair5-current.txt",
+            "frames_op": 300,
+            "frames_s": 31.93
+          }
+        }
+      ],
+      "input_path": "tmp/m8-closeout/endpoints-au/decode-1080p-high-s4.264"
+    }
+  ],
+  "short": {
+    "idr": {
+      "frames_per_op": 1,
+      "input": "b6f836c52d00a644b4cf5906e1b726b3d0bed713d2b2fdf940cb6c99133e59a9",
+      "median_baseline_ns_op": 46712942,
+      "median_current_ns_op": 36967347,
+      "baseline_fps": 21.407343600837645,
+      "current_fps": 27.05089981166352,
+      "change_percent": -20.862730075960535,
+      "median_pair_change_percent": -21.731529338470757,
+      "median_baseline_b_op": 8077816,
+      "median_current_b_op": 8078076,
+      "median_baseline_allocs_op": 116,
+      "median_current_allocs_op": 116,
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 13,
+            "ns_op": 47112469,
+            "b_op": 8078168,
+            "allocs_op": 116,
+            "log": "tmp/a07/short-idr-pair1-baseline.txt",
+            "frames_s": 21.23
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 15,
+            "ns_op": 35711767,
+            "b_op": 8078426,
+            "allocs_op": 117,
+            "log": "tmp/a07/short-idr-pair1-current.txt",
+            "frames_s": 28
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 12,
+            "ns_op": 46694892,
+            "b_op": 8077386,
+            "allocs_op": 115,
+            "log": "tmp/a07/short-idr-pair2-baseline.txt",
+            "frames_s": 21.42
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 15,
+            "ns_op": 36967347,
+            "b_op": 8078410,
+            "allocs_op": 116,
+            "log": "tmp/a07/short-idr-pair2-current.txt",
+            "frames_s": 27.05
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 12,
+            "ns_op": 46712942,
+            "b_op": 8077816,
+            "allocs_op": 116,
+            "log": "tmp/a07/short-idr-pair3-baseline.txt",
+            "frames_s": 21.41
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 15,
+            "ns_op": 35986720,
+            "b_op": 8078071,
+            "allocs_op": 116,
+            "log": "tmp/a07/short-idr-pair3-current.txt",
+            "frames_s": 27.79
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 13,
+            "ns_op": 45202415,
+            "b_op": 8078177,
+            "allocs_op": 116,
+            "log": "tmp/a07/short-idr-pair4-baseline.txt",
+            "frames_s": 22.12
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 15,
+            "ns_op": 36988860,
+            "b_op": 8078076,
+            "allocs_op": 116,
+            "log": "tmp/a07/short-idr-pair4-current.txt",
+            "frames_s": 27.04
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 12,
+            "ns_op": 47663033,
+            "b_op": 8077380,
+            "allocs_op": 115,
+            "log": "tmp/a07/short-idr-pair5-baseline.txt",
+            "frames_s": 20.98
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 15,
+            "ns_op": 37305127,
+            "b_op": 8077730,
+            "allocs_op": 115,
+            "log": "tmp/a07/short-idr-pair5-current.txt",
+            "frames_s": 26.81
+          }
+        }
+      ]
+    },
+    "ipb": {
+      "frames_per_op": 32,
+      "input": "e175d84a84d1ec065420cc4292650c04976393dcfea0588357b264ca4fa9583f",
+      "median_baseline_ns_op": 1137168100,
+      "median_current_ns_op": 988045900,
+      "baseline_fps": 28.140078850259695,
+      "current_fps": 32.387159341484036,
+      "change_percent": -13.113470207263111,
+      "median_pair_change_percent": -14.80462041215258,
+      "median_baseline_b_op": 162032240,
+      "median_current_b_op": 162032256,
+      "median_baseline_allocs_op": 4417,
+      "median_current_allocs_op": 4417,
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 1,
+            "ns_op": 1122948000,
+            "b_op": 162027272,
+            "allocs_op": 4413,
+            "log": "tmp/a07/short-ipb-pair1-baseline.txt",
+            "frames_s": 28.5
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 1,
+            "ns_op": 988045900,
+            "b_op": 162032368,
+            "allocs_op": 4418,
+            "log": "tmp/a07/short-ipb-pair1-current.txt",
+            "frames_s": 32.39
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 1,
+            "ns_op": 1127853800,
+            "b_op": 162032336,
+            "allocs_op": 4418,
+            "log": "tmp/a07/short-ipb-pair2-baseline.txt",
+            "frames_s": 28.37
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 1,
+            "ns_op": 1035553000,
+            "b_op": 162032256,
+            "allocs_op": 4417,
+            "log": "tmp/a07/short-ipb-pair2-current.txt",
+            "frames_s": 30.9
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 1,
+            "ns_op": 1137734000,
+            "b_op": 162027256,
+            "allocs_op": 4412,
+            "log": "tmp/a07/short-ipb-pair3-baseline.txt",
+            "frames_s": 28.13
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 1,
+            "ns_op": 969296800,
+            "b_op": 162027208,
+            "allocs_op": 4412,
+            "log": "tmp/a07/short-ipb-pair3-current.txt",
+            "frames_s": 33.01
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "current",
+            "baseline"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 1,
+            "ns_op": 1197010000,
+            "b_op": 162032368,
+            "allocs_op": 4418,
+            "log": "tmp/a07/short-ipb-pair4-baseline.txt",
+            "frames_s": 26.73
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 1,
+            "ns_op": 1015695600,
+            "b_op": 162032256,
+            "allocs_op": 4417,
+            "log": "tmp/a07/short-ipb-pair4-current.txt",
+            "frames_s": 31.51
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "baseline",
+            "current"
+          ],
+          "baseline": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 1,
+            "ns_op": 1137168100,
+            "b_op": 162032240,
+            "allocs_op": 4417,
+            "log": "tmp/a07/short-ipb-pair5-baseline.txt",
+            "frames_s": 28.14
+          },
+          "current": {
+            "benchmark": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": 1,
+            "ns_op": 955071500,
+            "b_op": 162032576,
+            "allocs_op": 4420,
+            "log": "tmp/a07/short-ipb-pair5-current.txt",
+            "frames_s": 33.51
+          }
+        }
+      ]
+    }
+  },
+  "coverage_audit": {
+    "method": "Static caller/admission audit plus actual selected-slot diagnostics, prior direct parity/guard tests, and current pipeline pixel checks; not an instruction-hit-rate measurement.",
+    "luma": "8-bit luma-like16-line prepared decoder edge with p2/q2 core; also reachable for444 luma-like planes and frame-only MBAFF MBs. Encoder luma still uses segmented LumaEdge, not this full-edge slot.",
+    "chroma": "8-bit420 progressive decoder and encoder reconstruction,8-line complete core; other formats/depth/field/MBAFF excluded from this slot.",
+    "average": "Decoder BiWeightBlock mean branch; width>=4, valid rectangles, exact in-place or independent buffers; tails within width. Encoder still uses sample-level averaging.",
+    "weight": "Decoder P nonidentity and B single/bi block weighting; width positive multiple4, weights[-128, 128],offsets[-128, 127],denom0..7,depth8/10; wide/odd/overlap cases retain int64. Encoder sample-level weighting does not use this block slot.",
+    "bs": "A06 rejected; original bS production code retained.",
+    "local_allocation_probe": {
+      "method": "AllocsPerRun100 with new arrays INSIDE closure; PrepareEdge32/0/0/8 outside, mixed strengths1/2/3/4. Local probe source/log in tmp/a07.",
+      "luma": {
+        "bytes": 512,
+        "q0": 4,
+        "line_step": 32,
+        "across_step": 1,
+        "allocs_per_op": 1
+      },
+      "chroma": {
+        "bytes": 256,
+        "q0": 4,
+        "line_step": 24,
+        "across_step": 1,
+        "allocs_per_op": 0
+      },
+      "interpretation": "Prepared luma wrapper conservatively escapes via function-value dispatch. Existing heap-plane reuse0alloc evidence is narrower than closure-local0alloc and must not be presented as such."
+    }
+  },
+  "historical_source_issue": "A01 endpoint generic_before series is not the A00 archived short-auto series (A01 medians51627950/1281560700 vs A00 45738950/1048345500). Its claimed A00-reused attribution is withdrawn; archived numbers are retained and final gains use the fresh paired baseline.",
+  "validation": {
+    "main_pixel_checks": "80 formal main ops x300 frames; all independent expected-YUV checks pass",
+    "short_oracle": "Both final direct-AU FFmpeg8.0 pixel comparisons passed before formal timings",
+    "fuzz": "FuzzDecoder_NoPanic,5s,parallel2:4 baseline seeds,6 reported execs,0 new interesting, PASS6.028s; bounded smoke only",
+    "reused": "A06 final accepted production five-package purego/386/race, six-target build/SIMD test compilation, direct kernel guards/parity and encoder three-way Oracle remain applicable. No production changes in A07.",
+    "not_run": "No new Unix/arm64 native execution, full-library race or long stability run; no aggregate8-hour/complete-Profile claim"
+  },
+  "profiles": {
+    "idr": {
+      "source": "tmp/a07/idr.cpu.pprof",
+      "text_source": "tmp/a07/all-idr.txt",
+      "total_cpu": "3.52s",
+      "command": "directAU Auto,benchtime3s,count1,cpuprofile",
+      "warmup_included": true,
+      "reported_nodes": "selected answer-relevant symbols; full node list retained in text_source",
+      "nodes": [
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/simd.filterLuma8EdgeSSE2",
+          "flat_time": "0.63s",
+          "flat_percent": 17.9,
+          "cumulative_time": "0.63s",
+          "cumulative_percent": 17.9
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).renormalize",
+          "flat_time": "0.26s",
+          "flat_percent": 7.39,
+          "cumulative_time": "0.36s",
+          "cumulative_percent": 10.23
+        },
+        {
+          "symbol": "runtime.semawakeup",
+          "flat_time": "0.24s",
+          "flat_percent": 6.82,
+          "cumulative_time": "0.24s",
+          "cumulative_percent": 6.82
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).Bin",
+          "flat_time": "0.21s",
+          "flat_percent": 5.97,
+          "cumulative_time": "0.61s",
+          "cumulative_percent": 17.33
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).residual",
+          "flat_time": "0.14s",
+          "flat_percent": 3.98,
+          "cumulative_time": "0.74s",
+          "cumulative_percent": 21.02
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/simd.filterChroma8EdgeSSE2",
+          "flat_time": "0.08s",
+          "flat_percent": 2.27,
+          "cumulative_time": "0.08s",
+          "cumulative_percent": 2.27
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).edgeStrengths",
+          "flat_time": "0.04s",
+          "flat_percent": 1.14,
+          "cumulative_time": "0.04s",
+          "cumulative_percent": 1.14
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).deblock",
+          "flat_time": "0",
+          "flat_percent": 0,
+          "cumulative_time": "1.08s",
+          "cumulative_percent": 30.68
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.decodeCABACSlice",
+          "flat_time": "0",
+          "flat_percent": 0,
+          "cumulative_time": "1.80s",
+          "cumulative_percent": 51.14
+        }
+      ]
+    },
+    "ipb": {
+      "source": "tmp/a07/ipb.cpu.pprof",
+      "text_source": "tmp/a07/all-ipb.txt",
+      "total_cpu": "3.80s",
+      "command": "directAU Auto,benchtime3x,count1,cpuprofile",
+      "warmup_included": true,
+      "reported_nodes": "selected answer-relevant symbols; full node list retained in text_source",
+      "nodes": [
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.decodeBMacroblock",
+          "flat_time": "0.42s",
+          "flat_percent": 11.05,
+          "cumulative_time": "1.75s",
+          "cumulative_percent": 46.05
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).renormalize",
+          "flat_time": "0.25s",
+          "flat_percent": 6.58,
+          "cumulative_time": "0.36s",
+          "cumulative_percent": 9.47
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).bSAtBlocks",
+          "flat_time": "0.20s",
+          "flat_percent": 5.26,
+          "cumulative_time": "0.57s",
+          "cumulative_percent": 15
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).residual",
+          "flat_time": "0.11s",
+          "flat_percent": 2.89,
+          "cumulative_time": "0.61s",
+          "cumulative_percent": 16.05
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).Bin",
+          "flat_time": "0.10s",
+          "flat_percent": 2.63,
+          "cumulative_time": "0.47s",
+          "cumulative_percent": 12.37
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/simd.filterLuma8EdgeSSE2",
+          "flat_time": "0.10s",
+          "flat_percent": 2.63,
+          "cumulative_time": "0.10s",
+          "cumulative_percent": 2.63
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/simd.mcLumaGeneric[go.shape.uint8]",
+          "flat_time": "0.08s",
+          "flat_percent": 2.11,
+          "cumulative_time": "0.10s",
+          "cumulative_percent": 2.63
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).edgeStrengths",
+          "flat_time": "0.07s",
+          "flat_percent": 1.84,
+          "cumulative_time": "0.64s",
+          "cumulative_percent": 16.84
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/simd.MCChroma[go.shape.uint8]",
+          "flat_time": "0.04s",
+          "flat_percent": 1.05,
+          "cumulative_time": "0.08s",
+          "cumulative_percent": 2.11
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.decodeCABACSlice",
+          "flat_time": "0.02s",
+          "flat_percent": 0.53,
+          "cumulative_time": "2.44s",
+          "cumulative_percent": 64.21
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/simd.filterChroma8EdgeSSE2",
+          "flat_time": "0.01s",
+          "flat_percent": 0.26,
+          "cumulative_time": "0.01s",
+          "cumulative_percent": 0.26
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).deblock",
+          "flat_time": "0",
+          "flat_percent": 0,
+          "cumulative_time": "0.84s",
+          "cumulative_percent": 22.11
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/prediction.BiWeightBlock8",
+          "flat_time": "0",
+          "flat_percent": 0,
+          "cumulative_time": "0.13s",
+          "cumulative_percent": 3.42
+        }
+      ]
+    },
+    "interpretation": "Cumulative parents/children overlap. decodeCABACSlice contains prediction/reconstruction and is not arithmetic entropy cost. These profiles follow formal timings and are not throughput samples."
+  },
+  "commands": {
+    "compile_auto": "CGO_ENABLED=0 GOAMD64=v1 go test -c -o tmp/a07/current-auto.test.exe ./benchmarks",
+    "compile_generic": "same with -tags=purego and current-generic.test.exe",
+    "main_arguments": [
+      "-test.run=^$",
+      "-test.bench=^BenchmarkDecoder_Sequence$",
+      "-test.benchtime=1x",
+      "-test.count=1",
+      "-test.benchmem",
+      "-test.timeout=30m"
+    ],
+    "main_environment": "GOAVC_M8_INPUT=tmp/m8-closeout/endpoints-au/<name>.264 (resolved absolute path), GOAVC_M8_FRAMES=300, GOAVC_M8_YUV_SHA256=<expected_yuv_sha256>",
+    "short_arguments": "-test.run=^$ -test.bench=^BenchmarkDecoder_DirectAU_Auto$ -test.benchtime=<500ms IDR|1x IPB> -test.count=1 -test.benchmem",
+    "short_environment": "GOAVC_BENCH_INPUT=tmp/deblock-perf/high-<idr|ipb>.264 (resolved absolute path)",
+    "pair_order": "odd baseline->current, even current->baseline; all runs sequential, no build/profile/oracle/fuzz overlap",
+    "source": "tmp/a07/run.ps1"
+  },
+  "conclusion": {
+    "performance_targets": {
+      "short_idr_time_reduction_percent": 20.862730075960535,
+      "short_ipb_time_reduction_percent": 13.113470207263111,
+      "idr_target15_met": true,
+      "ipb_target10_met": true
+    },
+    "coverage_gate": "A07 measurement/report complete; A01 closure-local buffer still1allocation/op and encoder luma/block weighting consumers are not migrated. This does not close all first-round or M8/M9 gates.",
+    "a06": "rejected, no batch production code",
+    "next": "Close the A01 named-dispatch/local-array allocation gate under subsequent implementation authorization; then prioritize independent CABAC residual/read-cache analysis rather than re-enabling rejected bS variants."
+  }
+}

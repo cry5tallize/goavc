@@ -48,7 +48,7 @@ SIMD       generic | sse2 | avx2 | neon
 
 | 场景 | 初始目标 | 状态 |
 |---|---|---|
-| 1080p 8-bit YUV420 解码 | M8 优化后争取 30 FPS，尚未承诺 | M2 实测中位数 21.54 FPS，见 §5 |
+| 1080p 8-bit YUV420 解码 | 固定输入吞吐与一般实时保证分开验收 | A07原300帧High Auto单/四slice为31.17/31.93FPS，见§26；不构成任意内容实时承诺 |
 | 720p 8-bit YUV420 编码 | 30 FPS | 未测量 |
 | 1080p 8-bit YUV420 编码 | v1.x 优化目标 | 未测量 |
 | 连续流式处理 | 内存无持续增长 | 未测量 |
@@ -1196,7 +1196,7 @@ Remove-Item Env:GOAVC_M8_INPUT,Env:GOAVC_M8_FRAMES,Env:GOAVC_M8_YUV_SHA256
 
 ## 20. A01：8-bit 亮度整边 SSE2
 
-A01 基于已提交 A00 `0c7e1ad` 实现；A00 的 before 复用 §19 与 `gates/a00_baseline_samples.json`。实现按 H.264 8.7.2 及本仓库标量滤波推导，不移植外部实现：一次 ABI 调用处理 16 条亮度线，四段分别应用 bS；4×16-bit lane 执行弱/强滤波运算，按采样步长收集/写回。条件邻点 p3/q3 仅在强滤波侧条件成立且地址有效时访问。边缘入口只在完整 p2/q2 邻域、正步长且几何为逐行垂直/水平时派发；不符合条件继续原逐段标量路径。10-bit 和其他形状未变。SSE2 内核没有保存 slice 指针；目标缓冲固定且零分配。
+A01 基于已提交 A00 `0c7e1ad` 实现；整边微基准的before来自§19与`gates/a00_baseline_samples.json`，短端点before的来源问题见下文。实现按 H.264 8.7.2 及本仓库标量滤波推导，不移植外部实现：一次 ABI 调用处理 16 条亮度线，四段分别应用 bS；4×16-bit lane 执行弱/强滤波运算，按采样步长收集/写回。条件邻点 p3/q3 仅在强滤波侧条件成立且地址有效时访问。边缘入口只在完整 p2/q2 邻域、正步长且几何为逐行垂直/水平时派发；不符合条件继续原逐段标量路径。10-bit 和其他形状未变。固定目标复用的基准每op零分配；A07发现包装层经函数值分派令新建局部数组逃逸，closure内实测1alloc/op，局部栈缓冲门禁尚未闭合。
 
 环境：HW-M2/Ryzen 7 5700X，Windows 11 10.0.26200 amd64、Go 1.27.4、CGO=0、GOAMD64=v1、GOMAXPROCS=16、Threads=1。所有测试与性能测量采用 `goavc_simdtest` 仅替换亮度整边槽，实际后端日志为 `FilterLumaEdge=SSE2; FilterDelta=Generic`。整边基准与 A00 同固定夹具、重置成本和计时边界；五次样本均 0 B/op、0 allocs/op。下表为五次中位 ns/op：
 
@@ -1209,7 +1209,7 @@ A01 基于已提交 A00 `0c7e1ad` 实现；A00 的 before 复用 §19 与 `gates
 | 水平强全通过 | 214.0 | 156.8 | -26.7% |
 | 水平混合 bS | 189.1 | 111.1 | -41.3% |
 
-整边前后五样本原值、命令和输入细节见 [`a01_luma_edge_samples.json`](gates/a01_luma_edge_samples.json)。短端点使用 §17 同一 high-idr/high-ipb 输入与 FFmpeg 8.0 独立像素 Oracle；Auto SSE2 路由在正式采样前通过 Oracle。A00 before 与 A01 after 均为五样本：IDR 中位数从 51,627,950 降至 37,881,547 ns/op（-26.6%）；I/P/B 1x 中位数从 1,281,560,700 降至 1,060,673,900 ns/op（-17.2%）。IPB 1x 样本波动较大，报告实测中位数，不声称配对复测。端点分配保持原范围：IDR 115 allocs/op、IPB 4402 allocs/op。端点五次原始值及 B/op/allocs/op 见 JSON；A00 before 直接复用，不重跑。
+整边前后五样本原值、命令和输入细节见 [`a01_luma_edge_samples.json`](gates/a01_luma_edge_samples.json)。短端点使用 §17 同一 high-idr/high-ipb 输入与 FFmpeg 8.0 独立像素 Oracle，Auto SSE2 路由通过像素比较。该JSON的generic_before中位数为51,627,950及1,281,560,700ns/op，after为37,881,547及1,060,673,900ns/op；before与§19的A00归档不一致，不能证明“A00直接复用”。A07撤回这项来源归因及据此单独归因A01的端点百分比，原始数值保留；整轮收益以§26的统一基线交错配对为准。历史after分配仍为IDR 115、IPB 4402 allocs/op，不将其与不同进程采样方式混算。
 
 正确性验证：整边全缓冲标量差分与确定性随机差分、两方向/不对齐 stride、bS 0..4/混合、阈值边界、tc0=0、p3/q3 可用性、未写区和零分配通过；整边入口正常派发与不满足 q2 完整条件时精确 fallback 测试通过。相关 `internal/simd`、`internal/filter`、`decoder`、`benchmarks` 在 `goavc_simdtest` 下全包测试通过；IDR/IPB 的独立 FFmpeg 像素 Oracle 通过。整边基准用测试专用标签强制槽；端点前后测量均使用默认 Auto，运行时记录该槽实际为 SSE2。
 
@@ -1266,3 +1266,42 @@ FFmpeg像素Oracle、CGO=0完整工程门禁、受影响包purego/386/race及六
 实际采纳的A03–A05已通过各项CGO0完整门禁及最终受影响五包purego/386/race、六目标
 build和SIMD测试编译；集成范围见[A06记录](gates/a06_deblocking_batch.md)。300帧主矩阵仍待A07，
 未扩大Unix/arm64原生或长期吞吐结论。
+
+## 26. A07：统一基线端点与实际覆盖收尾
+
+2026-11-17，当前报告源码`ff46b51`（生产算法同`4bd8638`），统一对比`v1.0.2`的
+`0e29cc3`。复用A00冻结的原版Auto/purego二进制，与本次新构建版本交错五对；
+CGO0、Go1.27.4、HW-M2、GOAMD64v1、GOMAXPROCS16、codec Threads1。
+输入、QP/GOP/ref/B/slice、计时和独立有效像素参考保持原定义，不混入A06未采纳候选。
+
+每op为300帧，各侧五样本中位数。Generic是purego，变化均指耗时：
+
+| 原1080p主输入 | Generic基线→当前FPS | 耗时变化 | Auto基线→当前FPS | 耗时变化 |
+|---|---:|---:|---:|---:|
+| Baseline/CAVLC，slice1 | 59.07→59.47 | -0.7%，未确认 | 60.93→64.50 | -5.5% |
+| Baseline/CAVLC，slice4 | 60.10→60.83 | -1.2%，未确认 | 60.65→64.32 | -5.7% |
+| High/CABAC+B，slice1 | 27.36→29.67 | -7.8% | 27.22→31.17 | -12.7% |
+| High/CABAC+B，slice4 | 27.38→29.20 | -6.2% | 26.37→31.93 | -17.4% |
+
+80个正式主矩阵op、24000帧全部通过独立FFmpeg原生像素参考核对；High Auto在该固定
+300帧合成序列达到31.17/31.93FPS，purego仍低于30FPS。每op含New/完整消费/Flush/Close，
+I/O、组AU和像素核对不计时；每对两侧独立进程count1，进程级缓存状态不与A00历史count5混算。
+
+两短输入同样重取统一基线：IDR46,712,942→36,967,347ns/op（-20.9%，27.05FPS），
+32帧I/P/B1,137,168,100→988,045,900ns/op（-13.1%，32.39FPS）。达到计划15%/10%的
+短耗时探索目标，且300帧High确认收益方向；这不是任意视频、P95或长期实时保证。
+
+当前SSE2实际消费者以decoder为主：亮度类整边、B块均值和P非恒等/B块权重；
+A03恒等跳过为Go快路，A02的8-bit420色度整边同时接入encoder。encoder亮度及逐样本均值/权重尚未迁移。
+A07还实测发现Prepared Luma8在closure内新建局部数组时为1alloc/op，已有预分配目标
+每op0alloc证据不等于局部栈缓冲门禁通过；该缺口和A01历史端点来源纠正已同步到§20与支持矩阵。
+
+当前短CPU采样中，去块累计IDR30.68%/I/P/B22.11%，CABAC residual21.02%/16.05%，
+Bin17.33%/12.37%（含renormalize）；父子比例不相加，decodeCABACSlice仍包含预测和重建。
+先补A01包装逃逸门禁，后续优先拆CABAC残差/读位/扫描成本；不重启已退化的A06配置。
+
+详细计时、覆盖范围、热点、剩余门禁及复现入口见[A07报告](gates/a07_decoder_block_results.md)，
+全部100个端点样本及关键CPU采样见[a07_endpoint_samples.json](gates/a07_endpoint_samples.json)。
+复用A06接受源码的purego/386/race/六目标及Oracle证据；本次另外完成两个短Oracle和5秒decoder
+fuzz烟测（日志6exec，0新interesting）。A07测量报告完成，A01局部缓冲门禁及完整M8/M9仍未闭合；
+未新增生产代码、Unix/arm64原生或8小时稳定性验收。

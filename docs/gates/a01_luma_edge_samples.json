@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "work_item": "A01 8-bit luma full-edge SSE2",
-  "purpose": "A01 after measurements; A00 before samples reused from a00_baseline_samples.json",
+  "purpose": "A01 historical measurements; kernel before references A00. A07 withdraws the endpoint A00-reuse attribution because generic_before differs from the A00 archived short-auto series.",
   "baseline_commit": "0c7e1ad",
   "measured_source": "A00 plus uncommitted A01 implementation",
   "environment": {
@@ -52,5 +52,13 @@
       "ipb_allocs_op": [4403, 4402, 4402, 4402, 4402]
     }
   },
-  "decision": "Enable SSE2 per-slot Auto: full-edge kernels improve; Auto IDR and I/P/B endpoints are faster than A00 medians. No Profile support claim changes."
+  "decision": "Historical adoption enabled the SSE2 full-edge slot. A07 withdraws the unsupported endpoint A00-reuse attribution; final aggregate gains use a07_endpoint_samples.json. Profile scope is unchanged.",
+  "original_decision": "Enable SSE2 per-slot Auto: full-edge kernels improve; Auto IDR and I/P/B endpoints are faster than A00 medians. No Profile support claim changes.",
+  "a07_source_audit": {
+    "a01_endpoint_before_medians_ns_op": [51627950, 1281560700],
+    "a00_short_auto_medians_ns_op": [45738950, 1048345500],
+    "endpoint_before_provenance": "not verified as A00 reuse; raw historical samples retained",
+    "local_wrapper_allocation": "A07 AllocsPerRun100 with a fresh512-byte array inside closure: Prepared Luma8=1alloc/op; preallocated-target per-op0alloc evidence remains valid but narrower",
+    "report": "a07_decoder_block_results.md"
+  }
 }

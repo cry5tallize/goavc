@@ -1,5 +1,7 @@
 # 支持矩阵
 
+> **A07后续性能报告：** 原300帧High Auto单/四slice为31.17/31.93FPS，统一基线耗时下降12.7%/17.4%。这是固定输入吞吐，Profile功能状态不变；实际SIMD消费链、encoder未迁移入口及A01局部数组分配缺口见[A07报告](gates/a07_decoder_block_results.md)。
+>
 > **v1.0.2：** 解码优化包括Direct任务合并、块级加权、零/DC重建、邻域去逃逸、网格初始化、CABAC归一化及网格访问。公共API、所有权、串行边界及本表功能状态不变；独立提交和短样本证据见[performance.md §18](performance.md)。
 >
 > **v1.0.0：** 本地版本收尾，功能组合和 Profile 状态保持本表原结论；不新增内部并行，不扩大 NEON 原生验证范围。使用说明与版本范围见 [README](../README.md) 和 [CHANGELOG](../CHANGELOG.md)。
@@ -172,9 +174,10 @@
 | SIMD 4/8×8正逆变换与DC | Partial | K10接入SSE2/AVX2/NEON，保留原8×8整数投影、int64逆变换、亮度/420/422 DC及晚期失败语义。x86显式后端解析值/原地/边界/0分配通过；修复SSE2的420 DC系数顺序错误。amd64默认按实测仅Forward4优选SSE2，其余变换槽保留Generic；NEON仅编译验收 |
 | SIMD量化/反量化 | Partial | K11为4/8×8与DC提供精确32×32→64乘积；除法/死区/符号/溢出提交由共享Go保持，宽域回退int64，不使用近似倒数。指针块接口保留首错前缀及原地未写后缀；x86显式后端验证通过，amd64默认按实测选择直接Generic；NEON原生未验 |
 | SIMD去块候选 | Partial | K12仅向量化同一条line的强弱候选加法；阈值、条件访问、逐线/跨边顺序与帧场几何不变。x86方向/Span及最小邻域保护页通过；实测SIMD较慢，amd64默认保留Generic，不宣称整条边全SIMD |
+| 8-bit亮度类整边SSE2 | Partial | A01：decoder完整16线亮度类边进入SSE2，含满足几何的444及MBAFF纯帧MB；10-bit/混合场逐线边保留原路。encoder亮度仍分段，包装层closure局部数组1alloc/op，未满足局部栈缓冲门禁。实际消费链及来源纠正见[gates/a07_decoder_block_results.md](gates/a07_decoder_block_results.md) |
 | 8-bit 420色度整边SSE2 | Partial | A02：逐行解码及编码本地重建共享八线强弱滤波，水平/垂直均接入独立FilterChromaEdge槽。标量差分、解析值、新内核保护页和栈缓冲零分配通过；独立FFmpeg像素一致，前后五样本见[performance.md §21](performance.md)。10-bit、422/444、场/MBAFF不进入新整边槽，继续原路径；不扩大Profile或NEON原生支持 |
-| 整块双向均值SSE2 | Partial | A04：8/10-bit实际BiWeightBlock均值分支使用PAVGB/PAVGW，保留奇数尾部、最小len及原地/部分重叠语义；实际SSE2差分、直接保护页、局部0分配与FFmpeg Oracle通过，证据见[gates/a04_average_blocks.md](gates/a04_average_blocks.md)。不改变Profile或并行状态 |
-| 整块单/双向加权SSE2 | Partial | A05：4倍数宽完整矩形、规范权重/offset/denom、8/10-bit输出进入Weight8/16槽；完整uint16输入域精确，其他形状/参数/部分重叠保留int64路径。直接保护页、解析值、局部0分配、宽域及FFmpeg Oracle通过，见[gates/a05_weight_blocks.md](gates/a05_weight_blocks.md)；NEON原生未验 |
+| 整块双向均值SSE2 | Partial | A04：decoder B块8/10-bit均值使用PAVGB/PAVGW，保留奇数尾部、最小len及原地/部分重叠语义；实际SSE2差分、直接保护页、局部0分配与FFmpeg Oracle通过，见[gates/a04_average_blocks.md](gates/a04_average_blocks.md)。encoder仍逐样本均值，不外推编码吞吐 |
+| 整块单/双向加权SSE2 | Partial | A05：decoder P非恒等/B块的4倍数宽完整矩形、规范权重/offset/denom、8/10-bit输出进入Weight8/16槽；完整uint16输入域精确，其他形状/参数/部分重叠保留int64。保护页/解析值/局部0分配/Oracle通过，见[gates/a05_weight_blocks.md](gates/a05_weight_blocks.md)；encoder仍逐样本权重，NEON原生未验 |
 | 去块逐边参数复用 | Partial | decoder普通边复用四段bS及每分量QP/阈值，保留旧单段入口和混合MBAFF路径；六格式调度/准备边回归及High直接AU的FFmpeg像素一致，性能见[performance.md §17](performance.md)。A06进一步批量候选端点退化，未采纳，见[gates/a06_deblocking_batch.md](gates/a06_deblocking_batch.md)；不扩展Profile或并行支持 |
 | 去块Generic直接算术 | Partial | 默认/纯Go路径移除逐像素线候选加法的小数组间接调用，显式SIMD仍走真实后端；双位深/方向/Span等价与最终High直接AU FFmpeg像素一致，耗时见[performance.md §17.2](performance.md)；CABAC与重建链未改 |
 | SIMD残差加减 | Partial | K13接入picture重建与真实encoder减法，保持int32极端Clip1、10-bit低两位、各自stride及未写区域；SSE2/AVX2/NEON为固定值向量算术，尾部与gather/scatter由Go完成。x86保护页/局部0分配通过，amd64默认直接标量避免gather开销；NEON原生未验 |
