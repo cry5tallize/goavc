@@ -339,7 +339,7 @@ func newFrameStateForPicture(d *Decoder, sps *syntax.SPS, pps *syntax.PPS, bFram
 		fs.mv1 = motion.NewGrid(mbW, mbH)
 		fs.referenceIDs[1] = make([]*dpb.Identity, total*16)
 	}
-	fs.mv.Reset()
+	// NewGrid已完成初始化；中间仅准备独立临时数组，没有改写运动网格。
 	return fs, nil
 }
 
