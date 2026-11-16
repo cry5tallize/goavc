@@ -1236,3 +1236,10 @@ CGO=0 的全仓 gofmt 检查、vet、build、`go test ./... -count=1`、36 包�
 全部530个样本见[a02_chroma_edge_samples.json](gates/a02_chroma_edge_samples.json)。
 FFmpeg像素Oracle、CGO=0完整工程门禁、受影响包purego/386/race及六目标构建通过；
 300帧主矩阵仍按计划在A07集中比较，未新增Unix/arm64原生或长稳验收。
+
+## 22. A03：P权重逐分量快路
+
+相对A02 `414059d`，逐分量恒等跳过，非恒等改用同一共享块内核；六格式、场ref与独立平面
+逐像素回归和FFmpeg Oracle通过。包含固定重置的八格微基准耗时下降25.8%–66.7%，
+均0B/0alloc；直接AU交错五对I/P/B耗时下降5.0%，IDR补测持平。
+完整条件、初测/补测和验证范围见[A03记录](gates/a03_p_weights.md)及[原始样本](gates/a03_samples.json)。

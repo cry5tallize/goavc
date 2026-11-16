@@ -33,21 +33,18 @@ func (s *sliceEntry) applyPWeights(fs *frameState, mbx, mby, x, y, w, h, ref int
 			ph /= fs.subH
 			denom = t.ChromaDenom
 		}
+		// Spec: 8.4.3.2。逐分量判定，独立平面使用亮度denom；
+		// 恒等亮度不代表色度也恒等，offset仍为码流8-bit标度。
+		if int64(weight.Weight[wi]) == int64(1)<<denom && weight.Offset[wi] == 0 {
+			continue
+		}
 		pl := &fs.pic.Planes[c]
 		if pl.BitDepth == 10 {
-			for yy := range ph {
-				row := pl.Row16(py + yy)[px : px+pw]
-				for i, v := range row {
-					row[i] = prediction.WeightSampleHigh(v, weight.Weight[wi], weight.Offset[wi], denom, pl.BitDepth)
-				}
-			}
+			block := pl.Data16[pl.Index(px, py):]
+			prediction.WeightBlock16(block, pl.Stride, block, pl.Stride, pw, ph, weight.Weight[wi], weight.Offset[wi], denom, pl.BitDepth)
 		} else {
-			for yy := range ph {
-				row := pl.Row(py + yy)[px : px+pw]
-				for i, v := range row {
-					row[i] = prediction.WeightSample(v, weight.Weight[wi], weight.Offset[wi], denom)
-				}
-			}
+			block := pl.Data[pl.Index(px, py):]
+			prediction.WeightBlock8(block, pl.Stride, block, pl.Stride, pw, ph, weight.Weight[wi], weight.Offset[wi], denom)
 		}
 	}
 }
