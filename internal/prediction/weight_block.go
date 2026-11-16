@@ -1,10 +1,16 @@
 package prediction
 
+import "github.com/cry5tallize/goavc/internal/simd"
+
 // 块入口保留具名跨包边界，避免调用方栈上邻域因导入泛型shape的保守逃逸而分配。
 // stride以采样计，输入和输出矩形由流水线校验；不保留任何切片。
 //
 //go:noinline
 func BiWeightBlock8(dst []byte, ds int, a, b []byte, ss, w, h int, weights, offsets [2]int32, denom uint32) {
+	if weightBlockIsAverage(weights, offsets, denom, 8) {
+		simd.AverageBlock8(dst, ds, a, b, ss, w, h)
+		return
+	}
 	biWeightBlock(dst, ds, a, b, ss, w, h, weights, offsets, denom, 8)
 }
 
@@ -12,22 +18,22 @@ func BiWeightBlock8(dst []byte, ds int, a, b []byte, ss, w, h int, weights, offs
 //
 //go:noinline
 func BiWeightBlock16(dst []uint16, ds int, a, b []uint16, ss, w, h int, weights, offsets [2]int32, denom uint32, depth int) {
+	if weightBlockIsAverage(weights, offsets, denom, depth) {
+		simd.AverageBlock16(dst, ds, a, b, ss, w, h)
+		return
+	}
 	biWeightBlock(dst, ds, a, b, ss, w, h, weights, offsets, denom, depth)
+}
+
+func weightBlockIsAverage(weights, offsets [2]int32, denom uint32, depth int) bool {
+	round := int64(1) << denom
+	return int64(weights[0]) == round && int64(weights[1]) == round && ((((int64(offsets[0])+int64(offsets[1]))<<(depth-8))+1)>>1) == 0
 }
 
 func biWeightBlock[T sample](dst []T, ds int, a, b []T, ss, w, h int, weights, offsets [2]int32, denom uint32, depth int) {
 	// Spec: 8.4.3.2。所有舍入和offset均是块内不变量。
 	offset := (((int64(offsets[0]) + int64(offsets[1])) << (depth - 8)) + 1) >> 1
 	w0, w1, round := int64(weights[0]), int64(weights[1]), int64(1)<<denom
-	if w0 == round && w1 == round && offset == 0 {
-		for y := range h {
-			d, u, v := dst[y*ds:][:w], a[y*ss:][:w], b[y*ss:][:w]
-			for x := range d {
-				d[x] = T((int(u[x]) + int(v[x]) + 1) >> 1)
-			}
-		}
-		return
-	}
 	for y := range h {
 		d, u, v := dst[y*ds:][:w], a[y*ss:][:w], b[y*ss:][:w]
 		for x := range d {

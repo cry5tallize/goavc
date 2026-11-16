@@ -1,0 +1,414 @@
+{
+  "schema_version": 1,
+  "work_item": "A04",
+  "measured_date": "2026-11-17",
+  "baseline_revision": "8108a02523a33aa96506e94ec7a34718d832196d",
+  "measured_source": "parent plus this work item; frozen before binary compiled before production edits, after binary matches the implementation committed with this evidence",
+  "environment": {
+    "hardware": "HW-M2",
+    "cpu": "AMD Ryzen 7 5700X",
+    "os": "Windows 11 10.0.26200 amd64",
+    "go": "go1.27.4",
+    "cgo": 0,
+    "goamd64": "v1",
+    "gomaxprocs": 16,
+    "codec_threads": 1,
+    "external_load_monitored": false,
+    "own_build_test_oracle_jobs_during_timing": 0
+  },
+  "inputs": {
+    "source": "docs/performance.md sections17/18; same files, unchanged generation settings",
+    "idr": {
+      "path": "tmp/deblock-perf/high-idr.264",
+      "sha256": "b6f836c52d00a644b4cf5906e1b726b3d0bed713d2b2fdf940cb6c99133e59a9",
+      "frames_per_op": 1
+    },
+    "ipb": {
+      "path": "tmp/deblock-perf/high-ipb.264",
+      "sha256": "e175d84a84d1ec065420cc4292650c04976393dcfea0588357b264ca4fa9583f",
+      "frames_per_op": 32
+    }
+  },
+  "timing": {
+    "kernels": "five100ms samples, fixed destination reset included; fixture preparation/verification excluded; details in the work-item report",
+    "endpoints": "New/Send/Receive/Release/Flush/Close; IO/AU assembly excluded; five interleaved pairs of frozen before/after executables, alternating order. Count1 per process, IDR500ms/IPB1x. No other own timing/compile/test/Oracle jobs overlapped."
+  },
+  "kernel_before": [
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/8bit/4x4/bi_average-16",
+      "iterations": [3696003, 3383025, 3250965, 3462273, 3081615],
+      "ns_op": [36.25, 33.84, 36.33, 31.09, 39.91],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 36.25
+    },
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/8bit/8x8/bi_average-16",
+      "iterations": [1540116, 1520985, 1418148, 1400788, 1474099],
+      "ns_op": [77.46, 79.57, 82.7, 84.95, 81.21],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 81.21
+    },
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/8bit/16x16/bi_average-16",
+      "iterations": [522079, 488061, 577282, 690447, 625455],
+      "ns_op": [211.6, 227.1, 217.9, 192, 189.6],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 211.6
+    },
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/8bit/7x5/bi_average-16",
+      "iterations": [2117080, 2142921, 2092670, 2440606, 2206664],
+      "ns_op": [54.45, 54.95, 56.82, 49.24, 55.24],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 54.95
+    },
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/10bit/4x4/bi_average-16",
+      "iterations": [3210624, 2437790, 2996568, 3054709, 3290672],
+      "ns_op": [38.47, 47.91, 41.2, 39.07, 36.98],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 39.07
+    },
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/10bit/8x8/bi_average-16",
+      "iterations": [1542544, 1343280, 1363807, 1482998, 1359465],
+      "ns_op": [77.86, 90.62, 88.21, 79.71, 81.33],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 81.33
+    },
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/10bit/16x16/bi_average-16",
+      "iterations": [634819, 509648, 482605, 502891, 466164],
+      "ns_op": [216.2, 229.8, 254.4, 238.4, 237],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 237
+    },
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/10bit/7x5/bi_average-16",
+      "iterations": [2025309, 2505453, 2070085, 1854378, 1973115],
+      "ns_op": [59.93, 47.99, 59.71, 61.01, 61.24],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 59.93
+    }
+  ],
+  "kernel_after": [
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/8bit/4x4/bi_average-16",
+      "iterations": [4677285, 4468042, 4286234, 4485444, 4501192],
+      "ns_op": [25.19, 26.3, 26.7, 27.09, 26.66],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 26.66
+    },
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/8bit/8x8/bi_average-16",
+      "iterations": [3726800, 3955344, 4182933, 4083507, 3284781],
+      "ns_op": [30.26, 30.2, 29.38, 29.76, 31.35],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 30.2
+    },
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/8bit/16x16/bi_average-16",
+      "iterations": [2198127, 2171179, 2331776, 2438226, 2380914],
+      "ns_op": [53.32, 53.95, 51.28, 49.82, 51.35],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 51.35
+    },
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/8bit/7x5/bi_average-16",
+      "iterations": [3689446, 3608392, 3509356, 3361363, 3306540],
+      "ns_op": [33.51, 33.71, 35.11, 35.16, 35.85],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 35.11
+    },
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/10bit/4x4/bi_average-16",
+      "iterations": [3715273, 3955917, 3543250, 3773572, 3337922],
+      "ns_op": [33.24, 30.84, 32.98, 32.16, 36.81],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 32.98
+    },
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/10bit/8x8/bi_average-16",
+      "iterations": [2999220, 3123031, 2697489, 3061825, 2992935],
+      "ns_op": [40.09, 39.1, 42.6, 39.03, 38.93],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 39.1
+    },
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/10bit/16x16/bi_average-16",
+      "iterations": [2157912, 1930274, 2103606, 2015556, 1707834],
+      "ns_op": [59.16, 62.52, 55.62, 58.55, 64.75],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 59.16
+    },
+    {
+      "case": "BenchmarkWeightBlocks_4To16_Auto/10bit/7x5/bi_average-16",
+      "iterations": [3018206, 2943470, 2947156, 3085268, 3127858],
+      "ns_op": [38.8, 40.98, 40.31, 38.11, 38.43],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 38.8
+    }
+  ],
+  "paired": {
+    "idr": {
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [14],
+            "ns_op": [38176164],
+            "b_op": [8078488],
+            "allocs_op": [116],
+            "median_ns_op": 38176164
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [15],
+            "ns_op": [37460820],
+            "b_op": [8078410],
+            "allocs_op": [116],
+            "median_ns_op": 37460820
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [14],
+            "ns_op": [39872614],
+            "b_op": [8078128],
+            "allocs_op": [116],
+            "median_ns_op": 39872614
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [15],
+            "ns_op": [38073407],
+            "b_op": [8077387],
+            "allocs_op": [115],
+            "median_ns_op": 38073407
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [15],
+            "ns_op": [37361687],
+            "b_op": [8078078],
+            "allocs_op": [116],
+            "median_ns_op": 37361687
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [14],
+            "ns_op": [36087200],
+            "b_op": [8078478],
+            "allocs_op": [116],
+            "median_ns_op": 36087200
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [15],
+            "ns_op": [37384773],
+            "b_op": [8078432],
+            "allocs_op": [116],
+            "median_ns_op": 37384773
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [15],
+            "ns_op": [36552033],
+            "b_op": [8078085],
+            "allocs_op": [116],
+            "median_ns_op": 36552033
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [16],
+            "ns_op": [37044425],
+            "b_op": [8078359],
+            "allocs_op": [116],
+            "median_ns_op": 37044425
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [15],
+            "ns_op": [36389320],
+            "b_op": [8078064],
+            "allocs_op": [116],
+            "median_ns_op": 36389320
+          }
+        }
+      ],
+      "median_before_ns_op": 37384773,
+      "median_after_ns_op": 36552033,
+      "change_percent": -2.2274844359761126
+    },
+    "ipb": {
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1027847300],
+            "b_op": [162032304],
+            "allocs_op": [4417],
+            "median_ns_op": 1027847300
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1000331200],
+            "b_op": [162027144],
+            "allocs_op": [4411],
+            "median_ns_op": 1000331200
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1018967000],
+            "b_op": [162032240],
+            "allocs_op": [4417],
+            "median_ns_op": 1018967000
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1007497200],
+            "b_op": [162032400],
+            "allocs_op": [4418],
+            "median_ns_op": 1007497200
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1067355400],
+            "b_op": [162032240],
+            "allocs_op": [4417],
+            "median_ns_op": 1067355400
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1045329900],
+            "b_op": [162027176],
+            "allocs_op": [4411],
+            "median_ns_op": 1045329900
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [966750100],
+            "b_op": [162027256],
+            "allocs_op": [4412],
+            "median_ns_op": 966750100
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1017634000],
+            "b_op": [162027160],
+            "allocs_op": [4411],
+            "median_ns_op": 1017634000
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1024056500],
+            "b_op": [162032368],
+            "allocs_op": [4418],
+            "median_ns_op": 1024056500
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1034863300],
+            "b_op": [162032336],
+            "allocs_op": [4418],
+            "median_ns_op": 1034863300
+          }
+        }
+      ],
+      "median_before_ns_op": 1024056500,
+      "median_after_ns_op": 1017634000,
+      "change_percent": -0.6271626614351877
+    }
+  }
+}

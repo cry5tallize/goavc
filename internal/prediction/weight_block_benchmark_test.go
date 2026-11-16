@@ -2,6 +2,7 @@ package prediction
 
 import (
 	"fmt"
+	"github.com/cry5tallize/goavc/internal/simd"
 	"testing"
 )
 
@@ -125,7 +126,7 @@ func BenchmarkWeightBlocks_4To16_Auto(b *testing.B) {
 				w, h := size[0], size[1]
 				b.Run(fmt.Sprintf("%dbit/%dx%d/%s", depth, w, h, c.name), func(b *testing.B) {
 					f := checkWeightBenchmark(b, c, depth, w, h)
-					b.Log("当前加权/均值实际为Generic；计时含固定目标重置和完整块入口")
+					b.Logf("均值槽8/16=%s/%s，非均值为Generic；计时含固定目标重置和完整块入口", simd.ActiveBackends().Average8, simd.ActiveBackends().Average16)
 					b.ReportAllocs()
 					if depth == 8 {
 						var dst [23 * 17]byte

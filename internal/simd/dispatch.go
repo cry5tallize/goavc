@@ -49,6 +49,7 @@ type Backends struct {
 	Residual                                           Backend
 	FilterDelta, FilterLumaEdge                        Backend
 	FilterChromaEdge                                   Backend
+	Average8, Average16                                Backend
 	QuantMultiply                                      Backend
 	Forward8x8, IDCT4x4, IDCT8x8                       Backend
 	ForwardLumaDC, ForwardChromaDC, ForwardChromaDC422 Backend
@@ -95,6 +96,7 @@ func selectKernels(cpu cpuFeatures) kernelTable {
 	table := platformKernels(cpu, genericTable())
 	table = installResidualKernels(cpu, table)
 	table = installFilterKernels(cpu, table)
+	table = installAverageKernels(cpu, table)
 	table = installQuantKernels(cpu, table)
 	table = installTransformKernels(cpu, table)
 	table.quantScalar = table.backends.QuantMultiply == Generic

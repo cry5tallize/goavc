@@ -1243,3 +1243,9 @@ FFmpeg像素Oracle、CGO=0完整工程门禁、受影响包purego/386/race及六
 逐像素回归和FFmpeg Oracle通过。包含固定重置的八格微基准耗时下降25.8%–66.7%，
 均0B/0alloc；直接AU交错五对I/P/B耗时下降5.0%，IDR补测持平。
 完整条件、初测/补测和验证范围见[A03记录](gates/a03_p_weights.md)及[原始样本](gates/a03_samples.json)。
+
+## 23. A04：整块双向均值SSE2
+
+实际BiWeightBlock均值分支接入8/16-bit SSE2，已测4/8/16宽和7×5尾部均值内核下降15.6%–75.7%，
+0B/0alloc。两短端点交错五对视为持平，保持原像素、别名和尾部语义；采用已获益形状Auto。
+实现、测试范围及全部样本见[A04记录](gates/a04_average_blocks.md)和[a04_samples.json](gates/a04_samples.json)。
