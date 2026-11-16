@@ -4,6 +4,7 @@ import (
 	"fmt"
 	h264 "github.com/cry5tallize/goavc"
 	"github.com/cry5tallize/goavc/bitstream"
+	"math/bits"
 )
 
 // Context 保存规范中的 pStateIdx 和 valMPS，独立于算术引擎的区间状态。
@@ -116,9 +117,28 @@ func (d *Decoder) readBit() uint8 {
 }
 
 func (d *Decoder) renormalize() {
-	for d.rangeValue < 256 && d.err == nil {
+	if d.rangeValue >= 128 && d.rangeValue < 256 && d.err == nil {
+		// 单位归一化是常见路径，直接读取一位，避免位数计算及重复长度检查。
 		d.rangeValue *= 2
-		d.offset = d.offset*2 + uint32(d.readBit())
+		v, err := d.r.ReadBits(1)
+		d.err, d.lastBit = err, uint8(v)
+		d.offset = d.offset*2 + uint32(v)
+	} else if d.rangeValue < 128 && d.err == nil {
+		// Spec: 9.3.3.2。有效区间的归一化位数一次确定，不预取额外比特。
+		n := uint(bits.LeadingZeros32(d.rangeValue) - 23)
+		if uint64(n) <= d.r.BitsRemaining() {
+			v, err := d.r.ReadBits(n)
+			d.err = err
+			d.rangeValue <<= n
+			d.offset = d.offset<<n | uint32(v)
+			d.lastBit = uint8(v & 1)
+		} else {
+			// 截断保留旧逐位路径：已消费的有效位、失败那次移位及lastBit都不变。
+			for d.rangeValue < 256 && d.err == nil {
+				d.rangeValue *= 2
+				d.offset = d.offset*2 + uint32(d.readBit())
+			}
+		}
 	}
 	if d.err == nil && d.offset >= d.rangeValue {
 		d.err = fmt.Errorf("cabac: offset exceeds range: %w", h264.ErrInvalidData)

@@ -3,13 +3,25 @@
   "environment": {"cpu":"Ryzen 7 5700X","os":"Windows 11 10.0.26200 amd64","go":"go1.27.4","cgo":0,"goamd64":"v1","gomaxprocs":16,"codec_threads":1,"external_load_monitored":false},
   "inputs": "performance.md 搂17鐨勫師濮媓igh-idr/high-ipb杈撳叆锛岀敓鎴愬弬鏁板拰SHA涓嶅彉锛涙瘡op涓?/32甯?,
   "samples": [
-    {"stage":"base-idr","ns_op":[51796170,50087090,53546740,55555190,51920730],"b_op":[9214312,9214299,9214299,9214302,9214313],"allocs_op":[23801,23801,23801,23801,23801]},
-    {"stage":"base-ipb","ns_op":[1924976500,2032848400,1909952500,1791938000,1901554700],"b_op":[154452760,154452744,154452792,154452744,154452696],"allocs_op":[42191,42190,42191,42190,42189]},
-    {"stage":"blend-ipb","ns_op":[1093448100,1184006200,1152908300,1140652300,1132057600],"b_op":[154452744,154452696,154452728,154452696,154452696],"allocs_op":[42191,42191,42190,42189,42189]},
-    {"stage":"coalesce-ipb","ns_op":[1250303600,1306248200,1282505500,1243254300,1289530200],"b_op":[154452824,154452744,154452728,154452728,154452824],"allocs_op":[42191,42189,42189,42189,42190]},
-    {"stage":"intra-idr","ns_op":[45407933,47188208,47033546,48460675,46510043],"b_op":[8077381,8077377,8077376,8077376,8077376],"allocs_op":[115,115,115,115,115]},
-    {"stage":"reset-idr","ns_op":[42892438,44613993,46251446,45538275,45406000],"b_op":[8077404,8077384,8077401,8077394,8077396],"allocs_op":[115,115,115,115,115]},
-    {"stage":"sparse-idr","ns_op":[46773583,52468980,48418654,45219900,44446593],"b_op":[9214302,9214300,9214310,9214300,9214299],"allocs_op":[23801,23801,23801,23801,23801]},
-    {"stage":"sparse-ipb","ns_op":[1112958600,1088984300,1092126900,1072080300,1180467500],"b_op":[154452760,154452712,154452696,154452680,154452696],"allocs_op":[42192,42189,42189,42190,42189]}
+    {"stage":"base-idr","case":"BenchmarkDecoder_DirectAU_Auto-16","ns_op":[51796170,50087090,53546740,55555190,51920730],"b_op":[9214312,9214299,9214299,9214302,9214313],"allocs_op":[23801,23801,23801,23801,23801]},
+    {"stage":"base-ipb","case":"BenchmarkDecoder_DirectAU_Auto-16","ns_op":[1924976500,2032848400,1909952500,1791938000,1901554700],"b_op":[154452760,154452744,154452792,154452744,154452696],"allocs_op":[42191,42190,42191,42190,42189]},
+    {"stage":"blend-ipb","case":"BenchmarkDecoder_DirectAU_Auto-16","ns_op":[1093448100,1184006200,1152908300,1140652300,1132057600],"b_op":[154452744,154452696,154452728,154452696,154452696],"allocs_op":[42191,42191,42190,42189,42189]},
+    {"stage":"cabac-idr","case":"BenchmarkDecoder_DirectAU_Auto-16","ns_op":[43925923,45727375,44094743,45058167,46872714],"b_op":[8077393,8077376,8077376,8077376,8077376],"allocs_op":[115,115,115,115,115]},
+    {"stage":"cabac-initial-idr","case":"BenchmarkDecoder_DirectAU_Auto-16","ns_op":[43882792,45266358,44593750,44693392,44954200],"b_op":[8077380,8077376,8077378,8077376,8077376],"allocs_op":[115,115,115,115,115]},
+    {"stage":"cabac-initial-ipb","case":"BenchmarkDecoder_DirectAU_Auto-16","ns_op":[1064182600,1092279000,1128119200,1127560600,1130733800],"b_op":[152638904,152638968,152638904,152639096,152638920],"allocs_op":[4403,4404,4401,4403,4401]},
+    {"stage":"cabac-ipb","case":"BenchmarkDecoder_DirectAU_Auto-16","ns_op":[1131114500,1070365200,1107202600,1089955400,1106760600],"b_op":[152638984,152639064,152638920,152638888,152638920],"allocs_op":[4402,4403,4401,4401,4402]},
+    {"stage":"coalesce-ipb","case":"BenchmarkDecoder_DirectAU_Auto-16","ns_op":[1250303600,1306248200,1282505500,1243254300,1289530200],"b_op":[154452824,154452744,154452728,154452728,154452824],"allocs_op":[42191,42189,42189,42189,42190]},
+    {"stage":"intra-idr","case":"BenchmarkDecoder_DirectAU_Auto-16","ns_op":[45407933,47188208,47033546,48460675,46510043],"b_op":[8077381,8077377,8077376,8077376,8077376],"allocs_op":[115,115,115,115,115]},
+    {"stage":"renorm-initial-kernel","case":"BenchmarkRenormalize_BatchedReference/range128/referencefalse-16","ns_op":[13.77,13.59,12.32,13.15,14.26],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"renorm-initial-kernel","case":"BenchmarkRenormalize_BatchedReference/range128/referencetrue-16","ns_op":[12.58,12.33,12.88,12.44,12.53],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"renorm-initial-kernel","case":"BenchmarkRenormalize_BatchedReference/range2/referencefalse-16","ns_op":[13.25,12.64,12,12.01,14.88],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"renorm-initial-kernel","case":"BenchmarkRenormalize_BatchedReference/range2/referencetrue-16","ns_op":[58.35,43.03,58.45,51.77,58.49],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"renorm-kernel","case":"BenchmarkRenormalize_BatchedReference/range128/referencefalse-16","ns_op":[12.55,11.58,10.95,12.88,11.04],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"renorm-kernel","case":"BenchmarkRenormalize_BatchedReference/range128/referencetrue-16","ns_op":[11.72,12.13,11.49,11.85,15.87],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"renorm-kernel","case":"BenchmarkRenormalize_BatchedReference/range2/referencefalse-16","ns_op":[15.11,12.9,12.72,15.13,13.32],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"renorm-kernel","case":"BenchmarkRenormalize_BatchedReference/range2/referencetrue-16","ns_op":[49.02,44.69,58.6,46.55,50.43],"b_op":[0,0,0,0,0],"allocs_op":[0,0,0,0,0]},
+    {"stage":"reset-idr","case":"BenchmarkDecoder_DirectAU_Auto-16","ns_op":[42892438,44613993,46251446,45538275,45406000],"b_op":[8077404,8077384,8077401,8077394,8077396],"allocs_op":[115,115,115,115,115]},
+    {"stage":"sparse-idr","case":"BenchmarkDecoder_DirectAU_Auto-16","ns_op":[46773583,52468980,48418654,45219900,44446593],"b_op":[9214302,9214300,9214310,9214300,9214299],"allocs_op":[23801,23801,23801,23801,23801]},
+    {"stage":"sparse-ipb","case":"BenchmarkDecoder_DirectAU_Auto-16","ns_op":[1112958600,1088984300,1092126900,1072080300,1180467500],"b_op":[154452760,154452712,154452696,154452680,154452696],"allocs_op":[42192,42189,42189,42190,42189]}
   ]
 }
