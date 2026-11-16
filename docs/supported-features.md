@@ -1,5 +1,7 @@
 # 支持矩阵
 
+> **v1.0.2：** 解码优化包括Direct任务合并、块级加权、零/DC重建、邻域去逃逸、网格初始化、CABAC归一化及网格访问。公共API、所有权、串行边界及本表功能状态不变；独立提交和短样本证据见[performance.md §18](performance.md)。
+>
 > **v1.0.0：** 本地版本收尾，功能组合和 Profile 状态保持本表原结论；不新增内部并行，不扩大 NEON 原生验证范围。使用说明与版本范围见 [README](../README.md) 和 [CHANGELOG](../CHANGELOG.md)。
 >
 > **M5 当前进展：** M5a/b/c/d本地门禁均已通过，M5c/d标签为v0.5.3/v0.6.0。
@@ -208,9 +210,6 @@
 | 30秒内存稳定性 | Conformant | tools/streamcheck按独立PCM常量解析值及预设RSS/GC后堆阈值验收通过，预热5秒、每5秒采样；取消后goroutine回到1。证据见gates/m6_smoke.json；仅证明该输入的短时稳定性，不保证长期无泄漏 |
 
 ## 11. 明确不支持（第一版）
-
-v1.0.2解码性能切片：已接入Direct像素预测任务合并，逐4×4运动语义保持不变；
-验证范围和独立五样本见[performance.md §18](performance.md)，Profile状态沿用上表。
 
 | 特性 | 原因 |
 |---|---|

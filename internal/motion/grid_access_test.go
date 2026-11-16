@@ -51,7 +51,7 @@ func TestGridAccess_SliceAndMappedParity(t *testing.T) {
 
 var gridAccessSink int
 
-func BenchmarkGridGet_1080p(b *testing.B) {
+func BenchmarkGridGet_1080p_Generic(b *testing.B) {
 	g := NewGrid(120, 68)
 	g.SetRect(0, 0, g.BlockW, g.BlockH, MV{X: 1, Y: -2}, 3)
 	x, y, sum := 0, 0, 0

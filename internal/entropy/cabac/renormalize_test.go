@@ -40,7 +40,7 @@ func TestRenormalize_BatchedBitExact(t *testing.T) {
 	}
 }
 
-func BenchmarkRenormalize_BatchedReference(b *testing.B) {
+func BenchmarkRenormalize_Bits_Generic(b *testing.B) {
 	for _, r := range []uint32{128, 2} {
 		for _, reference := range []bool{false, true} {
 			b.Run(fmt.Sprintf("range%d/reference%v", r, reference), func(b *testing.B) {

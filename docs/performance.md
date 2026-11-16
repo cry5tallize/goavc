@@ -1046,3 +1046,31 @@ CABAC的完整常规门禁和两份High像素Oracle均通过；PCM重启、终�
 本轮最终相对基线：IDR耗时下降12.7%，32帧I/P/B下降46.1%；短输入吞吐分别
 19.26→22.05及16.75→31.10帧/秒。32帧数据不替换§16.2的300帧主矩阵，未更新实时承诺。
 
+### 最终验证与复现
+
+每项实现提交前均通过CGO=0的gofmt/vet/build/全库test、36包依赖和55条语料清单校验；
+未受改动影响的包复用有效测试缓存。最终额外执行以下非缓存检查，均退出0：
+
+```powershell
+$env:CGO_ENABLED='0'; $env:H264_LONG_TEST='0'
+go test -tags purego ./decoder ./encoder ./internal/entropy/cabac ./internal/prediction ./internal/picture ./internal/motion ./internal/simd -count=1
+$env:GOARCH='386'
+go test ./decoder ./internal/entropy/cabac ./internal/prediction ./internal/picture ./internal/motion ./internal/simd -count=1
+Remove-Item Env:GOARCH
+$env:CGO_ENABLED='1'
+go test -race ./decoder ./encoder ./internal/entropy/cabac ./internal/prediction ./internal/picture ./internal/motion ./internal/simd -count=1
+$env:CGO_ENABLED='0'
+go test ./internal/entropy/cabac -run '^$' -fuzz '^FuzzDecoder_Arithmetic$' -fuzztime=5s -parallel=2
+go test ./internal/entropy/cabac -run '^$' -fuzz '^FuzzDecoder_Residual$' -fuzztime=5s -parallel=2
+go test ./decoder -run '^$' -fuzz '^FuzzDecoder_NoPanic$' -fuzztime=5s -parallel=2
+```
+
+最终生产源码切片为`441ec38`及其前六个性能提交；后续版本整理不改变生产实现。
+常规验证继续CGO=0，race仅按仓库允许的开发期例外启用CGO=1。
+阶段原日志在`tmp/v102/`，全部五样本已归档到JSON且通过JSON解析及样本完整性校验。
+端点复现沿用§17命令，微基准入口为`BenchmarkRenormalize_Bits_Generic`与
+`BenchmarkGridGet_1080p_Generic`，各`-benchtime=200ms -count=5 -benchmem`；
+JSON保留采样时的原入口名，版本整理仅按基准命名规范补齐名称。
+没有重跑300帧长Oracle、全库race、NEON原生或8小时长稳；DPB retained池化、扫描表
+预验证及整段去块SIMD未实施。公共API、错误、所有权和Profile/并发支持边界不变。
+
