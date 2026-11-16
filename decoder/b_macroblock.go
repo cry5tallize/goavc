@@ -254,7 +254,11 @@ func decodeBMacroblock(fs *frameState, addr, mbx, mby, typ int, s *sliceEntry, q
 		}
 	}
 	for _, g := range groups {
-		for _, p := range g.parts {
+		parts := g.parts
+		if g.direct {
+			parts = parts[:coalesceDirectPrediction(parts, g.w, g.h)]
+		}
+		for _, p := range parts {
 			fs.mcBPartition(s, mbx, mby, p.pPartition, p.refs, p.mvs)
 		}
 	}

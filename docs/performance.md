@@ -1000,3 +1000,20 @@ JSON同时保存Generic和Auto-Generic的全部独立样本，不挑选两者较
 300帧长Oracle或NEON原生测试。ffprobe确认现场输入为High/1920×1080/yuv420p，
 32帧输入实际包含I/P/B；没有修改Profile支持状态。
 
+## 18. v1.0.2：解码热路径逐项优化
+
+2026-11-17，基线`6af0bec86e593ac320fa80b7f29098684df50c83`；HW-M2、Go1.27.4、
+Windows/amd64、CGO=0、GOAMD64=v1、GOMAXPROCS=16，codec Threads=1。
+输入沿用§17的high-idr/high-ipb两份现场语料，生成参数及SHA不变；IDR为500ms自动校准，
+I/P/B为1x，各五次。各阶段没有同时运行其他本轮长任务，外部负载未监控。
+计时边界仍为New/Send/Receive/Release/Flush/Close，组AU及像素Oracle在计时外。
+所有原始ns/op、B/op和allocs/op保存在[v1_0_2_samples.json](gates/v1_0_2_samples.json)。
+
+| 阶段（独立提交） | IDR ns/op中位 | 32帧I/P/B ns/op中位 | 说明 |
+|---|---:|---:|---|
+| 原基线 | 51,920,730 | 1,909,952,500 | 23,801／42,190 allocs/op |
+| Direct预测任务合并 | 未重测 | 1,282,505,500 | 只合并参考和双列表MV相同的像素任务，逐4×4运动元数据不变 |
+
+Direct阶段新增六格式覆盖/像素回归，保留原B宏块MV/参考/读端/零分配断言。
+本阶段通过完整CGO=0常规门禁及32帧直接AU FFmpeg逐像素Oracle；未重测IDR路径。
+

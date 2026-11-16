@@ -283,6 +283,10 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 
 ## M9
 
+v1.0.2性能迭代：Direct像素预测任务按双列表参考/MV合并，保留逐4×4运动元数据。
+六格式分区覆盖/像素、B宏块状态与完整常规门禁、32帧High直接AU FFmpeg一致通过；
+每项独立提交与五样本见performance §18，不改变Profile或并发支持状态。
+
 **v1.0.0 本地收尾完成。** 按用户要求复用现有实现、测试和工具，整理 README、既有 API/流式用法、支持边界、一致性报告和 CHANGELOG；不新增编解码算法、公共 API 或发布框架。范围调整已同步到 Roadmap v1.2，完整 Profile 状态保持原结论。
 
 本轮执行 `H264_LONG_TEST=0 bash scripts/verify.sh`，退出 0：CGO=0 的 vet、build、test、gofmt 检查、36 包依赖规则和 55 条语料校验全部通过；多数包复用 Go 测试缓存，tests/codec 实际运行 50.946 秒。实际启动 h264enc/h264dec/h264probe 完成 32×32 High/YUV420P 单帧文件流程，图片数为 1，常量 128 的输出采样与输入一致，临时文件已清理。
