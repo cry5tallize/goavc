@@ -1,7 +1,7 @@
 {
   "base_revision": "6af0bec86e593ac320fa80b7f29098684df50c83",
   "environment": {"cpu":"Ryzen 7 5700X","os":"Windows 11 10.0.26200 amd64","go":"go1.27.4","cgo":0,"goamd64":"v1","gomaxprocs":16,"codec_threads":1,"external_load_monitored":false},
-  "inputs": "performance.md 搂17鐨勫師濮媓igh-idr/high-ipb杈撳叆锛岀敓鎴愬弬鏁板拰SHA涓嶅彉锛涙瘡op涓?/32甯?,
+  "inputs": {"reference":"docs/performance.md section 17","idr_frames_per_op":1,"ipb_frames_per_op":32,"idr_sha256":"b6f836c52d00a644b4cf5906e1b726b3d0bed713d2b2fdf940cb6c99133e59a9","ipb_sha256":"e175d84a84d1ec065420cc4292650c04976393dcfea0588357b264ca4fa9583f"},
   "samples": [
     {"stage":"base-idr","case":"BenchmarkDecoder_DirectAU_Auto-16","ns_op":[51796170,50087090,53546740,55555190,51920730],"b_op":[9214312,9214299,9214299,9214302,9214313],"allocs_op":[23801,23801,23801,23801,23801]},
     {"stage":"base-ipb","case":"BenchmarkDecoder_DirectAU_Auto-16","ns_op":[1924976500,2032848400,1909952500,1791938000,1901554700],"b_op":[154452760,154452744,154452792,154452744,154452696],"allocs_op":[42191,42190,42191,42190,42189]},
