@@ -27,13 +27,41 @@ func ForceBackendForTesting(backend Backend) (restore func(), err error) {
 	return func() { once.Do(func() { kernels = previous; backendTestMu.Unlock() }) }, nil
 }
 
+// ForceLuma8EdgeBackendForTesting 仅替换亮度整边槽；调用方须串行使用并先join worker。
+func ForceLuma8EdgeBackendForTesting(backend Backend) (restore func(), err error) {
+	backendTestMu.Lock()
+	previous := kernels
+	table := previous
+	switch backend {
+	case Generic:
+		table.filterLuma8Edge, table.backends.FilterLumaEdge = filterLuma8EdgeGeneric, Generic
+	case SSE2:
+		if !nativeCPU.sse2 {
+			backendTestMu.Unlock()
+			return nil, ErrBackendUnavailable
+		}
+		sse := selectKernels(cpuFeatures{sse2: true})
+		if sse.backends.FilterLumaEdge != SSE2 {
+			backendTestMu.Unlock()
+			return nil, ErrBackendUnavailable
+		}
+		table.filterLuma8Edge, table.backends.FilterLumaEdge = sse.filterLuma8Edge, SSE2
+	default:
+		backendTestMu.Unlock()
+		return nil, ErrBackendUnavailable
+	}
+	kernels = table
+	var once sync.Once
+	return func() { once.Do(func() { kernels = previous; backendTestMu.Unlock() }) }, nil
+}
+
 func testBackendTable(backend Backend) (kernelTable, error) {
 	if backend == Generic {
 		return genericTable(), nil
 	}
 	if backend == SSE2 && nativeCPU.sse2 {
 		table := selectKernels(cpuFeatures{sse2: true})
-		if table.backends.SAD8 == SSE2 && table.backends.SAD16 == SSE2 {
+		if table.backends.SAD8 == SSE2 && table.backends.SAD16 == SSE2 && table.backends.FilterLumaEdge == SSE2 {
 			return table, nil
 		}
 	}

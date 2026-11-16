@@ -1194,3 +1194,32 @@ Remove-Item Env:GOAVC_M8_INPUT,Env:GOAVC_M8_FRAMES,Env:GOAVC_M8_YUV_SHA256
 微基准零分配检查通过。race、额外平台执行本次未运行；A00没有新增生产并发或汇编实现。
 原日志和采样编排在 `tmp/a00/`，可提交的小型数值证据在上述 JSON。
 
+## 20. A01：8-bit 亮度整边 SSE2
+
+A01 基于已提交 A00 `0c7e1ad` 实现；A00 的 before 复用 §19 与 `gates/a00_baseline_samples.json`。实现按 H.264 8.7.2 及本仓库标量滤波推导，不移植外部实现：一次 ABI 调用处理 16 条亮度线，四段分别应用 bS；4×16-bit lane 执行弱/强滤波运算，按采样步长收集/写回。条件邻点 p3/q3 仅在强滤波侧条件成立且地址有效时访问。边缘入口只在完整 p2/q2 邻域、正步长且几何为逐行垂直/水平时派发；不符合条件继续原逐段标量路径。10-bit 和其他形状未变。SSE2 内核没有保存 slice 指针；目标缓冲固定且零分配。
+
+环境：HW-M2/Ryzen 7 5700X，Windows 11 10.0.26200 amd64、Go 1.27.4、CGO=0、GOAMD64=v1、GOMAXPROCS=16、Threads=1。所有测试与性能测量采用 `goavc_simdtest` 仅替换亮度整边槽，实际后端日志为 `FilterLumaEdge=SSE2; FilterDelta=Generic`。整边基准与 A00 同固定夹具、重置成本和计时边界；五次样本均 0 B/op、0 allocs/op。下表为五次中位 ns/op：
+
+| 亮度边形状 | A00 Generic before | A01 SSE2 after | 变化 |
+|---|---:|---:|---:|
+| 垂直弱全通过 | 226.1 | 108.5 | -52.0% |
+| 垂直强全通过 | 222.2 | 151.7 | -31.7% |
+| 垂直混合 bS | 179.0 | 95.87 | -46.4% |
+| 水平弱全通过 | 214.5 | 124.6 | -41.9% |
+| 水平强全通过 | 214.0 | 156.8 | -26.7% |
+| 水平混合 bS | 189.1 | 111.1 | -41.3% |
+
+整边前后五样本原值、命令和输入细节见 [`a01_luma_edge_samples.json`](gates/a01_luma_edge_samples.json)。短端点使用 §17 同一 high-idr/high-ipb 输入与 FFmpeg 8.0 独立像素 Oracle；Auto SSE2 路由在正式采样前通过 Oracle。A00 before 与 A01 after 均为五样本：IDR 中位数从 51,627,950 降至 37,881,547 ns/op（-26.6%）；I/P/B 1x 中位数从 1,281,560,700 降至 1,060,673,900 ns/op（-17.2%）。IPB 1x 样本波动较大，报告实测中位数，不声称配对复测。端点分配保持原范围：IDR 115 allocs/op、IPB 4402 allocs/op。端点五次原始值及 B/op/allocs/op 见 JSON；A00 before 直接复用，不重跑。
+
+正确性验证：整边全缓冲标量差分与确定性随机差分、两方向/不对齐 stride、bS 0..4/混合、阈值边界、tc0=0、p3/q3 可用性、未写区和零分配通过；整边入口正常派发与不满足 q2 完整条件时精确 fallback 测试通过。相关 `internal/simd`、`internal/filter`、`decoder`、`benchmarks` 在 `goavc_simdtest` 下全包测试通过；IDR/IPB 的独立 FFmpeg 像素 Oracle 通过。整边基准用测试专用标签强制槽；端点前后测量均使用默认 Auto，运行时记录该槽实际为 SSE2。
+
+复现核心命令：
+
+```powershell
+$env:CGO_ENABLED='0'; $env:GOAMD64='v1'; $env:GOMAXPROCS='16'
+go test -tags=goavc_simdtest ./internal/simd -run TestFilterLuma8EdgeSSE2 -count=1
+go test -tags=goavc_simdtest ./internal/filter -run TestPreparedEdge_Luma8SSE2DispatchAndFallback -count=1
+go test -tags=goavc_simdtest ./internal/filter -run '^$' -bench '^BenchmarkPreparedLumaEdge_16_SSE2/8bit$' -benchtime=150ms -count=5 -benchmem
+```
+
+CGO=0 的全仓 gofmt 检查、vet、build、`go test ./... -count=1`、36 包依赖检查及 55 条语料清单校验均通过；受影响 SIMD/filter/decoder 的 purego 测试亦通过。race、386、六目标交叉编译及 300 帧主矩阵未执行，不能记为通过。Profile 支持状态未改变。

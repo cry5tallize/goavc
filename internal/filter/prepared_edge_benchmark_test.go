@@ -133,7 +133,7 @@ func benchmarkPreparedEdge(b *testing.B, chroma bool) {
 					seed := checkEdgeBenchmarkFixture(b, c, depth, along, across, lines, chroma)
 					p := PrepareEdge(c.qp, 0, 0, depth)
 					q0 := 4*edgeBenchmarkStride + 5
-					b.Logf("filter_delta=%s；计时含固定像素重置、整边分段调度与滤波，不含PrepareEdge", simd.ActiveBackends().FilterDelta)
+					b.Logf("filter_luma_edge=%s filter_delta=%s；计时含固定像素重置、整边调度与滤波，不含PrepareEdge", simd.ActiveBackends().FilterLumaEdge, simd.ActiveBackends().FilterDelta)
 					b.ReportAllocs()
 					if depth == 8 {
 						var initial, dst [29 * 24]byte

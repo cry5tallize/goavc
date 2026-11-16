@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "work_item": "A01 8-bit luma full-edge SSE2",
+  "purpose": "A01 after measurements; A00 before samples reused from a00_baseline_samples.json",
+  "baseline_commit": "0c7e1ad",
+  "measured_source": "A00 plus uncommitted A01 implementation",
+  "environment": {
+    "hardware": "HW-M2; AMD Ryzen 7 5700X",
+    "os": "Windows 11 10.0.26200 amd64",
+    "go": "go1.27.4 windows/amd64",
+    "cgo": 0,
+    "goamd64": "v1",
+    "gomaxprocs": 16,
+    "codec_threads": 1,
+    "external_load_monitored": false,
+    "ffmpeg": "8.0-full_build-www.gyan.dev"
+  },
+  "edge_benchmark": {
+    "name": "BenchmarkPreparedLumaEdge_16_SSE2",
+    "command": "CGO_ENABLED=0 GOAMD64=v1 GOMAXPROCS=16 go test -tags=goavc_simdtest ./internal/filter -run ^$ -bench BenchmarkPreparedLumaEdge_16_SSE2/8bit -benchtime=150ms -count=5 -benchmem",
+    "actual_backend": "FilterLumaEdge=SSE2; FilterDelta=Generic",
+    "timing": "fixed destination reset plus one 16-line edge; PrepareEdge excluded",
+    "allocations": "all five runs: 0 B/op, 0 allocs/op",
+    "samples_ns_op": {
+      "vertical_weak_all": [111.5, 104.7, 113.9, 104.8, 108.5],
+      "vertical_strong_all": [157.9, 143.8, 154.3, 138.3, 151.7],
+      "vertical_mixed": [102.6, 94.67, 102.6, 93.6, 95.87],
+      "horizontal_weak_all": [124.6, 121.5, 130.1, 129.4, 121.7],
+      "horizontal_strong_all": [160.4, 161.1, 156.8, 143.3, 147.1],
+      "horizontal_mixed": [103.1, 109.9, 118.8, 120.1, 111.1]
+    }
+  },
+  "endpoint_measurements": {
+    "oracle": "FFmpeg 8.0 pixel comparison passed for both high-idr and high-ipb before timing and again through final Auto SSE2 route",
+    "inputs": {
+      "high_idr_sha256": "b6f836c52d00a644b4cf5906e1b726b3d0bed713d2b2fdf940cb6c99133e59a9",
+      "high_ipb_sha256": "e175d84a84d1ec065420cc4292650c04976393dcfea0588357b264ca4fa9583f"
+    },
+    "timing": "New/Send/Receive/Release/Flush/Close; file I/O and AU assembly excluded; IDR benchtime=500ms, IPB benchtime=1x",
+    "idr_ns_op": {
+      "generic_before": [50019540, 51627950, 51945270, 51413790, 53977510],
+      "auto_sse2_after": [38522664, 37023881, 37881547, 38919406, 35876864]
+    },
+    "ipb_ns_op": {
+      "generic_before": [1070614000, 1380983600, 1281560700, 1322986600, 1164044900],
+      "auto_sse2_after": [1028854100, 1060673900, 1071454900, 1046976000, 1060769000]
+    },
+    "auto_sse2_allocations": {
+      "idr_b_op": [8077387, 8077376, 8077376, 8077378, 8077376],
+      "idr_allocs_op": [115, 115, 115, 115, 115],
+      "ipb_b_op": [152638968, 152638888, 152639000, 152638920, 152639000],
+      "ipb_allocs_op": [4403, 4402, 4402, 4402, 4402]
+    }
+  },
+  "decision": "Enable SSE2 per-slot Auto: full-edge kernels improve; Auto IDR and I/P/B endpoints are faster than A00 medians. No Profile support claim changes."
+}

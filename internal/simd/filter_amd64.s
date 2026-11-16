@@ -22,3 +22,486 @@ TEXT ·filterDeltaAVX2(SB), NOSPLIT, $0-48
 	VMOVDQU X0, (DI)
 	VZEROUPPER
 	RET
+
+// 每段四条像素线装入低四个16位通道；字节地址同时适用于水平边和垂直边。
+// 栈上仅保存整数及低64位掩码，所有槽均按8字节对齐且不重叠。
+TEXT ·filterLuma8EdgeSSE2(SB), NOSPLIT, $144-104
+	MOVQ alpha+56(FP), AX
+	CMPQ AX, $0
+	JLE edge_done
+	MOVQ AX, CX
+	SARQ $2, CX
+	ADDQ $2, CX
+	CMPQ CX, $256
+	JLE edge_close_threshold
+	MOVQ $256, CX
+edge_close_threshold:
+	MOVD CX, X15
+	PSHUFLW $0, X15, X15
+	MOVQ X15, 80(SP)
+	CMPQ AX, $256
+	JLE edge_alpha_threshold
+	MOVQ $256, AX
+edge_alpha_threshold:
+	MOVD AX, X15
+	PSHUFLW $0, X15, X15
+	MOVQ X15, 64(SP)
+	MOVQ beta+64(FP), AX
+	CMPQ AX, $0
+	JLE edge_done
+	CMPQ AX, $256
+	JLE edge_beta_threshold
+	MOVQ $256, AX
+edge_beta_threshold:
+	MOVD AX, X15
+	PSHUFLW $0, X15, X15
+	MOVQ X15, 72(SP)
+	MOVQ data_base+0(FP), R8
+	MOVQ data_len+8(FP), R9
+	MOVQ lineStep+32(FP), R11
+	MOVQ acrossStep+40(FP), SI
+	MOVQ q0+24(FP), AX
+	MOVQ AX, 32(SP)
+	MOVQ $0, 40(SP)
+
+edge_segment:
+	MOVQ 40(SP), DI
+	CMPQ DI, $4
+	JGE edge_done
+	LEAQ strengths+48(FP), AX
+	MOVBQZX (AX)(DI*1), CX
+	TESTQ CX, CX
+	JEQ edge_next
+	CMPQ CX, $4
+	JGE edge_select_strong
+	// 弱滤波按边界强度索引tc；负tc直接跳过整段。
+	LEAQ tc+72(FP), AX
+	MOVQ (AX)(CX*8), AX
+	CMPQ AX, $0
+	JLT edge_next
+	// 8位像素的修正不超过255，较大的裁剪上界等价。
+	CMPQ AX, $255
+	JLE edge_tc_ready
+	MOVQ $255, AX
+edge_tc_ready:
+	MOVQ AX, 48(SP)
+	MOVQ $0, 56(SP)
+	JMP edge_gather
+edge_select_strong:
+	// 强滤波不读取tc数组。
+	MOVQ $1, 56(SP)
+
+edge_gather:
+	MOVQ 32(SP), R10
+	LEAQ (R11)(R11*2), AX
+	ADDQ AX, R10
+	PXOR X0, X0
+	PXOR X1, X1
+	PXOR X2, X2
+	PXOR X3, X3
+	PXOR X4, X4
+	PXOR X5, X5
+	MOVQ $4, DI
+edge_gather_lane:
+	// 依次装入线3、2、1、0；每次按字节移位而不是移动字内位。
+	PSLLDQ $2, X0
+	PSLLDQ $2, X1
+	PSLLDQ $2, X2
+	PSLLDQ $2, X3
+	PSLLDQ $2, X4
+	PSLLDQ $2, X5
+	MOVQ R10, AX
+	SUBQ SI, AX
+	MOVBLZX (R8)(AX*1), DX
+	PINSRW $0, DX, X0
+	MOVQ SI, AX
+	SHLQ $1, AX
+	MOVQ R10, CX
+	SUBQ AX, CX
+	MOVBLZX (R8)(CX*1), DX
+	PINSRW $0, DX, X1
+	LEAQ (SI)(SI*2), AX
+	MOVQ R10, CX
+	SUBQ AX, CX
+	MOVBLZX (R8)(CX*1), DX
+	PINSRW $0, DX, X2
+	MOVBLZX (R8)(R10*1), DX
+	PINSRW $0, DX, X3
+	MOVQ R10, CX
+	ADDQ SI, CX
+	MOVBLZX (R8)(CX*1), DX
+	PINSRW $0, DX, X4
+	LEAQ (SI)(SI*1), AX
+	MOVQ R10, CX
+	ADDQ AX, CX
+	MOVBLZX (R8)(CX*1), DX
+	PINSRW $0, DX, X5
+	SUBQ R11, R10
+	DECQ DI
+	JNE edge_gather_lane
+
+	// X0..X5分别是原始p0、p1、p2、q0、q1、q2。
+	// 外层三个严格不等式共同决定每条线是否允许写回。
+	MOVOU X0, X12
+	PSUBW X3, X12
+	PXOR X13, X13
+	PCMPGTW X12, X13
+	PXOR X13, X12
+	PSUBW X13, X12
+	MOVQ 64(SP), X13
+	PCMPGTW X12, X13
+	MOVOU X1, X12
+	PSUBW X0, X12
+	PXOR X14, X14
+	PCMPGTW X12, X14
+	PXOR X14, X12
+	PSUBW X14, X12
+	MOVQ 72(SP), X14
+	PCMPGTW X12, X14
+	PAND X14, X13
+	MOVOU X4, X12
+	PSUBW X3, X12
+	PXOR X14, X14
+	PCMPGTW X12, X14
+	PXOR X14, X12
+	PSUBW X14, X12
+	MOVQ 72(SP), X14
+	PCMPGTW X12, X14
+	PAND X14, X13
+	MOVQ X13, 96(SP)
+
+	// 两侧接近条件暂不包含强滤波的小边界条件。
+	MOVOU X2, X12
+	PSUBW X0, X12
+	PXOR X14, X14
+	PCMPGTW X12, X14
+	PXOR X14, X12
+	PSUBW X14, X12
+	MOVQ 72(SP), X14
+	PCMPGTW X12, X14
+	PAND X13, X14
+	MOVQ X14, 104(SP)
+	MOVOU X5, X12
+	PSUBW X3, X12
+	PXOR X14, X14
+	PCMPGTW X12, X14
+	PXOR X14, X12
+	PSUBW X14, X12
+	MOVQ 72(SP), X14
+	PCMPGTW X12, X14
+	PAND X13, X14
+	MOVQ X14, 112(SP)
+	CMPQ 56(SP), $0
+	JNE edge_strong
+
+edge_weak:
+	// 先从原始像素计算中心修正与两侧候选，避免邻点写回污染快照。
+	MOVOU X0, X11
+	PADDW X3, X11
+	MOVQ $1, DX
+	MOVD DX, X12
+	PSHUFLW $0, X12, X12
+	PADDW X12, X11
+	PSRAW $1, X11
+	MOVOU X2, X8
+	PADDW X11, X8
+	PSRAW $1, X8
+	PSUBW X1, X8
+	MOVOU X5, X9
+	PADDW X11, X9
+	PSRAW $1, X9
+	PSUBW X4, X9
+	MOVOU X3, X6
+	PSUBW X0, X6
+	PSLLW $2, X6
+	PADDW X1, X6
+	PSUBW X4, X6
+	MOVQ $4, DX
+	MOVD DX, X12
+	PSHUFLW $0, X12, X12
+	PADDW X12, X6
+	PSRAW $3, X6
+
+	MOVQ 48(SP), DX
+	MOVD DX, X11
+	PSHUFLW $0, X11, X11
+	PXOR X12, X12
+	PSUBW X11, X12
+	PMAXSW X12, X8
+	PMINSW X11, X8
+	PMAXSW X12, X9
+	PMINSW X11, X9
+	MOVQ 104(SP), X13
+	MOVQ 112(SP), X14
+	PAND X13, X8
+	PAND X14, X9
+	PADDW X8, X1
+	PADDW X9, X4
+	// 有效tc包含接近条件，即使原始tc为零仍应增加。
+	PSRLW $15, X13
+	PSRLW $15, X14
+	PADDW X13, X11
+	PADDW X14, X11
+	PXOR X12, X12
+	PSUBW X11, X12
+	PMAXSW X12, X6
+	PMINSW X11, X6
+	MOVQ 96(SP), X13
+	PAND X13, X6
+	PADDW X6, X0
+	PSUBW X6, X3
+	// 有符号16位结果饱和到字节，等价于标量像素裁剪。
+	PACKUSWB X0, X0
+	PACKUSWB X1, X1
+	PACKUSWB X3, X3
+	PACKUSWB X4, X4
+	MOVQ 32(SP), R10
+	XORQ DI, DI
+weak_store:
+	MOVW 96(SP)(DI*2), CX
+	TESTW CX, CX
+	JEQ weak_store_next
+	MOVQ R10, AX
+	SUBQ SI, AX
+	MOVD X0, DX
+	MOVB DL, (R8)(AX*1)
+	MOVD X3, DX
+	MOVB DL, (R8)(R10*1)
+	CMPQ 48(SP), $0
+	JEQ weak_store_next
+	MOVW 104(SP)(DI*2), CX
+	TESTW CX, CX
+	JEQ weak_store_q1
+	LEAQ (SI)(SI*1), AX
+	MOVQ R10, CX
+	SUBQ AX, CX
+	MOVD X1, DX
+	MOVB DL, (R8)(CX*1)
+weak_store_q1:
+	MOVW 112(SP)(DI*2), CX
+	TESTW CX, CX
+	JEQ weak_store_next
+	MOVQ R10, AX
+	ADDQ SI, AX
+	MOVD X4, DX
+	MOVB DL, (R8)(AX*1)
+weak_store_next:
+	ADDQ R11, R10
+	PSRLDQ $1, X0
+	PSRLDQ $1, X1
+	PSRLDQ $1, X3
+	PSRLDQ $1, X4
+	INCQ DI
+	CMPQ DI, $4
+	JLT weak_store
+	JMP edge_next
+
+edge_strong:
+	// 强滤波两侧掩码额外要求小边界；原始六个像素向量保持不变。
+	MOVOU X0, X12
+	PSUBW X3, X12
+	PXOR X13, X13
+	PCMPGTW X12, X13
+	PXOR X13, X12
+	PSUBW X13, X12
+	MOVQ 80(SP), X13
+	PCMPGTW X12, X13
+	MOVQ 104(SP), X14
+	PAND X13, X14
+	MOVQ X14, 104(SP)
+	MOVQ 112(SP), X14
+	PAND X13, X14
+	MOVQ X14, 112(SP)
+
+	// 仅在标量条件允许且对应邻点存在时读取p3、q3。
+	MOVQ $0, 120(SP)
+	MOVQ $0, 128(SP)
+	PXOR X6, X6
+	PXOR X7, X7
+	MOVQ 32(SP), R10
+	LEAQ (R11)(R11*2), AX
+	ADDQ AX, R10
+	MOVQ $4, DI
+strong_gather_extra:
+	PSLLDQ $2, X6
+	PSLLDQ $2, X7
+	DECQ DI
+	MOVW 104(SP)(DI*2), CX
+	TESTW CX, CX
+	JEQ strong_no_p3
+	MOVQ SI, AX
+	SHLQ $2, AX
+	MOVQ R10, CX
+	SUBQ AX, CX
+	CMPQ CX, $0
+	JLT strong_no_p3
+	MOVBLZX (R8)(CX*1), DX
+	PINSRW $0, DX, X6
+	MOVW $0xffff, 120(SP)(DI*2)
+strong_no_p3:
+	MOVW 112(SP)(DI*2), CX
+	TESTW CX, CX
+	JEQ strong_no_q3
+	LEAQ (SI)(SI*2), AX
+	MOVQ R10, CX
+	ADDQ AX, CX
+	CMPQ CX, R9
+	JGE strong_no_q3
+	MOVBLZX (R8)(CX*1), DX
+	PINSRW $0, DX, X7
+	MOVW $0xffff, 128(SP)(DI*2)
+strong_no_q3:
+	SUBQ R11, R10
+	TESTQ DI, DI
+	JNE strong_gather_extra
+
+	MOVQ $2, DX
+	MOVD DX, X14
+	PSHUFLW $0, X14, X14
+	// 两侧短候选分别为(2*p1+p0+q1+2)/4及其镜像。
+	MOVOU X1, X8
+	PSLLW $1, X8
+	PADDW X0, X8
+	PADDW X4, X8
+	PADDW X14, X8
+	PSRAW $2, X8
+	MOVOU X4, X9
+	PSLLW $1, X9
+	PADDW X3, X9
+	PADDW X1, X9
+	PADDW X14, X9
+	PSRAW $2, X9
+	// 两侧长候选的全部输入仍来自原始像素。
+	MOVOU X1, X10
+	PADDW X0, X10
+	PADDW X3, X10
+	PSLLW $1, X10
+	PADDW X2, X10
+	PADDW X4, X10
+	PADDW X14, X10
+	PADDW X14, X10
+	PSRAW $3, X10
+	MOVOU X4, X11
+	PADDW X3, X11
+	PADDW X0, X11
+	PSLLW $1, X11
+	PADDW X5, X11
+	PADDW X1, X11
+	PADDW X14, X11
+	PADDW X14, X11
+	PSRAW $3, X11
+	MOVQ 104(SP), X13
+	PAND X13, X10
+	// Go汇编PANDN的结果是非目标与源，而不是非源与目标。
+	PANDN X8, X13
+	POR X13, X10
+	MOVQ 112(SP), X13
+	PAND X13, X11
+	PANDN X9, X13
+	POR X13, X11
+
+	// p1、q1候选只在对应的强滤波掩码成立时写回。
+	MOVOU X2, X12
+	PADDW X1, X12
+	PADDW X0, X12
+	PADDW X3, X12
+	PADDW X14, X12
+	PSRAW $2, X12
+	MOVOU X5, X15
+	PADDW X4, X15
+	PADDW X3, X15
+	PADDW X0, X15
+	PADDW X14, X15
+	PSRAW $2, X15
+
+	// p2、q2候选还要求p3、q3存在；中心和邻点仍使用原始值。
+	MOVOU X6, X8
+	PSLLW $1, X8
+	MOVOU X2, X13
+	PSLLW $1, X13
+	PADDW X2, X13
+	PADDW X13, X8
+	PADDW X1, X8
+	PADDW X0, X8
+	PADDW X3, X8
+	PADDW X14, X8
+	PADDW X14, X8
+	PSRAW $3, X8
+	MOVOU X7, X9
+	PSLLW $1, X9
+	MOVOU X5, X13
+	PSLLW $1, X13
+	PADDW X5, X13
+	PADDW X13, X9
+	PADDW X4, X9
+	PADDW X3, X9
+	PADDW X0, X9
+	PADDW X14, X9
+	PADDW X14, X9
+	PSRAW $3, X9
+
+	MOVQ 32(SP), R10
+	XORQ DI, DI
+strong_store:
+	MOVW 96(SP)(DI*2), CX
+	TESTW CX, CX
+	JEQ strong_store_next
+	MOVQ R10, AX
+	SUBQ SI, AX
+	PEXTRW $0, X10, DX
+	MOVB DL, (R8)(AX*1)
+	PEXTRW $0, X11, DX
+	MOVB DL, (R8)(R10*1)
+	MOVW 104(SP)(DI*2), CX
+	TESTW CX, CX
+	JEQ strong_store_q1
+	LEAQ (SI)(SI*1), AX
+	MOVQ R10, CX
+	SUBQ AX, CX
+	PEXTRW $0, X12, DX
+	MOVB DL, (R8)(CX*1)
+strong_store_q1:
+	MOVW 112(SP)(DI*2), CX
+	TESTW CX, CX
+	JEQ strong_store_p2
+	MOVQ R10, AX
+	ADDQ SI, AX
+	PEXTRW $0, X15, DX
+	MOVB DL, (R8)(AX*1)
+strong_store_p2:
+	MOVW 120(SP)(DI*2), CX
+	TESTW CX, CX
+	JEQ strong_store_q2
+	LEAQ (SI)(SI*2), AX
+	MOVQ R10, CX
+	SUBQ AX, CX
+	PEXTRW $0, X8, DX
+	MOVB DL, (R8)(CX*1)
+strong_store_q2:
+	MOVW 128(SP)(DI*2), CX
+	TESTW CX, CX
+	JEQ strong_store_next
+	LEAQ (SI)(SI*1), AX
+	ADDQ R10, AX
+	PEXTRW $0, X9, DX
+	MOVB DL, (R8)(AX*1)
+strong_store_next:
+	ADDQ R11, R10
+	PSRLDQ $2, X10
+	PSRLDQ $2, X11
+	PSRLDQ $2, X12
+	PSRLDQ $2, X15
+	PSRLDQ $2, X8
+	PSRLDQ $2, X9
+	INCQ DI
+	CMPQ DI, $4
+	JLT strong_store
+
+edge_next:
+	MOVQ 32(SP), AX
+	LEAQ (AX)(R11*4), AX
+	MOVQ AX, 32(SP)
+	INCQ 40(SP)
+	JMP edge_segment
+edge_done:
+	RET

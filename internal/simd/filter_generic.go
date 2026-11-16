@@ -5,6 +5,24 @@ func FilterLuma8(data []byte, q0, lineStep, acrossStep, bS, alpha, beta, tc, lin
 	filterLuma(data, q0, lineStep, acrossStep, bS, alpha, beta, tc, lines, bitDepth, kernels.filterDelta)
 }
 
+// FilterLuma8Edge 执行整条16线亮度边；调用方负责完整邻域和访问范围验证。
+func FilterLuma8Edge(data []byte, q0, lineStep, acrossStep int, strengths [4]uint8, alpha, beta int, tc [4]int) {
+	kernels.filterLuma8Edge(data, q0, lineStep, acrossStep, strengths, alpha, beta, tc)
+}
+
+func filterLuma8EdgeGeneric(data []byte, q0, lineStep, acrossStep int, strengths [4]uint8, alpha, beta int, tc [4]int) {
+	for seg, bs := range strengths {
+		if bs == 0 {
+			continue
+		}
+		tc0 := 0
+		if bs < 4 {
+			tc0 = tc[bs]
+		}
+		filterLuma(data, q0+seg*4*lineStep, lineStep, acrossStep, int(bs), alpha, beta, tc0, 4, 8, nil)
+	}
+}
+
 // FilterLuma16 使用调用者准备的阈值。
 func FilterLuma16(data []uint16, q0, lineStep, acrossStep, bS, alpha, beta, tc, lines, bitDepth int) {
 	filterLuma(data, q0, lineStep, acrossStep, bS, alpha, beta, tc, lines, bitDepth, kernels.filterDelta)

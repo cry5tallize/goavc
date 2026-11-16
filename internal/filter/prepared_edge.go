@@ -22,9 +22,13 @@ func PrepareEdge(qp, alphaDiv2, betaDiv2, bitDepth int) EdgeParameters {
 		tc: [4]int{0, int(tc0Table[a][1]) * scale, int(tc0Table[a][2]) * scale, int(tc0Table[a][3]) * scale}, bitDepth: bitDepth}
 }
 
-// Luma8 按原顺序处理四段，每段四条像素线；strengths由相邻块元数据推导。
+// Luma8 使用整边内核处理满足完整邻域条件的16线边，其余保留逐段标量路径。
 func (e EdgeParameters) Luma8(data []byte, q0, lineStep, acrossStep int, strengths [4]uint8) {
-	if e.alpha == 0 || e.beta == 0 {
+	if e.alpha == 0 || e.beta == 0 || strengths == [4]uint8{} {
+		return
+	}
+	if e.bitDepth == 8 && simd.ActiveBackends().FilterLumaEdge == simd.SSE2 && luma8EdgeHasFullCore(data, q0, lineStep, acrossStep) {
+		simd.FilterLuma8Edge(data, q0, lineStep, acrossStep, strengths, e.alpha, e.beta, e.tc)
 		return
 	}
 	for seg, bs := range strengths {
@@ -37,6 +41,21 @@ func (e EdgeParameters) Luma8(data []byte, q0, lineStep, acrossStep int, strengt
 		}
 		simd.FilterLuma8(data, q0+seg*4*lineStep, lineStep, acrossStep, int(bs), e.alpha, e.beta, tc, 4, e.bitDepth)
 	}
+}
+
+// p2/q2必须覆盖整边；汇编核对p3/q3逐线作条件访问。
+func luma8EdgeHasFullCore(data []byte, q0, lineStep, acrossStep int) bool {
+	if q0 < 0 || q0 >= len(data) || lineStep <= 0 || acrossStep <= 0 {
+		return false
+	}
+	if !(acrossStep == 1 && lineStep >= 16 || lineStep == 1 && acrossStep >= 16) {
+		return false
+	}
+	if lineStep > (len(data)-1-q0)/15 || acrossStep > q0/3 {
+		return false
+	}
+	lastQ0 := q0 + 15*lineStep
+	return acrossStep <= (len(data)-1-lastQ0)/2
 }
 
 // Luma16 与Luma8相同，步长以uint16采样计。
