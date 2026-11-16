@@ -1074,3 +1074,123 @@ JSON保留采样时的原入口名，版本整理仅按基准命名规范补齐�
 没有重跑300帧长Oracle、全库race、NEON原生或8小时长稳；DPB retained池化、扫描表
 预验证及整段去块SIMD未实施。公共API、错误、所有权和Profile/并发支持边界不变。
 
+## 19. A00：整边与加权块的自主优化基线
+
+2026-11-17，完成[自主优化计划](decoder_performance_plan.md)的 A00。生产实现保持
+`v1.0.2`（`0e29cc366e659a495de3ec9f0c546ef8f7f87b64`）；构建来源为文档提交
+`1b146473bcff95199efb4cad8735f7a738ff540f` 加本次两份新增 `_benchmark_test.go`。
+采样时工作树为 dirty，具体来源已登记；已有 `scripts/verify_m8.ps1` 的 BOM 改动未参与执行或提交。
+本节提供 A01 之后的 before，生产算法、分派和功能支持范围均未修改。
+
+环境：HW-M2、Ryzen 7 5700X、Windows 11 10.0.26200 amd64、Go 1.27.4、CGO=0、
+GOAMD64=v1、GOMAXPROCS=16、codec Threads=1。测量时本任务没有并跑构建、测试、
+Oracle 或其他长测；外部负载未监控。每格五个样本，报告中位数。
+完整 122 组、610 个正式样本及命令、输入身份、分配数据见
+[a00_baseline_samples.json](gates/a00_baseline_samples.json)；1x 烟测不混入正式样本。
+
+### 19.1 新基准测完整边和完整块
+
+新增入口及覆盖：
+
+- `internal/filter/BenchmarkPreparedLumaEdge_16_Auto`：整条亮度边，四段共 16 条像素线。
+- `internal/filter/BenchmarkPreparedChromaEdge_8_Auto`：420 色度整边，四段共 8 条像素线。
+- 两入口共 56 格：8/10-bit × 垂直/水平 × 弱全通过、强全通过、混合 bS、全拒绝、
+  部分像素线通过、零 bS、零阈值。stride=29；每 op 从固定像素重置，再执行完整边，
+  包含重置成本和真实分段调用，不含 PrepareEdge。每条线的触发状态在计时外核对。
+- `internal/prediction/BenchmarkWeightBlocks_4To16_Auto`：共 56 格，8/10-bit ×
+  4×4/8×8/16×16/7×5 × 单向恒等、单向加权、原地单向加权、原地恒等、双向均值、
+  隐式权重和含负权重的显式权重。源 stride=19，目标为23（原地为19），起点偏移1，
+  含零/最大采样和独立10-bit低位；每 op 重置固定目标，避免原地重复加权最终饱和。
+- 整边与旧逐段入口比较，加权与原逐样本公式比较，均核对完整缓冲和未写区；
+  `TestPreparedEdgeBenchmark_Fixtures`、`TestWeightBlockBenchmark_Fixtures` 可单独运行。
+
+112 格均实测 **0 B/op、0 allocs/op**。本次实际滤波候选、加权与均值均为 Generic；
+端点 Auto 保持 v1.0.2 的其他逐槽选择。没有把既有微型候选汇编标成新的整边 SIMD。
+
+代表性 8-bit 中位数如下，单位 ns/op；完整其他位深/模式/尺寸在 JSON 中。
+
+| 整边入口 | 垂直 | 水平 |
+|---|---:|---:|
+| Luma，弱全通过 | 226.1 | 214.5 |
+| Luma，强全通过 | 222.2 | 214.0 |
+| Chroma420，弱全通过 | 73.19 | 79.07 |
+| Chroma420，强全通过 | 86.66 | 81.40 |
+
+| 加权块入口，8-bit 16×16 | ns/op |
+|---|---:|
+| 单向恒等 | 393.1 |
+| 原地单向加权 | 338.8 |
+| 双向均值 | 185.7 |
+| 双向隐式权重 | 392.4 |
+| 双向显式负权重 | 418.9 |
+
+上述数字包含各自固定缓冲重置，不能与 §16 的裸算术或 §17 的 Span4 直接作倍率比较。
+
+### 19.2 两份直接 AU 短端点
+
+沿用 §17/18 的同一份 high-idr/high-ipb 输入及参数，五次中位数：
+
+| 输入 | ns/op | 帧/op | FPS | B/op | allocs/op |
+|---|---:|---:|---:|---:|---:|
+| High IDR，Auto | 45,738,950 | 1 | 21.86 | 8,077,377 | 115 |
+| High I/P/B，Auto | 1,048,345,500 | 32 | 30.52 | 152,638,872 | 4,403 |
+
+计时仍含 New/Send/Receive/Release/Flush/Close，文件读取/组 AU 不计时。
+IDR 使用500ms自动校准、I/P/B 为1x；独立 FFmpeg 8.0 逐像素比较在正式计时前各执行一次，均通过。
+
+### 19.3 原 300 帧主矩阵基线
+
+复用 §16.2 的四份固定输入，文件身份和独立 FFmpeg 原生 yuv420p 输出 SHA 均已登记在 JSON。
+每份输入由 ffprobe 重新确认 1920×1080、yuv420p、300 帧及实际 Profile。
+每次 benchmark op 校验300 AU/300显示帧和既有独立 FFmpeg 有效像素 SHA；40个正式 op 全部通过。
+本轮复用已有独立像素参考，没有重新生成四份码流或300帧参考YUV。
+
+输入生成配置与短输入分开：FFmpeg 8.0/libx264 veryfast、testsrc2 1920×1080@30、
+300帧、QP26、keyint/min-keyint60、scenecut0、ref2、编码threads1、slice1/4。
+Baseline 为 B0/CAVLC/weightp0/8×8关闭；High 为 B2/CABAC/b-adapt0/b-pyramid none/
+weightp1/8×8开启。完整生成入口沿用现有 M8 解码性能配方，不调用其编码长测阶段。
+
+下表每 op 为300帧，FPS由五次 ns/op 中位数计算；Generic 使用本次重新构建的 purego 二进制。
+计时包含实例创建、完整消费和关闭，像素核对、文件I/O、组AU在计时外，是cold端点。
+
+| 场景 | Generic ns/op | Generic FPS | Auto ns/op | Auto FPS |
+|---|---:|---:|---:|---:|
+| 1080p Baseline/CAVLC，1 slice | 4,588,866,800 | 65.38 | 4,714,743,900 | 63.63 |
+| 1080p Baseline/CAVLC，4 slice | 4,495,631,600 | 66.73 | 4,585,445,700 | 65.42 |
+| 1080p High/CABAC+B，1 slice | 10,282,696,000 | 29.18 | 10,402,203,600 | 28.84 |
+| 1080p High/CABAC+B，4 slice | 10,121,360,200 | 29.64 | 9,987,275,300 | 30.04 |
+
+High 单 slice Auto 仍低于30 FPS，四 slice 位于30 FPS附近；这是固定合成300帧序列的当前基线，
+不扩大实时承诺。Generic/Auto 的小幅差异保留原值，不据此重选分派或宣称新优化收益。
+
+### 19.4 复现与检查
+
+以下命令直接使用已有入口；本地正式采样先编译二进制再串行执行，等价参数归档在 JSON。
+
+```powershell
+$env:CGO_ENABLED='0'; $env:GOAMD64='v1'; $env:GOMAXPROCS='16'
+go test ./internal/filter ./internal/prediction -run 'Test(PreparedEdgeBenchmark|WeightBlockBenchmark)_Fixtures' -count=1
+go test ./internal/filter -run '^$' -bench '^BenchmarkPrepared(Luma|Chroma)Edge_(16|8)_Auto$' -benchtime=150ms -count=5 -benchmem
+go test ./internal/prediction -run '^$' -bench '^BenchmarkWeightBlocks_4To16_Auto$' -benchtime=150ms -count=5 -benchmem
+```
+
+短端点复现沿用 §17 的两个直接 AU 命令。主矩阵以一格为例，四份输入均使用相同调用，
+分别设置 JSON 中已登记的路径、300帧和独立输出 SHA：
+
+```powershell
+$dir='tmp/m8-closeout/endpoints-au'
+$name='decode-1080p-high-s4'
+$meta=Get-Content -Raw "$dir/$name-input.json" | ConvertFrom-Json
+$env:GOAVC_M8_INPUT=(Resolve-Path "$dir/$name.264").Path
+$env:GOAVC_M8_FRAMES='300'
+$env:GOAVC_M8_YUV_SHA256=$meta.ExpectedYUVSHA256
+go test -tags purego ./benchmarks -run '^$' -bench '^BenchmarkDecoder_Sequence$' -benchtime=1x -count=5 -benchmem -timeout=30m
+go test ./benchmarks -run '^$' -bench '^BenchmarkDecoder_Sequence$' -benchtime=1x -count=5 -benchmem -timeout=30m
+Remove-Item Env:GOAVC_M8_INPUT,Env:GOAVC_M8_FRAMES,Env:GOAVC_M8_YUV_SHA256
+```
+
+本次通过 CGO=0 的全仓 gofmt 检查、vet、build、`go test ./...`、36包依赖检查和55条语料清单校验；
+未受影响包复用有效缓存。新增夹具 default/purego 执行通过；JSON解析、122组五样本完整性和
+微基准零分配检查通过。race、额外平台执行本次未运行；A00没有新增生产并发或汇编实现。
+原日志和采样编排在 `tmp/a00/`，可提交的小型数值证据在上述 JSON。
+
