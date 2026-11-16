@@ -172,6 +172,7 @@
 | SIMD 4/8×8正逆变换与DC | Partial | K10接入SSE2/AVX2/NEON，保留原8×8整数投影、int64逆变换、亮度/420/422 DC及晚期失败语义。x86显式后端解析值/原地/边界/0分配通过；修复SSE2的420 DC系数顺序错误。amd64默认按实测仅Forward4优选SSE2，其余变换槽保留Generic；NEON仅编译验收 |
 | SIMD量化/反量化 | Partial | K11为4/8×8与DC提供精确32×32→64乘积；除法/死区/符号/溢出提交由共享Go保持，宽域回退int64，不使用近似倒数。指针块接口保留首错前缀及原地未写后缀；x86显式后端验证通过，amd64默认按实测选择直接Generic；NEON原生未验 |
 | SIMD去块候选 | Partial | K12仅向量化同一条line的强弱候选加法；阈值、条件访问、逐线/跨边顺序与帧场几何不变。x86方向/Span及最小邻域保护页通过；实测SIMD较慢，amd64默认保留Generic，不宣称整条边全SIMD |
+| 8-bit 420色度整边SSE2 | Partial | A02：逐行解码及编码本地重建共享八线强弱滤波，水平/垂直均接入独立FilterChromaEdge槽。标量差分、解析值、新内核保护页和栈缓冲零分配通过；独立FFmpeg像素一致，前后五样本见[performance.md §21](performance.md)。10-bit、422/444、场/MBAFF不进入新整边槽，继续原路径；不扩大Profile或NEON原生支持 |
 | 去块逐边参数复用 | Partial | decoder普通边复用四段bS及每分量QP/阈值，保留旧单段入口和混合MBAFF路径；六格式调度/准备边回归及1080p High IDR、32帧I/P/B直接AU的FFmpeg像素一致，性能见[performance.md §17](performance.md)；不扩展Profile或并行支持 |
 | 去块Generic直接算术 | Partial | 默认/纯Go路径移除逐像素线候选加法的小数组间接调用，显式SIMD仍走真实后端；双位深/方向/Span等价与最终High直接AU FFmpeg像素一致，耗时见[performance.md §17.2](performance.md)；CABAC与重建链未改 |
 | SIMD残差加减 | Partial | K13接入picture重建与真实encoder减法，保持int32极端Clip1、10-bit低两位、各自stride及未写区域；SSE2/AVX2/NEON为固定值向量算术，尾部与gather/scatter由Go完成。x86保护页/局部0分配通过，amd64默认直接标量避免gather开销；NEON原生未验 |

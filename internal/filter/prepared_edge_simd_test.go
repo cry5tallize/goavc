@@ -3,6 +3,7 @@
 package filter
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/cry5tallize/goavc/internal/simd"
@@ -11,6 +12,9 @@ import (
 // BenchmarkPreparedLumaEdge_16_SSE2 复用A00同一整边夹具，只强制亮度整边槽。
 func BenchmarkPreparedLumaEdge_16_SSE2(b *testing.B) {
 	restore, err := simd.ForceLuma8EdgeBackendForTesting(simd.SSE2)
+	if errors.Is(err, simd.ErrBackendUnavailable) {
+		b.Skip("当前构建或CPU没有亮度整边SSE2，未计入该后端性能证据")
+	}
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -20,6 +24,9 @@ func BenchmarkPreparedLumaEdge_16_SSE2(b *testing.B) {
 
 func TestPreparedEdge_Luma8SSE2DispatchAndFallback(t *testing.T) {
 	restore, err := simd.ForceLuma8EdgeBackendForTesting(simd.SSE2)
+	if errors.Is(err, simd.ErrBackendUnavailable) {
+		t.Skip("当前构建或CPU没有亮度整边SSE2，未计入该后端通过")
+	}
 	if err != nil {
 		t.Fatal(err)
 	}

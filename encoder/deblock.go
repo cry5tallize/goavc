@@ -50,6 +50,24 @@ func (s *frameState) deblock() {
 						qp = (qp + otherQP + 1) >> 1
 					}
 					p := &s.pic.Planes[comp]
+					if !lumaLike && subW == 2 && subH == 2 && p.BitDepth == 8 && !s.field {
+						var strengths [4]uint8
+						for seg := range 4 {
+							qx, qy := mx*4+edge/4, my*4+seg
+							px, py := qx-1, qy
+							if dir == 1 {
+								qx, qy = mx*4+seg, my*4+edge/4
+								px, py = qx, qy-1
+							}
+							strengths[seg] = uint8(s.strength(px, py, qx, qy, edge == 0))
+						}
+						x, y, along, across := (mx*16+edge)/2, my*8, p.Stride, 1
+						if dir == 1 {
+							x, y, along, across = mx*8, (my*16+edge)/2, 1, p.Stride
+						}
+						filter.PrepareEdge(qp, 0, 0, 8).Chroma4208(p.Data, p.Index(x, y), along, across, strengths)
+						continue
+					}
 					for seg := range 4 {
 						qx, qy := mx*4+edge/4, my*4+seg
 						if dir == 1 {

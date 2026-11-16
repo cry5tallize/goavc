@@ -1,0 +1,4482 @@
+{
+  "schema_version": 1,
+  "work_item": "A02: independently implemented 8-bit 420 chroma whole-edge SSE2",
+  "measured_date": "2026-11-17",
+  "baseline_revision": "a0f3c0c14834f0dbfe2703fdfaded21fa54eab43",
+  "source": {
+    "before": "A01 plus a Chroma4208 forwarding-only stub and benchmark calls to that stub; no production algorithm or routing change",
+    "before_extra_test_source": "An unused temporary BenchmarkDeblockFrame test was compiled, then removed; formal full-frame comparison uses the existing BenchmarkDeblock_1080p_Auto",
+    "final": "A01 plus this A02 implementation, integration and tests; source dirty at measurement, committed together with this evidence",
+    "preserved_unrelated_changes": [
+      "docs/performance.md pre-existing CRLF-to-LF conversion",
+      "scripts/verify_m8.ps1 BOM"
+    ],
+    "pilot": "Initial A02 before asmdecl vet repair. Final accesses the bS array through its address and reuses the strong mask; same arithmetic, fewer instructions. Pilot samples are retained but excluded from final adoption claims."
+  },
+  "environment": {
+    "hardware": "HW-M2",
+    "cpu": "AMD Ryzen 7 5700X",
+    "os": "Windows 11 10.0.26200 amd64",
+    "go": "go1.27.4 windows/amd64",
+    "cgo": 0,
+    "goamd64": "v1",
+    "gomaxprocs": 16,
+    "codec_threads": 1,
+    "ffmpeg": "8.0-full_build-www.gyan.dev",
+    "external_load_monitored": false,
+    "own_other_jobs_during_timing": 0
+  },
+  "dispatch": {
+    "before": "FilterLumaEdge=SSE2, FilterDelta=Generic; chroma uses old scalar segments",
+    "final": "FilterLumaEdge=SSE2, FilterChromaEdge=SSE2, FilterDelta=Generic; only progressive 8-bit 420 uses the new chroma slot"
+  },
+  "timing": {
+    "chroma": "A00 fixed 696-byte destination reset plus one eight-line prepared edge; stride29, q0=121, preparation/checks excluded; 8/10-bit x two directions x seven scenarios",
+    "deblock": "Existing BenchmarkDeblock_1080p_Auto intra=true/false: fixed three-plane reset plus real deblockPlane, metadata/QP/bS and all Y/Cb/Cr edges; coded size1920x1088, no decode/IO",
+    "endpoints": "New/Send/Receive/Release/Flush/Close; input file IO and AU assembly excluded. IDR=one frame/op, 500ms; IPB=32 frames/op,1x. Initial before/final have count5 in one process.",
+    "paired_endpoints": "Five interleaved pairs alternating execution order, count=1 per process. IDR retains500ms; IPB retains1x and includes cold process-pool effects. Full-frame retains300ms with two cases. Compare the paired series to each other, not to count5 batch medians.",
+    "raw_sample_fields": "ns_op, b_op, allocs_op and iteration counts; frames_s is the benchmark rounded raw metric when present"
+  },
+  "inputs": {
+    "source": "docs/performance.md sections17/18; same files and generation settings, not regenerated",
+    "idr": {
+      "path": "tmp/deblock-perf/high-idr.264",
+      "sha256": "b6f836c52d00a644b4cf5906e1b726b3d0bed713d2b2fdf940cb6c99133e59a9",
+      "frames_per_op": 1
+    },
+    "ipb": {
+      "path": "tmp/deblock-perf/high-ipb.264",
+      "sha256": "e175d84a84d1ec065420cc4292650c04976393dcfea0588357b264ca4fa9583f",
+      "frames_per_op": 32
+    }
+  },
+  "commands": {
+    "compile": "CGO_ENABLED=0 go test -c -o <executable> ./internal/filter | ./decoder | ./benchmarks (one package per invocation, completed before timing)",
+    "chroma": "<filter-executable> -test.run=^$ -test.bench=^BenchmarkPreparedChromaEdge_8_Auto$ -test.benchtime=150ms -test.count=5 -test.benchmem",
+    "deblock": "<decoder-executable> -test.run=^$ -test.bench=^BenchmarkDeblock_1080p_Auto$ -test.benchtime=300ms -test.count=5 -test.benchmem",
+    "idr": "GOAVC_BENCH_INPUT=<idr path> <benchmarks-executable> -test.run=^$ -test.bench=^BenchmarkDecoder_DirectAU_Auto$ -test.benchtime=500ms -test.count=5 -test.benchmem",
+    "ipb": "GOAVC_BENCH_INPUT=<ipb path> <benchmarks-executable> -test.run=^$ -test.bench=^BenchmarkDecoder_DirectAU_Auto$ -test.benchtime=1x -test.count=5 -test.benchmem",
+    "paired": "Same commands, count=1; fresh before/final executables per pair, before/after order alternates. In each IDR/full-frame pair, each side runs its IDR process then its full-frame process."
+  },
+  "before": {
+    "chroma": {
+      "log": "tmp/a02/before-chroma.txt",
+      "cases": [
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/weak_all-16",
+          "samples": [
+            {
+              "iterations": 2314147,
+              "ns_op": 76.94,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2003703,
+              "ns_op": 94.11,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2404687,
+              "ns_op": 74.69,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2009556,
+              "ns_op": 90.76,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1899254,
+              "ns_op": 97.83,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 90.76,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/strong_all-16",
+          "samples": [
+            {
+              "iterations": 2339475,
+              "ns_op": 79.14,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1847868,
+              "ns_op": 90.48,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1858806,
+              "ns_op": 92.12,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1907022,
+              "ns_op": 94.41,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2120018,
+              "ns_op": 90.53,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 90.53,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/mixed-16",
+          "samples": [
+            {
+              "iterations": 2493102,
+              "ns_op": 75.45,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2401180,
+              "ns_op": 74.35,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2261780,
+              "ns_op": 77.43,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2319267,
+              "ns_op": 74.79,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3235518,
+              "ns_op": 52.56,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 74.79,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/reject_all-16",
+          "samples": [
+            {
+              "iterations": 3755946,
+              "ns_op": 48.18,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3664941,
+              "ns_op": 48.31,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3980626,
+              "ns_op": 46.91,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3913816,
+              "ns_op": 44.43,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3899420,
+              "ns_op": 47.06,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 47.06,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/partial-16",
+          "samples": [
+            {
+              "iterations": 2712926,
+              "ns_op": 66.58,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2504078,
+              "ns_op": 70.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3015554,
+              "ns_op": 54.94,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3231202,
+              "ns_op": 54.3,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2489763,
+              "ns_op": 71.95,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 66.58,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/zero_strength-16",
+          "samples": [
+            {
+              "iterations": 11077740,
+              "ns_op": 16.34,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 10656877,
+              "ns_op": 16.49,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 9748171,
+              "ns_op": 16.42,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 10224774,
+              "ns_op": 16.59,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 10296951,
+              "ns_op": 16.77,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 16.49,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/zero_threshold-16",
+          "samples": [
+            {
+              "iterations": 12003920,
+              "ns_op": 14.58,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12514339,
+              "ns_op": 14.52,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11546750,
+              "ns_op": 14.58,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12352964,
+              "ns_op": 14.26,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12398658,
+              "ns_op": 14.4,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 14.52,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/weak_all-16",
+          "samples": [
+            {
+              "iterations": 1821606,
+              "ns_op": 98.68,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1868740,
+              "ns_op": 92.53,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1909294,
+              "ns_op": 97.28,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2244668,
+              "ns_op": 78.74,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1851616,
+              "ns_op": 90.6,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 92.53,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/strong_all-16",
+          "samples": [
+            {
+              "iterations": 1920343,
+              "ns_op": 91.77,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1877737,
+              "ns_op": 95.66,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2120707,
+              "ns_op": 90.3,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1893901,
+              "ns_op": 95.06,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2049096,
+              "ns_op": 83.58,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 91.77,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/mixed-16",
+          "samples": [
+            {
+              "iterations": 2322322,
+              "ns_op": 77.82,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2254101,
+              "ns_op": 76.13,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2251998,
+              "ns_op": 75.88,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2603427,
+              "ns_op": 76.15,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2179378,
+              "ns_op": 71.73,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 76.13,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/reject_all-16",
+          "samples": [
+            {
+              "iterations": 3968419,
+              "ns_op": 45.41,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3677769,
+              "ns_op": 49.77,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3723031,
+              "ns_op": 47.47,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3618810,
+              "ns_op": 49.45,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4127502,
+              "ns_op": 43.96,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 47.47,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/partial-16",
+          "samples": [
+            {
+              "iterations": 2506998,
+              "ns_op": 72.07,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2803540,
+              "ns_op": 67.67,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2428543,
+              "ns_op": 71.5,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2547542,
+              "ns_op": 71.61,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2751716,
+              "ns_op": 67.2,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 71.5,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/zero_strength-16",
+          "samples": [
+            {
+              "iterations": 8443132,
+              "ns_op": 17.94,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 10777668,
+              "ns_op": 15.79,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11400630,
+              "ns_op": 16.35,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 10469132,
+              "ns_op": 16.17,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11708001,
+              "ns_op": 15.58,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 16.17,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/zero_threshold-16",
+          "samples": [
+            {
+              "iterations": 12106455,
+              "ns_op": 14.5,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12007364,
+              "ns_op": 14.3,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11782108,
+              "ns_op": 14.01,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12107270,
+              "ns_op": 14.19,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12837976,
+              "ns_op": 14.33,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 14.3,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/weak_all-16",
+          "samples": [
+            {
+              "iterations": 1752529,
+              "ns_op": 103.5,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1766020,
+              "ns_op": 102.4,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2419786,
+              "ns_op": 74.14,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1723166,
+              "ns_op": 103.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1824338,
+              "ns_op": 100.8,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 102.4,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/strong_all-16",
+          "samples": [
+            {
+              "iterations": 1789292,
+              "ns_op": 94.79,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1822197,
+              "ns_op": 92.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1838516,
+              "ns_op": 92.95,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1845451,
+              "ns_op": 93.33,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2699868,
+              "ns_op": 63.64,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 92.95,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/mixed-16",
+          "samples": [
+            {
+              "iterations": 2154583,
+              "ns_op": 82.02,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2228121,
+              "ns_op": 81.69,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2294404,
+              "ns_op": 80.37,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2376240,
+              "ns_op": 67.3,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2149176,
+              "ns_op": 80.14,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 80.37,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/reject_all-16",
+          "samples": [
+            {
+              "iterations": 3304000,
+              "ns_op": 52.33,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3362329,
+              "ns_op": 53.87,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3434832,
+              "ns_op": 50.98,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3171207,
+              "ns_op": 55.64,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3272994,
+              "ns_op": 55.61,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 53.87,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/partial-16",
+          "samples": [
+            {
+              "iterations": 2846317,
+              "ns_op": 63.48,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2999584,
+              "ns_op": 61.87,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3014388,
+              "ns_op": 61.13,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3052672,
+              "ns_op": 68.25,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2547788,
+              "ns_op": 73.93,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 63.48,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/zero_strength-16",
+          "samples": [
+            {
+              "iterations": 8084328,
+              "ns_op": 22.22,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7865413,
+              "ns_op": 21.49,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7842897,
+              "ns_op": 22.13,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8154573,
+              "ns_op": 21.55,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7690927,
+              "ns_op": 22.66,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 22.13,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/zero_threshold-16",
+          "samples": [
+            {
+              "iterations": 8831971,
+              "ns_op": 21.32,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8230941,
+              "ns_op": 21.15,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8480804,
+              "ns_op": 21.67,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8026898,
+              "ns_op": 21.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8082114,
+              "ns_op": 22.55,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 21.67,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/weak_all-16",
+          "samples": [
+            {
+              "iterations": 1659196,
+              "ns_op": 108.8,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1755000,
+              "ns_op": 103.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1775802,
+              "ns_op": 103.6,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1809235,
+              "ns_op": 102.4,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1753646,
+              "ns_op": 103.8,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 103.8,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/strong_all-16",
+          "samples": [
+            {
+              "iterations": 1927414,
+              "ns_op": 81.27,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2701898,
+              "ns_op": 66.21,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2080352,
+              "ns_op": 77.72,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2062164,
+              "ns_op": 84.95,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1986015,
+              "ns_op": 78,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 78,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/mixed-16",
+          "samples": [
+            {
+              "iterations": 2978001,
+              "ns_op": 60.24,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2154297,
+              "ns_op": 79.28,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2919148,
+              "ns_op": 60.19,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2826556,
+              "ns_op": 61.31,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2267067,
+              "ns_op": 81.64,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 61.31,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/reject_all-16",
+          "samples": [
+            {
+              "iterations": 3194025,
+              "ns_op": 55.48,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3277082,
+              "ns_op": 54.97,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3299670,
+              "ns_op": 55.07,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3215347,
+              "ns_op": 54.81,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3304965,
+              "ns_op": 54.78,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 54.97,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/partial-16",
+          "samples": [
+            {
+              "iterations": 2586072,
+              "ns_op": 67.24,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2821524,
+              "ns_op": 64.06,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2514110,
+              "ns_op": 66.56,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2312865,
+              "ns_op": 75.32,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2688942,
+              "ns_op": 68.41,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 67.24,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/zero_strength-16",
+          "samples": [
+            {
+              "iterations": 6568910,
+              "ns_op": 24.73,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7097203,
+              "ns_op": 23.99,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7135070,
+              "ns_op": 24.36,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7448696,
+              "ns_op": 24.51,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7254524,
+              "ns_op": 23.64,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 24.36,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/zero_threshold-16",
+          "samples": [
+            {
+              "iterations": 8131953,
+              "ns_op": 22.59,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8460832,
+              "ns_op": 20.85,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8290498,
+              "ns_op": 22.05,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8515509,
+              "ns_op": 21.37,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8377860,
+              "ns_op": 20.98,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 21.37,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        }
+      ]
+    },
+    "deblock": {
+      "log": "tmp/a02/before-deblock.txt",
+      "cases": [
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+          "samples": [
+            {
+              "iterations": 22,
+              "ns_op": 16015177,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 25,
+              "ns_op": 16314792,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 22,
+              "ns_op": 13651845,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 22,
+              "ns_op": 14961127,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 21,
+              "ns_op": 15145690,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 15145690,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+          "samples": [
+            {
+              "iterations": 36,
+              "ns_op": 8948050,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 36,
+              "ns_op": 9511236,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 37,
+              "ns_op": 8677030,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 43,
+              "ns_op": 9782833,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 44,
+              "ns_op": 8911923,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 8948050,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        }
+      ]
+    },
+    "idr": {
+      "log": "tmp/a02/before-idr.txt",
+      "cases": [
+        {
+          "case": "BenchmarkDecoder_DirectAU_Auto-16",
+          "samples": [
+            {
+              "iterations": 15,
+              "ns_op": 38520220,
+              "b_op": 8078076,
+              "allocs_op": 116,
+              "frames_s": 25.96
+            },
+            {
+              "iterations": 15,
+              "ns_op": 38950440,
+              "b_op": 8077399,
+              "allocs_op": 115,
+              "frames_s": 25.67
+            },
+            {
+              "iterations": 14,
+              "ns_op": 37455493,
+              "b_op": 8077392,
+              "allocs_op": 115,
+              "frames_s": 26.7
+            },
+            {
+              "iterations": 13,
+              "ns_op": 39890631,
+              "b_op": 8077376,
+              "allocs_op": 115,
+              "frames_s": 25.07
+            },
+            {
+              "iterations": 13,
+              "ns_op": 39534500,
+              "b_op": 8077376,
+              "allocs_op": 115,
+              "frames_s": 25.29
+            }
+          ],
+          "median_ns_op": 38950440,
+          "median_b_op": 8077392,
+          "median_allocs_op": 115
+        }
+      ]
+    },
+    "ipb": {
+      "log": "tmp/a02/before-ipb.txt",
+      "cases": [
+        {
+          "case": "BenchmarkDecoder_DirectAU_Auto-16",
+          "samples": [
+            {
+              "iterations": 1,
+              "ns_op": 1055014100,
+              "b_op": 162027272,
+              "allocs_op": 4412,
+              "frames_s": 30.33
+            },
+            {
+              "iterations": 1,
+              "ns_op": 1063176800,
+              "b_op": 152638872,
+              "allocs_op": 4405,
+              "frames_s": 30.1
+            },
+            {
+              "iterations": 1,
+              "ns_op": 1112149900,
+              "b_op": 152638936,
+              "allocs_op": 4403,
+              "frames_s": 28.77
+            },
+            {
+              "iterations": 1,
+              "ns_op": 1106769800,
+              "b_op": 152643920,
+              "allocs_op": 4409,
+              "frames_s": 28.91
+            },
+            {
+              "iterations": 1,
+              "ns_op": 1094570400,
+              "b_op": 152638920,
+              "allocs_op": 4402,
+              "frames_s": 29.24
+            }
+          ],
+          "median_ns_op": 1094570400,
+          "median_b_op": 152638936,
+          "median_allocs_op": 4405
+        }
+      ]
+    }
+  },
+  "final": {
+    "chroma": {
+      "log": "tmp/a02/final-chroma.txt",
+      "cases": [
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/weak_all-16",
+          "samples": [
+            {
+              "iterations": 4584223,
+              "ns_op": 38.1,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4726281,
+              "ns_op": 37.95,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4734038,
+              "ns_op": 38.46,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4810094,
+              "ns_op": 37.67,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4821458,
+              "ns_op": 38.19,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 38.1,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/strong_all-16",
+          "samples": [
+            {
+              "iterations": 4883024,
+              "ns_op": 36.59,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4950902,
+              "ns_op": 37.44,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5001931,
+              "ns_op": 36.18,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4607940,
+              "ns_op": 37.84,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4718761,
+              "ns_op": 37.73,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 37.44,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/mixed-16",
+          "samples": [
+            {
+              "iterations": 4846722,
+              "ns_op": 37,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4818063,
+              "ns_op": 36.31,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5050178,
+              "ns_op": 36.94,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4942610,
+              "ns_op": 37.2,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4797108,
+              "ns_op": 37.35,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 37,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/reject_all-16",
+          "samples": [
+            {
+              "iterations": 5915253,
+              "ns_op": 28.29,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6870044,
+              "ns_op": 28.17,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6838047,
+              "ns_op": 27.95,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6308617,
+              "ns_op": 28.57,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6139593,
+              "ns_op": 28.61,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 28.29,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/partial-16",
+          "samples": [
+            {
+              "iterations": 5121799,
+              "ns_op": 35.04,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4812614,
+              "ns_op": 34.87,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5295067,
+              "ns_op": 34.97,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5495158,
+              "ns_op": 33.73,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5418111,
+              "ns_op": 35.62,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 34.97,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/zero_strength-16",
+          "samples": [
+            {
+              "iterations": 12393535,
+              "ns_op": 14.38,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11389665,
+              "ns_op": 15.17,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 10781347,
+              "ns_op": 15.55,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12029431,
+              "ns_op": 14.97,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12782456,
+              "ns_op": 15.16,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 15.16,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/zero_threshold-16",
+          "samples": [
+            {
+              "iterations": 12436951,
+              "ns_op": 14.41,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12116887,
+              "ns_op": 14.37,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12855764,
+              "ns_op": 13.97,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12194212,
+              "ns_op": 14.24,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12156822,
+              "ns_op": 15.14,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 14.37,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/weak_all-16",
+          "samples": [
+            {
+              "iterations": 4788544,
+              "ns_op": 36.95,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4704480,
+              "ns_op": 38.22,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4804983,
+              "ns_op": 37.03,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4828662,
+              "ns_op": 37.4,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4753579,
+              "ns_op": 37.33,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 37.33,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/strong_all-16",
+          "samples": [
+            {
+              "iterations": 5124132,
+              "ns_op": 34.96,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5164370,
+              "ns_op": 36.44,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5273148,
+              "ns_op": 35.03,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3904672,
+              "ns_op": 39.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5335388,
+              "ns_op": 36.26,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 36.26,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/mixed-16",
+          "samples": [
+            {
+              "iterations": 4804855,
+              "ns_op": 36.91,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4778934,
+              "ns_op": 36.37,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4437639,
+              "ns_op": 40.02,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4784078,
+              "ns_op": 38.52,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4498402,
+              "ns_op": 41.32,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 38.52,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/reject_all-16",
+          "samples": [
+            {
+              "iterations": 5715228,
+              "ns_op": 28.52,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6133735,
+              "ns_op": 28.3,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5682445,
+              "ns_op": 28.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6887288,
+              "ns_op": 26.75,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6250498,
+              "ns_op": 28.62,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 28.52,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/partial-16",
+          "samples": [
+            {
+              "iterations": 5439988,
+              "ns_op": 35.38,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 4915574,
+              "ns_op": 34.51,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5101158,
+              "ns_op": 35.71,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5385013,
+              "ns_op": 34.01,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5284698,
+              "ns_op": 37.23,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 35.38,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/zero_strength-16",
+          "samples": [
+            {
+              "iterations": 12087188,
+              "ns_op": 15.36,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11792066,
+              "ns_op": 14.78,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12788814,
+              "ns_op": 14.4,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12662858,
+              "ns_op": 15.24,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11323816,
+              "ns_op": 15.49,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 15.24,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/zero_threshold-16",
+          "samples": [
+            {
+              "iterations": 12116968,
+              "ns_op": 14.91,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 13142618,
+              "ns_op": 14.35,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 13331752,
+              "ns_op": 14.2,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 13413116,
+              "ns_op": 13.61,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12813940,
+              "ns_op": 14.51,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 14.35,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/weak_all-16",
+          "samples": [
+            {
+              "iterations": 1743577,
+              "ns_op": 98.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1668994,
+              "ns_op": 109.4,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1895478,
+              "ns_op": 97.42,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1577264,
+              "ns_op": 114.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1748950,
+              "ns_op": 99.9,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 99.9,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/strong_all-16",
+          "samples": [
+            {
+              "iterations": 1947181,
+              "ns_op": 90.08,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2081347,
+              "ns_op": 91.65,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2226958,
+              "ns_op": 87.93,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2544772,
+              "ns_op": 72.25,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2242347,
+              "ns_op": 77.11,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 87.93,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/mixed-16",
+          "samples": [
+            {
+              "iterations": 2581459,
+              "ns_op": 65.13,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2381342,
+              "ns_op": 84.43,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1724725,
+              "ns_op": 103.3,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1771246,
+              "ns_op": 99.34,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1889114,
+              "ns_op": 96.22,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 96.22,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/reject_all-16",
+          "samples": [
+            {
+              "iterations": 2694997,
+              "ns_op": 62.61,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3121720,
+              "ns_op": 57.06,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3184724,
+              "ns_op": 56.95,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2912908,
+              "ns_op": 65.21,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2643489,
+              "ns_op": 65.95,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 62.61,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/partial-16",
+          "samples": [
+            {
+              "iterations": 2159684,
+              "ns_op": 89.46,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2098806,
+              "ns_op": 87.82,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2262220,
+              "ns_op": 81.51,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1957796,
+              "ns_op": 89.14,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2249808,
+              "ns_op": 77.26,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 87.82,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/zero_strength-16",
+          "samples": [
+            {
+              "iterations": 7242498,
+              "ns_op": 25.99,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6284828,
+              "ns_op": 27.93,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6317140,
+              "ns_op": 28.65,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6309302,
+              "ns_op": 28.6,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6419354,
+              "ns_op": 28.74,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 28.6,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/zero_threshold-16",
+          "samples": [
+            {
+              "iterations": 6617038,
+              "ns_op": 26.74,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6818800,
+              "ns_op": 26.59,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6464030,
+              "ns_op": 27.46,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6976771,
+              "ns_op": 26.85,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6935025,
+              "ns_op": 27.97,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 26.85,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/weak_all-16",
+          "samples": [
+            {
+              "iterations": 1568724,
+              "ns_op": 116.8,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1587974,
+              "ns_op": 113,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1605549,
+              "ns_op": 112.1,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1702699,
+              "ns_op": 105.1,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1655972,
+              "ns_op": 107.9,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 112.1,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/strong_all-16",
+          "samples": [
+            {
+              "iterations": 1744525,
+              "ns_op": 105,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2071197,
+              "ns_op": 85.13,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2017819,
+              "ns_op": 89.13,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1689465,
+              "ns_op": 110.1,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1782073,
+              "ns_op": 98.64,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 98.64,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/mixed-16",
+          "samples": [
+            {
+              "iterations": 2341374,
+              "ns_op": 80.86,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2084854,
+              "ns_op": 89.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1914848,
+              "ns_op": 90.1,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2060853,
+              "ns_op": 83.79,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2325652,
+              "ns_op": 77.41,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 83.79,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/reject_all-16",
+          "samples": [
+            {
+              "iterations": 2853356,
+              "ns_op": 63.54,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2836083,
+              "ns_op": 64.59,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2760642,
+              "ns_op": 62.85,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2756630,
+              "ns_op": 65.51,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2823736,
+              "ns_op": 62.81,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 63.54,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/partial-16",
+          "samples": [
+            {
+              "iterations": 2315278,
+              "ns_op": 79.87,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2198840,
+              "ns_op": 83.17,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2070972,
+              "ns_op": 86.05,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2182425,
+              "ns_op": 79.97,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2063587,
+              "ns_op": 84.04,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 83.17,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/zero_strength-16",
+          "samples": [
+            {
+              "iterations": 6585229,
+              "ns_op": 27.96,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5898466,
+              "ns_op": 31.07,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5645358,
+              "ns_op": 29.99,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6398884,
+              "ns_op": 29.74,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5645428,
+              "ns_op": 30.78,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 29.99,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/zero_threshold-16",
+          "samples": [
+            {
+              "iterations": 6739376,
+              "ns_op": 25.83,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6635137,
+              "ns_op": 26.48,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6691872,
+              "ns_op": 27.65,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6525190,
+              "ns_op": 27.72,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6470955,
+              "ns_op": 24.91,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 26.48,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        }
+      ]
+    },
+    "deblock": {
+      "log": "tmp/a02/final-deblock.txt",
+      "cases": [
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+          "samples": [
+            {
+              "iterations": 22,
+              "ns_op": 15206341,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 22,
+              "ns_op": 15286132,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 22,
+              "ns_op": 16215859,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 22,
+              "ns_op": 15098686,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 24,
+              "ns_op": 15371488,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 15286132,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+          "samples": [
+            {
+              "iterations": 31,
+              "ns_op": 11082665,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 31,
+              "ns_op": 10388890,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 34,
+              "ns_op": 11086726,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 34,
+              "ns_op": 11470394,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 28,
+              "ns_op": 11664614,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 11086726,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        }
+      ]
+    },
+    "idr": {
+      "log": "tmp/a02/final-idr.txt",
+      "cases": [
+        {
+          "case": "BenchmarkDecoder_DirectAU_Auto-16",
+          "samples": [
+            {
+              "iterations": 13,
+              "ns_op": 45010531,
+              "b_op": 8077791,
+              "allocs_op": 116,
+              "frames_s": 22.22
+            },
+            {
+              "iterations": 13,
+              "ns_op": 45461031,
+              "b_op": 8077776,
+              "allocs_op": 115,
+              "frames_s": 22
+            },
+            {
+              "iterations": 13,
+              "ns_op": 43824877,
+              "b_op": 8077376,
+              "allocs_op": 115,
+              "frames_s": 22.82
+            },
+            {
+              "iterations": 12,
+              "ns_op": 43580500,
+              "b_op": 8077376,
+              "allocs_op": 115,
+              "frames_s": 22.95
+            },
+            {
+              "iterations": 13,
+              "ns_op": 43614000,
+              "b_op": 8077376,
+              "allocs_op": 115,
+              "frames_s": 22.93
+            }
+          ],
+          "median_ns_op": 43824877,
+          "median_b_op": 8077376,
+          "median_allocs_op": 115
+        }
+      ]
+    },
+    "ipb": {
+      "log": "tmp/a02/final-ipb.txt",
+      "cases": [
+        {
+          "case": "BenchmarkDecoder_DirectAU_Auto-16",
+          "samples": [
+            {
+              "iterations": 1,
+              "ns_op": 1343893400,
+              "b_op": 162032272,
+              "allocs_op": 4417,
+              "frames_s": 23.81
+            },
+            {
+              "iterations": 1,
+              "ns_op": 1360728400,
+              "b_op": 152638952,
+              "allocs_op": 4404,
+              "frames_s": 23.52
+            },
+            {
+              "iterations": 1,
+              "ns_op": 1326149300,
+              "b_op": 152638840,
+              "allocs_op": 4403,
+              "frames_s": 24.13
+            },
+            {
+              "iterations": 1,
+              "ns_op": 1294788200,
+              "b_op": 152643936,
+              "allocs_op": 4409,
+              "frames_s": 24.71
+            },
+            {
+              "iterations": 1,
+              "ns_op": 1389688000,
+              "b_op": 152638824,
+              "allocs_op": 4402,
+              "frames_s": 23.03
+            }
+          ],
+          "median_ns_op": 1343893400,
+          "median_b_op": 152638952,
+          "median_allocs_op": 4404
+        }
+      ]
+    }
+  },
+  "pilot": {
+    "chroma": {
+      "log": "tmp/a02/after-chroma.txt",
+      "cases": [
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/weak_all-16",
+          "samples": [
+            {
+              "iterations": 5649982,
+              "ns_op": 31.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5768454,
+              "ns_op": 32.26,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5431862,
+              "ns_op": 32.73,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5651596,
+              "ns_op": 31.85,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5792251,
+              "ns_op": 31.89,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 31.9,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/strong_all-16",
+          "samples": [
+            {
+              "iterations": 5677838,
+              "ns_op": 30.75,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5858248,
+              "ns_op": 30.16,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5920020,
+              "ns_op": 30.22,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5902083,
+              "ns_op": 30.76,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5898428,
+              "ns_op": 30.23,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 30.23,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/mixed-16",
+          "samples": [
+            {
+              "iterations": 5797996,
+              "ns_op": 30.09,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5851431,
+              "ns_op": 31.27,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5850100,
+              "ns_op": 30.72,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5850709,
+              "ns_op": 31.4,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5735150,
+              "ns_op": 30.64,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 30.72,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/reject_all-16",
+          "samples": [
+            {
+              "iterations": 7772288,
+              "ns_op": 23.02,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7595545,
+              "ns_op": 22.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7610542,
+              "ns_op": 23.11,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7973774,
+              "ns_op": 22.79,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7574704,
+              "ns_op": 22.82,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 22.82,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/partial-16",
+          "samples": [
+            {
+              "iterations": 6341064,
+              "ns_op": 27.98,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6138002,
+              "ns_op": 29.62,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6148590,
+              "ns_op": 30.02,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6007248,
+              "ns_op": 29.29,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5892693,
+              "ns_op": 30.48,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 29.62,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/zero_strength-16",
+          "samples": [
+            {
+              "iterations": 13904982,
+              "ns_op": 13.51,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 14023605,
+              "ns_op": 13.21,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 14269066,
+              "ns_op": 13.02,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12780835,
+              "ns_op": 13.83,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12860908,
+              "ns_op": 13.09,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 13.21,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/vertical/zero_threshold-16",
+          "samples": [
+            {
+              "iterations": 14386533,
+              "ns_op": 12.54,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 14422845,
+              "ns_op": 14.08,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 10617777,
+              "ns_op": 17.62,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 14193008,
+              "ns_op": 12.84,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 14765595,
+              "ns_op": 11.85,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 12.84,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/weak_all-16",
+          "samples": [
+            {
+              "iterations": 5959514,
+              "ns_op": 30.49,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5845483,
+              "ns_op": 30.25,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5787855,
+              "ns_op": 30.52,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5908981,
+              "ns_op": 30.05,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6056425,
+              "ns_op": 30.06,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 30.25,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/strong_all-16",
+          "samples": [
+            {
+              "iterations": 6100184,
+              "ns_op": 28.95,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6278799,
+              "ns_op": 29.4,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6218024,
+              "ns_op": 28.98,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6041707,
+              "ns_op": 29.17,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6485832,
+              "ns_op": 28.73,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 28.98,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/mixed-16",
+          "samples": [
+            {
+              "iterations": 6343656,
+              "ns_op": 28.94,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6200545,
+              "ns_op": 28.8,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6117018,
+              "ns_op": 30.15,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5906209,
+              "ns_op": 29.65,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5931255,
+              "ns_op": 30.86,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 29.65,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/reject_all-16",
+          "samples": [
+            {
+              "iterations": 7615887,
+              "ns_op": 23.52,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7262749,
+              "ns_op": 23.42,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8198848,
+              "ns_op": 25.99,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7275019,
+              "ns_op": 24.34,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7561926,
+              "ns_op": 23.48,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 23.52,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/partial-16",
+          "samples": [
+            {
+              "iterations": 4922066,
+              "ns_op": 35.06,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5531533,
+              "ns_op": 29.29,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6775882,
+              "ns_op": 27.06,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 6047146,
+              "ns_op": 36.88,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 5152440,
+              "ns_op": 36.34,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 35.06,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/zero_strength-16",
+          "samples": [
+            {
+              "iterations": 13498717,
+              "ns_op": 14.86,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 13174651,
+              "ns_op": 13.65,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 13463413,
+              "ns_op": 13.2,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12862838,
+              "ns_op": 12.91,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 14287527,
+              "ns_op": 13.04,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 13.2,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/8bit/horizontal/zero_threshold-16",
+          "samples": [
+            {
+              "iterations": 15540954,
+              "ns_op": 12.04,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 15285585,
+              "ns_op": 12.09,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 14444488,
+              "ns_op": 12.36,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 15003876,
+              "ns_op": 11.83,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 14839730,
+              "ns_op": 12.01,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 12.04,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/weak_all-16",
+          "samples": [
+            {
+              "iterations": 1858392,
+              "ns_op": 98.6,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1861359,
+              "ns_op": 98.51,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2289242,
+              "ns_op": 83.33,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2439466,
+              "ns_op": 74.67,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2442766,
+              "ns_op": 72.95,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 83.33,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/strong_all-16",
+          "samples": [
+            {
+              "iterations": 2436286,
+              "ns_op": 75.86,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2965178,
+              "ns_op": 61.86,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1795906,
+              "ns_op": 100.1,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2859516,
+              "ns_op": 64.07,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1774386,
+              "ns_op": 100.9,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 75.86,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/mixed-16",
+          "samples": [
+            {
+              "iterations": 2463708,
+              "ns_op": 65.22,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2144508,
+              "ns_op": 83.91,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2443652,
+              "ns_op": 68.71,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2184643,
+              "ns_op": 81.8,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2214182,
+              "ns_op": 81.76,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 81.76,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/reject_all-16",
+          "samples": [
+            {
+              "iterations": 3387628,
+              "ns_op": 52.58,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3313628,
+              "ns_op": 52.76,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3725835,
+              "ns_op": 48.97,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3669163,
+              "ns_op": 50.07,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3536700,
+              "ns_op": 49.44,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 50.07,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/partial-16",
+          "samples": [
+            {
+              "iterations": 2532667,
+              "ns_op": 64.76,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3095623,
+              "ns_op": 69.38,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2804961,
+              "ns_op": 64.05,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2442614,
+              "ns_op": 73.57,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2645109,
+              "ns_op": 66.35,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 66.35,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/zero_strength-16",
+          "samples": [
+            {
+              "iterations": 8068998,
+              "ns_op": 22.26,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8090359,
+              "ns_op": 22.83,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7545998,
+              "ns_op": 22.73,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7752104,
+              "ns_op": 23.24,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7730098,
+              "ns_op": 22.73,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 22.73,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/vertical/zero_threshold-16",
+          "samples": [
+            {
+              "iterations": 8547494,
+              "ns_op": 21.15,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8271906,
+              "ns_op": 20.86,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8370729,
+              "ns_op": 20.71,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8681433,
+              "ns_op": 20.49,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8120067,
+              "ns_op": 21.82,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 20.86,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/weak_all-16",
+          "samples": [
+            {
+              "iterations": 2464993,
+              "ns_op": 74.73,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2424324,
+              "ns_op": 74.51,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1942971,
+              "ns_op": 89.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2400994,
+              "ns_op": 73.38,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2049950,
+              "ns_op": 83.68,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 74.73,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/strong_all-16",
+          "samples": [
+            {
+              "iterations": 2775994,
+              "ns_op": 67.38,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2132698,
+              "ns_op": 71.54,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2518849,
+              "ns_op": 78.14,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3004225,
+              "ns_op": 68.03,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2644425,
+              "ns_op": 82.75,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 71.54,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/mixed-16",
+          "samples": [
+            {
+              "iterations": 2195928,
+              "ns_op": 81.76,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2202076,
+              "ns_op": 78.38,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3178656,
+              "ns_op": 65.84,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2867962,
+              "ns_op": 62.62,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2201586,
+              "ns_op": 80.36,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 78.38,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/reject_all-16",
+          "samples": [
+            {
+              "iterations": 3683874,
+              "ns_op": 49.08,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3489460,
+              "ns_op": 50.22,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3547832,
+              "ns_op": 48.67,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3569097,
+              "ns_op": 49.56,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3599848,
+              "ns_op": 51.58,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 49.56,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/partial-16",
+          "samples": [
+            {
+              "iterations": 3143160,
+              "ns_op": 61.79,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2394724,
+              "ns_op": 74.93,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 3079275,
+              "ns_op": 58.29,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2411756,
+              "ns_op": 74.58,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 2757847,
+              "ns_op": 61.68,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 61.79,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/zero_strength-16",
+          "samples": [
+            {
+              "iterations": 7894944,
+              "ns_op": 22.5,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7847547,
+              "ns_op": 23.44,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7614051,
+              "ns_op": 23.47,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7071801,
+              "ns_op": 23.82,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7448635,
+              "ns_op": 23.66,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 23.47,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkPreparedChromaEdge_8_Auto/10bit/horizontal/zero_threshold-16",
+          "samples": [
+            {
+              "iterations": 8457096,
+              "ns_op": 20.98,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 7999430,
+              "ns_op": 21.09,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8226201,
+              "ns_op": 21.29,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8122596,
+              "ns_op": 21.23,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 8800363,
+              "ns_op": 20.19,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 21.09,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        }
+      ]
+    },
+    "deblock": {
+      "log": "tmp/a02/after-deblock.txt",
+      "cases": [
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+          "samples": [
+            {
+              "iterations": 30,
+              "ns_op": 12180753,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 28,
+              "ns_op": 12076154,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 31,
+              "ns_op": 12298187,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 22,
+              "ns_op": 14591773,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 30,
+              "ns_op": 11868810,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 12180753,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+          "samples": [
+            {
+              "iterations": 42,
+              "ns_op": 7943848,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 45,
+              "ns_op": 8418636,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 48,
+              "ns_op": 8235938,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 44,
+              "ns_op": 7547111,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 45,
+              "ns_op": 8104553,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 8104553,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        }
+      ]
+    },
+    "idr": {
+      "log": "tmp/a02/after-idr.txt",
+      "cases": [
+        {
+          "case": "BenchmarkDecoder_DirectAU_Auto-16",
+          "samples": [
+            {
+              "iterations": 16,
+              "ns_op": 35278956,
+              "b_op": 8078034,
+              "allocs_op": 116,
+              "frames_s": 28.35
+            },
+            {
+              "iterations": 18,
+              "ns_op": 34258967,
+              "b_op": 8077377,
+              "allocs_op": 115,
+              "frames_s": 29.19
+            },
+            {
+              "iterations": 16,
+              "ns_op": 33750125,
+              "b_op": 8077390,
+              "allocs_op": 115,
+              "frames_s": 29.63
+            },
+            {
+              "iterations": 15,
+              "ns_op": 35300620,
+              "b_op": 8077390,
+              "allocs_op": 115,
+              "frames_s": 28.33
+            },
+            {
+              "iterations": 15,
+              "ns_op": 38797920,
+              "b_op": 8077384,
+              "allocs_op": 115,
+              "frames_s": 25.77
+            }
+          ],
+          "median_ns_op": 35278956,
+          "median_b_op": 8077390,
+          "median_allocs_op": 115
+        }
+      ]
+    },
+    "ipb": {
+      "log": "tmp/a02/after-ipb.txt",
+      "cases": [
+        {
+          "case": "BenchmarkDecoder_DirectAU_Auto-16",
+          "samples": [
+            {
+              "iterations": 1,
+              "ns_op": 1390620300,
+              "b_op": 162032256,
+              "allocs_op": 4417,
+              "frames_s": 23.01
+            },
+            {
+              "iterations": 1,
+              "ns_op": 1218622400,
+              "b_op": 152649032,
+              "allocs_op": 4415,
+              "frames_s": 26.26
+            },
+            {
+              "iterations": 1,
+              "ns_op": 1135144300,
+              "b_op": 152638824,
+              "allocs_op": 4403,
+              "frames_s": 28.19
+            },
+            {
+              "iterations": 1,
+              "ns_op": 1084229800,
+              "b_op": 152638824,
+              "allocs_op": 4402,
+              "frames_s": 29.51
+            },
+            {
+              "iterations": 1,
+              "ns_op": 1129168800,
+              "b_op": 152638840,
+              "allocs_op": 4402,
+              "frames_s": 28.34
+            }
+          ],
+          "median_ns_op": 1135144300,
+          "median_b_op": 152638840,
+          "median_allocs_op": 4403
+        }
+      ]
+    },
+    "paired_ipb": [
+      {
+        "pair": 1,
+        "order": [
+          "before",
+          "after"
+        ],
+        "before": {
+          "iterations": 1,
+          "ns_op": 1061650700,
+          "b_op": 162027144,
+          "allocs_op": 4411,
+          "frames_s": 30.14
+        },
+        "after": {
+          "iterations": 1,
+          "ns_op": 1074692700,
+          "b_op": 162032240,
+          "allocs_op": 4417,
+          "frames_s": 29.78
+        }
+      },
+      {
+        "pair": 2,
+        "order": [
+          "after",
+          "before"
+        ],
+        "before": {
+          "iterations": 1,
+          "ns_op": 1095212500,
+          "b_op": 162027160,
+          "allocs_op": 4411,
+          "frames_s": 29.22
+        },
+        "after": {
+          "iterations": 1,
+          "ns_op": 1083555700,
+          "b_op": 162032352,
+          "allocs_op": 4418,
+          "frames_s": 29.53
+        }
+      },
+      {
+        "pair": 3,
+        "order": [
+          "before",
+          "after"
+        ],
+        "before": {
+          "iterations": 1,
+          "ns_op": 1113274700,
+          "b_op": 162027368,
+          "allocs_op": 4413,
+          "frames_s": 28.74
+        },
+        "after": {
+          "iterations": 1,
+          "ns_op": 1109842500,
+          "b_op": 162032368,
+          "allocs_op": 4418,
+          "frames_s": 28.83
+        }
+      },
+      {
+        "pair": 4,
+        "order": [
+          "after",
+          "before"
+        ],
+        "before": {
+          "iterations": 1,
+          "ns_op": 1068391900,
+          "b_op": 162032240,
+          "allocs_op": 4417,
+          "frames_s": 29.95
+        },
+        "after": {
+          "iterations": 1,
+          "ns_op": 1072946600,
+          "b_op": 162027144,
+          "allocs_op": 4411,
+          "frames_s": 29.82
+        }
+      },
+      {
+        "pair": 5,
+        "order": [
+          "before",
+          "after"
+        ],
+        "before": {
+          "iterations": 1,
+          "ns_op": 1062577400,
+          "b_op": 162032256,
+          "allocs_op": 4417,
+          "frames_s": 30.12
+        },
+        "after": {
+          "iterations": 1,
+          "ns_op": 1041463800,
+          "b_op": 162027288,
+          "allocs_op": 4412,
+          "frames_s": 30.73
+        }
+      }
+    ]
+  },
+  "final_paired_ipb": [
+    {
+      "pair": 1,
+      "order": [
+        "before",
+        "after"
+      ],
+      "before": {
+        "iterations": 1,
+        "ns_op": 1314693300,
+        "b_op": 162027160,
+        "allocs_op": 4411,
+        "frames_s": 24.34
+      },
+      "after": {
+        "iterations": 1,
+        "ns_op": 1301757200,
+        "b_op": 162032368,
+        "allocs_op": 4418,
+        "frames_s": 24.58
+      }
+    },
+    {
+      "pair": 2,
+      "order": [
+        "after",
+        "before"
+      ],
+      "before": {
+        "iterations": 1,
+        "ns_op": 1311476400,
+        "b_op": 162027176,
+        "allocs_op": 4411,
+        "frames_s": 24.4
+      },
+      "after": {
+        "iterations": 1,
+        "ns_op": 1301038400,
+        "b_op": 162027160,
+        "allocs_op": 4411,
+        "frames_s": 24.6
+      }
+    },
+    {
+      "pair": 3,
+      "order": [
+        "before",
+        "after"
+      ],
+      "before": {
+        "iterations": 1,
+        "ns_op": 1322296300,
+        "b_op": 162027176,
+        "allocs_op": 4411,
+        "frames_s": 24.2
+      },
+      "after": {
+        "iterations": 1,
+        "ns_op": 1321616500,
+        "b_op": 162027304,
+        "allocs_op": 4412,
+        "frames_s": 24.21
+      }
+    },
+    {
+      "pair": 4,
+      "order": [
+        "after",
+        "before"
+      ],
+      "before": {
+        "iterations": 1,
+        "ns_op": 1413129400,
+        "b_op": 162032336,
+        "allocs_op": 4418,
+        "frames_s": 22.64
+      },
+      "after": {
+        "iterations": 1,
+        "ns_op": 1450783200,
+        "b_op": 162032576,
+        "allocs_op": 4420,
+        "frames_s": 22.06
+      }
+    },
+    {
+      "pair": 5,
+      "order": [
+        "before",
+        "after"
+      ],
+      "before": {
+        "iterations": 1,
+        "ns_op": 1549824500,
+        "b_op": 162032480,
+        "allocs_op": 4419,
+        "frames_s": 20.65
+      },
+      "after": {
+        "iterations": 1,
+        "ns_op": 1572834500,
+        "b_op": 162032288,
+        "allocs_op": 4417,
+        "frames_s": 20.35
+      }
+    }
+  ],
+  "final_paired_idr": [
+    {
+      "pair": 1,
+      "order": [
+        "before",
+        "after"
+      ],
+      "before": {
+        "iterations": 12,
+        "ns_op": 47675850,
+        "b_op": 8077378,
+        "allocs_op": 115,
+        "frames_s": 20.98
+      },
+      "after": {
+        "iterations": 12,
+        "ns_op": 45656967,
+        "b_op": 8077402,
+        "allocs_op": 115,
+        "frames_s": 21.9
+      }
+    },
+    {
+      "pair": 2,
+      "order": [
+        "after",
+        "before"
+      ],
+      "before": {
+        "iterations": 12,
+        "ns_op": 49007675,
+        "b_op": 8077386,
+        "allocs_op": 115,
+        "frames_s": 20.41
+      },
+      "after": {
+        "iterations": 12,
+        "ns_op": 50045475,
+        "b_op": 8077388,
+        "allocs_op": 115,
+        "frames_s": 19.98
+      }
+    },
+    {
+      "pair": 3,
+      "order": [
+        "before",
+        "after"
+      ],
+      "before": {
+        "iterations": 12,
+        "ns_op": 46354283,
+        "b_op": 8077396,
+        "allocs_op": 115,
+        "frames_s": 21.57
+      },
+      "after": {
+        "iterations": 12,
+        "ns_op": 42902325,
+        "b_op": 8078276,
+        "allocs_op": 116,
+        "frames_s": 23.31
+      }
+    },
+    {
+      "pair": 4,
+      "order": [
+        "after",
+        "before"
+      ],
+      "before": {
+        "iterations": 13,
+        "ns_op": 45189462,
+        "b_op": 8078561,
+        "allocs_op": 117,
+        "frames_s": 22.13
+      },
+      "after": {
+        "iterations": 13,
+        "ns_op": 44952885,
+        "b_op": 8078178,
+        "allocs_op": 116,
+        "frames_s": 22.25
+      }
+    },
+    {
+      "pair": 5,
+      "order": [
+        "before",
+        "after"
+      ],
+      "before": {
+        "iterations": 12,
+        "ns_op": 49345592,
+        "b_op": 8077385,
+        "allocs_op": 115,
+        "frames_s": 20.27
+      },
+      "after": {
+        "iterations": 13,
+        "ns_op": 43129238,
+        "b_op": 8078166,
+        "allocs_op": 116,
+        "frames_s": 23.19
+      }
+    }
+  ],
+  "final_paired_deblock": [
+    {
+      "pair": 1,
+      "order": [
+        "before",
+        "after"
+      ],
+      "before": [
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+          "samples": [
+            {
+              "iterations": 16,
+              "ns_op": 21522719,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 21522719,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+          "samples": [
+            {
+              "iterations": 28,
+              "ns_op": 13323550,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 13323550,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+          "samples": [
+            {
+              "iterations": 20,
+              "ns_op": 17913045,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 17913045,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+          "samples": [
+            {
+              "iterations": 33,
+              "ns_op": 11617809,
+              "b_op": 3,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 11617809,
+          "median_b_op": 3,
+          "median_allocs_op": 0
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "order": [
+        "after",
+        "before"
+      ],
+      "before": [
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+          "samples": [
+            {
+              "iterations": 19,
+              "ns_op": 18246505,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 18246505,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+          "samples": [
+            {
+              "iterations": 27,
+              "ns_op": 12447070,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 12447070,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+          "samples": [
+            {
+              "iterations": 24,
+              "ns_op": 16110150,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 16110150,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+          "samples": [
+            {
+              "iterations": 34,
+              "ns_op": 11763700,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 11763700,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "order": [
+        "before",
+        "after"
+      ],
+      "before": [
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+          "samples": [
+            {
+              "iterations": 19,
+              "ns_op": 18745395,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 18745395,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+          "samples": [
+            {
+              "iterations": 32,
+              "ns_op": 12137459,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 12137459,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+          "samples": [
+            {
+              "iterations": 22,
+              "ns_op": 15057523,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 15057523,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+          "samples": [
+            {
+              "iterations": 33,
+              "ns_op": 10741970,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 10741970,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        }
+      ]
+    },
+    {
+      "pair": 4,
+      "order": [
+        "after",
+        "before"
+      ],
+      "before": [
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+          "samples": [
+            {
+              "iterations": 18,
+              "ns_op": 18109372,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 18109372,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+          "samples": [
+            {
+              "iterations": 36,
+              "ns_op": 11673328,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 11673328,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+          "samples": [
+            {
+              "iterations": 19,
+              "ns_op": 16294937,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 16294937,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+          "samples": [
+            {
+              "iterations": 30,
+              "ns_op": 10638453,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 10638453,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        }
+      ]
+    },
+    {
+      "pair": 5,
+      "order": [
+        "before",
+        "after"
+      ],
+      "before": [
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+          "samples": [
+            {
+              "iterations": 19,
+              "ns_op": 19204774,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 19204774,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+          "samples": [
+            {
+              "iterations": 28,
+              "ns_op": 11670768,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 11670768,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=true-16",
+          "samples": [
+            {
+              "iterations": 20,
+              "ns_op": 15346770,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 15346770,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        },
+        {
+          "case": "BenchmarkDeblock_1080p_Auto/intra=false-16",
+          "samples": [
+            {
+              "iterations": 37,
+              "ns_op": 10897408,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "median_ns_op": 10897408,
+          "median_b_op": 0,
+          "median_allocs_op": 0
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "routine_cgo0": "gofmt -l . (empty); go vet ./...; go build ./...; go test ./...; tools/depscheck (36 packages); tools/manifest (55 inputs), all passed; unaffected test caches reused",
+    "targeted": "go test -tags goavc_simdtest ./internal/simd ./internal/filter -count=1: new direct SSE2 full-buffer differential/analytic/guard-page and forced chroma-slot tests passed",
+    "escaping": "internal/filter/chroma_420_edge.go: data does not escape; AllocsPerRun uses arrays inside the closure, both eligible directions and fallback are0alloc",
+    "independent_oracle": "Both final direct-AU FFmpeg8.0 pixel tests passed; selected encoder DecisionCorpus, InterSequence, BFrameReorder, CABACSequence, Transform8x8 and WeightedPrediction Oracle groups passed, plus routine tests/codec",
+    "purego": "simd/decoder/encoder passed with purego,goavc_simdtest; filter initially exposed the existing A01 SSE2-unavailable fatal. Fixed the forced A01 test/benchmark to skip unavailable backends; filter rerun passed. SSE2 skips are not counted as Generic/SSE2 execution evidence.",
+    "native386": "go test ./internal/simd ./internal/filter ./decoder ./encoder -count=1 with GOARCH=386,CGO0 passed",
+    "cross": "Six OS/arch combinations (windows/linux/darwin x amd64/arm64): go build ./... and go test -c ./internal/simd passed; compile evidence only",
+    "race": "CGO_ENABLED=1 go test -race ./internal/simd ./internal/filter ./decoder ./encoder -count=1 passed; regular commands use CGO0",
+    "deferred": "300-frame main matrix remains at A07; no new native arm64/Unix execution, full-library race, fuzz or long stability run",
+    "local_logs": "tmp/a02; numerical samples are archived in this JSON; initial asmdecl error fixed by bounded bS loads through the array address, final code revalidated and rebuilt before final timing"
+  },
+  "decision": {
+    "auto": "Enable SSE2 for eligible vertical and horizontal 8-bit420 progressive edges; old entry paths and fallback retained",
+    "basis": "Active-edge microbenchmarks improve about40%-61%; final paired full-frame intra/inter improve14.1%/10.2%, IDR5.7%; IPB paired medians differ-0.1%, no confirmed IPB speedup or reproducible regression",
+    "batch_drift": "Frozen before IPB median changed from1094570400 in the original batch to1322296300 in final pairing (+20.8%). Execution conditions changed across batches; cause not monitored. Final endpoint adoption uses the paired series, preserves original batch numbers and does not claim the unpaired deltas as implementation regressions.",
+    "allocation_observation": "All chroma edge microbench samples0B/0alloc; paired full-frame all0alloc, one inter-frame sample3B/op, all other paired full-frame samples0B/op. Retained exactly; local-array noescape/0alloc checks passed.",
+    "next": "A03 only under subsequent authorization; A07 retains the300-frame main comparison"
+  }
+}

@@ -55,6 +55,19 @@ func ForceLuma8EdgeBackendForTesting(backend Backend) (restore func(), err error
 	return func() { once.Do(func() { kernels = previous; backendTestMu.Unlock() }) }, nil
 }
 
+// ForceChroma8EdgeBackendForTesting 仅替换色度整边槽，调用方必须串行使用。
+func ForceChroma8EdgeBackendForTesting(backend Backend) (restore func(), err error) {
+	backendTestMu.Lock()
+	if backend != Generic && (backend != SSE2 || !nativeCPU.sse2 || selectKernels(nativeCPU).backends.FilterChromaEdge != SSE2) {
+		backendTestMu.Unlock()
+		return nil, ErrBackendUnavailable
+	}
+	previous := kernels.backends.FilterChromaEdge
+	kernels.backends.FilterChromaEdge = backend
+	var once sync.Once
+	return func() { once.Do(func() { kernels.backends.FilterChromaEdge = previous; backendTestMu.Unlock() }) }, nil
+}
+
 func testBackendTable(backend Backend) (kernelTable, error) {
 	if backend == Generic {
 		return genericTable(), nil

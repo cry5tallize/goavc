@@ -48,6 +48,7 @@ type Backends struct {
 	MCLumaCopy                                         Backend
 	Residual                                           Backend
 	FilterDelta, FilterLumaEdge                        Backend
+	FilterChromaEdge                                   Backend
 	QuantMultiply                                      Backend
 	Forward8x8, IDCT4x4, IDCT8x8                       Backend
 	ForwardLumaDC, ForwardChromaDC, ForwardChromaDC422 Backend

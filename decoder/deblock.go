@@ -136,6 +136,8 @@ func (fs *frameState) filterChromaEdge(mbx, mby, edge int, vertical bool, streng
 		}
 		if pl.BitDepth == 10 {
 			params.Chroma16(pl.Data16, pl.Index(x, y), along, across, strengths, lines)
+		} else if fs.subW == 2 && fs.subH == 2 && !fs.mbaff && !fs.field {
+			params.Chroma4208(pl.Data, pl.Index(x, y), along, across, strengths)
 		} else {
 			params.Chroma8(pl.Data, pl.Index(x, y), along, across, strengths, lines)
 		}

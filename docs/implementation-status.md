@@ -259,6 +259,7 @@ CLI相对路径别名及无对应VUI/SEI字段的子用例不计作通过；anal
 | 去块（K12） | 唯一共享亮度/色度算法，强弱候选部分向量化，保持逐线顺序和条件邻域访问 | Partial | 本机Generic/Auto/SSE2/AVX2强弱、方向/Span1/2/4与最小邻域保护页通过；领域解析测试保留 | 不是整条边全SIMD，不改变bS/阈值/slice权限；amd64默认候选加法保留Generic，实测SIMD较慢；NEON原生未验 |
 | 去块逐边参数复用 | decoder普通边四段bS跨亮色度复用，QP/阈值按分量逐边准备；旧单段入口保留 | Partial | 六格式原调度像素回归、B参考交换、准备边负QP/偏移/stride/零分配；1080p High IDR及32帧I/P/B直接AU逐像素FFmpeg一致；五样本见performance §17 | 混合MBAFF几何保留原路径；未新增SIMD、并行或Profile支持，短端点不替代300帧主矩阵 |
 | 去块Generic直接算术 | 默认/纯Go去块直接计算强弱候选，显式SIMD继续使用原候选后端；阈值/裁剪/邻域流程共享 | Partial | 直接标量与原值ABI候选双位深/方向/Span等价；最终High IDR和32帧I/P/B直接AU逐像素FFmpeg一致；三阶段五样本见performance §17.2 | 未改CABAC、IDCT、重建或并发模型；NEON原生性能未测 |
+| 8-bit 420色度整边（A02） | 逐行解码和编码本地重建共用八线SSE2；独立FilterChromaEdge槽及Generic回退 | Partial | 两方向/混合bS/严格阈值/tc0+1/饱和裁剪解析值与全缓冲差分；新内核保护页、包装层栈缓冲0分配；High直接AU及编码三方Oracle通过；五样本见performance §21 | 10-bit、422/444、场/MBAFF保留原入口；原生仅Windows/amd64，其他平台构建证据另列；Profile与并发状态不变 |
 | 残差加减（K13） | 8/10-bit共享Clip1和Subtract，picture与编码真实残差循环迁移，R3精确放行picture | Partial | 本机四路径parity、int32极值、低两位、奇数stride/最小len逐行保护页及局部0分配通过 | gather/scatter与不足4采样尾部为Go，值ABI仅向量化加减；amd64默认直接标量避免gather开销，显式后端保留真实SIMD；NEON原生未验 |
 | 其余MC SIMD（K09b-d） | 现有整数复制之外的插值向量化 | TODO | 唯一Generic与全相位边界保护保留 | 不以本轮K10–K14工作冒充K09插值SIMD已完成 |
 | 搜索去逃逸（G01/K18前置） | caller-owned双位深Workspace，真实编码器跨帧/场/Reset复用，结束解除借用 | Partial | 32组改造前Scorer轨迹/结果，64组prepared零分配，强制x86/purego/386/M8指纹 | 该行仅搜索；完整决策保护网见G03b，K16仍是串行租约复用，未开并行 |
@@ -287,7 +288,7 @@ v1.0.2性能迭代按七个独立实现提交完成：Direct像素任务合并�
 帧内邻域去逃逸、重复网格Reset清理、CABAC归一化、整帧网格访问。
 各项完整常规门禁及相关High直接AU FFmpeg像素比较通过；六格式、逐4×4运动元数据、
 负权重/舍入/裁剪、错误与位消费契约保留。各阶段五样本、失败诊断与最终验证见performance §18。
-Profile状态、公共API和并发模型不变；DPB retained池化、整段滤波SIMD及扫描表预验证仍留作后续候选。
+Profile状态、公共API和并发模型不变；后续A01/A02已实现限定8-bit亮/色度整边SSE2，见performance §20/21；DPB retained池化及扫描表预验证仍留作后续候选。
 
 **v1.0.0 本地收尾完成。** 按用户要求复用现有实现、测试和工具，整理 README、既有 API/流式用法、支持边界、一致性报告和 CHANGELOG；不新增编解码算法、公共 API 或发布框架。范围调整已同步到 Roadmap v1.2，完整 Profile 状态保持原结论。
 

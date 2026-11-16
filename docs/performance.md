@@ -1223,3 +1223,16 @@ go test -tags=goavc_simdtest ./internal/filter -run '^$' -bench '^BenchmarkPrepa
 ```
 
 CGO=0 的全仓 gofmt 检查、vet、build、`go test ./... -count=1`、36 包依赖检查及 55 条语料清单校验均通过；受影响 SIMD/filter/decoder 的 purego 测试亦通过。race、386、六目标交叉编译及 300 帧主矩阵未执行，不能记为通过。Profile 支持状态未改变。
+
+## 21. A02：8-bit 420 色度整边 SSE2
+
+以已完成A01的 `a0f3c0c` 为父基线，逐行解码和编码本地重建共用八线色度整边SSE2；
+独立 `FilterChromaEdge` 槽的水平、垂直方向均启用Auto，其余位深/格式和场/MBAFF保持原路径。
+同机五样本活跃整边耗时下降约40%–61%，局部栈缓冲0分配；最终交错配对中，合成整帧去块
+下降10.2%–14.1%，短IDR下降5.7%，32帧I/P/B基本持平（-0.1%，不确认收益）。
+顺序批测曾出现明显运行条件漂移，原值和配对补测均保留；不以短端点扩大持续实时结论。
+
+完整输入、计时、各场景中位数、实现条件及验证范围见[A02记录](gates/a02_chroma_edge.md)，
+全部530个样本见[a02_chroma_edge_samples.json](gates/a02_chroma_edge_samples.json)。
+FFmpeg像素Oracle、CGO=0完整工程门禁、受影响包purego/386/race及六目标构建通过；
+300帧主矩阵仍按计划在A07集中比较，未新增Unix/arm64原生或长稳验收。

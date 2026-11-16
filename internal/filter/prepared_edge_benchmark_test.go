@@ -59,7 +59,7 @@ func checkEdgeBenchmarkFixture(t testing.TB, c edgeBenchmarkCase, depth, along, 
 	if chroma {
 		p.Chroma16(got[:], q0, along, across, c.strengths, lines)
 		if depth == 8 {
-			p.Chroma8(low[:], q0, along, across, c.strengths, lines)
+			p.Chroma4208(low[:], q0, along, across, c.strengths)
 		}
 	} else {
 		p.Luma16(got[:], q0, along, across, c.strengths)
@@ -133,7 +133,7 @@ func benchmarkPreparedEdge(b *testing.B, chroma bool) {
 					seed := checkEdgeBenchmarkFixture(b, c, depth, along, across, lines, chroma)
 					p := PrepareEdge(c.qp, 0, 0, depth)
 					q0 := 4*edgeBenchmarkStride + 5
-					b.Logf("filter_luma_edge=%s filter_delta=%s；计时含固定像素重置、整边调度与滤波，不含PrepareEdge", simd.ActiveBackends().FilterLumaEdge, simd.ActiveBackends().FilterDelta)
+					b.Logf("filter_luma_edge=%s filter_chroma_edge=%s filter_delta=%s；计时含固定像素重置、整边调度与滤波，不含PrepareEdge", simd.ActiveBackends().FilterLumaEdge, simd.ActiveBackends().FilterChromaEdge, simd.ActiveBackends().FilterDelta)
 					b.ReportAllocs()
 					if depth == 8 {
 						var initial, dst [29 * 24]byte
@@ -143,7 +143,7 @@ func benchmarkPreparedEdge(b *testing.B, chroma bool) {
 						if chroma {
 							for b.Loop() {
 								dst = initial
-								p.Chroma8(dst[:], q0, along, across, c.strengths, lines)
+								p.Chroma4208(dst[:], q0, along, across, c.strengths)
 							}
 						} else {
 							for b.Loop() {

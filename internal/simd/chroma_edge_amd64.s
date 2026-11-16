@@ -1,0 +1,198 @@
+//go:build amd64 && !purego
+
+#include "textflag.h"
+
+// Spec: 8.7.2.4。8个16位lane保存8条线，所有候选都从原始p1/p0/q0/q1计算。
+// 弱滤波分子范围[-1271,1279]、强滤波和范围[2,1022]，有符号16位精确。
+// 垂直方向每行只读4字节，水平每行只读8字节；不要求额外padding。
+TEXT ·filterChroma8EdgeSSE2(SB), NOSPLIT, $0-104
+	MOVQ alpha+56(FP), AX
+	TESTQ AX, AX
+	JLE chroma_done
+	MOVQ beta+64(FP), CX
+	TESTQ CX, CX
+	JLE chroma_done
+	LEAQ strengths+48(FP), R8
+	MOVL (R8), DX
+	TESTL DX, DX
+	JEQ chroma_done
+	PXOR X15, X15
+	MOVD AX, X12
+	PSHUFLW $0, X12, X12
+	PSHUFD $0, X12, X12
+	MOVD CX, X13
+	PSHUFLW $0, X13, X13
+	PSHUFD $0, X13, X13
+	// 每个bS复制到连续两个word；强度0不写，>=4走强滤波。
+	MOVD DX, X4
+	PUNPCKLBW X4, X4
+	PUNPCKLBW X15, X4
+	MOVOU X4, X6
+	PCMPGTW X15, X6
+	MOVQ $3, AX
+	MOVD AX, X7
+	PSHUFLW $0, X7, X7
+	PSHUFD $0, X7, X7
+	PCMPGTW X7, X4
+	// tc按段查询一次；仅弱段取tc0并加未缩放的1。
+	PXOR X5, X5
+	LEAQ tc+72(FP), R9
+	MOVQ $3, CX
+chroma_tc:
+	PSLLDQ $2, X5
+	MOVBQZX (R8)(CX*1), AX
+	XORQ DX, DX
+	TESTQ AX, AX
+	JEQ chroma_tc_insert
+	CMPQ AX, $4
+	JGE chroma_tc_insert
+	MOVQ (R9)(AX*8), DX
+	INCQ DX
+chroma_tc_insert:
+	PINSRW $0, DX, X5
+	DECQ CX
+	JGE chroma_tc
+	PUNPCKLWL X5, X5
+	MOVQ data_base+0(FP), R8
+	ADDQ q0+24(FP), R8
+	MOVQ lineStep+32(FP), R9
+	MOVQ acrossStep+40(FP), R10
+	CMPQ R10, $1
+	JNE chroma_horizontal
+	// 8×4字节转置，不读取行外字节。
+	LEAQ -2(R8), AX
+	MOVL (AX), X0
+	ADDQ R9, AX
+	MOVL (AX), X1
+	ADDQ R9, AX
+	MOVL (AX), X2
+	ADDQ R9, AX
+	MOVL (AX), X3
+	ADDQ R9, AX
+	MOVL (AX), X8
+	ADDQ R9, AX
+	MOVL (AX), X9
+	ADDQ R9, AX
+	MOVL (AX), X10
+	ADDQ R9, AX
+	MOVL (AX), X11
+	PUNPCKLBW X1, X0
+	PUNPCKLBW X3, X2
+	PUNPCKLBW X9, X8
+	PUNPCKLBW X11, X10
+	PUNPCKLWL X2, X0
+	PUNPCKLWL X10, X8
+	MOVOU X0, X2
+	PUNPCKLLQ X8, X0
+	PUNPCKHLQ X8, X2
+	MOVOU X0, X1
+	PSRLDQ $8, X1
+	MOVOU X2, X3
+	PSRLDQ $8, X3
+	JMP chroma_unpack
+chroma_horizontal:
+	MOVQ R8, AX
+	SUBQ R10, AX
+	MOVQ (AX), X1
+	SUBQ R10, AX
+	MOVQ (AX), X0
+	MOVQ (R8), X2
+	MOVQ (R8)(R10*1), X3
+chroma_unpack:
+	PUNPCKLBW X15, X0
+	PUNPCKLBW X15, X1
+	PUNPCKLBW X15, X2
+	PUNPCKLBW X15, X3
+	// X0=p1、X1=p0、X2=q0、X3=q1。严格阈值用threshold>abs实现。
+	MOVOU X1, X8
+	PSUBW X2, X8
+	PXOR X9, X9
+	PCMPGTW X8, X9
+	PXOR X9, X8
+	PSUBW X9, X8
+	MOVOU X12, X9
+	PCMPGTW X8, X9
+	PAND X9, X6
+	MOVOU X0, X8
+	PSUBW X1, X8
+	PXOR X9, X9
+	PCMPGTW X8, X9
+	PXOR X9, X8
+	PSUBW X9, X8
+	MOVOU X13, X9
+	PCMPGTW X8, X9
+	PAND X9, X6
+	MOVOU X3, X8
+	PSUBW X2, X8
+	PXOR X9, X9
+	PCMPGTW X8, X9
+	PXOR X9, X8
+	PSUBW X9, X8
+	PCMPGTW X8, X13
+	PAND X13, X6
+	PMOVMSKB X6, DX
+	TESTL DX, DX
+	JEQ chroma_done
+	// 弱候选：Clip3(-tc0-1,tc0+1,((q0-p0)*4+p1-q1+4)>>3)。
+	MOVOU X2, X8
+	PSUBW X1, X8
+	PSLLW $2, X8
+	PADDW X0, X8
+	PSUBW X3, X8
+	MOVQ $4, AX
+	MOVD AX, X14
+	PSHUFLW $0, X14, X14
+	PSHUFD $0, X14, X14
+	PADDW X14, X8
+	PSRAW $3, X8
+	PXOR X9, X9
+	PSUBW X5, X9
+	PMAXSW X9, X8
+	PMINSW X5, X8
+	MOVOU X1, X10
+	PADDW X8, X10
+	MOVOU X2, X11
+	PSUBW X8, X11
+	// 强候选分别是(2*p1+p0+q1+2)>>2和(2*q1+q0+p1+2)>>2。
+	PSRLW $1, X14
+	MOVOU X0, X8
+	PADDW X0, X8
+	PADDW X1, X8
+	PADDW X3, X8
+	PADDW X14, X8
+	PSRLW $2, X8
+	MOVOU X3, X9
+	PADDW X3, X9
+	PADDW X2, X9
+	PADDW X0, X9
+	PADDW X14, X9
+	PSRLW $2, X9
+	PAND X4, X8
+	PAND X4, X9
+	MOVOU X4, X5
+	PANDN X10, X4
+	POR X4, X8
+	PANDN X11, X5
+	POR X5, X9
+	PACKUSWB X8, X8
+	PACKUSWB X9, X9
+	// 逐线掩码写回，bS0及拒绝线完全不写；只修改p0/q0。
+	MOVQ $8, CX
+	MOVQ R8, AX
+	SUBQ R10, AX
+chroma_store:
+	TESTL $3, DX
+	JEQ chroma_store_next
+	MOVL X8, BX
+	MOVB BL, (AX)
+	MOVL X9, BX
+	MOVB BL, (AX)(R10*1)
+chroma_store_next:
+	PSRLDQ $1, X8
+	PSRLDQ $1, X9
+	SHRL $2, DX
+	ADDQ R9, AX
+	DECQ CX
+	JNE chroma_store
+chroma_done:
+	RET
