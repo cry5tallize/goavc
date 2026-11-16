@@ -1,6 +1,7 @@
 package decoder
 
 import (
+	"github.com/cry5tallize/goavc/internal/dpb"
 	"github.com/cry5tallize/goavc/internal/motion"
 	"github.com/cry5tallize/goavc/internal/prediction"
 )
@@ -66,6 +67,17 @@ func mcBPartitionSamples[T ~uint8 | ~uint16](fs *frameState, s *sliceEntry, mbx,
 	if fs.sps.SeparateColourPlaneFlag {
 		first, end = fs.component, fs.component+1
 	}
+	explicit := s.pps.WeightedBipredIDC == 1 && s.hdr.PredictionWeights != nil
+	both := refs[0] >= 0 && refs[1] >= 0
+	list := 0
+	if refs[0] < 0 {
+		list = 1
+	}
+	implicit := [2]int32{1, 1}
+	if s.pps.WeightedBipredIDC == 2 && both {
+		a, b := s.refs[0][refs[0]], s.refs[1][refs[1]]
+		implicit[0], implicit[1] = prediction.ImplicitWeights(fs.poc, a.POC, b.POC, a.LongTerm, b.LongTerm)
+	}
 	for c := first; c < end; c++ {
 		x, y, w, h := mbx*16+p.x*4, mby*16+p.y*4, p.w*4, p.h*4
 		if c > 0 && !fs.sps.SeparateColourPlaneFlag {
@@ -74,97 +86,82 @@ func mcBPartitionSamples[T ~uint8 | ~uint16](fs *frameState, s *sliceEntry, mbx,
 			w /= fs.subW
 			h /= fs.subH
 		}
+		pl := &fs.pic.Planes[c]
+		if !both && !explicit {
+			// 单参考无权重时直接写最终平面，不清零/填充中转预测块。
+			if pl.BitDepth == 10 {
+				mcBPlane(fs, pl.Data16[pl.Index(x, y):], pl.Stride, s.refs[list][refs[list]], c, x, y, w, h, mvs[list])
+			} else {
+				mcBPlane(fs, pl.Data[pl.Index(x, y):], pl.Stride, s.refs[list][refs[list]], c, x, y, w, h, mvs[list])
+			}
+			continue
+		}
 		var samples [2][256]T
-		for l := 0; l < 2; l++ {
-			if refs[l] < 0 {
-				continue
-			}
-			r := s.refs[l][refs[l]]
-			mv := mvs[l]
-			chromaY := int(mv.Y)
-			if c > 0 {
-				chromaY += fs.chromaFieldOffset(r)
-			}
-			switch dst := any(samples[l][:]).(type) {
-			case []byte:
-				if c == 0 || fs.sps.ChromaFormatIDC == 3 {
-					prediction.MCBlockLuma(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
-				} else {
-					prediction.MCBlockChromaFormat(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), chromaY, fs.subW, fs.subH)
-				}
-			case []uint16:
-				if c == 0 || fs.sps.ChromaFormatIDC == 3 {
-					prediction.MCBlockLumaHigh(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
-				} else {
-					prediction.MCBlockChromaFormatHigh(dst, w, &r.Picture.Planes[c], x, y, w, h, int(mv.X), chromaY, fs.subW, fs.subH)
-				}
+		for l := range 2 {
+			if refs[l] >= 0 {
+				mcBPlane(fs, samples[l][:], w, s.refs[l][refs[l]], c, x, y, w, h, mvs[l])
 			}
 		}
 		denom := uint32(0)
-		weights := [2]int32{1, 1}
-		offsets := [2]int32{}
-		explicit := s.pps.WeightedBipredIDC == 1 && s.hdr.PredictionWeights != nil
+		weights, offsets := [2]int32{1, 1}, [2]int32{}
 		if explicit {
 			t := s.hdr.PredictionWeights
 			denom = t.LumaDenom
 			if c > 0 && !fs.sps.SeparateColourPlaneFlag {
 				denom = t.ChromaDenom
 			}
-			for l := 0; l < 2; l++ {
-				if refs[l] >= 0 {
-					index := int(refs[l])
-					if fs.field {
-						index /= 2
-					}
-					v := t.Lists[l][index]
-					wi := c
-					if fs.sps.SeparateColourPlaneFlag {
-						wi = 0
-					}
-					weights[l], offsets[l] = v.Weight[wi], v.Offset[wi]
+			for l := range 2 {
+				if refs[l] < 0 {
+					continue
 				}
+				index := int(refs[l])
+				if fs.field {
+					index /= 2
+				}
+				wi := c
+				if fs.sps.SeparateColourPlaneFlag {
+					wi = 0
+				}
+				weights[l], offsets[l] = t.Lists[l][index].Weight[wi], t.Lists[l][index].Offset[wi]
 			}
+		} else if s.pps.WeightedBipredIDC == 2 && both {
+			weights, denom = implicit, 5
 		}
-		if s.pps.WeightedBipredIDC == 2 && refs[0] >= 0 && refs[1] >= 0 {
-			a, b := s.refs[0][refs[0]], s.refs[1][refs[1]]
-			weights[0], weights[1] = prediction.ImplicitWeights(fs.poc, a.POC, b.POC, a.LongTerm, b.LongTerm)
-			denom = 5
-		}
-		pl := &fs.pic.Planes[c]
-		l := 0
-		if refs[0] < 0 {
-			l = 1
-		}
-		both := refs[0] >= 0 && refs[1] >= 0
 		switch values := any(&samples).(type) {
 		case *[2][256]byte:
-			for yy := range h {
-				row := pl.Row(y + yy)[x : x+w]
-				for xx := range w {
-					i := yy*w + xx
-					if both {
-						row[xx] = prediction.BiWeightSample(values[0][i], values[1][i], weights[0], weights[1], offsets[0], offsets[1], denom)
-					} else if explicit {
-						row[xx] = prediction.WeightSample(values[l][i], weights[l], offsets[l], denom)
-					} else {
-						row[xx] = values[l][i]
-					}
-				}
+			if both {
+				prediction.BiWeightBlock8(pl.Data[pl.Index(x, y):], pl.Stride, values[0][:], values[1][:], w, w, h, weights, offsets, denom)
+			} else {
+				prediction.WeightBlock8(pl.Data[pl.Index(x, y):], pl.Stride, values[list][:], w, w, h, weights[list], offsets[list], denom)
 			}
 		case *[2][256]uint16:
-			for yy := range h {
-				row := pl.Row16(y + yy)[x : x+w]
-				for xx := range w {
-					i := yy*w + xx
-					if both {
-						row[xx] = prediction.BiWeightSampleHigh(values[0][i], values[1][i], weights[0], weights[1], offsets[0], offsets[1], denom, pl.BitDepth)
-					} else if explicit {
-						row[xx] = prediction.WeightSampleHigh(values[l][i], weights[l], offsets[l], denom, pl.BitDepth)
-					} else {
-						row[xx] = values[l][i]
-					}
-				}
+			if both {
+				prediction.BiWeightBlock16(pl.Data16[pl.Index(x, y):], pl.Stride, values[0][:], values[1][:], w, w, h, weights, offsets, denom, pl.BitDepth)
+			} else {
+				prediction.WeightBlock16(pl.Data16[pl.Index(x, y):], pl.Stride, values[list][:], w, w, h, weights[list], offsets[list], denom, pl.BitDepth)
 			}
+		}
+	}
+}
+
+// mcBPlane 只分派存储和采样格式，所有插值仍调用唯一共享MC内核。
+func mcBPlane[T ~uint8 | ~uint16](fs *frameState, dst []T, stride int, r *dpb.Reference, c, x, y, w, h int, mv motion.MV) {
+	chromaY := int(mv.Y)
+	if c > 0 {
+		chromaY += fs.chromaFieldOffset(r)
+	}
+	switch d := any(dst).(type) {
+	case []byte:
+		if c == 0 || fs.sps.ChromaFormatIDC == 3 {
+			prediction.MCBlockLuma(d, stride, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
+		} else {
+			prediction.MCBlockChromaFormat(d, stride, &r.Picture.Planes[c], x, y, w, h, int(mv.X), chromaY, fs.subW, fs.subH)
+		}
+	case []uint16:
+		if c == 0 || fs.sps.ChromaFormatIDC == 3 {
+			prediction.MCBlockLumaHigh(d, stride, &r.Picture.Planes[c], x, y, w, h, int(mv.X), int(mv.Y))
+		} else {
+			prediction.MCBlockChromaFormatHigh(d, stride, &r.Picture.Planes[c], x, y, w, h, int(mv.X), chromaY, fs.subW, fs.subH)
 		}
 	}
 }
