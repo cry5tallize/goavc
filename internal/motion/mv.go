@@ -76,11 +76,20 @@ func (g *Grid) Available(bx, by int) bool {
 	if g == nil || bx < 0 || by < 0 || bx >= g.BlockW || by >= g.BlockH {
 		return false
 	}
+	return g.availableIndex(bx, by, g.index(bx, by))
+}
+
+// availableIndex 共享可用性规则；调用方已校验坐标并只计算一次线性下标。
+// 去块和首slice常用整帧视图，无需重复计算所属宏块；映射slice仍保留原权限检查。
+func (g *Grid) availableIndex(bx, by, index int) bool {
+	if g.mappedOwners == nil && g.sliceStart == 0 {
+		return g.valid[index]
+	}
 	mb := (by/4)*g.MBWidth + bx/4
 	if g.mappedOwners != nil {
-		return mb < len(g.mappedOwners) && g.mappedOwners[mb] == g.mappedSlice && g.valid[g.index(bx, by)]
+		return mb < len(g.mappedOwners) && g.mappedOwners[mb] == g.mappedSlice && g.valid[index]
 	}
-	return mb >= g.sliceStart && g.valid[g.index(bx, by)]
+	return mb >= g.sliceStart && g.valid[index]
 }
 
 // BeginSlice 限制预测邻块到当前 slice；调用 BeginSlice(0) 可恢复整帧
@@ -99,10 +108,13 @@ func (g *Grid) BeginMappedSlice(owners []int, sliceID int) {
 
 // Get 返回块的 MV 与参考索引；不可用时 ok=false。
 func (g *Grid) Get(bx, by int) (MV, int8, bool) {
-	if !g.Available(bx, by) {
+	if g == nil || bx < 0 || by < 0 || bx >= g.BlockW || by >= g.BlockH {
 		return MV{}, 0, false
 	}
 	i := g.index(bx, by)
+	if !g.availableIndex(bx, by, i) {
+		return MV{}, 0, false
+	}
 	return g.MV[i], g.Ref[i], true
 }
 
