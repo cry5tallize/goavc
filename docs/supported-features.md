@@ -177,7 +177,7 @@
 | SIMD 4/8×8正逆变换与DC | Partial | K10接入SSE2/AVX2/NEON，保留原8×8整数投影、int64逆变换、亮度/420/422 DC及晚期失败语义。x86显式后端解析值/原地/边界/0分配通过；修复SSE2的420 DC系数顺序错误。amd64默认按实测仅Forward4优选SSE2，其余变换槽保留Generic；NEON仅编译验收 |
 | SIMD量化/反量化 | Partial | K11为4/8×8与DC提供精确32×32→64乘积；除法/死区/符号/溢出提交由共享Go保持，宽域回退int64，不使用近似倒数。指针块接口保留首错前缀及原地未写后缀；x86显式后端验证通过，amd64默认按实测选择直接Generic；NEON原生未验 |
 | SIMD去块候选 | Partial | K12仅向量化同一条line的强弱候选加法；阈值、条件访问、逐线/跨边顺序与帧场几何不变。x86方向/Span及最小邻域保护页通过；实测SIMD较慢，amd64默认保留Generic，不宣称整条边全SIMD |
-| 8-bit亮度类整边SSE2 | Partial | A01：decoder完整16线亮度类边进入SSE2，含满足几何的444及MBAFF纯帧MB；10-bit/混合场逐线边保留原路。encoder亮度仍分段，包装层closure局部数组1alloc/op，未满足局部栈缓冲门禁。实际消费链及来源纠正见[gates/a07_decoder_block_results.md](gates/a07_decoder_block_results.md) |
+| 8-bit亮度类整边SSE2 | Partial | A01：decoder完整16线亮度类边进入SSE2，含满足几何的444及MBAFF纯帧MB；10-bit/混合场逐线边保留原路。encoder亮度仍分段。[C01](gates/c01_luma_edge_dispatch.md)关闭包装层局部缓冲分配缺口，覆盖水平、垂直及短邻域回退 |
 | 8-bit 420色度整边SSE2 | Partial | A02：逐行解码及编码本地重建共享八线强弱滤波，水平/垂直均接入独立FilterChromaEdge槽。标量差分、解析值、新内核保护页和栈缓冲零分配通过；独立FFmpeg像素一致，前后五样本见[performance.md §21](performance.md)。10-bit、422/444、场/MBAFF不进入新整边槽，继续原路径；不扩大Profile或NEON原生支持 |
 | 整块双向均值SSE2 | Partial | A04：decoder B块8/10-bit均值使用PAVGB/PAVGW，保留奇数尾部、最小len及原地/部分重叠语义；实际SSE2差分、直接保护页、局部0分配与FFmpeg Oracle通过，见[gates/a04_average_blocks.md](gates/a04_average_blocks.md)。encoder仍逐样本均值，不外推编码吞吐 |
 | 整块单/双向加权SSE2 | Partial | A05：decoder P非恒等/B块的4倍数宽完整矩形、规范权重/offset/denom、8/10-bit输出进入Weight8/16槽；完整uint16输入域精确，其他形状/参数/部分重叠保留int64。保护页/解析值/局部0分配/Oracle通过，见[gates/a05_weight_blocks.md](gates/a05_weight_blocks.md)；encoder仍逐样本权重，NEON原生未验 |

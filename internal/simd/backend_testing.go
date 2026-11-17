@@ -34,7 +34,7 @@ func ForceLuma8EdgeBackendForTesting(backend Backend) (restore func(), err error
 	table := previous
 	switch backend {
 	case Generic:
-		table.filterLuma8Edge, table.backends.FilterLumaEdge = filterLuma8EdgeGeneric, Generic
+		table.backends.FilterLumaEdge = Generic
 	case SSE2:
 		if !nativeCPU.sse2 {
 			backendTestMu.Unlock()
@@ -45,7 +45,7 @@ func ForceLuma8EdgeBackendForTesting(backend Backend) (restore func(), err error
 			backendTestMu.Unlock()
 			return nil, ErrBackendUnavailable
 		}
-		table.filterLuma8Edge, table.backends.FilterLumaEdge = sse.filterLuma8Edge, SSE2
+		table.backends.FilterLumaEdge = SSE2
 	default:
 		backendTestMu.Unlock()
 		return nil, ErrBackendUnavailable

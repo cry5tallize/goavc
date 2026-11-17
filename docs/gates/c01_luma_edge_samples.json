@@ -1,0 +1,3126 @@
+{
+  "baseline_revision": "9f493b3e318b4f9a38d991aa703b265b69db6dfa",
+  "environment": {
+    "cpu": "AMD Ryzen 7 5700X 8-Core Processor             ",
+    "os": "Microsoft Windows NT 10.0.26200.0",
+    "go": "go version go1.27.4 windows/amd64",
+    "cgo": 0,
+    "goamd64": "v1",
+    "gomaxprocs": 16,
+    "threads": 1
+  },
+  "protocol": "Five separate processes per side alternating before/after order; same inputs and fixtures. Edge100ms, IDR500ms, IPB1x.",
+  "inputs": {
+    "idr": "b6f836c52d00a644b4cf5906e1b726b3d0bed713d2b2fdf940cb6c99133e59a9",
+    "ipb": "e175d84a84d1ec065420cc4292650c04976393dcfea0588357b264ca4fa9583f"
+  },
+  "cases": {
+    "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/weak_all-16": {
+      "before": [
+        {
+          "iterations": 1000000,
+          "ns_op": 100.5,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 112.1,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 920950,
+          "ns_op": 124.9,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 103.4,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 881186,
+          "ns_op": 138.3,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "iterations": 1000000,
+          "ns_op": 109,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 105.9,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 104.1,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 120.4,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 106.3,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "change_percent": -5.173951828724355
+    },
+    "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/strong_all-16": {
+      "before": [
+        {
+          "iterations": 791504,
+          "ns_op": 157,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 784057,
+          "ns_op": 160.6,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 736330,
+          "ns_op": 183.6,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 777302,
+          "ns_op": 161.8,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 694806,
+          "ns_op": 184.6,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "iterations": 889678,
+          "ns_op": 152.6,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 783289,
+          "ns_op": 148.4,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 775894,
+          "ns_op": 148.9,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 913867,
+          "ns_op": 167.7,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 701302,
+          "ns_op": 158.3,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "change_percent": -5.686032138442531
+    },
+    "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/mixed-16": {
+      "before": [
+        {
+          "iterations": 1337810,
+          "ns_op": 89.84,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 100.5,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 125.4,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 102.8,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 117.7,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "iterations": 1000000,
+          "ns_op": 102.5,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1237615,
+          "ns_op": 96.9,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1260484,
+          "ns_op": 97.14,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 108.6,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 102.7,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "change_percent": -0.29182879377431803
+    },
+    "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/reject_all-16": {
+      "before": [
+        {
+          "iterations": 1264845,
+          "ns_op": 94.96,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1234045,
+          "ns_op": 97.6,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 125.4,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1221732,
+          "ns_op": 98.27,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 127.3,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "iterations": 1247457,
+          "ns_op": 97,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 100.2,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 101,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 916869,
+          "ns_op": 109.9,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1250361,
+          "ns_op": 95.83,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "change_percent": 1.9639767986160628
+    },
+    "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/partial-16": {
+      "before": [
+        {
+          "iterations": 1000000,
+          "ns_op": 100.8,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 101.9,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 834897,
+          "ns_op": 140.6,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 109.8,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 727624,
+          "ns_op": 152.5,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "iterations": 972446,
+          "ns_op": 108.5,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 106.9,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 109.2,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 115.1,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 107.2,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "change_percent": -1.1839708561020013
+    },
+    "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/zero_strength-16": {
+      "before": [
+        {
+          "iterations": 9809049,
+          "ns_op": 12.14,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 9442498,
+          "ns_op": 12.7,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 6831650,
+          "ns_op": 17.14,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 9245562,
+          "ns_op": 13.14,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 6658490,
+          "ns_op": 16.55,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "iterations": 7726083,
+          "ns_op": 15.49,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7761162,
+          "ns_op": 15.61,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 8022033,
+          "ns_op": 15.46,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7258429,
+          "ns_op": 17.09,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7249615,
+          "ns_op": 15.71,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "change_percent": 18.797564687975644
+    },
+    "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/zero_threshold-16": {
+      "before": [
+        {
+          "iterations": 10026570,
+          "ns_op": 12.19,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 9487590,
+          "ns_op": 12.56,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7366346,
+          "ns_op": 16.24,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 8994759,
+          "ns_op": 13.01,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 8284431,
+          "ns_op": 16.19,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "iterations": 7662932,
+          "ns_op": 15.01,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7792864,
+          "ns_op": 15.45,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7476169,
+          "ns_op": 15.29,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7500796,
+          "ns_op": 15.68,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 8172214,
+          "ns_op": 14.99,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "change_percent": 17.5249807840123
+    },
+    "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/weak_all-16": {
+      "before": [
+        {
+          "iterations": 1000000,
+          "ns_op": 116.1,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 121,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 848235,
+          "ns_op": 154.8,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 117.1,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 825592,
+          "ns_op": 149.2,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "iterations": 1000000,
+          "ns_op": 117,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 114.5,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 853180,
+          "ns_op": 124.9,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 114.8,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 991045,
+          "ns_op": 122,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "change_percent": -3.3057851239669422
+    },
+    "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/strong_all-16": {
+      "before": [
+        {
+          "iterations": 849496,
+          "ns_op": 140.6,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 863805,
+          "ns_op": 143.8,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 607538,
+          "ns_op": 196.6,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 775393,
+          "ns_op": 161.9,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 706588,
+          "ns_op": 173.1,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "iterations": 851727,
+          "ns_op": 151.2,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 748362,
+          "ns_op": 161.6,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 861944,
+          "ns_op": 149.4,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 866550,
+          "ns_op": 160.2,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 724287,
+          "ns_op": 151.7,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "change_percent": -6.30018529956764
+    },
+    "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/mixed-16": {
+      "before": [
+        {
+          "iterations": 1220595,
+          "ns_op": 97.45,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1221400,
+          "ns_op": 98.03,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 899010,
+          "ns_op": 134.1,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 112,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 121,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "iterations": 1000000,
+          "ns_op": 108,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 106.8,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 112.5,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 111.8,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1214781,
+          "ns_op": 98.81,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "change_percent": -3.57142857142857
+    },
+    "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/reject_all-16": {
+      "before": [
+        {
+          "iterations": 1279845,
+          "ns_op": 93.53,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1260156,
+          "ns_op": 95.73,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 127.3,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 109.5,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 105.5,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "iterations": 1000000,
+          "ns_op": 101.6,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 103.6,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 104.6,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 102.8,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1290711,
+          "ns_op": 93.27,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "change_percent": -2.5592417061611417
+    },
+    "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/partial-16": {
+      "before": [
+        {
+          "iterations": 1000000,
+          "ns_op": 105,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 104.9,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 135.3,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 131.8,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 125.8,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "iterations": 1000000,
+          "ns_op": 110.5,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 113.1,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 969853,
+          "ns_op": 113.8,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 122.9,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 1000000,
+          "ns_op": 109.6,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "change_percent": -10.095389507154218
+    },
+    "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/zero_strength-16": {
+      "before": [
+        {
+          "iterations": 9452390,
+          "ns_op": 12.48,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 9335034,
+          "ns_op": 12.84,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7876806,
+          "ns_op": 14.48,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7808178,
+          "ns_op": 14.89,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 8026862,
+          "ns_op": 14.9,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "iterations": 7734100,
+          "ns_op": 15.98,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7598976,
+          "ns_op": 15.62,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7228174,
+          "ns_op": 16.36,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 6558344,
+          "ns_op": 16.5,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7883222,
+          "ns_op": 15.41,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "change_percent": 10.359116022099446
+    },
+    "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/zero_threshold-16": {
+      "before": [
+        {
+          "iterations": 9858448,
+          "ns_op": 12.54,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 9585889,
+          "ns_op": 12.27,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 8906239,
+          "ns_op": 14.23,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 8274548,
+          "ns_op": 14.45,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 8359922,
+          "ns_op": 14.56,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "after": [
+        {
+          "iterations": 7886383,
+          "ns_op": 15.7,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7433700,
+          "ns_op": 15.69,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7254744,
+          "ns_op": 16.16,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7963420,
+          "ns_op": 15.54,
+          "b_op": 0,
+          "allocs_op": 0
+        },
+        {
+          "iterations": 7956820,
+          "ns_op": 15.04,
+          "b_op": 0,
+          "allocs_op": 0
+        }
+      ],
+      "change_percent": 10.260014054813759
+    },
+    "idr": {
+      "before": [
+        {
+          "iterations": 15,
+          "ns_op": 36226893,
+          "b_op": 8078093,
+          "allocs_op": 116
+        },
+        {
+          "iterations": 15,
+          "ns_op": 37541173,
+          "b_op": 8078070,
+          "allocs_op": 116
+        },
+        {
+          "iterations": 12,
+          "ns_op": 42951375,
+          "b_op": 8078234,
+          "allocs_op": 116
+        },
+        {
+          "iterations": 13,
+          "ns_op": 43032015,
+          "b_op": 8078579,
+          "allocs_op": 117
+        },
+        {
+          "iterations": 12,
+          "ns_op": 44045475,
+          "b_op": 8078254,
+          "allocs_op": 116
+        }
+      ],
+      "after": [
+        {
+          "iterations": 15,
+          "ns_op": 36506720,
+          "b_op": 8077385,
+          "allocs_op": 115
+        },
+        {
+          "iterations": 16,
+          "ns_op": 36514862,
+          "b_op": 8078028,
+          "allocs_op": 116
+        },
+        {
+          "iterations": 14,
+          "ns_op": 40224836,
+          "b_op": 8078113,
+          "allocs_op": 116
+        },
+        {
+          "iterations": 16,
+          "ns_op": 36597569,
+          "b_op": 8078022,
+          "allocs_op": 116
+        },
+        {
+          "iterations": 16,
+          "ns_op": 38028875,
+          "b_op": 8077382,
+          "allocs_op": 115
+        }
+      ],
+      "change_percent": -14.793021178018162
+    },
+    "ipb": {
+      "before": [
+        {
+          "iterations": 1,
+          "ns_op": 936536600,
+          "b_op": 162032352,
+          "allocs_op": 4418
+        },
+        {
+          "iterations": 1,
+          "ns_op": 1027850600,
+          "b_op": 162027144,
+          "allocs_op": 4411
+        },
+        {
+          "iterations": 1,
+          "ns_op": 1009555800,
+          "b_op": 162032256,
+          "allocs_op": 4417
+        },
+        {
+          "iterations": 1,
+          "ns_op": 1129102800,
+          "b_op": 162032800,
+          "allocs_op": 4422
+        },
+        {
+          "iterations": 1,
+          "ns_op": 1027375500,
+          "b_op": 162032224,
+          "allocs_op": 4417
+        }
+      ],
+      "after": [
+        {
+          "iterations": 1,
+          "ns_op": 921635400,
+          "b_op": 162032256,
+          "allocs_op": 4417
+        },
+        {
+          "iterations": 1,
+          "ns_op": 935487200,
+          "b_op": 162027256,
+          "allocs_op": 4412
+        },
+        {
+          "iterations": 1,
+          "ns_op": 1009041300,
+          "b_op": 162032384,
+          "allocs_op": 4418
+        },
+        {
+          "iterations": 1,
+          "ns_op": 904247700,
+          "b_op": 162032240,
+          "allocs_op": 4417
+        },
+        {
+          "iterations": 1,
+          "ns_op": 1095642100,
+          "b_op": 162032368,
+          "allocs_op": 4418
+        }
+      ],
+      "change_percent": -8.943983966913748
+    }
+  },
+  "pilot": {
+    "baseline_revision": "9f493b3e318b4f9a38d991aa703b265b69db6dfa",
+    "environment": {
+      "cpu": "AMD Ryzen 7 5700X 8-Core Processor             ",
+      "os": "Microsoft Windows NT 10.0.26200.0",
+      "go": "go version go1.27.4 windows/amd64",
+      "cgo": 0,
+      "goamd64": "v1",
+      "gomaxprocs": 16,
+      "threads": 1
+    },
+    "protocol": "Five separate processes per side alternating before/after order; same inputs and fixtures. Edge100ms, IDR500ms, IPB1x.",
+    "inputs": {
+      "idr": "b6f836c52d00a644b4cf5906e1b726b3d0bed713d2b2fdf940cb6c99133e59a9",
+      "ipb": "e175d84a84d1ec065420cc4292650c04976393dcfea0588357b264ca4fa9583f"
+    },
+    "cases": {
+      "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/weak_all-16": {
+        "before": [
+          {
+            "iterations": 1000000,
+            "ns_op": 109.5,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 112.9,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1224165,
+            "ns_op": 98.13,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1211940,
+            "ns_op": 99.42,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 102.4,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "after": [
+          {
+            "iterations": 1000000,
+            "ns_op": 112.7,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 101.2,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 107.2,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 106.5,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 948315,
+            "ns_op": 126.4,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "change_percent": 4.6875
+      },
+      "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/strong_all-16": {
+        "before": [
+          {
+            "iterations": 846644,
+            "ns_op": 141.5,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 793021,
+            "ns_op": 164.7,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 916100,
+            "ns_op": 140.9,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 795703,
+            "ns_op": 154.2,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 754716,
+            "ns_op": 139.7,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "after": [
+          {
+            "iterations": 765940,
+            "ns_op": 155.9,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 780894,
+            "ns_op": 147.3,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 750234,
+            "ns_op": 153.2,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 693039,
+            "ns_op": 147,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 757192,
+            "ns_op": 179.3,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "change_percent": 8.2685512367491
+      },
+      "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/mixed-16": {
+        "before": [
+          {
+            "iterations": 1255525,
+            "ns_op": 95.53,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 107.7,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 102.9,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1347630,
+            "ns_op": 89.08,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1309970,
+            "ns_op": 92.08,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "after": [
+          {
+            "iterations": 1000000,
+            "ns_op": 106.2,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1265565,
+            "ns_op": 97.19,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1217472,
+            "ns_op": 98.79,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1302388,
+            "ns_op": 91.97,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 146.2,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "change_percent": 3.4125405631738825
+      },
+      "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/reject_all-16": {
+        "before": [
+          {
+            "iterations": 1000000,
+            "ns_op": 103.1,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1214414,
+            "ns_op": 97.98,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 984170,
+            "ns_op": 119.4,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 104.2,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1258944,
+            "ns_op": 95.08,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "after": [
+          {
+            "iterations": 1000000,
+            "ns_op": 122.5,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 966130,
+            "ns_op": 123.5,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1225228,
+            "ns_op": 98.54,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1227934,
+            "ns_op": 96.82,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 158.2,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "change_percent": 18.81668283220175
+      },
+      "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/partial-16": {
+        "before": [
+          {
+            "iterations": 1000000,
+            "ns_op": 107.5,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 105.2,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 947959,
+            "ns_op": 115.2,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 139.2,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 100.8,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "after": [
+          {
+            "iterations": 1000000,
+            "ns_op": 130.4,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 131,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 107,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 106.1,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 737372,
+            "ns_op": 161.3,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "change_percent": 21.302325581395355
+      },
+      "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/zero_strength-16": {
+        "before": [
+          {
+            "iterations": 9374413,
+            "ns_op": 15.54,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 9339102,
+            "ns_op": 14.61,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 9687496,
+            "ns_op": 12.69,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 7171928,
+            "ns_op": 14.49,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 9557487,
+            "ns_op": 12.47,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "after": [
+          {
+            "iterations": 6236649,
+            "ns_op": 18.5,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 8069775,
+            "ns_op": 15.17,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 7915880,
+            "ns_op": 15.93,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 7841188,
+            "ns_op": 15.5,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 5147143,
+            "ns_op": 20.8,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "change_percent": 9.937888198757761
+      },
+      "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/zero_threshold-16": {
+        "before": [
+          {
+            "iterations": 8311170,
+            "ns_op": 12.88,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 9083407,
+            "ns_op": 14.29,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 9661446,
+            "ns_op": 12.33,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 8743359,
+            "ns_op": 13.1,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 10113523,
+            "ns_op": 12.34,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "after": [
+          {
+            "iterations": 6165765,
+            "ns_op": 17.02,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 7890895,
+            "ns_op": 14.39,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 7492273,
+            "ns_op": 19.4,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 8403302,
+            "ns_op": 14.84,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 5602711,
+            "ns_op": 19.68,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "change_percent": 32.14285714285714
+      },
+      "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/weak_all-16": {
+        "before": [
+          {
+            "iterations": 925639,
+            "ns_op": 127,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 123.8,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 110.4,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 794175,
+            "ns_op": 158.6,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 133,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "after": [
+          {
+            "iterations": 973788,
+            "ns_op": 138.8,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 984090,
+            "ns_op": 118,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 953288,
+            "ns_op": 128.6,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 117.3,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 970480,
+            "ns_op": 149.5,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "change_percent": 1.2598425196850283
+      },
+      "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/strong_all-16": {
+        "before": [
+          {
+            "iterations": 694725,
+            "ns_op": 170.4,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 766821,
+            "ns_op": 163.1,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 779726,
+            "ns_op": 148.1,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 691442,
+            "ns_op": 186.1,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 824061,
+            "ns_op": 189.5,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "after": [
+          {
+            "iterations": 819895,
+            "ns_op": 154.6,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 767214,
+            "ns_op": 146.3,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 713181,
+            "ns_op": 150,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 697065,
+            "ns_op": 145.7,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 718089,
+            "ns_op": 191.4,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "change_percent": -11.9718309859155
+      },
+      "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/mixed-16": {
+        "before": [
+          {
+            "iterations": 1000000,
+            "ns_op": 105.2,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 111.1,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1249660,
+            "ns_op": 96.95,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 154,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 123.4,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "after": [
+          {
+            "iterations": 1000000,
+            "ns_op": 110.5,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 104.7,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 986354,
+            "ns_op": 156.2,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 104,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 138.8,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "change_percent": -0.5400540054005365
+      },
+      "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/reject_all-16": {
+        "before": [
+          {
+            "iterations": 1000000,
+            "ns_op": 119.7,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 116.8,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 108.7,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 993579,
+            "ns_op": 116.1,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 103.5,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "after": [
+          {
+            "iterations": 1000000,
+            "ns_op": 106.6,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1276033,
+            "ns_op": 93.6,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1195413,
+            "ns_op": 100.6,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 100.7,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 114.4,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "change_percent": -13.264427217915586
+      },
+      "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/partial-16": {
+        "before": [
+          {
+            "iterations": 748467,
+            "ns_op": 150.7,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 930442,
+            "ns_op": 126.2,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 123.5,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 102.4,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 944211,
+            "ns_op": 123.6,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "after": [
+          {
+            "iterations": 1000000,
+            "ns_op": 117,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 108,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 111,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 991161,
+            "ns_op": 112.4,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 1000000,
+            "ns_op": 121.9,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "change_percent": -9.06148867313915
+      },
+      "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/zero_strength-16": {
+        "before": [
+          {
+            "iterations": 7957770,
+            "ns_op": 13.39,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 7685360,
+            "ns_op": 13.72,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 9409033,
+            "ns_op": 12.67,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 9506682,
+            "ns_op": 15.52,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 7448650,
+            "ns_op": 15.42,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "after": [
+          {
+            "iterations": 7479710,
+            "ns_op": 15.58,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 8000959,
+            "ns_op": 15.6,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 7744783,
+            "ns_op": 15.24,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 7774437,
+            "ns_op": 15.49,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 6786945,
+            "ns_op": 18.83,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "change_percent": 13.556851311953345
+      },
+      "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/zero_threshold-16": {
+        "before": [
+          {
+            "iterations": 9075576,
+            "ns_op": 14.73,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 9373608,
+            "ns_op": 13,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 9505477,
+            "ns_op": 12.21,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 8106355,
+            "ns_op": 15.05,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 7763070,
+            "ns_op": 13.44,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "after": [
+          {
+            "iterations": 7467888,
+            "ns_op": 14.75,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 7449991,
+            "ns_op": 15.85,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 7487598,
+            "ns_op": 15.61,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 8393896,
+            "ns_op": 14.57,
+            "b_op": 0,
+            "allocs_op": 0
+          },
+          {
+            "iterations": 6757441,
+            "ns_op": 17.5,
+            "b_op": 0,
+            "allocs_op": 0
+          }
+        ],
+        "change_percent": 16.145833333333325
+      },
+      "idr": {
+        "before": [
+          {
+            "iterations": 15,
+            "ns_op": 37685140,
+            "b_op": 8077377,
+            "allocs_op": 115
+          },
+          {
+            "iterations": 16,
+            "ns_op": 39738912,
+            "b_op": 8077384,
+            "allocs_op": 115
+          },
+          {
+            "iterations": 15,
+            "ns_op": 34570853,
+            "b_op": 8077737,
+            "allocs_op": 115
+          },
+          {
+            "iterations": 15,
+            "ns_op": 37444180,
+            "b_op": 8078084,
+            "allocs_op": 116
+          },
+          {
+            "iterations": 16,
+            "ns_op": 45593075,
+            "b_op": 8078028,
+            "allocs_op": 116
+          }
+        ],
+        "after": [
+          {
+            "iterations": 16,
+            "ns_op": 33820594,
+            "b_op": 8078029,
+            "allocs_op": 116
+          },
+          {
+            "iterations": 16,
+            "ns_op": 34577219,
+            "b_op": 8077390,
+            "allocs_op": 115
+          },
+          {
+            "iterations": 16,
+            "ns_op": 34830006,
+            "b_op": 8078345,
+            "allocs_op": 116
+          },
+          {
+            "iterations": 14,
+            "ns_op": 36504814,
+            "b_op": 8077748,
+            "allocs_op": 115
+          },
+          {
+            "iterations": 14,
+            "ns_op": 37120129,
+            "b_op": 8078129,
+            "allocs_op": 116
+          }
+        ],
+        "change_percent": -7.576286037414215
+      },
+      "ipb": {
+        "before": [
+          {
+            "iterations": 1,
+            "ns_op": 1021915700,
+            "b_op": 162027160,
+            "allocs_op": 4411
+          },
+          {
+            "iterations": 1,
+            "ns_op": 868779000,
+            "b_op": 162032240,
+            "allocs_op": 4417
+          },
+          {
+            "iterations": 1,
+            "ns_op": 1107226000,
+            "b_op": 162027144,
+            "allocs_op": 4411
+          },
+          {
+            "iterations": 1,
+            "ns_op": 883589000,
+            "b_op": 162032352,
+            "allocs_op": 4418
+          },
+          {
+            "iterations": 1,
+            "ns_op": 1235897900,
+            "b_op": 162032208,
+            "allocs_op": 4417
+          }
+        ],
+        "after": [
+          {
+            "iterations": 1,
+            "ns_op": 868292300,
+            "b_op": 162032240,
+            "allocs_op": 4417
+          },
+          {
+            "iterations": 1,
+            "ns_op": 955060400,
+            "b_op": 162027160,
+            "allocs_op": 4411
+          },
+          {
+            "iterations": 1,
+            "ns_op": 852260800,
+            "b_op": 162027160,
+            "allocs_op": 4411
+          },
+          {
+            "iterations": 1,
+            "ns_op": 929409500,
+            "b_op": 162032240,
+            "allocs_op": 4417
+          },
+          {
+            "iterations": 1,
+            "ns_op": 952601000,
+            "b_op": 162032224,
+            "allocs_op": 4417
+          }
+        ],
+        "change_percent": -9.052233956284262
+      }
+    },
+    "edge_repeat": {
+      "protocol": "Same fixtures, 150ms per case, reversed odd/even order, five independent pairs",
+      "cases": {
+        "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/weak_all-16": {
+          "before": [
+            {
+              "iterations": 1762514,
+              "ns_op": 100.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1530063,
+              "ns_op": 117.1,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1694677,
+              "ns_op": 106.6,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1781565,
+              "ns_op": 99.74,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1743667,
+              "ns_op": 102.2,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "after": [
+            {
+              "iterations": 1591537,
+              "ns_op": 113.6,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1669938,
+              "ns_op": 107.1,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1510149,
+              "ns_op": 125.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1596838,
+              "ns_op": 112.4,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1667365,
+              "ns_op": 110.7,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "change_percent": 9.980430528375738
+        },
+        "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/strong_all-16": {
+          "before": [
+            {
+              "iterations": 1246981,
+              "ns_op": 143.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1000000,
+              "ns_op": 164.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1265982,
+              "ns_op": 142.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1211259,
+              "ns_op": 150,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1307604,
+              "ns_op": 137.8,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "after": [
+            {
+              "iterations": 1000000,
+              "ns_op": 162.2,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1211012,
+              "ns_op": 151.3,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1000000,
+              "ns_op": 155.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1000000,
+              "ns_op": 253.6,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1000000,
+              "ns_op": 156,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "change_percent": 8.559498956158663
+        },
+        "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/mixed-16": {
+          "before": [
+            {
+              "iterations": 2032866,
+              "ns_op": 91.13,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1727613,
+              "ns_op": 109.8,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1898829,
+              "ns_op": 96.81,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1809820,
+              "ns_op": 99.62,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1821343,
+              "ns_op": 99.69,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "after": [
+            {
+              "iterations": 1293141,
+              "ns_op": 134,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1701805,
+              "ns_op": 103.4,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1765629,
+              "ns_op": 101.8,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 709398,
+              "ns_op": 265.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1911960,
+              "ns_op": 95.24,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "change_percent": 3.794418791407339
+        },
+        "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/reject_all-16": {
+          "before": [
+            {
+              "iterations": 1811437,
+              "ns_op": 99.34,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1490684,
+              "ns_op": 120.3,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1892950,
+              "ns_op": 93.92,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1833186,
+              "ns_op": 101.2,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1882041,
+              "ns_op": 94.84,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "after": [
+            {
+              "iterations": 1732898,
+              "ns_op": 103.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1670067,
+              "ns_op": 109.1,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1916548,
+              "ns_op": 94.86,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1311877,
+              "ns_op": 142.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1739080,
+              "ns_op": 101.5,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "change_percent": 4.590295953291723
+        },
+        "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/partial-16": {
+          "before": [
+            {
+              "iterations": 1733317,
+              "ns_op": 125.3,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1000000,
+              "ns_op": 162.6,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1685822,
+              "ns_op": 106.1,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1664691,
+              "ns_op": 107.4,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1706654,
+              "ns_op": 105.1,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "after": [
+            {
+              "iterations": 1651118,
+              "ns_op": 109.8,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1528366,
+              "ns_op": 117.3,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1671632,
+              "ns_op": 106.8,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1247425,
+              "ns_op": 137.5,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1726916,
+              "ns_op": 103.6,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "change_percent": 2.2346368715083775
+        },
+        "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/zero_strength-16": {
+          "before": [
+            {
+              "iterations": 6811627,
+              "ns_op": 26.21,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 10133664,
+              "ns_op": 17.57,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 14646172,
+              "ns_op": 12.5,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12911370,
+              "ns_op": 13.06,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 13645356,
+              "ns_op": 12.66,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "after": [
+            {
+              "iterations": 11155526,
+              "ns_op": 15.46,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 10449805,
+              "ns_op": 17.17,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11738236,
+              "ns_op": 15.12,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11681712,
+              "ns_op": 15.44,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12015780,
+              "ns_op": 15.18,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "change_percent": 18.223583460949456
+        },
+        "BenchmarkPreparedLumaEdge_16_Auto/8bit/vertical/zero_threshold-16": {
+          "before": [
+            {
+              "iterations": 7172514,
+              "ns_op": 22.24,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11088112,
+              "ns_op": 17.11,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 15053565,
+              "ns_op": 11.97,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 14742739,
+              "ns_op": 18.15,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 14336118,
+              "ns_op": 12.14,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "after": [
+            {
+              "iterations": 12368328,
+              "ns_op": 14.57,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11578764,
+              "ns_op": 16.53,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12517297,
+              "ns_op": 14.61,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 10766386,
+              "ns_op": 16.74,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12090922,
+              "ns_op": 14.91,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "change_percent": -12.857977790765629
+        },
+        "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/weak_all-16": {
+          "before": [
+            {
+              "iterations": 1000000,
+              "ns_op": 186.8,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1239439,
+              "ns_op": 131.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1634866,
+              "ns_op": 110.2,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1000000,
+              "ns_op": 230.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1595114,
+              "ns_op": 112.5,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "after": [
+            {
+              "iterations": 1476453,
+              "ns_op": 123.5,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1445898,
+              "ns_op": 124.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1558443,
+              "ns_op": 119,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1471713,
+              "ns_op": 124,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1576735,
+              "ns_op": 114.8,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "change_percent": -6.368460955269151
+        },
+        "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/strong_all-16": {
+          "before": [
+            {
+              "iterations": 1000000,
+              "ns_op": 201.6,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1000000,
+              "ns_op": 161.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1000000,
+              "ns_op": 154.3,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1000000,
+              "ns_op": 174.5,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1293722,
+              "ns_op": 140.5,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "after": [
+            {
+              "iterations": 1229740,
+              "ns_op": 145.8,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1000000,
+              "ns_op": 160.8,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1240076,
+              "ns_op": 144.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1000000,
+              "ns_op": 167.4,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1123189,
+              "ns_op": 160.3,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "change_percent": -0.9882643607164843
+        },
+        "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/mixed-16": {
+          "before": [
+            {
+              "iterations": 1628544,
+              "ns_op": 112.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1808272,
+              "ns_op": 99.58,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1748358,
+              "ns_op": 102,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1748692,
+              "ns_op": 101,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1674224,
+              "ns_op": 106.9,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "after": [
+            {
+              "iterations": 1673023,
+              "ns_op": 108.4,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1646380,
+              "ns_op": 109.5,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1741255,
+              "ns_op": 103.5,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1000000,
+              "ns_op": 201.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1686025,
+              "ns_op": 107.2,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "change_percent": 6.2745098039215685
+        },
+        "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/reject_all-16": {
+          "before": [
+            {
+              "iterations": 1574616,
+              "ns_op": 115.1,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1839606,
+              "ns_op": 98.05,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1812792,
+              "ns_op": 98.45,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1879384,
+              "ns_op": 95.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1860397,
+              "ns_op": 96.75,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "after": [
+            {
+              "iterations": 1796680,
+              "ns_op": 98.34,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1901047,
+              "ns_op": 95.25,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1847660,
+              "ns_op": 99.03,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1000000,
+              "ns_op": 192.9,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1904690,
+              "ns_op": 94.02,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "change_percent": 0.29576746557880007
+        },
+        "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/partial-16": {
+          "before": [
+            {
+              "iterations": 1503166,
+              "ns_op": 117.1,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1728651,
+              "ns_op": 104.1,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1756569,
+              "ns_op": 102.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1692802,
+              "ns_op": 105.4,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1735947,
+              "ns_op": 102.9,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "after": [
+            {
+              "iterations": 1540351,
+              "ns_op": 114.7,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1608602,
+              "ns_op": 111.1,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1653235,
+              "ns_op": 109,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1458140,
+              "ns_op": 120.3,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 1684570,
+              "ns_op": 106.2,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "change_percent": 6.724303554274735
+        },
+        "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/zero_strength-16": {
+          "before": [
+            {
+              "iterations": 14632004,
+              "ns_op": 14.12,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 13675940,
+              "ns_op": 14.09,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 14700717,
+              "ns_op": 12.25,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 13792046,
+              "ns_op": 13.42,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 13320801,
+              "ns_op": 12.58,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "after": [
+            {
+              "iterations": 11788513,
+              "ns_op": 15.39,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11902242,
+              "ns_op": 18.29,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11446231,
+              "ns_op": 15.21,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11655237,
+              "ns_op": 15.6,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11971666,
+              "ns_op": 15.4,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "change_percent": 14.754098360655732
+        },
+        "BenchmarkPreparedLumaEdge_16_Auto/8bit/horizontal/zero_threshold-16": {
+          "before": [
+            {
+              "iterations": 11381023,
+              "ns_op": 14.38,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11355535,
+              "ns_op": 13.56,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 15034202,
+              "ns_op": 12.14,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 14252803,
+              "ns_op": 12.49,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 14795330,
+              "ns_op": 12.48,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "after": [
+            {
+              "iterations": 12139359,
+              "ns_op": 15.54,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11352596,
+              "ns_op": 15.59,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 11913034,
+              "ns_op": 14.95,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12363061,
+              "ns_op": 14.62,
+              "b_op": 0,
+              "allocs_op": 0
+            },
+            {
+              "iterations": 12680610,
+              "ns_op": 14.45,
+              "b_op": 0,
+              "allocs_op": 0
+            }
+          ],
+          "change_percent": 19.69575660528422
+        }
+      }
+    },
+    "decision": "Initial named dispatch retained two slot checks in the prepared path; replaced with one checked Try call. Original series retained; not final evidence."
+  }
+}

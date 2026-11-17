@@ -27,8 +27,8 @@ func (e EdgeParameters) Luma8(data []byte, q0, lineStep, acrossStep int, strengt
 	if e.alpha == 0 || e.beta == 0 || strengths == [4]uint8{} {
 		return
 	}
-	if e.bitDepth == 8 && simd.ActiveBackends().FilterLumaEdge == simd.SSE2 && luma8EdgeHasFullCore(data, q0, lineStep, acrossStep) {
-		simd.FilterLuma8Edge(data, q0, lineStep, acrossStep, strengths, e.alpha, e.beta, e.tc)
+	if e.bitDepth == 8 && luma8EdgeHasFullCore(data, q0, lineStep, acrossStep) &&
+		simd.TryFilterLuma8Edge(data, q0, lineStep, acrossStep, strengths, e.alpha, e.beta, e.tc) {
 		return
 	}
 	for seg, bs := range strengths {

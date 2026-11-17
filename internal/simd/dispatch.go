@@ -30,7 +30,6 @@ type sad16Func func(a []uint16, as int, b []uint16, bs, width, height int) int
 type satd4Func func([16]int32) int
 type forward4Func func([16]int32) [16]int32
 type filterDeltaFunc func([4]int32, [4]int32) [4]int32
-type filterLuma8EdgeFunc func([]byte, int, int, int, [4]uint8, int, int, [4]int)
 type quantMultiplyFunc func([4]uint64, [4]uint64) [4]uint64
 type forward8Func func([64]int32) [64]int32
 type idct4Func func([16]int32) [16]int32
@@ -68,7 +67,6 @@ type kernelTable struct {
 	forward4                    forward4Func
 	residualVector              residualVector
 	filterDelta                 filterDeltaFunc // nil明确选择直接标量算术，非缺失后端回退。
-	filterLuma8Edge             filterLuma8EdgeFunc
 	quantMultiply               quantMultiplyFunc
 	forward8                    forward8Func
 	idct4                       idct4Func
@@ -90,7 +88,6 @@ func genericTable() kernelTable {
 		forwardLumaDC: forwardLumaDCGeneric, forwardChromaDC: forwardChromaDCGeneric,
 		forwardChromaDC422: forwardChromaDC422Generic,
 		wideAdd4:           wideAdd4Generic,
-		filterLuma8Edge:    filterLuma8EdgeGeneric,
 	}
 }
 

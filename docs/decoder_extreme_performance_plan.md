@@ -1,7 +1,7 @@
 # C轮：B05之后的极致解码性能计划
 
 日期：2026-11-17。代码基线：`9f493b3`，本机Ryzen7 5700X、Windows/amd64、Go1.27.4、CGO0。
-状态：C00 已冻结[基线与成本账本](gates/c00_baseline.md)；其余工作按独立门禁推进。B01–B05按已确认的本机范围完成。
+状态：C00 已冻结[基线与成本账本](gates/c00_baseline.md)，C01 已通过[局部缓冲零分配回归](gates/c01_luma_edge_dispatch.md)。下一项为 C02；B01–B05 按已确认的本机范围完成。
 
 ## 结论：下一步先优化数据流和调度，不再按SIMD数量排任务
 
@@ -220,4 +220,4 @@ IDR专项再做C07；只有GC证据充分才进入C08。要逼近单路60FPS，�
 
 - [B05收尾及正式性能](gates/b05_results.md)、[本次规划CPU采样](gates/c00_planning_profile.json)。
 - [既有优化计划与失败候选](decoder_performance_plan.md)、[架构](architecture.md)、[当前支持矩阵](supported-features.md)。
-- 本次只有规划和只读采样，没有实现C轮代码、修改默认分派或重定义旧基准。
+- C00/C01 保留既有计时口径、默认后端和滤波公式；后续任务按表单独验收，不沿用未验证结果。
