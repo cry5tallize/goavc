@@ -183,6 +183,7 @@
 | SIMD残差加减 | Partial | K13接入picture重建与真实encoder减法，保持int32极端Clip1、10-bit低两位、各自stride及未写区域；SSE2/AVX2/NEON为固定值向量算术，尾部与gather/scatter由Go完成。x86保护页/局部0分配通过，amd64默认直接标量避免gather开销；NEON原生未验 |
 | SIMD边界矩阵 | Partial | K14覆盖所有现有内核类别及MC全相位，Windows Generic/Auto/SSE2/AVX2、purego、386保护页执行通过；Unix mmap辅助和六目标汇编vet/build/测试编译已交付。未执行Unix/NEON原生动态页验证，值ABI栈范围另以静态访问证明记录 |
 | decoder双向MC Put/Avg | Partial | B01普通8-bit420逐行、无显式/非均值权重的双参考预测融合，clip/舍入后再平均。全相位/边界/负MV/局部0分配、组合核保护页及FFmpeg像素通过，见[gates/b01_put_average.md](gates/b01_put_average.md)；其他路径保留原两预测块 |
+| 分数像素MC SSE2 | Partial | B02共享MC的8-bit 4/8/12/16宽亮度全qpel/色度全双线性相位进入SSE2；先完成两遍未裁剪六抽头再Clip，支持逻辑边界/FieldView适配及Put/Avg。全相位、halo保护页、0分配与Oracle通过，见[gates/b02_fractional_mc.md](gates/b02_fractional_mc.md)；10-bit及其他ISA尚未扩展 |
 | 搜索工作区复用 | Partial | G01在真实编码器复用双位深Workspace，prepared Integer/Refine/Estimate含Scorer为0分配；旧回调轨迹/码流不变。决策集成见G03b/K18，K16仍限串行复用，未开启内部并行 |
 | 帧间残差去分配 | Partial | G02在六格式/场/矩阵/两死区/4与8变换下，prepared真实帧间候选与重建0分配，384组改造前指纹不变；真实决策集成见G03b/K18，不宣称整个codec零分配 |
 | 帧内邻域去分配 | Partial | G03a的I4/I16/I8真实候选（六格式/场/矩阵/QP边界）0分配，1152个旧候选指纹一致；真实决策集成见G03b/K18，完整M8仍未验收 |

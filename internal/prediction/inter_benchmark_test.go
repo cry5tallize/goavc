@@ -12,7 +12,7 @@ import (
 var mcBenchmarkByteSink [256]byte
 var mcBenchmarkHighSink [256]uint16
 
-// 历史名称保留；实际为Auto分派，2/2相位的六抽头算术当前固定为Generic。
+// 历史名称保留；实际为Auto分派，槽诊断见BenchmarkMCBlocks。
 func BenchmarkMCLuma_16x16_Generic(b *testing.B) {
 	for _, format := range []h264.PixelFormat{h264.YUV420P, h264.YUV420P10LE} {
 		for _, scenario := range []string{"interior", "border", "field"} {
@@ -57,7 +57,7 @@ func BenchmarkMCLuma_16x16_Generic(b *testing.B) {
 	}
 }
 
-// 分数插值目前没有ISA实现；仅8位16宽整数亮度/444复制报告真实复制槽。
+// 名称记录真实槽；边界通过逻辑patch后仍可使用相同插值内核。
 // 图片、边界位置和单采样参考均在计时外准备，不把边界patch伪称直接ISA。
 func BenchmarkMCBlocks(b *testing.B) {
 	formats := []h264.PixelFormat{h264.YUV420P, h264.YUV420P10LE, h264.YUV422P, h264.YUV422P10LE, h264.YUV444P, h264.YUV444P10LE}
@@ -88,6 +88,13 @@ func BenchmarkMCBlocks(b *testing.B) {
 				}
 				if format.BitDepth() == 8 && scenario.mvx == 0 && scenario.mvy == 0 && (!chroma || subW == 1 && subH == 1) {
 					actual = simd.ActiveBackends().MCLumaCopy
+				}
+				if format.BitDepth() == 8 && (scenario.mvx != 0 || scenario.mvy != 0) {
+					if !chroma || subW == 1 && subH == 1 {
+						actual = simd.ActiveBackends().MCLumaFractional8
+					} else {
+						actual = simd.ActiveBackends().MCChroma8
+					}
 				}
 				name := fmt.Sprintf("%s/%s/%s/Auto-%s", planeName, format, scenario.name, actual)
 				b.Run(name, func(b *testing.B) {

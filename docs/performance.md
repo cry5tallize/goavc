@@ -1312,3 +1312,10 @@ fuzz烟测（日志6exec，0新interesting）。A07测量报告完成，A01局�
 其他权重/位深/几何仍原路。完整双向MC核心下降11.2%–20.4%，0B/0alloc；短IDR/IPB配对持平。
 新MCBlend8 SSE2负责相位组合/目标均值，六抽头本阶段仍Go。
 完整范围与证据见[B01记录](gates/b01_put_average.md)及[b01_samples.json](gates/b01_samples.json)。
+
+## 28. B02：8-bit分数像素MC SSE2
+
+共享亮度qpel/色度双线性4/8/12/16宽全相位进入SSE2，保留未裁剪对角中间值及准确halo。
+代表性完整块快26.6%–81.5%，0B/0alloc；短端点首轮条件波动大，唯一配对补测持平，
+不确认整体吞吐收益。实际范围、全部首轮/补测及验证见[B02记录](gates/b02_fractional_mc.md)
+和[b02_samples.json](gates/b02_samples.json)。10-bit和其他ISA未计入本项覆盖。

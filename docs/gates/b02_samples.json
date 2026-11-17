@@ -1,0 +1,618 @@
+{
+  "schema_version": 1,
+  "work_item": "B02",
+  "measured_date": "2026-11-17",
+  "baseline_revision": "4d67c60c7a6f115dfca4d7ca552700ee7aa9e5c5",
+  "measured_source": "parent plus this work item; frozen before binary compiled before production edits, after binary matches the implementation committed with this evidence",
+  "environment": {
+    "hardware": "HW-M2",
+    "cpu": "AMD Ryzen 7 5700X",
+    "os": "Windows 11 10.0.26200 amd64",
+    "go": "go1.27.4",
+    "cgo": 0,
+    "goamd64": "v1",
+    "gomaxprocs": 16,
+    "codec_threads": 1,
+    "external_load_monitored": false,
+    "own_build_test_oracle_jobs_during_timing": 0
+  },
+  "inputs": {
+    "source": "docs/performance.md sections17/18; same files, unchanged generation settings",
+    "idr": {
+      "path": "tmp/deblock-perf/high-idr.264",
+      "sha256": "b6f836c52d00a644b4cf5906e1b726b3d0bed713d2b2fdf940cb6c99133e59a9",
+      "frames_per_op": 1
+    },
+    "ipb": {
+      "path": "tmp/deblock-perf/high-ipb.264",
+      "sha256": "e175d84a84d1ec065420cc4292650c04976393dcfea0588357b264ca4fa9583f",
+      "frames_per_op": 32
+    }
+  },
+  "timing": {
+    "kernels": "five100ms samples, fixed destination reset included; fixture preparation/verification excluded; details in the work-item report",
+    "endpoints": "New/Send/Receive/Release/Flush/Close; IO/AU assembly excluded; five interleaved pairs of frozen before/after executables, alternating order. Count1 per process, IDR500ms/IPB1x. No other own timing/compile/test/Oracle jobs overlapped."
+  },
+  "kernel_before": [
+    {
+      "case": "BenchmarkMCBlocks/Luma/yuv420p/HalfHorizontalInterior/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Luma/yuv420p/HalfHorizontalInterior/Auto-Generic-16",
+      "iterations": [129463, 124048, 117972, 122240, 130335],
+      "ns_op": [922.4, 952.9, 966.7, 971.2, 919.6],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 952.9
+    },
+    {
+      "case": "BenchmarkMCBlocks/Luma/yuv420p/HalfVerticalBorder/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Luma/yuv420p/HalfVerticalBorder/Auto-Generic-16",
+      "iterations": [110270, 104070, 91141, 110122, 96348],
+      "ns_op": [1128, 1129, 1148, 1217, 1245],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 1148
+    },
+    {
+      "case": "BenchmarkMCBlocks/Luma/yuv420p/HalfXY-JLumaInterior/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Luma/yuv420p/HalfXY-JLumaInterior/Auto-Generic-16",
+      "iterations": [64564, 62686, 63441, 61969, 66220],
+      "ns_op": [1889, 1838, 1884, 1876, 1826],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 1876
+    },
+    {
+      "case": "BenchmarkMCBlocks/Luma/yuv420p/QuarterInterior/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Luma/yuv420p/QuarterInterior/Auto-Generic-16",
+      "iterations": [74091, 68990, 75072, 62557, 72567],
+      "ns_op": [1648, 1746, 1628, 1764, 1739],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 1739
+    },
+    {
+      "case": "BenchmarkMCBlocks/Luma/yuv420p/QuarterBorder/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Luma/yuv420p/QuarterBorder/Auto-Generic-16",
+      "iterations": [59458, 57368, 55460, 55686, 54601],
+      "ns_op": [1996, 2030, 2157, 2168, 2172],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 2157
+    },
+    {
+      "case": "BenchmarkMCBlocks/Chroma/yuv420p/HalfHorizontalInterior/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Chroma/yuv420p/HalfHorizontalInterior/Auto-Generic-16",
+      "iterations": [995354, 1000000, 1000000, 1000000, 1000000],
+      "ns_op": [107.2, 109, 102.8, 108.1, 101.6],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 107.2
+    },
+    {
+      "case": "BenchmarkMCBlocks/Chroma/yuv420p/HalfVerticalBorder/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Chroma/yuv420p/HalfVerticalBorder/Auto-Generic-16",
+      "iterations": [711828, 678501, 684579, 661484, 738234],
+      "ns_op": [177.5, 198.7, 169.8, 164.8, 173.2],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 173.2
+    },
+    {
+      "case": "BenchmarkMCBlocks/Chroma/yuv420p/HalfXY-JLumaInterior/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Chroma/yuv420p/HalfXY-JLumaInterior/Auto-Generic-16",
+      "iterations": [796917, 882223, 801978, 882027, 870952],
+      "ns_op": [140.7, 153.6, 157.5, 168.9, 142.3],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 153.6
+    },
+    {
+      "case": "BenchmarkMCBlocks/Chroma/yuv420p/QuarterInterior/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Chroma/yuv420p/QuarterInterior/Auto-Generic-16",
+      "iterations": [607963, 613402, 573256, 604716, 782574],
+      "ns_op": [197.6, 182.9, 191.6, 185.6, 178.7],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 185.6
+    },
+    {
+      "case": "BenchmarkMCBlocks/Chroma/yuv420p/QuarterBorder/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Chroma/yuv420p/QuarterBorder/Auto-Generic-16",
+      "iterations": [513830, 536336, 540199, 412228, 524062],
+      "ns_op": [241.6, 239.6, 251.6, 263.4, 257.7],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 251.6
+    }
+  ],
+  "kernel_after": [
+    {
+      "case": "BenchmarkMCBlocks/Luma/yuv420p/HalfHorizontalInterior/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Luma/yuv420p/HalfHorizontalInterior/Auto-SSE2-16",
+      "iterations": [540734, 549676, 548871, 496113, 555246],
+      "ns_op": [226.3, 232.1, 242.4, 237, 233.8],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 233.8
+    },
+    {
+      "case": "BenchmarkMCBlocks/Luma/yuv420p/HalfVerticalBorder/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Luma/yuv420p/HalfVerticalBorder/Auto-SSE2-16",
+      "iterations": [248673, 229015, 222340, 253216, 216032],
+      "ns_op": [482.2, 554.4, 519.6, 475.5, 539.7],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 519.6
+    },
+    {
+      "case": "BenchmarkMCBlocks/Luma/yuv420p/HalfXY-JLumaInterior/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Luma/yuv420p/HalfXY-JLumaInterior/Auto-SSE2-16",
+      "iterations": [350425, 292304, 357132, 324946, 331774],
+      "ns_op": [358.1, 367.7, 346.3, 368.7, 368.9],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 367.7
+    },
+    {
+      "case": "BenchmarkMCBlocks/Luma/yuv420p/QuarterInterior/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Luma/yuv420p/QuarterInterior/Auto-SSE2-16",
+      "iterations": [364442, 385454, 366636, 386473, 353971],
+      "ns_op": [321.3, 324.7, 320.1, 318.9, 328.1],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 321.3
+    },
+    {
+      "case": "BenchmarkMCBlocks/Luma/yuv420p/QuarterBorder/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Luma/yuv420p/QuarterBorder/Auto-SSE2-16",
+      "iterations": [172743, 172386, 184665, 171459, 176410],
+      "ns_op": [667, 705.5, 700.7, 755, 660],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 700.7
+    },
+    {
+      "case": "BenchmarkMCBlocks/Chroma/yuv420p/HalfHorizontalInterior/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Chroma/yuv420p/HalfHorizontalInterior/Auto-SSE2-16",
+      "iterations": [2416538, 2653744, 2713722, 2586000, 2684365],
+      "ns_op": [50.65, 44.51, 43.97, 45.3, 45.02],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 45.02
+    },
+    {
+      "case": "BenchmarkMCBlocks/Chroma/yuv420p/HalfVerticalBorder/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Chroma/yuv420p/HalfVerticalBorder/Auto-SSE2-16",
+      "iterations": [900736, 824232, 805801, 870890, 935750],
+      "ns_op": [134.6, 126.7, 125.3, 130.5, 127.2],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 127.2
+    },
+    {
+      "case": "BenchmarkMCBlocks/Chroma/yuv420p/HalfXY-JLumaInterior/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Chroma/yuv420p/HalfXY-JLumaInterior/Auto-SSE2-16",
+      "iterations": [2733322, 2591668, 2685001, 2702038, 2542700],
+      "ns_op": [44.28, 45.45, 44.87, 44.19, 48.34],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 44.87
+    },
+    {
+      "case": "BenchmarkMCBlocks/Chroma/yuv420p/QuarterInterior/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Chroma/yuv420p/QuarterInterior/Auto-SSE2-16",
+      "iterations": [2730517, 2026886, 2354445, 2273854, 2269228],
+      "ns_op": [45.48, 55.17, 55.06, 53.26, 53.16],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 53.26
+    },
+    {
+      "case": "BenchmarkMCBlocks/Chroma/yuv420p/QuarterBorder/Auto-16",
+      "raw_case": "BenchmarkMCBlocks/Chroma/yuv420p/QuarterBorder/Auto-SSE2-16",
+      "iterations": [914215, 771753, 840453, 800907, 753105],
+      "ns_op": [138.6, 139.2, 139.5, 159.9, 173],
+      "b_op": [0, 0, 0, 0, 0],
+      "allocs_op": [0, 0, 0, 0, 0],
+      "median_ns_op": 139.5
+    }
+  ],
+  "paired": {
+    "idr": {
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [16],
+            "ns_op": [35379206],
+            "b_op": [8077378],
+            "allocs_op": [115],
+            "median_ns_op": 35379206
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [15],
+            "ns_op": [34665147],
+            "b_op": [8078422],
+            "allocs_op": [116],
+            "median_ns_op": 34665147
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [16],
+            "ns_op": [35762425],
+            "b_op": [8078027],
+            "allocs_op": [116],
+            "median_ns_op": 35762425
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [14],
+            "ns_op": [37526579],
+            "b_op": [8078121],
+            "allocs_op": [116],
+            "median_ns_op": 37526579
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [16],
+            "ns_op": [35153500],
+            "b_op": [8078034],
+            "allocs_op": [116],
+            "median_ns_op": 35153500
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [15],
+            "ns_op": [33605860],
+            "b_op": [8078075],
+            "allocs_op": [116],
+            "median_ns_op": 33605860
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [16],
+            "ns_op": [38366131],
+            "b_op": [8078348],
+            "allocs_op": [116],
+            "median_ns_op": 38366131
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [15],
+            "ns_op": [36382093],
+            "b_op": [8078078],
+            "allocs_op": [116],
+            "median_ns_op": 36382093
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [15],
+            "ns_op": [33850340],
+            "b_op": [8077723],
+            "allocs_op": [115],
+            "median_ns_op": 33850340
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [16],
+            "ns_op": [34584462],
+            "b_op": [8078020],
+            "allocs_op": [116],
+            "median_ns_op": 34584462
+          }
+        }
+      ],
+      "median_before_ns_op": 35379206,
+      "median_after_ns_op": 34665147,
+      "change_percent": -2.0183013717153475
+    },
+    "ipb": {
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [958357300],
+            "b_op": [162032464],
+            "allocs_op": [4419],
+            "median_ns_op": 958357300
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [895248400],
+            "b_op": [162032240],
+            "allocs_op": [4417],
+            "median_ns_op": 895248400
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [878534000],
+            "b_op": [162032224],
+            "allocs_op": [4417],
+            "median_ns_op": 878534000
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [898359000],
+            "b_op": [162027144],
+            "allocs_op": [4411],
+            "median_ns_op": 898359000
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [932484500],
+            "b_op": [162032224],
+            "allocs_op": [4417],
+            "median_ns_op": 932484500
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1121657100],
+            "b_op": [162032512],
+            "allocs_op": [4419],
+            "median_ns_op": 1121657100
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1294873100],
+            "b_op": [162027160],
+            "allocs_op": [4411],
+            "median_ns_op": 1294873100
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1229827300],
+            "b_op": [162037320],
+            "allocs_op": [4423],
+            "median_ns_op": 1229827300
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1191673000],
+            "b_op": [162027160],
+            "allocs_op": [4411],
+            "median_ns_op": 1191673000
+          },
+          "after": {
+            "case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [1],
+            "ns_op": [1147961300],
+            "b_op": [162032288],
+            "allocs_op": [4417],
+            "median_ns_op": 1147961300
+          }
+        }
+      ],
+      "median_before_ns_op": 958357300,
+      "median_after_ns_op": 1121657100,
+      "change_percent": 17.039552993439912,
+      "repeat": {
+        "pairs": [
+          {
+            "pair": 1,
+            "order": [
+              "before",
+              "after"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [913673900],
+              "b_op": [162032240],
+              "allocs_op": [4417],
+              "median_ns_op": 913673900
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [910270900],
+              "b_op": [162027368],
+              "allocs_op": [4413],
+              "median_ns_op": 910270900
+            }
+          },
+          {
+            "pair": 2,
+            "order": [
+              "after",
+              "before"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [962870800],
+              "b_op": [162027160],
+              "allocs_op": [4411],
+              "median_ns_op": 962870800
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [990622000],
+              "b_op": [162032272],
+              "allocs_op": [4417],
+              "median_ns_op": 990622000
+            }
+          },
+          {
+            "pair": 3,
+            "order": [
+              "before",
+              "after"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [895436900],
+              "b_op": [162032352],
+              "allocs_op": [4418],
+              "median_ns_op": 895436900
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [883786500],
+              "b_op": [162032256],
+              "allocs_op": [4417],
+              "median_ns_op": 883786500
+            }
+          },
+          {
+            "pair": 4,
+            "order": [
+              "after",
+              "before"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [903830400],
+              "b_op": [162032272],
+              "allocs_op": [4417],
+              "median_ns_op": 903830400
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [880726800],
+              "b_op": [162032368],
+              "allocs_op": [4418],
+              "median_ns_op": 880726800
+            }
+          },
+          {
+            "pair": 5,
+            "order": [
+              "before",
+              "after"
+            ],
+            "before": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [919887800],
+              "b_op": [162032464],
+              "allocs_op": [4419],
+              "median_ns_op": 919887800
+            },
+            "after": {
+              "case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "raw_case": "BenchmarkDecoder_DirectAU_Auto-16",
+              "iterations": [1],
+              "ns_op": [927396900],
+              "b_op": [162032304],
+              "allocs_op": [4417],
+              "median_ns_op": 927396900
+            }
+          }
+        ],
+        "median_before_ns_op": 913673900,
+        "median_after_ns_op": 910270900,
+        "change_percent": -0.37245235964384893
+      }
+    }
+  }
+}

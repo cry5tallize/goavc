@@ -270,7 +270,7 @@ A01局部数组经包装层仍1alloc/op、encoder亮度/均值/权重整块入�
 | 整块均值（A04） | decoder B块均值使用Average8/16 SSE2槽，保留精确原地和部分重叠顺序 | Partial | 奇数尾部/stride/最小len/完整uint16域差分、直接保护页、栈缓冲0分配及FFmpeg像素Oracle通过；五样本见gates/a04_average_blocks.md | width<4及不适合SIMD的几何用Generic；encoder仍逐样本均值；受影响purego/386/race及六目标构建/测试编译通过，Unix/NEON原生未验 |
 | 整块单/双向加权（A05） | decoder P非恒等与B块非均值权重进入Weight8/16 SSE2槽，4样本批量32位乘加/移位/Clip1 | Partial | 规范参数、全uint16域、负数舍入/offset缩放解析值及直接保护页；旧宽域/部分重叠回退、局部0分配、FFmpeg像素Oracle通过，见gates/a05_weight_blocks.md | 奇数宽、其他参数和不合适别名继续原int64；encoder仍逐样本权重；NEON原生未验，Profile状态不变 |
 | 残差加减（K13） | 8/10-bit共享Clip1和Subtract，picture与编码真实残差循环迁移，R3精确放行picture | Partial | 本机四路径parity、int32极值、低两位、奇数stride/最小len逐行保护页及局部0分配通过 | gather/scatter与不足4采样尾部为Go，值ABI仅向量化加减；amd64默认直接标量避免gather开销，显式后端保留真实SIMD；NEON原生未验 |
-| 其余MC SIMD（K09b-d） | 现有整数复制之外的插值向量化 | TODO | 唯一Generic与全相位边界保护保留 | 不以本轮K10–K14工作冒充K09插值SIMD已完成 |
+| 分数MC SIMD（B02/K09b-d子集） | 8-bit亮度六抽头/qpel与色度双线性SSE2，4/8/12/16宽全相位，Put/Avg共用 | Partial | 未裁剪双轴int32、全相位Go对照、逻辑边界/FieldView/halo保护页及0分配、FFmpeg Oracle通过，见gates/b02_fractional_mc.md | 10-bit和其他ISA仍原Go，其他宽度回退；不是完整K09全部平台覆盖 |
 | 搜索去逃逸（G01/K18前置） | caller-owned双位深Workspace，真实编码器跨帧/场/Reset复用，结束解除借用 | Partial | 32组改造前Scorer轨迹/结果，64组prepared零分配，强制x86/purego/386/M8指纹 | 该行仅搜索；完整决策保护网见G03b，K16仍是串行租约复用，未开并行 |
 | 残差去逃逸（G02/K18切片） | 具名调用唯一共享量化器、共同444亮度重建入口解除递归逃逸 | Partial | 384组改造前系数/CBP/重建指纹；六格式/场/矩阵/两死区/4与8变换的真实残差和四种帧间分区0分配 | 该行仅残差，完整决策见G03b；不新增量化策略或SIMD量化 |
 | 帧内邻域（G03a/K18切片） | 调用者栈上固定邻域槽；相同可用性预检避免枚举不可用模式的错误分配 | Partial | 1152个旧I4/I16/I8候选指纹、六格式/场/矩阵/QP的prepared帧内候选0分配、邻域并存/清零解析值 | 该行仅单候选，完整决策见G03b；不将局部零分配扩大为整个库 |

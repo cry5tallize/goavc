@@ -80,7 +80,7 @@ func TestGuardPage_MC(t *testing.T) {
 	for _, backend := range guardBackends() {
 		kernels = backend.table
 		t.Run(backend.name, func(t *testing.T) {
-			for _, w := range []int{1, 3, 7, 13, 16} {
+			for _, w := range []int{1, 3, 4, 7, 8, 12, 13, 16} {
 				for _, h := range []int{1, 3, 16} {
 					for phase := range 16 {
 						t.Run(fmt.Sprintf("%dx%d/phase%d", w, h, phase), func(t *testing.T) {
