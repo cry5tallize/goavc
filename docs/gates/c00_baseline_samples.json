@@ -1,0 +1,803 @@
+{
+  "revision": "9f493b3e318b4f9a38d991aa703b265b69db6dfa",
+  "go": "go version go1.27.4 windows/amd64",
+  "cpu": "AMD Ryzen 7 5700X 8-Core Processor             ",
+  "os": "Microsoft Windows NT 10.0.26200.0",
+  "cgo": 0,
+  "goamd64": "v1",
+  "gomaxprocs": 16,
+  "threads": 1,
+  "protocol": "Sequence; 1x/count5 same process per cell; FFmpeg pixel reference verified outside timer",
+  "inputs": [
+    {
+      "Name": "decode-1080p-baseline-s1",
+      "Path": "tmp/m8-closeout/endpoints-au/decode-1080p-baseline-s1.264",
+      "Frames": 300,
+      "InputSHA256": "7B6FD4B472CB659E20D516B34A4253FFA7BCC3B0DA0D25942178CB94C4ADDEE0",
+      "ExpectedYUVSHA256": "ABB4939AF9D710E39C89B36A64F7230B78BA47758401D91F1D4573129F67801A"
+    },
+    {
+      "Name": "decode-1080p-baseline-s4",
+      "Path": "tmp/m8-closeout/endpoints-au/decode-1080p-baseline-s4.264",
+      "Frames": 300,
+      "InputSHA256": "1CC5306C2A5F23E4F423A8BDCAA9089627F72EAC467D69EEA256E51C1997E155",
+      "ExpectedYUVSHA256": "DC8392C147D9AC425E5C730163683FF4326BC7584C0CB45D0DAE271A1E5D9418"
+    },
+    {
+      "Name": "decode-1080p-high-s1",
+      "Path": "tmp/m8-closeout/endpoints-au/decode-1080p-high-s1.264",
+      "Frames": 300,
+      "InputSHA256": "2EA2EB0581F1AA6D79FCD9D3F194C9B4172E8DEB95F133C4418C6E14C16C39B4",
+      "ExpectedYUVSHA256": "F574EABD36B903729D65D0F2B6FF3941DF5244C01B1AD30C330ECE1D5B05C385"
+    },
+    {
+      "Name": "decode-1080p-high-s4",
+      "Path": "tmp/m8-closeout/endpoints-au/decode-1080p-high-s4.264",
+      "Frames": 300,
+      "InputSHA256": "1FEC982AA3A2AD36932FBD6853BF9D5951878D9AB44BA3207D636988C8E4F32F",
+      "ExpectedYUVSHA256": "909BF6A96D63C37FACAD746D63E08CB2A98026FDF58F164C7E9A2C6DEC8F5158"
+    },
+    {
+      "Name": "high10-1080p-s1",
+      "Path": "tmp/b05/high10-1080p-s1.264",
+      "Frames": 300,
+      "InputSHA256": "CD2C1663FC699A15CB2C3F72CAC5E2DFB308AF08DAB49F391174EE6BDC50D735",
+      "ExpectedYUVSHA256": "69F5A263AFE96ADF40FB0007B61A375DA265DBAFB866E42A79DDBB51E9F94F09"
+    },
+    {
+      "Name": "high10-1080p-s4",
+      "Path": "tmp/b05/high10-1080p-s4.264",
+      "Frames": 300,
+      "InputSHA256": "EF38255157EA0AB480CF6CDF287D273A146E157AC4D31DE34E469270A0826746",
+      "ExpectedYUVSHA256": "40A0BCB5FEF17ABCC90CD42AD0D48FDD79A40B7F654ADD0887CA49EAA66C2788"
+    },
+    {
+      "Name": "desktop-static",
+      "Path": "tmp/c00-inputs/desktop-static.264",
+      "Frames": 60,
+      "Depth": 8,
+      "Slices": 1,
+      "InputSHA256": "0FDC8913483F4B601E6F2D8EEBC7A18D87B00AE20B70784B7E0386BA91B00F17",
+      "ExpectedYUVSHA256": "BB966F638F7ECB0695B880D108A14ECF76843D2332ECED54C74E468274E807E3",
+      "GeneratorArguments": [
+        "-v",
+        "error",
+        "-xerror",
+        "-f",
+        "lavfi",
+        "-i",
+        "smptebars=size=1920x1080:rate=30",
+        "-vf",
+        "drawgrid=width=96:height=54:thickness=1:color=white",
+        "-frames:v",
+        "60",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-profile:v",
+        "high",
+        "-qp",
+        "26",
+        "-bf",
+        "2",
+        "-x264-params",
+        "keyint=60:min-keyint=60:scenecut=0:ref=2:threads=1:slices=1:cabac=1:b-adapt=0:b-pyramid=none:8x8dct=1",
+        "-f",
+        "h264",
+        "tmp/c00-inputs/desktop-static.264"
+      ]
+    },
+    {
+      "Name": "texture-noise",
+      "Path": "tmp/c00-inputs/texture-noise.264",
+      "Frames": 60,
+      "Depth": 10,
+      "Slices": 4,
+      "InputSHA256": "10A828EC17CD5CC8E80BC7C98E16873DC58160F6A680ED8ED64D5CAE01995D93",
+      "ExpectedYUVSHA256": "4D5033B71E2F820A0BC1DB0C2205011818960C58234C80D67A4761FC84267878",
+      "GeneratorArguments": [
+        "-v",
+        "error",
+        "-xerror",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=1920x1080:rate=30",
+        "-vf",
+        "noise=alls=12:all_seed=31415:allf=t+u",
+        "-frames:v",
+        "60",
+        "-pix_fmt",
+        "yuv420p10le",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-profile:v",
+        "high10",
+        "-qp",
+        "26",
+        "-bf",
+        "2",
+        "-x264-params",
+        "keyint=60:min-keyint=60:scenecut=0:ref=2:threads=1:slices=4:cabac=1:b-adapt=0:b-pyramid=none:8x8dct=1",
+        "-f",
+        "h264",
+        "tmp/c00-inputs/texture-noise.264"
+      ]
+    },
+    {
+      "Name": "lowrate-skip",
+      "Path": "tmp/c00-inputs/lowrate-skip.264",
+      "Frames": 60,
+      "Depth": 8,
+      "Slices": 4,
+      "InputSHA256": "B58BB8D7D61774A5CEFD90103C301595F38A27440F68A058DED80C785A865AB9",
+      "ExpectedYUVSHA256": "611D9C16DF4E5DEECF84B304ABF5F4E3D15667AB46C9152FFEA600617654ACB5",
+      "GeneratorArguments": [
+        "-v",
+        "error",
+        "-xerror",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=1920x1080:rate=30",
+        "-vf",
+        "fps=5,fps=30",
+        "-frames:v",
+        "60",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-profile:v",
+        "high",
+        "-b:v",
+        "220k",
+        "-maxrate",
+        "220k",
+        "-bufsize",
+        "440k",
+        "-bf",
+        "2",
+        "-x264-params",
+        "keyint=60:min-keyint=60:scenecut=0:ref=2:threads=1:slices=4:cabac=1:b-adapt=0:b-pyramid=none:8x8dct=1",
+        "-f",
+        "h264",
+        "tmp/c00-inputs/lowrate-skip.264"
+      ]
+    }
+  ],
+  "runs": [
+    {
+      "input": "decode-1080p-baseline-s1",
+      "backend": "auto",
+      "samples": [
+        {
+          "ns_op": 4916264900,
+          "b_op": 836439632,
+          "allocs_op": 12055
+        },
+        {
+          "ns_op": 5210798400,
+          "b_op": 833314888,
+          "allocs_op": 12050
+        },
+        {
+          "ns_op": 4418544300,
+          "b_op": 833309904,
+          "allocs_op": 12045
+        },
+        {
+          "ns_op": 4445608300,
+          "b_op": 833309680,
+          "allocs_op": 12043
+        },
+        {
+          "ns_op": 4187585400,
+          "b_op": 833309680,
+          "allocs_op": 12043
+        }
+      ],
+      "median_ns_op": 4445608300,
+      "fps": 67.48232857132285
+    },
+    {
+      "input": "decode-1080p-baseline-s1",
+      "backend": "generic",
+      "samples": [
+        {
+          "ns_op": 4756899700,
+          "b_op": 836439472,
+          "allocs_op": 12051
+        },
+        {
+          "ns_op": 5357587300,
+          "b_op": 833309568,
+          "allocs_op": 12042
+        },
+        {
+          "ns_op": 5154071000,
+          "b_op": 833309904,
+          "allocs_op": 12045
+        },
+        {
+          "ns_op": 5086098200,
+          "b_op": 833309568,
+          "allocs_op": 12042
+        },
+        {
+          "ns_op": 5257571600,
+          "b_op": 833309680,
+          "allocs_op": 12043
+        }
+      ],
+      "median_ns_op": 5154071000,
+      "fps": 58.20641586039463
+    },
+    {
+      "input": "decode-1080p-baseline-s4",
+      "backend": "auto",
+      "samples": [
+        {
+          "ns_op": 6225591200,
+          "b_op": 831194888,
+          "allocs_op": 23742
+        },
+        {
+          "ns_op": 5969724400,
+          "b_op": 828065432,
+          "allocs_op": 23737
+        },
+        {
+          "ns_op": 4794930000,
+          "b_op": 828065336,
+          "allocs_op": 23737
+        },
+        {
+          "ns_op": 4654231500,
+          "b_op": 828065320,
+          "allocs_op": 23736
+        },
+        {
+          "ns_op": 4817314400,
+          "b_op": 828065208,
+          "allocs_op": 23735
+        }
+      ],
+      "median_ns_op": 4817314400,
+      "fps": 62.27536238863712
+    },
+    {
+      "input": "decode-1080p-baseline-s4",
+      "backend": "generic",
+      "samples": [
+        {
+          "ns_op": 6000014800,
+          "b_op": 831194920,
+          "allocs_op": 23744
+        },
+        {
+          "ns_op": 5044264500,
+          "b_op": 828065432,
+          "allocs_op": 23737
+        },
+        {
+          "ns_op": 5427541800,
+          "b_op": 828065224,
+          "allocs_op": 23736
+        },
+        {
+          "ns_op": 4844142800,
+          "b_op": 828065432,
+          "allocs_op": 23737
+        },
+        {
+          "ns_op": 5942580600,
+          "b_op": 828065320,
+          "allocs_op": 23736
+        }
+      ],
+      "median_ns_op": 5427541800,
+      "fps": 55.273641559057175
+    },
+    {
+      "input": "decode-1080p-high-s1",
+      "backend": "auto",
+      "samples": [
+        {
+          "ns_op": 9176362100,
+          "b_op": 1279639280,
+          "allocs_op": 15710
+        },
+        {
+          "ns_op": 9390095700,
+          "b_op": 1273385144,
+          "allocs_op": 15699
+        },
+        {
+          "ns_op": 10952648600,
+          "b_op": 1273380496,
+          "allocs_op": 15697
+        },
+        {
+          "ns_op": 10147512300,
+          "b_op": 1273379936,
+          "allocs_op": 15692
+        },
+        {
+          "ns_op": 9891596100,
+          "b_op": 1273379936,
+          "allocs_op": 15692
+        }
+      ],
+      "median_ns_op": 9891596100,
+      "fps": 30.32877575743312
+    },
+    {
+      "input": "decode-1080p-high-s1",
+      "backend": "generic",
+      "samples": [
+        {
+          "ns_op": 12249398900,
+          "b_op": 1279639136,
+          "allocs_op": 15707
+        },
+        {
+          "ns_op": 9814309600,
+          "b_op": 1273380288,
+          "allocs_op": 15696
+        },
+        {
+          "ns_op": 9725550000,
+          "b_op": 1273380272,
+          "allocs_op": 15695
+        },
+        {
+          "ns_op": 10624331400,
+          "b_op": 1273379936,
+          "allocs_op": 15692
+        },
+        {
+          "ns_op": 11095843600,
+          "b_op": 1273379936,
+          "allocs_op": 15692
+        }
+      ],
+      "median_ns_op": 10624331400,
+      "fps": 28.237070993474468
+    },
+    {
+      "input": "decode-1080p-high-s4",
+      "backend": "auto",
+      "samples": [
+        {
+          "ns_op": 10720862400,
+          "b_op": 1276900144,
+          "allocs_op": 33520
+        },
+        {
+          "ns_op": 9714459300,
+          "b_op": 1270636168,
+          "allocs_op": 33501
+        },
+        {
+          "ns_op": 9409556600,
+          "b_op": 1270636392,
+          "allocs_op": 33503
+        },
+        {
+          "ns_op": 9770058500,
+          "b_op": 1270636056,
+          "allocs_op": 33500
+        },
+        {
+          "ns_op": 10816803100,
+          "b_op": 1270635832,
+          "allocs_op": 33498
+        }
+      ],
+      "median_ns_op": 9770058500,
+      "fps": 30.706059743654553
+    },
+    {
+      "input": "decode-1080p-high-s4",
+      "backend": "generic",
+      "samples": [
+        {
+          "ns_op": 12423136700,
+          "b_op": 1276895240,
+          "allocs_op": 33514
+        },
+        {
+          "ns_op": 12523276400,
+          "b_op": 1270641168,
+          "allocs_op": 33507
+        },
+        {
+          "ns_op": 12200608600,
+          "b_op": 1270635832,
+          "allocs_op": 33498
+        },
+        {
+          "ns_op": 11048548000,
+          "b_op": 1270635944,
+          "allocs_op": 33499
+        },
+        {
+          "ns_op": 10735485200,
+          "b_op": 1270636280,
+          "allocs_op": 33502
+        }
+      ],
+      "median_ns_op": 12200608600,
+      "fps": 24.588937309242098
+    },
+    {
+      "input": "high10-1080p-s1",
+      "backend": "auto",
+      "samples": [
+        {
+          "ns_op": 12576917600,
+          "b_op": 1370166480,
+          "allocs_op": 16417
+        },
+        {
+          "ns_op": 13027146800,
+          "b_op": 1357697888,
+          "allocs_op": 16405
+        },
+        {
+          "ns_op": 14091716300,
+          "b_op": 1357698016,
+          "allocs_op": 16407
+        },
+        {
+          "ns_op": 13824145500,
+          "b_op": 1357698240,
+          "allocs_op": 16409
+        },
+        {
+          "ns_op": 12767826000,
+          "b_op": 1357697888,
+          "allocs_op": 16405
+        }
+      ],
+      "median_ns_op": 13027146800,
+      "fps": 23.028833911659
+    },
+    {
+      "input": "high10-1080p-s1",
+      "backend": "generic",
+      "samples": [
+        {
+          "ns_op": 14082191500,
+          "b_op": 1370166592,
+          "allocs_op": 16418
+        },
+        {
+          "ns_op": 14716613900,
+          "b_op": 1357698224,
+          "allocs_op": 16408
+        },
+        {
+          "ns_op": 14364673700,
+          "b_op": 1357698000,
+          "allocs_op": 16406
+        },
+        {
+          "ns_op": 14435315300,
+          "b_op": 1357698112,
+          "allocs_op": 16407
+        },
+        {
+          "ns_op": 13727550700,
+          "b_op": 1357698000,
+          "allocs_op": 16406
+        }
+      ],
+      "median_ns_op": 14364673700,
+      "fps": 20.884567673820534
+    },
+    {
+      "input": "high10-1080p-s4",
+      "backend": "auto",
+      "samples": [
+        {
+          "ns_op": 12082656200,
+          "b_op": 1374539280,
+          "allocs_op": 35586
+        },
+        {
+          "ns_op": 12176939300,
+          "b_op": 1362065832,
+          "allocs_op": 35571
+        },
+        {
+          "ns_op": 12162061000,
+          "b_op": 1362065592,
+          "allocs_op": 35568
+        },
+        {
+          "ns_op": 12715104900,
+          "b_op": 1362065592,
+          "allocs_op": 35568
+        },
+        {
+          "ns_op": 11546416700,
+          "b_op": 1362065816,
+          "allocs_op": 35570
+        }
+      ],
+      "median_ns_op": 12162061000,
+      "fps": 24.666871840225106
+    },
+    {
+      "input": "high10-1080p-s4",
+      "backend": "generic",
+      "samples": [
+        {
+          "ns_op": 13129578600,
+          "b_op": 1374539408,
+          "allocs_op": 35588
+        },
+        {
+          "ns_op": 12788308800,
+          "b_op": 1362065608,
+          "allocs_op": 35569
+        },
+        {
+          "ns_op": 13521148700,
+          "b_op": 1362065608,
+          "allocs_op": 35569
+        },
+        {
+          "ns_op": 13131035000,
+          "b_op": 1362065592,
+          "allocs_op": 35568
+        },
+        {
+          "ns_op": 13586015400,
+          "b_op": 1362065592,
+          "allocs_op": 35568
+        }
+      ],
+      "median_ns_op": 13131035000,
+      "fps": 22.846637755515843
+    },
+    {
+      "input": "desktop-static",
+      "backend": "auto",
+      "samples": [
+        {
+          "ns_op": 1400150300,
+          "b_op": 257769904,
+          "allocs_op": 2482
+        },
+        {
+          "ns_op": 1337737600,
+          "b_op": 251505464,
+          "allocs_op": 2464
+        },
+        {
+          "ns_op": 1269606100,
+          "b_op": 251500368,
+          "allocs_op": 2458
+        },
+        {
+          "ns_op": 1389940700,
+          "b_op": 251500608,
+          "allocs_op": 2461
+        },
+        {
+          "ns_op": 1344274900,
+          "b_op": 251500368,
+          "allocs_op": 2458
+        }
+      ],
+      "median_ns_op": 1344274900,
+      "fps": 44.633727818618055
+    },
+    {
+      "input": "desktop-static",
+      "backend": "generic",
+      "samples": [
+        {
+          "ns_op": 1542837800,
+          "b_op": 257769696,
+          "allocs_op": 2481
+        },
+        {
+          "ns_op": 1676907300,
+          "b_op": 251505560,
+          "allocs_op": 2464
+        },
+        {
+          "ns_op": 1657569300,
+          "b_op": 251500480,
+          "allocs_op": 2459
+        },
+        {
+          "ns_op": 1484749900,
+          "b_op": 251500368,
+          "allocs_op": 2458
+        },
+        {
+          "ns_op": 1552111400,
+          "b_op": 251500352,
+          "allocs_op": 2457
+        }
+      ],
+      "median_ns_op": 1552111400,
+      "fps": 38.65701907736777
+    },
+    {
+      "input": "texture-noise",
+      "backend": "auto",
+      "samples": [
+        {
+          "ns_op": 13145875500,
+          "b_op": 602658872,
+          "allocs_op": 9837
+        },
+        {
+          "ns_op": 11833222500,
+          "b_op": 590190376,
+          "allocs_op": 9831
+        },
+        {
+          "ns_op": 11237933000,
+          "b_op": 590190360,
+          "allocs_op": 9830
+        },
+        {
+          "ns_op": 11612150500,
+          "b_op": 590190360,
+          "allocs_op": 9830
+        },
+        {
+          "ns_op": 10833954000,
+          "b_op": 590190360,
+          "allocs_op": 9830
+        }
+      ],
+      "median_ns_op": 11612150500,
+      "fps": 5.167001581662243
+    },
+    {
+      "input": "texture-noise",
+      "backend": "generic",
+      "samples": [
+        {
+          "ns_op": 12722876400,
+          "b_op": 602664080,
+          "allocs_op": 9844
+        },
+        {
+          "ns_op": 11389680000,
+          "b_op": 590190392,
+          "allocs_op": 9832
+        },
+        {
+          "ns_op": 11146020300,
+          "b_op": 590190376,
+          "allocs_op": 9831
+        },
+        {
+          "ns_op": 11495320100,
+          "b_op": 590190360,
+          "allocs_op": 9830
+        },
+        {
+          "ns_op": 10766239400,
+          "b_op": 590190360,
+          "allocs_op": 9830
+        }
+      ],
+      "median_ns_op": 11389680000,
+      "fps": 5.267926754746402
+    },
+    {
+      "input": "lowrate-skip",
+      "backend": "auto",
+      "samples": [
+        {
+          "ns_op": 1191216600,
+          "b_op": 258398824,
+          "allocs_op": 5511
+        },
+        {
+          "ns_op": 1185358600,
+          "b_op": 252134880,
+          "allocs_op": 5500
+        },
+        {
+          "ns_op": 1204215000,
+          "b_op": 252129416,
+          "allocs_op": 5489
+        },
+        {
+          "ns_op": 1203116500,
+          "b_op": 252129432,
+          "allocs_op": 5490
+        },
+        {
+          "ns_op": 1166637900,
+          "b_op": 252129400,
+          "allocs_op": 5488
+        }
+      ],
+      "median_ns_op": 1191216600,
+      "fps": 50.368673505725155
+    },
+    {
+      "input": "lowrate-skip",
+      "backend": "generic",
+      "samples": [
+        {
+          "ns_op": 1428125600,
+          "b_op": 258398584,
+          "allocs_op": 5508
+        },
+        {
+          "ns_op": 1431482300,
+          "b_op": 252129560,
+          "allocs_op": 5492
+        },
+        {
+          "ns_op": 1456071500,
+          "b_op": 252129432,
+          "allocs_op": 5490
+        },
+        {
+          "ns_op": 1409148900,
+          "b_op": 252134512,
+          "allocs_op": 5495
+        },
+        {
+          "ns_op": 1396930600,
+          "b_op": 252129512,
+          "allocs_op": 5489
+        }
+      ],
+      "median_ns_op": 1428125600,
+      "fps": 42.013111451821885
+    }
+  ],
+  "total_frames": 19800,
+  "oracle": "FFmpeg native pixels, every sample",
+  "local_binaries": "tmp/c00-frozen/decoder-{auto,generic}.exe",
+  "fixture_generator": "FFmpeg 8.0-full_build-www.gyan.dev; scripts/prepare_c00_inputs.ps1",
+  "resident": {
+    "input": "decode-1080p-high-s1",
+    "revision": "9f493b3e318b4f9a38d991aa703b265b69db6dfa",
+    "benchmark": "BenchmarkDecoder_Resident_ResetCycle",
+    "cycles": 2,
+    "frames_per_cycle": 300,
+    "ns_op_diagnostic": 8634571100,
+    "b_op": 1269758416,
+    "allocs_op": 15690,
+    "gc_op": 32.5,
+    "gc_pause_ns_op": 495400,
+    "sampled_alloc_space_flat_percent": {
+      "NewGrid": 49.09,
+      "newFrameStateForPicture": 39.19
+    },
+    "sampled_alloc_objects_flat_percent": {
+      "NewGrid": 6.4
+    },
+    "profile_files": "tmp/c-plan/resident*",
+    "args": [
+      "-test.benchtime=2x",
+      "-test.count=1",
+      "-test.benchmem",
+      "-test.cpuprofile=tmp/c-plan/resident.cpu.pprof",
+      "-test.memprofile=tmp/c-plan/resident.mem.pprof"
+    ]
+  }
+}

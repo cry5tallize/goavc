@@ -10,6 +10,8 @@
 
 本文件细化已有 M8/M9 之后的性能迭代，不改变 [Roadmap](Roadmap.md)、[架构契约](architecture.md) 或 Profile 支持范围。A00 基准与证据见 [performance.md §19](performance.md)；后续实施逐项提交，版本号、标签和推送另按当次授权执行。
 
+B01–B05之后的下一轮方向见[极致解码性能计划](decoder_extreme_performance_plan.md)：基于`9f493b3`的[C00基线与成本账本](gates/c00_baseline.md)，优先高位深输出打包、B宏块调度和元数据/CABAC结构。
+
 ### 首轮范围
 
 - amd64：优先 SSE2 整边滤波、整块均值与加权；不要求 AVX2。

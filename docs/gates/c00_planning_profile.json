@@ -1,0 +1,508 @@
+{
+  "schema_version": 1,
+  "purpose": "Evidence for next-round planning only; CPU sample shares are not new formal throughput results",
+  "source_revision": "9f493b3e318b4f9a38d991aa703b265b69db6dfa",
+  "date": "2026-11-17",
+  "environment": {
+    "cpu": "AMD Ryzen7 5700X",
+    "os": "Windows amd64",
+    "go": "1.27.4",
+    "cgo": 0,
+    "goamd64": "v1",
+    "gomaxprocs": 16,
+    "decoder_threads": 1,
+    "external_load_monitored": false
+  },
+  "method": {
+    "binary": "tmp/c-plan/decoder-current.test.exe, built from current HEAD, no production edits",
+    "short": "Existing DirectAU benchmark; IDR3s/IPB3x, CPU profile includes benchmark warmup",
+    "long": "Existing Sequence benchmark, original High8 and B05 High10 single-slice300-frame inputs,1x; expected independent FFmpeg YUV SHA checked",
+    "filter": "decoder.(*Decoder).(SendPacket|ReceiveFrame|Flush|Close)$",
+    "percentages": "pprof -relative_percentages: normalized to focused decoder subgraph; excludes benchmark pixel-SHA work and CPU outside that subgraph. Not fractions of complete timed wall clock. Parent/child cumulative shares overlap.",
+    "commands": "CGO_ENABLED=0 GOAMD64=v1 GOMAXPROCS=16 go test -c -o tmp/c-plan/decoder-current.test.exe ./benchmarks; <binary> -test.run=^$ -test.bench=<DirectAU|Sequence> -test.benchtime=<3s|3x|1x> -test.count=1 -test.cpuprofile=<path>; go tool pprof -top -nodecount=0 -nodefraction=0 -relative_percentages -focus=<filter> <binary> <profile>"
+  },
+  "profiles": {
+    "idr": {
+      "cpu_profile": "tmp/c-plan/idr.cpu.pprof",
+      "raw_table": "tmp/c-plan/top-idr.txt",
+      "focused_table": "tmp/c-plan/focused-idr.txt",
+      "focused_cpu": "3.15s",
+      "selected_nodes": [
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/simd.filterLuma8EdgeSSE2",
+          "flat": "0.55s",
+          "flat_percent": 17.46,
+          "cumulative": "0.55s",
+          "cumulative_percent": 17.46
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).Bin",
+          "flat": "0.24s",
+          "flat_percent": 7.62,
+          "cumulative": "0.61s",
+          "cumulative_percent": 19.37
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).renormalize",
+          "flat": "0.22s",
+          "flat_percent": 6.98,
+          "cumulative": "0.33s",
+          "cumulative_percent": 10.48
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).decodeResidual",
+          "flat": "0.13s",
+          "flat_percent": 4.13,
+          "cumulative": "0.77s",
+          "cumulative_percent": 24.44
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).deblockMB",
+          "flat": "0.08s",
+          "flat_percent": 2.54,
+          "cumulative": "1.06s",
+          "cumulative_percent": 33.65
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).ready",
+          "flat": "0.05s",
+          "flat_percent": 1.59,
+          "cumulative": "0.05s",
+          "cumulative_percent": 1.59
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/motion.(*Grid).SetRect",
+          "flat": "0.04s",
+          "flat_percent": 1.27,
+          "cumulative": "0.05s",
+          "cumulative_percent": 1.59
+        },
+        {
+          "symbol": "runtime.memclrNoHeapPointers",
+          "flat": "0.04s",
+          "flat_percent": 1.27,
+          "cumulative": "0.04s",
+          "cumulative_percent": 1.27
+        },
+        {
+          "symbol": "runtime.memmove",
+          "flat": "0.04s",
+          "flat_percent": 1.27,
+          "cumulative": "0.04s",
+          "cumulative_percent": 1.27
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/motion.(*Grid).Reset (inline)",
+          "flat": "0.03s",
+          "flat_percent": 0.95,
+          "cumulative": "0.03s",
+          "cumulative_percent": 0.95
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*Decoder).toFrame",
+          "flat": "0",
+          "flat_percent": 0,
+          "cumulative": "0.05s",
+          "cumulative_percent": 1.59
+        },
+        {
+          "symbol": "runtime.memclrNoHeapPointersChunked",
+          "flat": "0",
+          "flat_percent": 0,
+          "cumulative": "0.03s",
+          "cumulative_percent": 0.95
+        }
+      ]
+    },
+    "ipb": {
+      "cpu_profile": "tmp/c-plan/ipb.cpu.pprof",
+      "raw_table": "tmp/c-plan/top-ipb.txt",
+      "focused_table": "tmp/c-plan/focused-ipb.txt",
+      "focused_cpu": "3.62s",
+      "selected_nodes": [
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.decodeBMacroblock",
+          "flat": "0.35s",
+          "flat_percent": 9.67,
+          "cumulative": "1.70s",
+          "cumulative_percent": 46.96
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/motion.(*Grid).Get",
+          "flat": "0.23s",
+          "flat_percent": 6.35,
+          "cumulative": "0.28s",
+          "cumulative_percent": 7.73
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/motion.(*Grid).Reset (inline)",
+          "flat": "0.19s",
+          "flat_percent": 5.25,
+          "cumulative": "0.19s",
+          "cumulative_percent": 5.25
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).Bin",
+          "flat": "0.17s",
+          "flat_percent": 4.7,
+          "cumulative": "0.42s",
+          "cumulative_percent": 11.6
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).bSAtBlocks",
+          "flat": "0.15s",
+          "flat_percent": 4.14,
+          "cumulative": "0.56s",
+          "cumulative_percent": 15.47
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).renormalize",
+          "flat": "0.15s",
+          "flat_percent": 4.14,
+          "cumulative": "0.22s",
+          "cumulative_percent": 6.08
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/motion.(*Grid).SetRect",
+          "flat": "0.15s",
+          "flat_percent": 4.14,
+          "cumulative": "0.15s",
+          "cumulative_percent": 4.14
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).decodeResidual",
+          "flat": "0.10s",
+          "flat_percent": 2.76,
+          "cumulative": "0.55s",
+          "cumulative_percent": 15.19
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/simd.filterLuma8EdgeSSE2",
+          "flat": "0.10s",
+          "flat_percent": 2.76,
+          "cumulative": "0.10s",
+          "cumulative_percent": 2.76
+        },
+        {
+          "symbol": "runtime.memmove",
+          "flat": "0.09s",
+          "flat_percent": 2.49,
+          "cumulative": "0.09s",
+          "cumulative_percent": 2.49
+        },
+        {
+          "symbol": "runtime.memclrNoHeapPointers",
+          "flat": "0.08s",
+          "flat_percent": 2.21,
+          "cumulative": "0.08s",
+          "cumulative_percent": 2.21
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).deriveDirect",
+          "flat": "0.06s",
+          "flat_percent": 1.66,
+          "cumulative": "0.22s",
+          "cumulative_percent": 6.08
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).deblockMB",
+          "flat": "0.05s",
+          "flat_percent": 1.38,
+          "cumulative": "0.83s",
+          "cumulative_percent": 22.93
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).ready",
+          "flat": "0.04s",
+          "flat_percent": 1.1,
+          "cumulative": "0.04s",
+          "cumulative_percent": 1.1
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).edgeStrengths",
+          "flat": "0.03s",
+          "flat_percent": 0.83,
+          "cumulative": "0.59s",
+          "cumulative_percent": 16.3
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*Decoder).toFrame",
+          "flat": "0",
+          "flat_percent": 0,
+          "cumulative": "0.06s",
+          "cumulative_percent": 1.66
+        },
+        {
+          "symbol": "runtime.memclrNoHeapPointersChunked",
+          "flat": "0",
+          "flat_percent": 0,
+          "cumulative": "0.04s",
+          "cumulative_percent": 1.1
+        }
+      ]
+    },
+    "high8": {
+      "cpu_profile": "tmp/c-plan/high8.cpu.pprof",
+      "raw_table": "tmp/c-plan/top-high8.txt",
+      "focused_table": "tmp/c-plan/focused-high8.txt",
+      "focused_cpu": "8.66s",
+      "selected_nodes": [
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.decodeBMacroblock",
+          "flat": "1s",
+          "flat_percent": 11.55,
+          "cumulative": "4.18s",
+          "cumulative_percent": 48.27
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/motion.(*Grid).Get",
+          "flat": "0.59s",
+          "flat_percent": 6.81,
+          "cumulative": "0.71s",
+          "cumulative_percent": 8.2
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).renormalize",
+          "flat": "0.49s",
+          "flat_percent": 5.66,
+          "cumulative": "0.61s",
+          "cumulative_percent": 7.04
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).Bin",
+          "flat": "0.47s",
+          "flat_percent": 5.43,
+          "cumulative": "1.17s",
+          "cumulative_percent": 13.51
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).decodeResidual",
+          "flat": "0.34s",
+          "flat_percent": 3.93,
+          "cumulative": "1.49s",
+          "cumulative_percent": 17.21
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).bSAtBlocks",
+          "flat": "0.33s",
+          "flat_percent": 3.81,
+          "cumulative": "1.34s",
+          "cumulative_percent": 15.47
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/motion.(*Grid).Reset (inline)",
+          "flat": "0.32s",
+          "flat_percent": 3.7,
+          "cumulative": "0.32s",
+          "cumulative_percent": 3.7
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/simd.filterLuma8EdgeSSE2",
+          "flat": "0.29s",
+          "flat_percent": 3.35,
+          "cumulative": "0.29s",
+          "cumulative_percent": 3.35
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/motion.(*Grid).SetRect",
+          "flat": "0.25s",
+          "flat_percent": 2.89,
+          "cumulative": "0.25s",
+          "cumulative_percent": 2.89
+        },
+        {
+          "symbol": "runtime.memmove",
+          "flat": "0.25s",
+          "flat_percent": 2.89,
+          "cumulative": "0.25s",
+          "cumulative_percent": 2.89
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).deriveDirect",
+          "flat": "0.16s",
+          "flat_percent": 1.85,
+          "cumulative": "0.46s",
+          "cumulative_percent": 5.31
+        },
+        {
+          "symbol": "runtime.memclrNoHeapPointers",
+          "flat": "0.15s",
+          "flat_percent": 1.73,
+          "cumulative": "0.15s",
+          "cumulative_percent": 1.73
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).deblockMB",
+          "flat": "0.14s",
+          "flat_percent": 1.62,
+          "cumulative": "2.15s",
+          "cumulative_percent": 24.83
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).edgeStrengths",
+          "flat": "0.14s",
+          "flat_percent": 1.62,
+          "cumulative": "1.48s",
+          "cumulative_percent": 17.09
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).ready",
+          "flat": "0.09s",
+          "flat_percent": 1.04,
+          "cumulative": "0.09s",
+          "cumulative_percent": 1.04
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*Decoder).toFrame",
+          "flat": "0",
+          "flat_percent": 0,
+          "cumulative": "0.13s",
+          "cumulative_percent": 1.5
+        },
+        {
+          "symbol": "runtime.memclrNoHeapPointersChunked",
+          "flat": "0",
+          "flat_percent": 0,
+          "cumulative": "0.05s",
+          "cumulative_percent": 0.58
+        }
+      ]
+    },
+    "high10": {
+      "cpu_profile": "tmp/c-plan/high10.cpu.pprof",
+      "raw_table": "tmp/c-plan/top-high10.txt",
+      "focused_table": "tmp/c-plan/focused-high10.txt",
+      "focused_cpu": "11.72s",
+      "selected_nodes": [
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*Decoder).toFrame",
+          "flat": "0.94s",
+          "flat_percent": 8.02,
+          "cumulative": "1.07s",
+          "cumulative_percent": 9.13
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).renormalize",
+          "flat": "0.84s",
+          "flat_percent": 7.17,
+          "cumulative": "1.27s",
+          "cumulative_percent": 10.84
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.decodeBMacroblock",
+          "flat": "0.83s",
+          "flat_percent": 7.08,
+          "cumulative": "5.69s",
+          "cumulative_percent": 48.55
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).Bin",
+          "flat": "0.79s",
+          "flat_percent": 6.74,
+          "cumulative": "2.25s",
+          "cumulative_percent": 19.2
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/motion.(*Grid).Get",
+          "flat": "0.59s",
+          "flat_percent": 5.03,
+          "cumulative": "0.67s",
+          "cumulative_percent": 5.72
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).decodeResidual",
+          "flat": "0.48s",
+          "flat_percent": 4.1,
+          "cumulative": "3.05s",
+          "cumulative_percent": 26.02
+        },
+        {
+          "symbol": "runtime.memmove",
+          "flat": "0.48s",
+          "flat_percent": 4.1,
+          "cumulative": "0.48s",
+          "cumulative_percent": 4.1
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/motion.(*Grid).SetRect",
+          "flat": "0.38s",
+          "flat_percent": 3.24,
+          "cumulative": "0.38s",
+          "cumulative_percent": 3.24
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).deriveDirect",
+          "flat": "0.37s",
+          "flat_percent": 3.16,
+          "cumulative": "0.72s",
+          "cumulative_percent": 6.14
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).bSAtBlocks",
+          "flat": "0.33s",
+          "flat_percent": 2.82,
+          "cumulative": "1.24s",
+          "cumulative_percent": 10.58
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/motion.(*Grid).Reset (inline)",
+          "flat": "0.27s",
+          "flat_percent": 2.3,
+          "cumulative": "0.27s",
+          "cumulative_percent": 2.3
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/entropy/cabac.(*Decoder).ready",
+          "flat": "0.26s",
+          "flat_percent": 2.22,
+          "cumulative": "0.26s",
+          "cumulative_percent": 2.22
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).deblockMB",
+          "flat": "0.17s",
+          "flat_percent": 1.45,
+          "cumulative": "1.91s",
+          "cumulative_percent": 16.3
+        },
+        {
+          "symbol": "runtime.memclrNoHeapPointers",
+          "flat": "0.17s",
+          "flat_percent": 1.45,
+          "cumulative": "0.17s",
+          "cumulative_percent": 1.45
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/decoder.(*frameState).edgeStrengths",
+          "flat": "0.13s",
+          "flat_percent": 1.11,
+          "cumulative": "1.38s",
+          "cumulative_percent": 11.77
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/simd.filterLuma[go.shape.uint16]",
+          "flat": "0.08s",
+          "flat_percent": 0.68,
+          "cumulative": "0.12s",
+          "cumulative_percent": 1.02
+        },
+        {
+          "symbol": "github.com/cry5tallize/goavc/internal/simd.filterChroma[go.shape.uint16]",
+          "flat": "0.05s",
+          "flat_percent": 0.43,
+          "cumulative": "0.08s",
+          "cumulative_percent": 0.68
+        },
+        {
+          "symbol": "runtime.memclrNoHeapPointersChunked",
+          "flat": "0",
+          "flat_percent": 0,
+          "cumulative": "0.05s",
+          "cumulative_percent": 0.43
+        }
+      ]
+    }
+  },
+  "formal_baseline_source": "docs/gates/b05_results.md and b05_samples.json; these planning profiles do not replace those paired medians",
+  "scope": "Read-only investigation and plan; no production implementation or baseline redefinition"
+}
