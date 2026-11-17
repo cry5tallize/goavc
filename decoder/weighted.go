@@ -84,6 +84,19 @@ func mcBPartitionSamples[T ~uint8 | ~uint16](fs *frameState, s *sliceEntry, mbx,
 			h /= fs.subH
 		}
 		pl := &fs.pic.Planes[c]
+		// 第一轮仅普通8-bit420无显式权重、实际均值的双参考进入融合。
+		// 非均值隐式权重及所有显式权重继续独立预测块，保留舍入顺序。
+		if both && !explicit && implicit[0] == implicit[1] && pl.BitDepth == 8 && fs.subW == 2 && fs.subH == 2 && !fs.field && !fs.mbaff {
+			dst := pl.Data[pl.Index(x, y):]
+			mcBPlane(fs, dst, pl.Stride, s.refs[0][refs[0]], c, x, y, w, h, mvs[0])
+			ref := &s.refs[1][refs[1]].Picture.Planes[c]
+			if c == 0 {
+				prediction.MCBlockLumaAverage(dst, pl.Stride, ref, x, y, w, h, int(mvs[1].X), int(mvs[1].Y))
+			} else {
+				prediction.MCBlockChromaFormatAverage(dst, pl.Stride, ref, x, y, w, h, int(mvs[1].X), int(mvs[1].Y), fs.subW, fs.subH)
+			}
+			continue
+		}
 		if !both && !explicit {
 			// 单参考无权重时直接写最终平面，不清零/填充中转预测块。
 			if pl.BitDepth == 10 {

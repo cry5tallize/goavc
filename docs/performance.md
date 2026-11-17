@@ -1305,3 +1305,10 @@ Bin17.33%/12.37%（含renormalize）；父子比例不相加，decodeCABACSlice�
 复用A06接受源码的purego/386/race/六目标及Oracle证据；本次另外完成两个短Oracle和5秒decoder
 fuzz烟测（日志6exec，0新interesting）。A07测量报告完成，A01局部缓冲门禁及完整M8/M9仍未闭合；
 未新增生产代码、Unix/arm64原生或8小时稳定性验收。
+
+## 27. B01：无权重双向MC Put/Avg融合
+
+普通8-bit420逐行双参考均值直接写目标并融合第二路Avg，保留插值先clip/舍入的顺序；
+其他权重/位深/几何仍原路。完整双向MC核心下降11.2%–20.4%，0B/0alloc；短IDR/IPB配对持平。
+新MCBlend8 SSE2负责相位组合/目标均值，六抽头本阶段仍Go。
+完整范围与证据见[B01记录](gates/b01_put_average.md)及[b01_samples.json](gates/b01_samples.json)。

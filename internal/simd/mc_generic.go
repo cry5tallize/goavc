@@ -14,6 +14,15 @@ func MCLuma[T ~byte | ~uint16](dst []T, ds int, ref []T, rs, w, h, fx, fy, bitDe
 }
 
 func mcLumaGeneric[T ~byte | ~uint16](dst []T, ds int, ref []T, rs, w, h, fx, fy, bitDepth int) {
+	mcLumaMode(dst, ds, ref, rs, w, h, fx, fy, bitDepth, false)
+}
+
+// MCLumaAverage8先完成规范插值/Clip，再和既有目标做向上舍入均值。
+func MCLumaAverage8(dst []byte, ds int, ref []byte, rs, w, h, fx, fy int) {
+	mcLumaMode(dst, ds, ref, rs, w, h, fx, fy, 8, true)
+}
+
+func mcLumaMode[T ~byte | ~uint16](dst []T, ds int, ref []T, rs, w, h, fx, fy, bitDepth int, average bool) {
 	left, top := 0, 0
 	if fx != 0 {
 		left = 2
@@ -22,6 +31,10 @@ func mcLumaGeneric[T ~byte | ~uint16](dst []T, ds int, ref []T, rs, w, h, fx, fy
 		top = 2
 	}
 	if fx == 0 && fy == 0 {
+		if average {
+			mcCombine(dst, ds, ref, rs, nil, 0, w, h, true)
+			return
+		}
 		for y := range h {
 			copy(dst[y*ds:][:w], ref[y*rs:][:w])
 		}
@@ -113,9 +126,17 @@ func mcLumaGeneric[T ~byte | ~uint16](dst []T, ds int, ref []T, rs, w, h, fx, fy
 		a, b = vertical[:], diagonal[:]
 	}
 	if b == nil {
+		if average {
+			mcCombine(dst, ds, a, as, nil, 0, w, h, true)
+			return
+		}
 		for y := range h {
 			copy(dst[y*ds:][:w], a[y*as:][:w])
 		}
+		return
+	}
+	if _, ok := any(dst).([]byte); ok {
+		mcCombine(dst, ds, a, as, b, bs, w, h, average)
 		return
 	}
 	for y := range h {
@@ -137,33 +158,79 @@ func clipPixel[T ~byte | ~uint16](v int32, bitDepth int) T {
 // MCChroma 计算最多16×16双线性块。fx/fy是0..7的本平面1/8相位，
 // 非零轴才要求右/下一个采样。422垂直相位由领域层转换，444不能调用此算法。
 func MCChroma[T ~byte | ~uint16](dst []T, ds int, ref []T, rs, w, h, fx, fy int) {
+	mcChromaMode(dst, ds, ref, rs, w, h, fx, fy, false)
+}
+
+// MCChromaAverage8保留双线性插值的舍入，再对目标取均值，不平均未舍入中间值。
+func MCChromaAverage8(dst []byte, ds int, ref []byte, rs, w, h, fx, fy int) {
+	mcChromaMode(dst, ds, ref, rs, w, h, fx, fy, true)
+}
+
+func chromaBlend2[T ~byte | ~uint16](a, b T, f int) T { return T(((8-f)*int(a) + f*int(b) + 4) >> 3) }
+func chromaBlend4[T ~byte | ~uint16](u, v, s, t T, a, b, c, d int) T {
+	return T((a*int(u) + b*int(v) + c*int(s) + d*int(t) + 32) >> 6)
+}
+
+func mcChromaMode[T ~byte | ~uint16](dst []T, ds int, ref []T, rs, w, h, fx, fy int, average bool) {
 	if fx == 0 && fy == 0 {
+		if average {
+			mcCombine(dst, ds, ref, rs, nil, 0, w, h, true)
+			return
+		}
 		for y := range h {
 			copy(dst[y*ds:][:w], ref[y*rs:][:w])
 		}
 		return
 	}
 	if fx == 0 {
+		if average {
+			for y := range h {
+				for x := range w {
+					v := chromaBlend2(ref[y*rs+x], ref[(y+1)*rs+x], fy)
+					dst[y*ds+x] = T((int(dst[y*ds+x]) + int(v) + 1) >> 1)
+				}
+			}
+			return
+		}
 		for y := range h {
 			for x := range w {
-				dst[y*ds+x] = T(((8-fy)*int(ref[y*rs+x]) + fy*int(ref[(y+1)*rs+x]) + 4) >> 3)
+				dst[y*ds+x] = chromaBlend2(ref[y*rs+x], ref[(y+1)*rs+x], fy)
 			}
 		}
 		return
 	}
 	if fy == 0 {
+		if average {
+			for y := range h {
+				for x := range w {
+					v := chromaBlend2(ref[y*rs+x], ref[y*rs+x+1], fx)
+					dst[y*ds+x] = T((int(dst[y*ds+x]) + int(v) + 1) >> 1)
+				}
+			}
+			return
+		}
 		for y := range h {
 			for x := range w {
-				dst[y*ds+x] = T(((8-fx)*int(ref[y*rs+x]) + fx*int(ref[y*rs+x+1]) + 4) >> 3)
+				dst[y*ds+x] = chromaBlend2(ref[y*rs+x], ref[y*rs+x+1], fx)
 			}
 		}
 		return
 	}
 	a, b, c, d := (8-fx)*(8-fy), fx*(8-fy), (8-fx)*fy, fx*fy
+	if average {
+		for y := range h {
+			for x := range w {
+				i := y*rs + x
+				v := chromaBlend4(ref[i], ref[i+1], ref[i+rs], ref[i+rs+1], a, b, c, d)
+				dst[y*ds+x] = T((int(dst[y*ds+x]) + int(v) + 1) >> 1)
+			}
+		}
+		return
+	}
 	for y := range h {
 		for x := range w {
 			i := y*rs + x
-			dst[y*ds+x] = T((a*int(ref[i]) + b*int(ref[i+1]) + c*int(ref[i+rs]) + d*int(ref[i+rs+1]) + 32) >> 6)
+			dst[y*ds+x] = chromaBlend4(ref[i], ref[i+1], ref[i+rs], ref[i+rs+1], a, b, c, d)
 		}
 	}
 }

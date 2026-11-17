@@ -46,6 +46,7 @@ type Backends struct {
 	SATD4x4                                            Backend
 	Forward4x4                                         Backend
 	MCLumaCopy                                         Backend
+	MCBlend8                                           Backend
 	Residual                                           Backend
 	FilterDelta, FilterLumaEdge                        Backend
 	FilterChromaEdge                                   Backend
@@ -99,6 +100,7 @@ func selectKernels(cpu cpuFeatures) kernelTable {
 	table = installFilterKernels(cpu, table)
 	table = installAverageKernels(cpu, table)
 	table = installWeightKernels(cpu, table)
+	table = installMCCombineKernels(cpu, table)
 	table = installQuantKernels(cpu, table)
 	table = installTransformKernels(cpu, table)
 	table.quantScalar = table.backends.QuantMultiply == Generic

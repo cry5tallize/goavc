@@ -52,8 +52,20 @@ func MCBlockChromaFormatHigh(dst []uint16, dstStride int, ref *picture.Plane, cx
 }
 
 func mcBlockChromaFormat[T sample](dst []T, dstStride int, ref *samplePlane[T], cx, cy, w, h, mvx, mvy, subW, subH int) {
+	mcBlockChromaMode(dst, dstStride, ref, cx, cy, w, h, mvx, mvy, subW, subH, false)
+}
+
+// MCBlockChromaFormatAverage保留色度相位映射和逻辑边缘，融合最终均值。
+//
+//go:noinline
+func MCBlockChromaFormatAverage(dst []byte, ds int, ref *picture.Plane, x, y, w, h, mvx, mvy, subW, subH int) {
+	p := samplePlane[byte]{ref.Data, ref, 8}
+	mcBlockChromaMode(dst, ds, &p, x, y, w, h, mvx, mvy, subW, subH, true)
+}
+
+func mcBlockChromaMode[T sample](dst []T, dstStride int, ref *samplePlane[T], cx, cy, w, h, mvx, mvy, subW, subH int, average bool) {
 	if subW == 1 && subH == 1 {
-		mcBlockLuma(dst, dstStride, ref, cx, cy, w, h, mvx, mvy)
+		mcBlockLumaMode(dst, dstStride, ref, cx, cy, w, h, mvx, mvy, average)
 		return
 	}
 	fullX, fullY := cx*8+mvx*(2/subW), cy*8+mvy*(2/subH)
@@ -63,7 +75,11 @@ func mcBlockChromaFormat[T sample](dst []T, dstStride int, ref *samplePlane[T], 
 			for i := range w {
 				var one [1]T
 				mcBlockChromaFormat(one[:], 1, ref, cx+i, cy+j, 1, 1, mvx, mvy, subW, subH)
-				row[i] = one[0]
+				v := one[0]
+				if average {
+					v = T((int(row[i]) + int(v) + 1) >> 1)
+				}
+				row[i] = v
 			}
 		}
 		return
@@ -82,7 +98,11 @@ func mcBlockChromaFormat[T sample](dst []T, dstStride int, ref *samplePlane[T], 
 		for bx := 0; bx < w; bx += 16 {
 			tw := min(16, w-bx)
 			source, stride := mcPatch(ref, ix+bx, iy+by, tw+right, th+bottom, &patch)
-			simd.MCChroma(dst[by*dstStride+bx:], dstStride, source, stride, tw, th, fx, fy)
+			if average {
+				simd.MCChromaAverage8(any(dst[by*dstStride+bx:]).([]byte), dstStride, any(source).([]byte), stride, tw, th, fx, fy)
+			} else {
+				simd.MCChroma(dst[by*dstStride+bx:], dstStride, source, stride, tw, th, fx, fy)
+			}
 		}
 	}
 }

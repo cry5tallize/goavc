@@ -253,6 +253,7 @@ A01局部数组经包装层仍1alloc/op、encoder亮度/均值/权重整块入�
 | AVX2 SAD（K05） | width16的8/10-bit真实AVX2，其他宽度复用SSE2 | Partial | AVX2直接parity、强制搜索、M7指纹及K14保护页 | 逐槽AVX2诊断表示此快路覆盖域，非16宽实际为SSE2 |
 | NEON SAD（K06） | width16的8/10-bit基线NEON，其他矩形复用Generic | WIP | 原生parity/bench测试入口已交付；三种arm64交叉vet/测试构建 | 用户指定只做编译验收；未原生执行，不提供虚构NEON性能或正确性通过声明 |
 | MC块化（K09a） | 唯一共享标量、interior/边界patch、相位一次分解、j中间行复用 | Partial | 旧MC指纹、原六格式/场/权重解析值、M7码流指纹、MC0分配与stride/phase/bit-depth回归 | SSE2/AVX2仅新增整数宽16复制快路；SIMD插值仍待K09b/c/d，不把复制快路标为完整AVX2/NEON MC |
+| 双向MC Put/Avg（B01） | decoder普通8-bit420逐行双参考均值融合；共享相位组合MCBlend8 SSE2 | Partial | 两预测块对照、全相位/负MV/边界/未写区、局部0分配及新核保护页、FFmpeg像素通过，见gates/b01_put_average.md | 显式/非均值权重及其他几何/位深仍原路；六抽头和双线性本阶段仍Go，端点收益未确认 |
 | MC整数复制快路（K09b前置） | SSE2/AVX2宽16、fx=fy=0、逐行16字节无对齐要求，静态noescape包装，其他尺寸/相位唯一Generic回退 | Partial | 全相位边界保护页、预测解析值、purego/386全库测试及prediction/search/encoder现有0分配保护网 | 仍缺SSE2/AVX2/NEON插值与uint16快路，不因K14完成而扩大K09能力 |
 | x86 SATD（K07） | SSE2/AVX2的4×4 Hadamard，真实帧内候选接入，内部值参数 | Partial | 8/10-bit常量/冲激解析值、5000组parity、实际候选、局部残差0分配、M7指纹 | 默认实测优选SSE2；arm64尚未原生验证；矩形仍按原4×4 tiled |
 | NEON SATD（K08） | 基线ASIMD 4×4 Hadamard、同值参数与测试入口 | WIP | arm64交叉vet/构建，原生测试入口已交付 | 用户指定编译验收；未原生运行，不把Generic或跨编译当NEON通过 |

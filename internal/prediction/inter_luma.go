@@ -43,6 +43,18 @@ func MCBlockLumaHigh(dst []uint16, dstStride int, ref *picture.Plane, x, y, w, h
 }
 
 func mcBlockLuma[T sample](dst []T, dstStride int, ref *samplePlane[T], x, y, w, h, mvx, mvy int) {
+	mcBlockLumaMode(dst, dstStride, ref, x, y, w, h, mvx, mvy, false)
+}
+
+// MCBlockLumaAverage与Put入口共用相位/边界适配，插值裁剪后直接平均目标。
+//
+//go:noinline
+func MCBlockLumaAverage(dst []byte, ds int, ref *picture.Plane, x, y, w, h, mvx, mvy int) {
+	p := samplePlane[byte]{ref.Data, ref, 8}
+	mcBlockLumaMode(dst, ds, &p, x, y, w, h, mvx, mvy, true)
+}
+
+func mcBlockLumaMode[T sample](dst []T, dstStride int, ref *samplePlane[T], x, y, w, h, mvx, mvy int, average bool) {
 	fullX, fullY := x*4+mvx, y*4+mvy
 	if mcCoordinateWraps(fullX, fullY, w, h, 4) {
 		// 罕见宽坐标仍保持旧入口的逐样本int回绕语义；正常视频走块快路。
@@ -50,7 +62,11 @@ func mcBlockLuma[T sample](dst []T, dstStride int, ref *samplePlane[T], x, y, w,
 		for j := range h {
 			row := dst[j*dstStride:][:w]
 			for i := range w {
-				row[i] = lumaSample(ref, x+i, y+j, mvx, mvy)
+				v := lumaSample(ref, x+i, y+j, mvx, mvy)
+				if average {
+					v = T((int(row[i]) + int(v) + 1) >> 1)
+				}
+				row[i] = v
 			}
 		}
 		return
@@ -70,7 +86,11 @@ func mcBlockLuma[T sample](dst []T, dstStride int, ref *samplePlane[T], x, y, w,
 		for bx := 0; bx < w; bx += 16 {
 			tw := min(16, w-bx)
 			source, stride := mcPatch(ref, ix+bx-left, iy+by-top, tw+left+right, th+top+bottom, &patch)
-			simd.MCLuma(dst[by*dstStride+bx:], dstStride, source, stride, tw, th, fx, fy, ref.bitDepth)
+			if average {
+				simd.MCLumaAverage8(any(dst[by*dstStride+bx:]).([]byte), dstStride, any(source).([]byte), stride, tw, th, fx, fy)
+			} else {
+				simd.MCLuma(dst[by*dstStride+bx:], dstStride, source, stride, tw, th, fx, fy, ref.bitDepth)
+			}
 		}
 	}
 }

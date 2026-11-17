@@ -106,7 +106,7 @@ A07使用Go1.27.4额外实测AllocsPerRun100，数组在closure内部创建：
 A01已有固定目标复用基准0B/0alloc及直接汇编的栈数组0分配仍有效，但不证明
 “调用包装层并在每次closure内新建目标数组”也0分配。实际帧平面已经在堆上，
 端点复用既有堆平面；局部数组的保守逃逸只在调用方新建该数组时体现为新分配。
-探针和日志在 `tmp/a07/allocation_probe_test.go`、`allocation-probe.txt`、`escape.txt`，
+探针和日志在 `tmp/a07/allocation_probe_test.go.txt`、`allocation-probe.txt`、`escape.txt`，
 临时测试已删除，生产代码未改。A01局部栈缓冲零分配门禁仍需后续修正具名分派并验证。
 
 ## 修正A01短端点的来源归因
