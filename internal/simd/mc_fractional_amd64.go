@@ -19,6 +19,8 @@ func chroma8SSE2(dst []byte, ds int, src []byte, rs, w, h, fx, fy int, average b
 func installMCFractionalKernels(cpu cpuFeatures, t kernelTable) kernelTable {
 	if cpu.sse2 {
 		t.backends.MCLumaFractional8, t.backends.MCChroma8 = SSE2, SSE2
+		t.backends.MCLumaFractional16 = SSE2
+		t.backends.MCChroma16 = SSE2
 	}
 	return t
 }

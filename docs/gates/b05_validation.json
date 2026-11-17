@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "work_items": [
+    "B01",
+    "B02",
+    "B03",
+    "B04",
+    "B05"
+  ],
+  "date": "2026-11-17",
+  "source": "B04 bce30ee plus AVX2 weighting (subsequently29f25d8) and high-depth MC committed with this report; final test-only extensions rerun separately",
+  "host": "Windows/amd64 Ryzen5700X Go1.27.4",
+  "cgo_regular": 0,
+  "cgo_race": 1,
+  "checks": [
+    {
+      "name": "vet",
+      "path": "tmp/b05/vet.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "build",
+      "path": "tmp/b05/build.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "test",
+      "path": "tmp/b05/test.txt",
+      "sha256": "56821c8889d12e80fd9af5420967fb93c4c96fba3090c1b06fb15b2358e16c08",
+      "result": "passed"
+    },
+    {
+      "name": "deps",
+      "path": "tmp/b05/deps.txt",
+      "sha256": "370b750f9abcc9536de05637eefb2f93483656b6e605fef2a2ee9dbcdf640e66",
+      "result": "passed"
+    },
+    {
+      "name": "manifest",
+      "path": "tmp/b05/manifest.txt",
+      "sha256": "9ac8d275e6a4738a5852dbb68db90ae9a8f26f997b07cc5c131a675b3db01997",
+      "result": "passed"
+    },
+    {
+      "name": "oracle-idr",
+      "path": "tmp/b05/oracle-idr.txt",
+      "sha256": "f742cdda3130392d337dbaebf9b55743c321b1a00bfed1dfb02d8ed733c01ca1",
+      "result": "passed"
+    },
+    {
+      "name": "oracle-ipb",
+      "path": "tmp/b05/oracle-ipb.txt",
+      "sha256": "b9b2815efce9a80a8808eaa1273c1a07b8582fc7e112ad00983b5e4bf2c527bd",
+      "result": "passed"
+    },
+    {
+      "name": "weighted-oracle",
+      "path": "tmp/b05/weighted-oracle.txt",
+      "sha256": "e027cebb7b94b7887fc40fdb9c037b9e461cc355021f6590d9dcd31e0583b1dd",
+      "result": "passed"
+    },
+    {
+      "name": "purego-all",
+      "path": "tmp/b05/purego-all.txt",
+      "sha256": "1e1fe0a945d9bc9b51274cf5addd419148aff6c8e8a2985a183b33e5635cc0fe",
+      "result": "passed"
+    },
+    {
+      "name": "386-all",
+      "path": "tmp/b05/386-all.txt",
+      "sha256": "2db884d5478a838bf61a206c6fa666a8137f3eef70f9984c35f910c97a82994d",
+      "result": "passed"
+    },
+    {
+      "name": "tagged-all",
+      "path": "tmp/b05/tagged-all.txt",
+      "sha256": "92d997e3f733a76edd8dd89f6a5111739ed02c90eb3d90140c33d09414438391",
+      "result": "passed"
+    },
+    {
+      "name": "race-related",
+      "path": "tmp/b05/race-related.txt",
+      "sha256": "852eedc0a5b245a34247aec8b55b4de5f50b4cac521d85a0916aa8093e2174ac",
+      "result": "passed"
+    },
+    {
+      "name": "fuzz-decoder",
+      "path": "tmp/b05/fuzz-decoder.txt",
+      "sha256": "36e20d456c03c89e0b2e0a24b40feafb84adf0ce17fb6395c66d048b13bca6a8",
+      "result": "passed"
+    },
+    {
+      "name": "fuzz-b",
+      "path": "tmp/b05/fuzz-b.txt",
+      "sha256": "f54e0c8b29418fde2c03b2e38e2e7a6a6846ad7d7745f016cd6fce478b3cb79d",
+      "result": "passed"
+    },
+    {
+      "name": "final-tagged-race",
+      "path": "tmp/b05/final-tagged-race.txt",
+      "sha256": "253338eb28b677c25df58e0a51c68a6c7b0e30099182e553bdc8baf16971998c",
+      "result": "passed"
+    },
+    {
+      "name": "final-targeted-purego",
+      "path": "tmp/b05/final-targeted-purego.txt",
+      "sha256": "367bbbc22eaa9a0a10e8f6b53dacdcac8158e16dc992119358820ebb3692d8f8",
+      "result": "passed"
+    },
+    {
+      "name": "final-targeted-386",
+      "path": "tmp/b05/final-targeted-386.txt",
+      "sha256": "ebe323a8c3c29be1c2ae78ed2652ba753f06b6c8f6bf99f6c611f53b8652be91",
+      "result": "passed"
+    },
+    {
+      "name": "avx-only-vet",
+      "path": "tmp/b05/avx-only-vet.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "avx-only-build",
+      "path": "tmp/b05/avx-only-build.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "avx-only-test",
+      "path": "tmp/b05/avx-only-test.txt",
+      "sha256": "0bdcb4e6b9a5095c5683253efffc7fafb85fa10d951b44ffa34b379ef8954552",
+      "result": "passed"
+    },
+    {
+      "name": "avx-only-deps",
+      "path": "tmp/b05/avx-only-deps.txt",
+      "sha256": "370b750f9abcc9536de05637eefb2f93483656b6e605fef2a2ee9dbcdf640e66",
+      "result": "passed"
+    },
+    {
+      "name": "avx-only-manifest",
+      "path": "tmp/b05/avx-only-manifest.txt",
+      "sha256": "9ac8d275e6a4738a5852dbb68db90ae9a8f26f997b07cc5c131a675b3db01997",
+      "result": "passed"
+    },
+    {
+      "name": "build-windows-amd64",
+      "path": "tmp/b05/build-windows-amd64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "vet-windows-amd64",
+      "path": "tmp/b05/vet-windows-amd64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "testcompile-windows-amd64",
+      "path": "tmp/b05/testcompile-windows-amd64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "build-windows-arm64",
+      "path": "tmp/b05/build-windows-arm64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "vet-windows-arm64",
+      "path": "tmp/b05/vet-windows-arm64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "testcompile-windows-arm64",
+      "path": "tmp/b05/testcompile-windows-arm64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "build-linux-amd64",
+      "path": "tmp/b05/build-linux-amd64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "vet-linux-amd64",
+      "path": "tmp/b05/vet-linux-amd64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "testcompile-linux-amd64",
+      "path": "tmp/b05/testcompile-linux-amd64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "build-linux-arm64",
+      "path": "tmp/b05/build-linux-arm64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "vet-linux-arm64",
+      "path": "tmp/b05/vet-linux-arm64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "testcompile-linux-arm64",
+      "path": "tmp/b05/testcompile-linux-arm64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "build-darwin-amd64",
+      "path": "tmp/b05/build-darwin-amd64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "vet-darwin-amd64",
+      "path": "tmp/b05/vet-darwin-amd64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "testcompile-darwin-amd64",
+      "path": "tmp/b05/testcompile-darwin-amd64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "build-darwin-arm64",
+      "path": "tmp/b05/build-darwin-arm64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "vet-darwin-arm64",
+      "path": "tmp/b05/vet-darwin-arm64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    },
+    {
+      "name": "testcompile-darwin-arm64",
+      "path": "tmp/b05/testcompile-darwin-arm64.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "passed"
+    }
+  ],
+  "coverage": {
+    "native": [
+      "windows/amd64",
+      "windows/386",
+      "purego on windows/amd64"
+    ],
+    "cross_compile_only": [
+      "linux/amd64",
+      "darwin/amd64",
+      "windows/arm64",
+      "linux/arm64",
+      "darwin/arm64"
+    ],
+    "race_packages": [
+      "bitstream",
+      "internal/entropy/cabac",
+      "internal/simd",
+      "internal/prediction",
+      "internal/picture",
+      "internal/transform",
+      "internal/filter",
+      "decoder",
+      "encoder"
+    ],
+    "fuzz_smoke": {
+      "decoder": {
+        "seconds": 5,
+        "parallel": 2,
+        "execs": 6
+      },
+      "b_reorder": {
+        "seconds": 5,
+        "parallel": 2,
+        "execs": 1414
+      }
+    },
+    "neon_native": false,
+    "full_m8_accepted": false,
+    "a01_local_array_allocs_per_op": 1
+  },
+  "notes": [
+    "One initial integration wrapper timed out after120s after purego/386 completed; incomplete tagged run was restarted and all remaining checks completed with no outer timeout.",
+    "Normal go test logs are not verbose and do not enumerate every skipped optional case; H264_LONG_TEST was not set. Do not interpret all-package success as optional long tests executed.",
+    "Final added SIMD/prediction regressions rerun with tagged race,purego,and386; six-target compile additionally checked after final test extensions."
+  ],
+  "skips_seen_in_nonverbose_log": []
+}

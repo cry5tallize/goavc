@@ -1,5 +1,7 @@
 # 支持矩阵
 
+> **B01–B05接续：** B05按用户确认的本机范围完成：16宽加权AVX2与10-bit分数MC SSE2、独立Oracle、purego/386/race及六目标编译已验证；原短/300帧端点总体持平。NEON仍未原生验证、未新增未经验证的默认路径；A01局部数组分配缺口及完整M8/Profile状态不变。见[B05收尾](gates/b05_results.md)。
+
 > **A07后续性能报告：** 原300帧High Auto单/四slice为31.17/31.93FPS，统一基线耗时下降12.7%/17.4%。这是固定输入吞吐，Profile功能状态不变；实际SIMD消费链、encoder未迁移入口及A01局部数组分配缺口见[A07报告](gates/a07_decoder_block_results.md)。
 >
 > **v1.0.2：** 解码优化包括Direct任务合并、块级加权、零/DC重建、邻域去逃逸、网格初始化、CABAC归一化及网格访问。公共API、所有权、串行边界及本表功能状态不变；独立提交和短样本证据见[performance.md §18](performance.md)。
@@ -186,7 +188,8 @@
 | SIMD残差加减 | Partial | K13接入picture重建与真实encoder减法，保持int32极端Clip1、10-bit低两位、各自stride及未写区域；SSE2/AVX2/NEON为固定值向量算术，尾部与gather/scatter由Go完成。x86保护页/局部0分配通过，amd64默认直接标量避免gather开销；NEON原生未验 |
 | SIMD边界矩阵 | Partial | K14覆盖所有现有内核类别及MC全相位，Windows Generic/Auto/SSE2/AVX2、purego、386保护页执行通过；Unix mmap辅助和六目标汇编vet/build/测试编译已交付。未执行Unix/NEON原生动态页验证，值ABI栈范围另以静态访问证明记录 |
 | decoder双向MC Put/Avg | Partial | B01普通8-bit420逐行、无显式/非均值权重的双参考预测融合，clip/舍入后再平均。全相位/边界/负MV/局部0分配、组合核保护页及FFmpeg像素通过，见[gates/b01_put_average.md](gates/b01_put_average.md)；其他路径保留原两预测块 |
-| 分数像素MC SSE2 | Partial | B02共享MC的8-bit 4/8/12/16宽亮度全qpel/色度全双线性相位进入SSE2；先完成两遍未裁剪六抽头再Clip，支持逻辑边界/FieldView适配及Put/Avg。全相位、halo保护页、0分配与Oracle通过，见[gates/b02_fractional_mc.md](gates/b02_fractional_mc.md)；10-bit及其他ISA尚未扩展 |
+| 分数像素MC SSE2 | Partial | B02共享MC的8-bit 4/8/12/16宽亮度全qpel/色度全双线性相位进入SSE2；先完成两遍未裁剪六抽头再Clip，支持逻辑边界/FieldView适配及Put/Avg。全相位、halo保护页、0分配与Oracle通过，见[gates/b02_fractional_mc.md](gates/b02_fractional_mc.md)；10-bit后续扩展见B05b，其他ISA仍未扩展 |
+| 高位深分数像素MC SSE2 | Partial | B05b共享10-bit亮度全qpel/uint16色度全双线性，4/8/12/16宽、最多16行；int32中间不提前Clip，完整uint16语义/halo保护页/真实帧场块/0分配/独立Oracle通过，见[gates/b05_high_depth_mc.md](gates/b05_high_depth_mc.md)。其他形状/ISA仍Generic，无10-bit Put/Avg融合，NEON原生未验 |
 | 搜索工作区复用 | Partial | G01在真实编码器复用双位深Workspace，prepared Integer/Refine/Estimate含Scorer为0分配；旧回调轨迹/码流不变。决策集成见G03b/K18，K16仍限串行复用，未开启内部并行 |
 | 帧间残差去分配 | Partial | G02在六格式/场/矩阵/两死区/4与8变换下，prepared真实帧间候选与重建0分配，384组改造前指纹不变；真实决策集成见G03b/K18，不宣称整个codec零分配 |
 | 帧内邻域去分配 | Partial | G03a的I4/I16/I8真实候选（六格式/场/矩阵/QP边界）0分配，1152个旧候选指纹一致；真实决策集成见G03b/K18，完整M8仍未验收 |

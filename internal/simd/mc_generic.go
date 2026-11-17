@@ -53,6 +53,11 @@ func mcLumaMode[T ~byte | ~uint16](dst []T, ds int, ref []T, rs, w, h, fx, fy, b
 			accelerated = luma8PartsNative(source, rs, w, h, fx, fy, &rawH, any(horizontal[:]).([]byte), any(vertical[:]).([]byte), any(diagonal[:]).([]byte))
 		}
 	}
+	if bitDepth == 10 {
+		if source, ok := any(ref).([]uint16); ok {
+			accelerated = luma16PartsNative(source, rs, w, h, fx, fy, &rawH, any(horizontal[:]).([]uint16), any(vertical[:]).([]uint16), any(diagonal[:]).([]uint16))
+		}
+	}
 	if !accelerated && fx != 0 {
 		start, rows := top, h
 		if fy == 3 {
@@ -178,6 +183,11 @@ func chromaBlend4[T ~byte | ~uint16](u, v, s, t T, a, b, c, d int) T {
 }
 
 func mcChromaMode[T ~byte | ~uint16](dst []T, ds int, ref []T, rs, w, h, fx, fy int, average bool) {
+	if !average {
+		if d, ok := any(dst).([]uint16); ok && chroma16Native(d, ds, any(ref).([]uint16), rs, w, h, fx, fy) {
+			return
+		}
+	}
 	if d, ok := any(dst).([]byte); ok {
 		if chroma8Native(d, ds, any(ref).([]byte), rs, w, h, fx, fy, average) {
 			return

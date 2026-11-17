@@ -48,6 +48,8 @@ type Backends struct {
 	MCLumaCopy                                         Backend
 	MCBlend8                                           Backend
 	MCLumaFractional8, MCChroma8                       Backend
+	MCLumaFractional16                                 Backend
+	MCChroma16                                         Backend
 	Residual                                           Backend
 	FilterDelta, FilterLumaEdge                        Backend
 	FilterChromaEdge                                   Backend

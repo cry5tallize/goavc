@@ -246,6 +246,7 @@ A01局部数组经包装层仍1alloc/op、encoder亮度/均值/权重整块入�
 
 | Module | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|
+| 高位深分数MC SSE2（B05b） | 10-bit亮度全qpel及uint16色度双线性，4/8/12/16宽完整块，编解码共享 | Partial | 全相位/宽域/halo保护页/真实帧场块/解析向量/0分配/FFmpeg；本轮purego/386/race/六目标通过，见gates/b05_high_depth_mc.md | 其他形状/ISA仍Generic，无10-bit Put/Avg；用户确认B05按本机范围完成，NEON未原生验证，不改变完整M8或Profile状态 |
 | 16宽块加权AVX2（B05a） | 8/10-bit单/双向，16宽且至少两行；其他形状保留SSE2/Generic | Partial | 独立int64解析式、完整uint16/原地/非对齐/保护页/局部0分配及Oracle，见gates/b05_avx2_weight.md | 不是所有加权形状均AVX2；单行收益未确认不启用；NEON未扩展 |
 | CABAC缓存/固定扫描（B04） | ReadBit复用已有reservoir、立即提交逻辑位数；固定4/15/16项扫描一次验证 | Partial | 旧引擎逐状态trace、混合读位、十四类帧场/截断、FFmpeg与编码三方Oracle，见gates/b04_cabac_cache.md | 8/64项及未知scan保持通用入口；短端点收益未确认，不扩大Profile或并行支持 |
 | CPU检测（K01） | amd64安全CPUID/XGETBV、arm64基线NEON能力、purego/其他架构回退 | Partial | `simd/cpu_test.go` 的1024组合与 `cpu_purego_test.go` | CPU检测不等于任何向量kernel已实现；arm64仅交叉构建时不记原生执行 |

@@ -1338,3 +1338,16 @@ fuzz烟测（日志6exec，0新interesting）。A07测量报告完成，A01局�
 16×16完整包装同机五样本下降24.4%–30.6%，0B/0alloc；计入lane拼接与VZEROUPPER。
 初始AVX/旧SSE混用的慢候选及修复证据完整保留，不计作最终收益。
 范围、数值证明和原始样本见[B05a记录](gates/b05_avx2_weight.md)及[b05_avx2_samples.json](gates/b05_avx2_samples.json)。
+
+## 32. B05b：高位深MC与本机集成收尾
+
+共享10-bit亮度qpel/uint16色度双线性4/8/12/16宽SSE2，完整核代表格耗时下降
+54.6%–82.7%/62.7%–84.0%，0B/0alloc；完整uint16输入域、中间精度与原halo契约不变。
+原8-bit 300帧High单/四slice最终34.19/34.44FPS，对B04耗时-1.8%/-0.3%；
+High10单/四slice为24.66/24.98FPS，对仅加权版本-1.6%/-3.0%。均不确认稳定端点收益。
+短I/P/B首轮+6.0%，唯一同配置补测+0.4%持平，全部样本公开，不选择性隐藏。
+
+B01–B05本轮CGO0完整门禁、独立Oracle、全库purego/386/测试标签、相关race、六目标
+build/汇编vet/测试编译通过。按用户明确确认的本机范围完成B05，NEON无原生证据，
+完整M8、Profile和A01局部数组1alloc/op缺口仍保留。详细范围、数值与输入/版本身份见
+[B05b记录](gates/b05_high_depth_mc.md)、[收尾](gates/b05_results.md)和[b05_samples.json](gates/b05_samples.json)。
