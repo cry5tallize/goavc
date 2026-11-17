@@ -199,6 +199,7 @@
 | 公共 Frame backing 与迁移 | Partial | G06 提供 `NewFrame`、64 MiB 有界 backing 缓存、新 Frame 头、清零和一次性租约；decoder 输出、encoder Reconstruction/lookahead/B 输入及 YUVReader 已迁移，六格式/奇数尺寸/High10 校验回归通过。公共头/租约分配、G07/G08 所有权和最终 M8 门禁仍待完成 |
 | encoder 图像与 RC 候选所有权 | Partial | G07/K15收尾覆盖实例私有池、普通/场/独立平面候选、创建层失败及RC最佳候选fatal回收；后续通道拒绝QP、成功重试和Reset租约平衡有回归。不改变QP搜索、码流或公共输出；自然GC/RSS及完整M8门禁未验收 |
 | decoder retained metadata 与 DPB 所有权 | Partial | G08失败清尾与DPB Picture归池，K16仅复用临时数组；本轮集成全库race通过。DPB retained backing未池化，自然GC/RSS和长期门禁仍未验收 |
+| 参考身份令牌隔离实验 | WIP | C05只交付每图uint32字典/身份对照/合成建表基准及GC后留存探针，生产仍使用原指针数组。完整DPB/SPS生命周期、真实端点与自然GC收益未验收，见[gates/c05_reference_identity.md](gates/c05_reference_identity.md) |
 | AU 容量与粘性错误状态 | Partial | G09保持既有封装前预算与独立Packet所有权；失败清尾/粘性错误/容量测试及本轮集成全库race通过。未新增封装算法，自然GC/RSS和长期门禁仍未验收 |
 | 串行临时元数据复用 | Partial | K16精简复用decoder表示级临时数组及encoder帧/候选元数据，活跃租约独占；各实例空闲缓存16MiB/最多三槽。DPB retained Motion/reference IDs/MBField仍按原生命周期，未做slice并行或宣称全codec零分配；前后端点与边界见performance及实施记录 |
 | decoder正常P/B宏块去分配 | Partial | K17以固定栈backing消除分区容器分配；prepared双熵/双位深、全部P/B分区及子类型、空间/时间direct和非零残差有像素/MV/读端与0分配断言。不宣称每slice初始化、MBAFF首次场引用或整个codec零分配 |

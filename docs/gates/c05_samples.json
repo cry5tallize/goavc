@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "work_item": "C05 feasibility only",
+  "date": "2026-11-18",
+  "baseline": "11364826bebbff0f611dffa78b7e5bc8f32e7d18",
+  "environment": {
+    "cpu": "AMD Ryzen 7 5700X",
+    "os": "Windows/amd64",
+    "go": "go1.27.4",
+    "cgo": 0,
+    "goamd64": "v1",
+    "gomaxprocs": 16,
+    "threads": 1,
+    "external_load_monitored": false,
+    "own_jobs_overlapped_timing": false
+  },
+  "production_changed": false,
+  "decision": "Not migrated: synthetic frame-local token experiment proves representation feasibility, not decoder endpoints or GC latency acceptance. Current pointer layout remains production.",
+  "scope": "130560 blocks, two lists,16 distinct identities; layout benchmark includes allocation,table construction,write,comparison,and sparse resolve; heap probe holds8 pictures in separate process,explicitGC,then clears all owners andGC again; no pictures or motion payload included",
+  "layout": [
+    {
+      "name": "BenchmarkReferenceIdentity_1080p_Layout/pointer-16",
+      "iterations": [
+        100,
+        177,
+        133,
+        127,
+        134
+      ],
+      "ns_op": [
+        2095768,
+        1204240,
+        1941570,
+        1878829,
+        1808408
+      ],
+      "b_op": [
+        2097312,
+        2097156,
+        2097163,
+        2097169,
+        2097167
+      ],
+      "allocs_op": [
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "median_ns_op": 1878829,
+      "median_b_op": 2097167,
+      "median_allocs_op": 2
+    },
+    {
+      "name": "BenchmarkReferenceIdentity_1080p_Layout/token-16",
+      "iterations": [
+        500,
+        458,
+        412,
+        460,
+        488
+      ],
+      "ns_op": [
+        490984,
+        479112,
+        521193,
+        510773,
+        497485
+      ],
+      "b_op": [
+        1049489,
+        1049488,
+        1049488,
+        1049488,
+        1049488
+      ],
+      "allocs_op": [
+        11,
+        11,
+        11,
+        11,
+        11
+      ],
+      "median_ns_op": 497485,
+      "median_b_op": 1049488,
+      "median_allocs_op": 11
+    }
+  ],
+  "heap": {
+    "pointer": [
+      {
+        "layout": "pointer",
+        "pictures": 8,
+        "live_heap_delta": 16800224,
+        "live_scan_delta": 16784984,
+        "released_heap_delta": 17376,
+        "released_scan_delta": 4648
+      },
+      {
+        "layout": "pointer",
+        "pictures": 8,
+        "live_heap_delta": 16810416,
+        "live_scan_delta": 16784984,
+        "released_heap_delta": 27568,
+        "released_scan_delta": 9288
+      },
+      {
+        "layout": "pointer",
+        "pictures": 8,
+        "live_heap_delta": 16810528,
+        "live_scan_delta": 16789720,
+        "released_heap_delta": 27680,
+        "released_scan_delta": 7064
+      },
+      {
+        "layout": "pointer",
+        "pictures": 8,
+        "live_heap_delta": 16805432,
+        "live_scan_delta": 16785080,
+        "released_heap_delta": 22584,
+        "released_scan_delta": 7064
+      },
+      {
+        "layout": "pointer",
+        "pictures": 8,
+        "live_heap_delta": 16810528,
+        "live_scan_delta": 16785080,
+        "released_heap_delta": 27680,
+        "released_scan_delta": 9384
+      }
+    ],
+    "token": [
+      {
+        "layout": "token",
+        "pictures": 8,
+        "live_heap_delta": 8407544,
+        "live_scan_delta": 8792,
+        "released_heap_delta": 12280,
+        "released_scan_delta": 2328
+      },
+      {
+        "layout": "token",
+        "pictures": 8,
+        "live_heap_delta": 8407544,
+        "live_scan_delta": 10704,
+        "released_heap_delta": 12280,
+        "released_scan_delta": 2328
+      },
+      {
+        "layout": "token",
+        "pictures": 8,
+        "live_heap_delta": 8407544,
+        "live_scan_delta": 8792,
+        "released_heap_delta": 12280,
+        "released_scan_delta": 2328
+      },
+      {
+        "layout": "token",
+        "pictures": 8,
+        "live_heap_delta": 8407544,
+        "live_scan_delta": 8792,
+        "released_heap_delta": 12280,
+        "released_scan_delta": 2328
+      },
+      {
+        "layout": "token",
+        "pictures": 8,
+        "live_heap_delta": 8407544,
+        "live_scan_delta": 6472,
+        "released_heap_delta": 12280,
+        "released_scan_delta": 2328
+      }
+    ]
+  },
+  "unrecorded_initial_run": "Earlier150ms x5 stdout experiment was not saved; not used for formal claims"
+}

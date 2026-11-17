@@ -1351,3 +1351,11 @@ B01–B05本轮CGO0完整门禁、独立Oracle、全库purego/386/测试标签�
 build/汇编vet/测试编译通过。按用户明确确认的本机范围完成B05，NEON无原生证据，
 完整M8、Profile和A01局部数组1alloc/op缺口仍保留。详细范围、数值与输入/版本身份见
 [B05b记录](gates/b05_high_depth_mc.md)、[收尾](gates/b05_results.md)和[b05_samples.json](gates/b05_samples.json)。
+
+## 33. C05：参考身份布局隔离实验
+
+每图uint32字典只进入测试，没有迁移生产DPB。合成1080p两列表五样本中位
+指针1878829ns/2097167B/2alloc，令牌497485ns/1049488B/11alloc；八图GC后活跃
+HeapAlloc差值中位16810416→8407544B，可扫描heap差值16785080→8792B。
+以上不包含完整decoder，不等于端点或自然GC延迟改善，C05完整迁移验收仍未完成。
+方法、边界及全部样本见[实验报告](gates/c05_reference_identity.md)和[c05_samples.json](gates/c05_samples.json)。
