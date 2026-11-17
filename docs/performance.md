@@ -1359,3 +1359,10 @@ build/汇编vet/测试编译通过。按用户明确确认的本机范围完成B
 HeapAlloc差值中位16810416→8407544B，可扫描heap差值16785080→8792B。
 以上不包含完整decoder，不等于端点或自然GC延迟改善，C05完整迁移验收仍未完成。
 方法、边界及全部样本见[实验报告](gates/c05_reference_identity.md)和[c05_samples.json](gates/c05_samples.json)。
+
+## 34. C06：MPS归一化快路未采纳
+
+C04父版本上评估合法MPS已归一化时省去函数调用的候选。IDR首轮-13.5%未在唯一补测
+重复（+2.1%）；High10首轮+0.8%、唯一补测+6.3%，留出方向不一致，未通过采纳门槛。
+生产Bin已恢复父版本，候选只保留在测试，完整C06结构专化尚未完成。
+全部五对、核诊断、输入身份及负结果见[C06记录](gates/c06_cabac_mps.md)和[c06_samples.json](gates/c06_samples.json)。

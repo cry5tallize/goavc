@@ -1,0 +1,97 @@
+{
+  "date": "2026-11-18",
+  "scope": "C05 isolated tests plus C06 test-only candidate; accepted production exactly matches1136482",
+  "cgo_regular": 0,
+  "cgo_race": 1,
+  "checks": [
+    {
+      "name": "vet",
+      "result": "passed",
+      "log": "tmp/c06/vet.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "build",
+      "result": "passed",
+      "log": "tmp/c06/build.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "test",
+      "result": "passed",
+      "log": "tmp/c06/test.txt",
+      "sha256": "77c2839f92f834b66058f25c091c34131426b1cbfca8e167d51c2982f86ce2e3"
+    },
+    {
+      "name": "deps",
+      "result": "passed",
+      "log": "tmp/c06/deps.txt",
+      "sha256": "370b750f9abcc9536de05637eefb2f93483656b6e605fef2a2ee9dbcdf640e66"
+    },
+    {
+      "name": "manifest",
+      "result": "passed",
+      "log": "tmp/c06/manifest.txt",
+      "sha256": "9ac8d275e6a4738a5852dbb68db90ae9a8f26f997b07cc5c131a675b3db01997"
+    },
+    {
+      "name": "purego",
+      "result": "passed",
+      "log": "tmp/c06/purego.txt",
+      "sha256": "0b455a77b66ff31712bc1810aacecbbdee341d2133da9afe73e00f4ac4d65d56"
+    },
+    {
+      "name": "386",
+      "result": "passed",
+      "log": "tmp/c06/386.txt",
+      "sha256": "059b052a11ff6d9df91f62c59ddd801bef5e6b6904e09103636253ffcc195633"
+    },
+    {
+      "name": "race",
+      "result": "passed",
+      "log": "tmp/c06/race.txt",
+      "sha256": "1ce865077b25d4aee23a234a7c3b1c92dfd6d996725986a2cd65846ff9497a41"
+    },
+    {
+      "name": "oracle-idr",
+      "result": "passed",
+      "log": "tmp/c06/oracle-idr.txt",
+      "sha256": "b82196cf96c585a08a7655f206dcf1f9ba87878610aeb1bfc85905061d112db8"
+    },
+    {
+      "name": "oracle-ipb",
+      "result": "passed",
+      "log": "tmp/c06/oracle-ipb.txt",
+      "sha256": "a4f941c605f26259af709c0bda53472cf45ce5693bc662f02d9827b0b690dfe9"
+    },
+    {
+      "name": "weighted-oracle",
+      "result": "passed",
+      "log": "tmp/c06/weighted-oracle.txt",
+      "sha256": "271a2e4cb987eaac692b2c010625f1344aeba3f2a091d021b3cdefedbeb9f078"
+    },
+    {
+      "name": "fuzz-arithmetic",
+      "result": "passed",
+      "log": "tmp/c06/fuzz-arithmetic.txt",
+      "sha256": "ff04b4f7828ab7a6e7cbf2526169ef2f8710bc218f59701507e1216529cfdbed"
+    },
+    {
+      "name": "fuzz-residual",
+      "result": "passed",
+      "log": "tmp/c06/fuzz-residual.txt",
+      "sha256": "9f3da65342669b737814b97af44d92c67059582e3c6e03475f2201f102ebedec"
+    }
+  ],
+  "not_run": [
+    "six-target cross compile (no production or assembly change)",
+    "optional long oracle suites",
+    "native arm64"
+  ],
+  "fuzz": {
+    "arithmetic_execs": 211073,
+    "residual_execs": 197168,
+    "seconds_each": 5,
+    "parallel": 2
+  }
+}

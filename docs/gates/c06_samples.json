@@ -1,0 +1,2005 @@
+{
+  "schema_version": 1,
+  "work_item": "C06",
+  "date": "2026-11-18",
+  "baseline": "11364826bebbff0f611dffa78b7e5bc8f32e7d18",
+  "source": "before frozen at1136482; after differs only Bin MPS branch normalization avoidance; new tests do not change production binary",
+  "decision": "Not adopted: High10 initial flat,only repeat regressed6.3%;holdouts mixed. Accepted production decoder.go exactly matches1136482. Candidate retained only in tests; full C06 residual specialization remains incomplete.",
+  "environment": {
+    "cpu": "AMD Ryzen 7 5700X",
+    "os": "Windows/amd64",
+    "go": "go1.27.4",
+    "cgo": 0,
+    "goamd64": "v1",
+    "gomaxprocs": 16,
+    "threads": 1,
+    "external_load_monitored": false,
+    "own_jobs_overlapped_timing": false
+  },
+  "inputs": {
+    "idr": {
+      "path": "tmp/deblock-perf/high-idr.264",
+      "sha256": "b6f836c52d00a644b4cf5906e1b726b3d0bed713d2b2fdf940cb6c99133e59a9",
+      "frames_per_op": 1
+    },
+    "high10": {
+      "Name": "high10-1080p-s1",
+      "Frames": 300,
+      "SliceCount": 1,
+      "Format": "yuv420p10le",
+      "InputSHA256": "CD2C1663FC699A15CB2C3F72CAC5E2DFB308AF08DAB49F391174EE6BDC50D735",
+      "ExpectedYUVSHA256": "69F5A263AFE96ADF40FB0007B61A375DA265DBAFB866E42A79DDBB51E9F94F09"
+    },
+    "holdout": [
+      {
+        "Name": "desktop-static",
+        "Path": "tmp/c00-inputs/desktop-static.264",
+        "Frames": 60,
+        "Depth": 8,
+        "Slices": 1,
+        "InputSHA256": "0FDC8913483F4B601E6F2D8EEBC7A18D87B00AE20B70784B7E0386BA91B00F17",
+        "ExpectedYUVSHA256": "BB966F638F7ECB0695B880D108A14ECF76843D2332ECED54C74E468274E807E3",
+        "GeneratorArguments": [
+          "-v",
+          "error",
+          "-xerror",
+          "-f",
+          "lavfi",
+          "-i",
+          "smptebars=size=1920x1080:rate=30",
+          "-vf",
+          "drawgrid=width=96:height=54:thickness=1:color=white",
+          "-frames:v",
+          "60",
+          "-pix_fmt",
+          "yuv420p",
+          "-c:v",
+          "libx264",
+          "-preset",
+          "veryfast",
+          "-profile:v",
+          "high",
+          "-qp",
+          "26",
+          "-bf",
+          "2",
+          "-x264-params",
+          "keyint=60:min-keyint=60:scenecut=0:ref=2:threads=1:slices=1:cabac=1:b-adapt=0:b-pyramid=none:8x8dct=1",
+          "-f",
+          "h264",
+          "tmp/c00-inputs/desktop-static.264"
+        ]
+      },
+      {
+        "Name": "texture-noise",
+        "Path": "tmp/c00-inputs/texture-noise.264",
+        "Frames": 60,
+        "Depth": 10,
+        "Slices": 4,
+        "InputSHA256": "10A828EC17CD5CC8E80BC7C98E16873DC58160F6A680ED8ED64D5CAE01995D93",
+        "ExpectedYUVSHA256": "4D5033B71E2F820A0BC1DB0C2205011818960C58234C80D67A4761FC84267878",
+        "GeneratorArguments": [
+          "-v",
+          "error",
+          "-xerror",
+          "-f",
+          "lavfi",
+          "-i",
+          "testsrc2=size=1920x1080:rate=30",
+          "-vf",
+          "noise=alls=12:all_seed=31415:allf=t+u",
+          "-frames:v",
+          "60",
+          "-pix_fmt",
+          "yuv420p10le",
+          "-c:v",
+          "libx264",
+          "-preset",
+          "veryfast",
+          "-profile:v",
+          "high10",
+          "-qp",
+          "26",
+          "-bf",
+          "2",
+          "-x264-params",
+          "keyint=60:min-keyint=60:scenecut=0:ref=2:threads=1:slices=4:cabac=1:b-adapt=0:b-pyramid=none:8x8dct=1",
+          "-f",
+          "h264",
+          "tmp/c00-inputs/texture-noise.264"
+        ]
+      },
+      {
+        "Name": "lowrate-skip",
+        "Path": "tmp/c00-inputs/lowrate-skip.264",
+        "Frames": 60,
+        "Depth": 8,
+        "Slices": 4,
+        "InputSHA256": "B58BB8D7D61774A5CEFD90103C301595F38A27440F68A058DED80C785A865AB9",
+        "ExpectedYUVSHA256": "611D9C16DF4E5DEECF84B304ABF5F4E3D15667AB46C9152FFEA600617654ACB5",
+        "GeneratorArguments": [
+          "-v",
+          "error",
+          "-xerror",
+          "-f",
+          "lavfi",
+          "-i",
+          "testsrc2=size=1920x1080:rate=30",
+          "-vf",
+          "fps=5,fps=30",
+          "-frames:v",
+          "60",
+          "-pix_fmt",
+          "yuv420p",
+          "-c:v",
+          "libx264",
+          "-preset",
+          "veryfast",
+          "-profile:v",
+          "high",
+          "-b:v",
+          "220k",
+          "-maxrate",
+          "220k",
+          "-bufsize",
+          "440k",
+          "-bf",
+          "2",
+          "-x264-params",
+          "keyint=60:min-keyint=60:scenecut=0:ref=2:threads=1:slices=4:cabac=1:b-adapt=0:b-pyramid=none:8x8dct=1",
+          "-f",
+          "h264",
+          "tmp/c00-inputs/lowrate-skip.264"
+        ]
+      }
+    ]
+  },
+  "timing": "five fresh-process pairs,alternating order;IDR500ms,Sequence1x;New/Send/Receive/Release/Flush/Close included;IO/AU assembly/independent pixel hash excluded;one planned IDR/High10 repeat",
+  "kernel_before": [
+    {
+      "name": "BenchmarkBin_NormalizedMPS_Engine-16",
+      "iterations": [
+        32704230,
+        32938980,
+        16044282,
+        16920950,
+        29741250
+      ],
+      "ns_op": [
+        7.844,
+        8.128,
+        14,
+        11.96,
+        7.072
+      ],
+      "b_op": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "allocs_op": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "median_ns_op": 8.128,
+      "median_b_op": 0,
+      "median_allocs_op": 0
+    },
+    {
+      "name": "BenchmarkCABACResidual_Prepared_Auto/size15-16",
+      "iterations": [
+        554720,
+        452676,
+        521734,
+        572901,
+        611884
+      ],
+      "ns_op": [
+        466.6,
+        484.3,
+        483.6,
+        478.2,
+        509.5
+      ],
+      "b_op": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "allocs_op": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "median_ns_op": 483.6,
+      "median_b_op": 64,
+      "median_allocs_op": 1
+    },
+    {
+      "name": "BenchmarkCABACResidual_Prepared_Auto/size16-16",
+      "iterations": [
+        420130,
+        591642,
+        386709,
+        386659,
+        471846
+      ],
+      "ns_op": [
+        543.9,
+        562,
+        521.1,
+        628.4,
+        624.5
+      ],
+      "b_op": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "allocs_op": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "median_ns_op": 562,
+      "median_b_op": 64,
+      "median_allocs_op": 1
+    },
+    {
+      "name": "BenchmarkCABACResidual_Prepared_Auto/size64-16",
+      "iterations": [
+        125366,
+        120045,
+        142239,
+        94767,
+        107576
+      ],
+      "ns_op": [
+        1994,
+        2257,
+        2224,
+        2568,
+        2084
+      ],
+      "b_op": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "allocs_op": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "median_ns_op": 2224,
+      "median_b_op": 64,
+      "median_allocs_op": 1
+    }
+  ],
+  "kernel_after": [
+    {
+      "name": "BenchmarkBin_NormalizedMPS_Engine-16",
+      "iterations": [
+        44282076,
+        20474670,
+        25105652,
+        47583170,
+        20614086
+      ],
+      "ns_op": [
+        12.43,
+        11.47,
+        10.54,
+        11.51,
+        12.44
+      ],
+      "b_op": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "allocs_op": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "median_ns_op": 11.51,
+      "median_b_op": 0,
+      "median_allocs_op": 0
+    },
+    {
+      "name": "BenchmarkCABACResidual_Prepared_Auto/size15-16",
+      "iterations": [
+        179118,
+        388376,
+        436576,
+        419374,
+        582523
+      ],
+      "ns_op": [
+        1145,
+        564,
+        490.1,
+        488.8,
+        488.6
+      ],
+      "b_op": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "allocs_op": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "median_ns_op": 490.1,
+      "median_b_op": 64,
+      "median_allocs_op": 1
+    },
+    {
+      "name": "BenchmarkCABACResidual_Prepared_Auto/size16-16",
+      "iterations": [
+        515971,
+        598652,
+        425192,
+        644242,
+        655254
+      ],
+      "ns_op": [
+        476.5,
+        463.2,
+        516.9,
+        480,
+        720.8
+      ],
+      "b_op": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "allocs_op": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "median_ns_op": 480,
+      "median_b_op": 64,
+      "median_allocs_op": 1
+    },
+    {
+      "name": "BenchmarkCABACResidual_Prepared_Auto/size64-16",
+      "iterations": [
+        144248,
+        117246,
+        149847,
+        113422,
+        122755
+      ],
+      "ns_op": [
+        1812,
+        1873,
+        1823,
+        2335,
+        2334
+      ],
+      "b_op": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "allocs_op": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "median_ns_op": 1873,
+      "median_b_op": 64,
+      "median_allocs_op": 1
+    }
+  ],
+  "initial": {
+    "idr": {
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              13
+            ],
+            "ns_op": [
+              39848346
+            ],
+            "b_op": [
+              8077787
+            ],
+            "allocs_op": [
+              116
+            ],
+            "median_ns_op": 39848346,
+            "median_b_op": 8077787,
+            "median_allocs_op": 116
+          },
+          "after": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              15
+            ],
+            "ns_op": [
+              36805593
+            ],
+            "b_op": [
+              8077384
+            ],
+            "allocs_op": [
+              115
+            ],
+            "median_ns_op": 36805593,
+            "median_b_op": 8077384,
+            "median_allocs_op": 115
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              14
+            ],
+            "ns_op": [
+              42027686
+            ],
+            "b_op": [
+              8078120
+            ],
+            "allocs_op": [
+              116
+            ],
+            "median_ns_op": 42027686,
+            "median_b_op": 8078120,
+            "median_allocs_op": 116
+          },
+          "after": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              16
+            ],
+            "ns_op": [
+              38694469
+            ],
+            "b_op": [
+              8078027
+            ],
+            "allocs_op": [
+              116
+            ],
+            "median_ns_op": 38694469,
+            "median_b_op": 8078027,
+            "median_allocs_op": 116
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              14
+            ],
+            "ns_op": [
+              39840443
+            ],
+            "b_op": [
+              8078484
+            ],
+            "allocs_op": [
+              116
+            ],
+            "median_ns_op": 39840443,
+            "median_b_op": 8078484,
+            "median_allocs_op": 116
+          },
+          "after": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              16
+            ],
+            "ns_op": [
+              32649819
+            ],
+            "b_op": [
+              8078028
+            ],
+            "allocs_op": [
+              116
+            ],
+            "median_ns_op": 32649819,
+            "median_b_op": 8078028,
+            "median_allocs_op": 116
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              16
+            ],
+            "ns_op": [
+              38705944
+            ],
+            "b_op": [
+              8078020
+            ],
+            "allocs_op": [
+              116
+            ],
+            "median_ns_op": 38705944,
+            "median_b_op": 8078020,
+            "median_allocs_op": 116
+          },
+          "after": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              16
+            ],
+            "ns_op": [
+              34476794
+            ],
+            "b_op": [
+              8078027
+            ],
+            "allocs_op": [
+              116
+            ],
+            "median_ns_op": 34476794,
+            "median_b_op": 8078027,
+            "median_allocs_op": 116
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              14
+            ],
+            "ns_op": [
+              39558914
+            ],
+            "b_op": [
+              8078113
+            ],
+            "allocs_op": [
+              116
+            ],
+            "median_ns_op": 39558914,
+            "median_b_op": 8078113,
+            "median_allocs_op": 116
+          },
+          "after": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              16
+            ],
+            "ns_op": [
+              33753794
+            ],
+            "b_op": [
+              8077715
+            ],
+            "allocs_op": [
+              115
+            ],
+            "median_ns_op": 33753794,
+            "median_b_op": 8077715,
+            "median_allocs_op": 115
+          }
+        }
+      ],
+      "median_before_ns_op": 39840443,
+      "median_after_ns_op": 34476794,
+      "change_percent": -13.462824698008502,
+      "paired_median_percent": -10.926357977472401
+    },
+    "high10": {
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              8807580500
+            ],
+            "b_op": [
+              1370171816
+            ],
+            "allocs_op": [
+              16426
+            ],
+            "median_ns_op": 8807580500,
+            "median_b_op": 1370171816,
+            "median_allocs_op": 16426
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              8886794300
+            ],
+            "b_op": [
+              1370176928
+            ],
+            "allocs_op": [
+              16433
+            ],
+            "median_ns_op": 8886794300,
+            "median_b_op": 1370176928,
+            "median_allocs_op": 16433
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              8994426000
+            ],
+            "b_op": [
+              1370171848
+            ],
+            "allocs_op": [
+              16428
+            ],
+            "median_ns_op": 8994426000,
+            "median_b_op": 1370171848,
+            "median_allocs_op": 16428
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              8933522600
+            ],
+            "b_op": [
+              1370171720
+            ],
+            "allocs_op": [
+              16426
+            ],
+            "median_ns_op": 8933522600,
+            "median_b_op": 1370171720,
+            "median_allocs_op": 16426
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              10649143800
+            ],
+            "b_op": [
+              1370176688
+            ],
+            "allocs_op": [
+              16430
+            ],
+            "median_ns_op": 10649143800,
+            "median_b_op": 1370176688,
+            "median_allocs_op": 16430
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              11158702500
+            ],
+            "b_op": [
+              1370176944
+            ],
+            "allocs_op": [
+              16434
+            ],
+            "median_ns_op": 11158702500,
+            "median_b_op": 1370176944,
+            "median_allocs_op": 16434
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              8677054800
+            ],
+            "b_op": [
+              1370171832
+            ],
+            "allocs_op": [
+              16427
+            ],
+            "median_ns_op": 8677054800,
+            "median_b_op": 1370171832,
+            "median_allocs_op": 16427
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              8685579600
+            ],
+            "b_op": [
+              1370171848
+            ],
+            "allocs_op": [
+              16428
+            ],
+            "median_ns_op": 8685579600,
+            "median_b_op": 1370171848,
+            "median_allocs_op": 16428
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              8818602200
+            ],
+            "b_op": [
+              1370171720
+            ],
+            "allocs_op": [
+              16426
+            ],
+            "median_ns_op": 8818602200,
+            "median_b_op": 1370171720,
+            "median_allocs_op": 16426
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              8534911700
+            ],
+            "b_op": [
+              1370171816
+            ],
+            "allocs_op": [
+              16426
+            ],
+            "median_ns_op": 8534911700,
+            "median_b_op": 1370171816,
+            "median_allocs_op": 16426
+          }
+        }
+      ],
+      "median_before_ns_op": 8818602200,
+      "median_after_ns_op": 8886794300,
+      "change_percent": 0.7732756105043537,
+      "paired_median_percent": 0.09824531706310591
+    }
+  },
+  "repeat": {
+    "idr": {
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              15
+            ],
+            "ns_op": [
+              34579200
+            ],
+            "b_op": [
+              8077385
+            ],
+            "allocs_op": [
+              115
+            ],
+            "median_ns_op": 34579200,
+            "median_b_op": 8077385,
+            "median_allocs_op": 115
+          },
+          "after": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              16
+            ],
+            "ns_op": [
+              34957888
+            ],
+            "b_op": [
+              8078350
+            ],
+            "allocs_op": [
+              116
+            ],
+            "median_ns_op": 34957888,
+            "median_b_op": 8078350,
+            "median_allocs_op": 116
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              16
+            ],
+            "ns_op": [
+              35094638
+            ],
+            "b_op": [
+              8078026
+            ],
+            "allocs_op": [
+              116
+            ],
+            "median_ns_op": 35094638,
+            "median_b_op": 8078026,
+            "median_allocs_op": 116
+          },
+          "after": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              15
+            ],
+            "ns_op": [
+              35841207
+            ],
+            "b_op": [
+              8078078
+            ],
+            "allocs_op": [
+              116
+            ],
+            "median_ns_op": 35841207,
+            "median_b_op": 8078078,
+            "median_allocs_op": 116
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              15
+            ],
+            "ns_op": [
+              34715060
+            ],
+            "b_op": [
+              8077740
+            ],
+            "allocs_op": [
+              116
+            ],
+            "median_ns_op": 34715060,
+            "median_b_op": 8077740,
+            "median_allocs_op": 116
+          },
+          "after": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              16
+            ],
+            "ns_op": [
+              34046225
+            ],
+            "b_op": [
+              8078042
+            ],
+            "allocs_op": [
+              116
+            ],
+            "median_ns_op": 34046225,
+            "median_b_op": 8078042,
+            "median_allocs_op": 116
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              16
+            ],
+            "ns_op": [
+              36791219
+            ],
+            "b_op": [
+              8078029
+            ],
+            "allocs_op": [
+              116
+            ],
+            "median_ns_op": 36791219,
+            "median_b_op": 8078029,
+            "median_allocs_op": 116
+          },
+          "after": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              15
+            ],
+            "ns_op": [
+              48199800
+            ],
+            "b_op": [
+              8078433
+            ],
+            "allocs_op": [
+              117
+            ],
+            "median_ns_op": 48199800,
+            "median_b_op": 8078433,
+            "median_allocs_op": 117
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              8
+            ],
+            "ns_op": [
+              68554962
+            ],
+            "b_op": [
+              8078708
+            ],
+            "allocs_op": [
+              117
+            ],
+            "median_ns_op": 68554962,
+            "median_b_op": 8078708,
+            "median_allocs_op": 117
+          },
+          "after": {
+            "name": "BenchmarkDecoder_DirectAU_Auto-16",
+            "iterations": [
+              8
+            ],
+            "ns_op": [
+              71530400
+            ],
+            "b_op": [
+              8078027
+            ],
+            "allocs_op": [
+              116
+            ],
+            "median_ns_op": 71530400,
+            "median_b_op": 8078027,
+            "median_allocs_op": 116
+          }
+        }
+      ],
+      "median_before_ns_op": 35094638,
+      "median_after_ns_op": 35841207,
+      "change_percent": 2.127302182173807,
+      "paired_median_percent": 2.127302182173807
+    },
+    "high10": {
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              9614031000
+            ],
+            "b_op": [
+              1370166608
+            ],
+            "allocs_op": [
+              16419
+            ],
+            "median_ns_op": 9614031000,
+            "median_b_op": 1370166608,
+            "median_allocs_op": 16419
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              10222903400
+            ],
+            "b_op": [
+              1370166512
+            ],
+            "allocs_op": [
+              16419
+            ],
+            "median_ns_op": 10222903400,
+            "median_b_op": 1370166512,
+            "median_allocs_op": 16419
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              9488226800
+            ],
+            "b_op": [
+              1370166480
+            ],
+            "allocs_op": [
+              16417
+            ],
+            "median_ns_op": 9488226800,
+            "median_b_op": 1370166480,
+            "median_allocs_op": 16417
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              9803973400
+            ],
+            "b_op": [
+              1370171944
+            ],
+            "allocs_op": [
+              16428
+            ],
+            "median_ns_op": 9803973400,
+            "median_b_op": 1370171944,
+            "median_allocs_op": 16428
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              16405374100
+            ],
+            "b_op": [
+              1370176912
+            ],
+            "allocs_op": [
+              16432
+            ],
+            "median_ns_op": 16405374100,
+            "median_b_op": 1370176912,
+            "median_allocs_op": 16432
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              13727621200
+            ],
+            "b_op": [
+              1370176848
+            ],
+            "allocs_op": [
+              16434
+            ],
+            "median_ns_op": 13727621200,
+            "median_b_op": 1370176848,
+            "median_allocs_op": 16434
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              9583482000
+            ],
+            "b_op": [
+              1370171720
+            ],
+            "allocs_op": [
+              16426
+            ],
+            "median_ns_op": 9583482000,
+            "median_b_op": 1370171720,
+            "median_allocs_op": 16426
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              11512304600
+            ],
+            "b_op": [
+              1370166528
+            ],
+            "allocs_op": [
+              16420
+            ],
+            "median_ns_op": 11512304600,
+            "median_b_op": 1370166528,
+            "median_allocs_op": 16420
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              9925861900
+            ],
+            "b_op": [
+              1370171992
+            ],
+            "allocs_op": [
+              16425
+            ],
+            "median_ns_op": 9925861900,
+            "median_b_op": 1370171992,
+            "median_allocs_op": 16425
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              9431319400
+            ],
+            "b_op": [
+              1370171848
+            ],
+            "allocs_op": [
+              16428
+            ],
+            "median_ns_op": 9431319400,
+            "median_b_op": 1370171848,
+            "median_allocs_op": 16428
+          }
+        }
+      ],
+      "median_before_ns_op": 9614031000,
+      "median_after_ns_op": 10222903400,
+      "change_percent": 6.333164517568135,
+      "paired_median_percent": 3.3277724769395167
+    }
+  },
+  "holdout": {
+    "desktop-static": {
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              788774700
+            ],
+            "b_op": [
+              257769792
+            ],
+            "allocs_op": [
+              2481
+            ],
+            "median_ns_op": 788774700,
+            "median_b_op": 257769792,
+            "median_allocs_op": 2481
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              786522600
+            ],
+            "b_op": [
+              257769680
+            ],
+            "allocs_op": [
+              2480
+            ],
+            "median_ns_op": 786522600,
+            "median_b_op": 257769680,
+            "median_allocs_op": 2480
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              755435500
+            ],
+            "b_op": [
+              257769808
+            ],
+            "allocs_op": [
+              2482
+            ],
+            "median_ns_op": 755435500,
+            "median_b_op": 257769808,
+            "median_allocs_op": 2482
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              838956700
+            ],
+            "b_op": [
+              257774648
+            ],
+            "allocs_op": [
+              2484
+            ],
+            "median_ns_op": 838956700,
+            "median_b_op": 257774648,
+            "median_allocs_op": 2484
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              884367500
+            ],
+            "b_op": [
+              257769904
+            ],
+            "allocs_op": [
+              2482
+            ],
+            "median_ns_op": 884367500,
+            "median_b_op": 257769904,
+            "median_allocs_op": 2482
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              905088200
+            ],
+            "b_op": [
+              257769696
+            ],
+            "allocs_op": [
+              2481
+            ],
+            "median_ns_op": 905088200,
+            "median_b_op": 257769696,
+            "median_allocs_op": 2481
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              1069088400
+            ],
+            "b_op": [
+              257769680
+            ],
+            "allocs_op": [
+              2480
+            ],
+            "median_ns_op": 1069088400,
+            "median_b_op": 257769680,
+            "median_allocs_op": 2480
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              1199385100
+            ],
+            "b_op": [
+              257774760
+            ],
+            "allocs_op": [
+              2485
+            ],
+            "median_ns_op": 1199385100,
+            "median_b_op": 257774760,
+            "median_allocs_op": 2485
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              803672500
+            ],
+            "b_op": [
+              257769680
+            ],
+            "allocs_op": [
+              2480
+            ],
+            "median_ns_op": 803672500,
+            "median_b_op": 257769680,
+            "median_allocs_op": 2480
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              788495400
+            ],
+            "b_op": [
+              257769904
+            ],
+            "allocs_op": [
+              2482
+            ],
+            "median_ns_op": 788495400,
+            "median_b_op": 257769904,
+            "median_allocs_op": 2482
+          }
+        }
+      ],
+      "median_before_ns_op": 803672500,
+      "median_after_ns_op": 838956700,
+      "change_percent": 4.390370455627135,
+      "paired_median_percent": 2.342996548380616
+    },
+    "texture-noise": {
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              11534998300
+            ],
+            "b_op": [
+              602658872
+            ],
+            "allocs_op": [
+              9837
+            ],
+            "median_ns_op": 11534998300,
+            "median_b_op": 602658872,
+            "median_allocs_op": 9837
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              12526996300
+            ],
+            "b_op": [
+              602658872
+            ],
+            "allocs_op": [
+              9837
+            ],
+            "median_ns_op": 12526996300,
+            "median_b_op": 602658872,
+            "median_allocs_op": 9837
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              12409955900
+            ],
+            "b_op": [
+              602658872
+            ],
+            "allocs_op": [
+              9837
+            ],
+            "median_ns_op": 12409955900,
+            "median_b_op": 602658872,
+            "median_allocs_op": 9837
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              11350168700
+            ],
+            "b_op": [
+              602663968
+            ],
+            "allocs_op": [
+              9843
+            ],
+            "median_ns_op": 11350168700,
+            "median_b_op": 602663968,
+            "median_allocs_op": 9843
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              12048019800
+            ],
+            "b_op": [
+              602658872
+            ],
+            "allocs_op": [
+              9837
+            ],
+            "median_ns_op": 12048019800,
+            "median_b_op": 602658872,
+            "median_allocs_op": 9837
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              12157947900
+            ],
+            "b_op": [
+              602663968
+            ],
+            "allocs_op": [
+              9843
+            ],
+            "median_ns_op": 12157947900,
+            "median_b_op": 602663968,
+            "median_allocs_op": 9843
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              12376100900
+            ],
+            "b_op": [
+              602658872
+            ],
+            "allocs_op": [
+              9837
+            ],
+            "median_ns_op": 12376100900,
+            "median_b_op": 602658872,
+            "median_allocs_op": 9837
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              11838940200
+            ],
+            "b_op": [
+              602658872
+            ],
+            "allocs_op": [
+              9837
+            ],
+            "median_ns_op": 11838940200,
+            "median_b_op": 602658872,
+            "median_allocs_op": 9837
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              15253860400
+            ],
+            "b_op": [
+              602659096
+            ],
+            "allocs_op": [
+              9839
+            ],
+            "median_ns_op": 15253860400,
+            "median_b_op": 602659096,
+            "median_allocs_op": 9839
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              14526857200
+            ],
+            "b_op": [
+              602663968
+            ],
+            "allocs_op": [
+              9843
+            ],
+            "median_ns_op": 14526857200,
+            "median_b_op": 602663968,
+            "median_allocs_op": 9843
+          }
+        }
+      ],
+      "median_before_ns_op": 12376100900,
+      "median_after_ns_op": 12157947900,
+      "change_percent": -1.762695712993101,
+      "paired_median_percent": -4.340306404580141
+    },
+    "lowrate-skip": {
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              992977800
+            ],
+            "b_op": [
+              258398824
+            ],
+            "allocs_op": [
+              5511
+            ],
+            "median_ns_op": 992977800,
+            "median_b_op": 258398824,
+            "median_allocs_op": 5511
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              951868300
+            ],
+            "b_op": [
+              258398696
+            ],
+            "allocs_op": [
+              5509
+            ],
+            "median_ns_op": 951868300,
+            "median_b_op": 258398696,
+            "median_allocs_op": 5509
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              1033994400
+            ],
+            "b_op": [
+              258399048
+            ],
+            "allocs_op": [
+              5513
+            ],
+            "median_ns_op": 1033994400,
+            "median_b_op": 258399048,
+            "median_allocs_op": 5513
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              1018708100
+            ],
+            "b_op": [
+              258398584
+            ],
+            "allocs_op": [
+              5508
+            ],
+            "median_ns_op": 1018708100,
+            "median_b_op": 258398584,
+            "median_allocs_op": 5508
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              1031023900
+            ],
+            "b_op": [
+              258398840
+            ],
+            "allocs_op": [
+              5512
+            ],
+            "median_ns_op": 1031023900,
+            "median_b_op": 258398840,
+            "median_allocs_op": 5512
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              892120100
+            ],
+            "b_op": [
+              258398584
+            ],
+            "allocs_op": [
+              5508
+            ],
+            "median_ns_op": 892120100,
+            "median_b_op": 258398584,
+            "median_allocs_op": 5508
+          }
+        },
+        {
+          "pair": 4,
+          "order": [
+            "after",
+            "before"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              1001407700
+            ],
+            "b_op": [
+              258398808
+            ],
+            "allocs_op": [
+              5510
+            ],
+            "median_ns_op": 1001407700,
+            "median_b_op": 258398808,
+            "median_allocs_op": 5510
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              914432000
+            ],
+            "b_op": [
+              258398936
+            ],
+            "allocs_op": [
+              5512
+            ],
+            "median_ns_op": 914432000,
+            "median_b_op": 258398936,
+            "median_allocs_op": 5512
+          }
+        },
+        {
+          "pair": 5,
+          "order": [
+            "before",
+            "after"
+          ],
+          "before": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              960496700
+            ],
+            "b_op": [
+              258398696
+            ],
+            "allocs_op": [
+              5509
+            ],
+            "median_ns_op": 960496700,
+            "median_b_op": 258398696,
+            "median_allocs_op": 5509
+          },
+          "after": {
+            "name": "BenchmarkDecoder_Sequence-16",
+            "iterations": [
+              1
+            ],
+            "ns_op": [
+              919708200
+            ],
+            "b_op": [
+              258398600
+            ],
+            "allocs_op": [
+              5509
+            ],
+            "median_ns_op": 919708200,
+            "median_b_op": 258398600,
+            "median_allocs_op": 5509
+          }
+        }
+      ],
+      "median_before_ns_op": 1001407700,
+      "median_after_ns_op": 919708200,
+      "change_percent": -8.158465328357266,
+      "paired_median_percent": -4.246604907648299
+    }
+  },
+  "binaries": {
+    "before": "bb715fd51da71ebf44204561762f25fe47bf8d89b1634ed29271cac66a349403",
+    "after": "7a83b22419539e665a765f92df67f76b034dbe37ede4a8f15507beefc0403978"
+  }
+}
