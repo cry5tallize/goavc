@@ -1,7 +1,7 @@
 # C轮：B05之后的极致解码性能计划
 
 日期：2026-11-17。代码基线：`9f493b3`，本机Ryzen7 5700X、Windows/amd64、Go1.27.4、CGO0。
-状态：C00 已冻结[基线与成本账本](gates/c00_baseline.md)，C01 已通过[局部缓冲零分配回归](gates/c01_luma_edge_dispatch.md)。下一项为 C02；B01–B05 按已确认的本机范围完成。
+状态：C00 已冻结[基线与成本账本](gates/c00_baseline.md)，C01 已通过[局部缓冲零分配回归](gates/c01_luma_edge_dispatch.md)，C02 已完成[High10 输出打包](gates/c02_high10_output.md)。B01–B05 按已确认的本机范围完成。
 
 ## 结论：下一步先优化数据流和调度，不再按SIMD数量排任务
 

@@ -1,7 +1,6 @@
 package decoder
 
 import (
-	"encoding/binary"
 	"fmt"
 	"unsafe"
 
@@ -632,12 +631,11 @@ func (d *Decoder) toFrame(pic *picture.Picture, sps *syntax.SPS, p h264.Packet, 
 			cropX /= subW
 			cropY /= subH
 		}
+		high := pic.Format.BitDepth() > 8
 		for y := 0; y < ph; y++ {
 			row := f.Planes[pi].Data[y*rowBytes : (y+1)*rowBytes]
-			if pic.Format.BitDepth() > 8 {
-				for x, value := range src.Row16(y + cropY)[cropX : cropX+pw] {
-					binary.LittleEndian.PutUint16(row[x*2:], value)
-				}
+			if high {
+				picture.PackRow16LE(row, src.Row16(y + cropY)[cropX:cropX+pw])
 			} else {
 				copy(row, src.Row(y + cropY)[cropX:cropX+pw])
 			}

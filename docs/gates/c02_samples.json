@@ -1,0 +1,149 @@
+{
+  "baseline": "fb248ef1ca1196c925eda970f10cde91767cbb88",
+  "input": {
+    "Name": "high10-1080p-s1",
+    "Frames": 300,
+    "SliceCount": 1,
+    "Format": "yuv420p10le",
+    "InputSHA256": "CD2C1663FC699A15CB2C3F72CAC5E2DFB308AF08DAB49F391174EE6BDC50D735",
+    "ExpectedYUVSHA256": "69F5A263AFE96ADF40FB0007B61A375DA265DBAFB866E42A79DDBB51E9F94F09"
+  },
+  "hardware": "Ryzen 7 5700X; Windows/amd64; Go 1.27.4; CGO0; GOAMD64=v1; GOMAXPROCS16; Threads1",
+  "protocol": "Five paired fresh processes; odd before first, even after first; endpoint Sequence 300 frames 1x with independent FFmpeg SHA outside timer; kernel 200ms",
+  "series": {
+    "kernel": {
+      "before": [
+        {
+          "iterations": 62,
+          "ns_op": 3783063,
+          "b_op": 100906,
+          "allocs_op": 4
+        },
+        {
+          "iterations": 73,
+          "ns_op": 3440879,
+          "b_op": 85754,
+          "allocs_op": 4
+        },
+        {
+          "iterations": 54,
+          "ns_op": 4157522,
+          "b_op": 115803,
+          "allocs_op": 4
+        },
+        {
+          "iterations": 57,
+          "ns_op": 4201477,
+          "b_op": 109816,
+          "allocs_op": 4
+        },
+        {
+          "iterations": 60,
+          "ns_op": 3928333,
+          "b_op": 104258,
+          "allocs_op": 4
+        }
+      ],
+      "after": [
+        {
+          "iterations": 456,
+          "ns_op": 542057,
+          "b_op": 14023,
+          "allocs_op": 4
+        },
+        {
+          "iterations": 402,
+          "ns_op": 532690,
+          "b_op": 15860,
+          "allocs_op": 4
+        },
+        {
+          "iterations": 277,
+          "ns_op": 807780,
+          "b_op": 22858,
+          "allocs_op": 4
+        },
+        {
+          "iterations": 298,
+          "ns_op": 741196,
+          "b_op": 21272,
+          "allocs_op": 4
+        },
+        {
+          "iterations": 381,
+          "ns_op": 613392,
+          "b_op": 16715,
+          "allocs_op": 4
+        }
+      ],
+      "change_percent": -84.38543779257003
+    },
+    "endpoint": {
+      "before": [
+        {
+          "iterations": 1,
+          "ns_op": 14617235600,
+          "b_op": 1370166464,
+          "allocs_op": 16416
+        },
+        {
+          "iterations": 1,
+          "ns_op": 13408165500,
+          "b_op": 1370166496,
+          "allocs_op": 16418
+        },
+        {
+          "iterations": 1,
+          "ns_op": 15089376100,
+          "b_op": 1370171688,
+          "allocs_op": 16424
+        },
+        {
+          "iterations": 1,
+          "ns_op": 15390697100,
+          "b_op": 1370166448,
+          "allocs_op": 16415
+        },
+        {
+          "iterations": 1,
+          "ns_op": 14701636700,
+          "b_op": 1370171592,
+          "allocs_op": 16424
+        }
+      ],
+      "after": [
+        {
+          "iterations": 1,
+          "ns_op": 11936460500,
+          "b_op": 1370176800,
+          "allocs_op": 16431
+        },
+        {
+          "iterations": 1,
+          "ns_op": 11603085500,
+          "b_op": 1370166480,
+          "allocs_op": 16417
+        },
+        {
+          "iterations": 1,
+          "ns_op": 14184035300,
+          "b_op": 1370171688,
+          "allocs_op": 16424
+        },
+        {
+          "iterations": 1,
+          "ns_op": 14639750300,
+          "b_op": 1370171576,
+          "allocs_op": 16423
+        },
+        {
+          "iterations": 1,
+          "ns_op": 11438306500,
+          "b_op": 1370166704,
+          "allocs_op": 16419
+        }
+      ],
+      "change_percent": -18.808628293746366
+    }
+  }
+}
