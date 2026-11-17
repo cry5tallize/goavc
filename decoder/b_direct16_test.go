@@ -76,6 +76,10 @@ func TestBDirect16_GroupedParity(t *testing.T) {
 							}
 						}
 						a, b := states[0], states[1]
+						if a.info[0].deblockUniform != ((spatial || !varying) && !missing) {
+							t.Fatal("一致运动标志与已提交 Direct 矩形不符")
+						}
+						a.info[0].deblockUniform = false // 通用分组没有此派生元数据。
 						if fmt.Sprint(errs[0]) != fmt.Sprint(errs[1]) || (errs[0] != nil) != missing || qps[0] != qps[1] ||
 							!reflect.DeepEqual(a.info, b.info) || !reflect.DeepEqual(a.mv, b.mv) || !reflect.DeepEqual(a.mv1, b.mv1) ||
 							!slices.Equal(a.directBlocks, b.directBlocks) || !slices.Equal(a.mvd, b.mvd) || !slices.Equal(a.mvd1, b.mvd1) ||

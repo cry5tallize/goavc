@@ -48,6 +48,10 @@ type mbInfo struct {
 	// 非 Intra4x4 宏块保持 -1，供 MPM 判定“邻块无模式”。
 	intraModes [16]int8
 	chromaMode int8
+	// 去块专用派生值；原 lumaNZ 仍保存熵上下文需要的系数计数。
+	deblockNZ      uint16
+	deblockNZReady bool
+	deblockUniform bool // 整宏块 Direct 已发布两列表一致的运动与身份。
 }
 
 // frameState 是一帧解码期间的工作状态。

@@ -1,0 +1,244 @@
+{
+  "baseline": "ee87fe6412166579fe42aaa388c6367a92be45a5",
+  "input": {
+    "Name": "decode-1080p-high-s1",
+    "InputSHA256": "2EA2EB0581F1AA6D79FCD9D3F194C9B4172E8DEB95F133C4418C6E14C16C39B4",
+    "ExpectedYUVSHA256": "F574EABD36B903729D65D0F2B6FF3941DF5244C01B1AD30C330ECE1D5B05C385",
+    "Frames": 300,
+    "SliceCount": 1,
+    "Profile": "high"
+  },
+  "hardware": "Ryzen 7 5700X; Windows/amd64; Go 1.27.4; CGO0; GOAMD64=v1; GOMAXPROCS16; Threads1",
+  "protocol": "Five paired fresh processes; odd before first, even after first; endpoint Sequence 300 frames 1x with independent FFmpeg SHA outside timer; kernel 200ms",
+  "series": {
+    "endpoint": {
+      "before": [
+        {
+          "iterations": 1,
+          "ns_op": 6981185200,
+          "b_op": 1279639232,
+          "allocs_op": 15707
+        },
+        {
+          "iterations": 1,
+          "ns_op": 7332189800,
+          "b_op": 1279639008,
+          "allocs_op": 15705
+        },
+        {
+          "iterations": 1,
+          "ns_op": 6908155600,
+          "b_op": 1279639472,
+          "allocs_op": 15710
+        },
+        {
+          "iterations": 1,
+          "ns_op": 6836618300,
+          "b_op": 1279639232,
+          "allocs_op": 15707
+        },
+        {
+          "iterations": 1,
+          "ns_op": 7332548300,
+          "b_op": 1279639568,
+          "allocs_op": 15710
+        }
+      ],
+      "after": [
+        {
+          "iterations": 1,
+          "ns_op": 6398375200,
+          "b_op": 1279639344,
+          "allocs_op": 15708
+        },
+        {
+          "iterations": 1,
+          "ns_op": 6354902000,
+          "b_op": 1279644648,
+          "allocs_op": 15715
+        },
+        {
+          "iterations": 1,
+          "ns_op": 6435471500,
+          "b_op": 1279639440,
+          "allocs_op": 15708
+        },
+        {
+          "iterations": 1,
+          "ns_op": 6260306900,
+          "b_op": 1279639232,
+          "allocs_op": 15707
+        },
+        {
+          "iterations": 1,
+          "ns_op": 6145971600,
+          "b_op": 1279644120,
+          "allocs_op": 15712
+        }
+      ],
+      "change_percent": -8.971015408673011,
+      "paired_median_percent": -8.429772947832992
+    }
+  },
+  "high10": {
+    "input": {
+      "Name": "high10-1080p-s1",
+      "Frames": 300,
+      "SliceCount": 1,
+      "Format": "yuv420p10le",
+      "InputSHA256": "CD2C1663FC699A15CB2C3F72CAC5E2DFB308AF08DAB49F391174EE6BDC50D735",
+      "ExpectedYUVSHA256": "69F5A263AFE96ADF40FB0007B61A375DA265DBAFB866E42A79DDBB51E9F94F09"
+    },
+    "series": {
+      "endpoint": {
+        "before": [
+          {
+            "iterations": 1,
+            "ns_op": 9447658300,
+            "b_op": 1370166608,
+            "allocs_op": 16419
+          },
+          {
+            "iterations": 1,
+            "ns_op": 12314799000,
+            "b_op": 1370166608,
+            "allocs_op": 16419
+          },
+          {
+            "iterations": 1,
+            "ns_op": 13392686500,
+            "b_op": 1370171848,
+            "allocs_op": 16428
+          },
+          {
+            "iterations": 1,
+            "ns_op": 10303263700,
+            "b_op": 1370171592,
+            "allocs_op": 16424
+          },
+          {
+            "iterations": 1,
+            "ns_op": 10684386300,
+            "b_op": 1370166608,
+            "allocs_op": 16419
+          }
+        ],
+        "after": [
+          {
+            "iterations": 1,
+            "ns_op": 9122673800,
+            "b_op": 1370166480,
+            "allocs_op": 16417
+          },
+          {
+            "iterations": 1,
+            "ns_op": 9915734400,
+            "b_op": 1370166512,
+            "allocs_op": 16419
+          },
+          {
+            "iterations": 1,
+            "ns_op": 11752670600,
+            "b_op": 1370166512,
+            "allocs_op": 16419
+          },
+          {
+            "iterations": 1,
+            "ns_op": 10221706200,
+            "b_op": 1370171592,
+            "allocs_op": 16424
+          },
+          {
+            "iterations": 1,
+            "ns_op": 10644891500,
+            "b_op": 1370171576,
+            "allocs_op": 16423
+          }
+        ],
+        "change_percent": -4.330432155939546,
+        "paired_median_percent": -3.43984180714918
+      }
+    }
+  },
+  "pilot": {
+    "description": "Masks and reference-first MV lookup only; did not clear the roughly 3% adoption threshold.",
+    "input": {
+      "Name": "decode-1080p-high-s1",
+      "InputSHA256": "2EA2EB0581F1AA6D79FCD9D3F194C9B4172E8DEB95F133C4418C6E14C16C39B4",
+      "ExpectedYUVSHA256": "F574EABD36B903729D65D0F2B6FF3941DF5244C01B1AD30C330ECE1D5B05C385",
+      "Frames": 300,
+      "SliceCount": 1,
+      "Profile": "high"
+    },
+    "series": {
+      "endpoint": {
+        "before": [
+          {
+            "iterations": 1,
+            "ns_op": 7159105200,
+            "b_op": 1279638992,
+            "allocs_op": 15704
+          },
+          {
+            "iterations": 1,
+            "ns_op": 7090351400,
+            "b_op": 1279639232,
+            "allocs_op": 15707
+          },
+          {
+            "iterations": 1,
+            "ns_op": 7284809300,
+            "b_op": 1279644440,
+            "allocs_op": 15714
+          },
+          {
+            "iterations": 1,
+            "ns_op": 6882085200,
+            "b_op": 1279639392,
+            "allocs_op": 15711
+          },
+          {
+            "iterations": 1,
+            "ns_op": 7076403500,
+            "b_op": 1279639216,
+            "allocs_op": 15706
+          }
+        ],
+        "after": [
+          {
+            "iterations": 1,
+            "ns_op": 7016896100,
+            "b_op": 1279639376,
+            "allocs_op": 15710
+          },
+          {
+            "iterations": 1,
+            "ns_op": 6857679100,
+            "b_op": 1279639008,
+            "allocs_op": 15705
+          },
+          {
+            "iterations": 1,
+            "ns_op": 7140266600,
+            "b_op": 1279644296,
+            "allocs_op": 15711
+          },
+          {
+            "iterations": 1,
+            "ns_op": 6928083600,
+            "b_op": 1279644456,
+            "allocs_op": 15715
+          },
+          {
+            "iterations": 1,
+            "ns_op": 6775068900,
+            "b_op": 1279639040,
+            "allocs_op": 15707
+          }
+        ],
+        "change_percent": -2.288572044539283,
+        "paired_median_percent": -1.9864088601463714
+      }
+    }
+  }
+}

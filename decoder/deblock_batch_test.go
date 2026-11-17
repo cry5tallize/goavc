@@ -73,8 +73,15 @@ func TestDeblock_EdgeStrengthReferenceParity(t *testing.T) {
 			for i := range fs.lumaNZ {
 				fs.lumaNZ[i] = 0
 				if iteration%3 == 1 && rng.IntN(7) == 0 {
-					fs.lumaNZ[i] = 1
+					fs.lumaNZ[i] = uint8(1 + rng.IntN(16))
 				}
+			}
+			counts := slices.Clone(fs.lumaNZ)
+			for i := range fs.info {
+				fs.prepareDeblockNZ(i)
+			}
+			if !slices.Equal(fs.lumaNZ, counts) {
+				t.Fatal("派生掩码改变了原系数计数")
 			}
 			fs.mv.Reset()
 			if bFrame {
@@ -134,6 +141,9 @@ func TestDeblock_EdgeStrengthReferenceParity(t *testing.T) {
 
 func TestDeblock_ReferenceSwapEmptyAndFieldParity(t *testing.T) {
 	fs := deblockMotionFixture(t, 3, 3, true, false, false)
+	for i := range fs.info {
+		fs.prepareDeblockNZ(i)
+	}
 	a, b := &dpb.Identity{ID: 11}, &dpb.Identity{ID: 12}
 	for y := 4; y < 8; y++ {
 		pi, qi := y*fs.mv.BlockW+3, y*fs.mv.BlockW+4
@@ -166,6 +176,9 @@ func TestDeblock_ReferenceSwapEmptyAndFieldParity(t *testing.T) {
 
 func TestDeblock_BFramePreparedScheduleParity(t *testing.T) {
 	got, want := deblockMotionFixture(t, 3, 3, true, true, true), deblockMotionFixture(t, 3, 3, true, true, true)
+	for i := range got.info {
+		got.prepareDeblockNZ(i)
+	}
 	if err := got.deblockPlane(); err != nil {
 		t.Fatal(err)
 	}

@@ -87,6 +87,7 @@ func decodeCABACSlice(fs *frameState, s *sliceEntry, sliceID, first, end int) er
 		if last != (addr == end-1) {
 			return fmt.Errorf("decoder: CABAC slice termination at mb %d: %w", addr, h264.ErrInvalidData)
 		}
+		fs.prepareDeblockNZ(addr)
 	}
 	return nil
 }

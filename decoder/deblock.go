@@ -78,9 +78,10 @@ func (fs *frameState) skipSliceBoundary(mbx, mby, nbx, nby int) bool {
 // 此入口也供MBAFF的纯帧邻域复用，混合帧/场边仍由mbaff_deblock.go独立定位。
 func (fs *frameState) edgeStrengths(mbx, mby, edge int, vertical bool) (strengths [4]uint8) {
 	addr := mby*fs.mbW + mbx
+	other := addr
 	intra := fs.info[addr].intra || fs.info[addr].pcm
 	if edge == 0 {
-		other := addr - fs.mbW
+		other = addr - fs.mbW
 		if vertical {
 			other = addr - 1
 		}
@@ -92,6 +93,15 @@ func (fs *frameState) edgeStrengths(mbx, mby, edge int, vertical bool) (strength
 			bs = 4
 		}
 		return [4]uint8{bs, bs, bs, bs}
+	}
+	p, q := &fs.info[other], &fs.info[addr]
+	if p.deblockNZReady && q.deblockNZReady && !fs.mbaff && !fs.field {
+		// 同一宏块内两侧共享权限且两列表运动一致，只剩非零规则。
+		uniform := edge != 0 && q.deblockUniform
+		if uniform && q.deblockNZ == 0 {
+			return strengths
+		}
+		return fs.preparedEdgeStrengths(mbx, mby, edge, vertical, p.deblockNZ, q.deblockNZ, uniform)
 	}
 	for seg := range 4 {
 		px, py := mbx*4+edge/4-1, mby*4+seg
@@ -220,6 +230,10 @@ func (fs *frameState) bSAtBlocks(pbx, pby, qbx, qby int, boundary bool) int {
 	if fs.mv1 != nil {
 		return fs.bMotionStrength(pbx, pby, qbx, qby)
 	}
+	return fs.pMotionStrength(pbx, pby, qbx, qby)
+}
+
+func (fs *frameState) pMotionStrength(pbx, pby, qbx, qby int) int {
 	pmv, pref, pok := fs.mv.Get(pbx, pby)
 	qmv, qref, qok := fs.mv.Get(qbx, qby)
 	sameReference := pref == qref

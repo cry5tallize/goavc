@@ -42,10 +42,13 @@ func decodeBDirect16(fs *frameState, addr, mbx, mby int, s *sliceEntry, qp *int,
 	} else {
 		fs.predictDirectParts(s, mbx, mby, &direct)
 	}
-	if skip {
-		return nil
+	if !skip {
+		if err := fs.interResidual(s, addr, mbx, mby, qp); err != nil {
+			return err
+		}
 	}
-	return fs.interResidual(s, addr, mbx, mby, qp)
+	info.deblockUniform = uniform
+	return nil
 }
 
 func (d *directMotion) uniform() bool {

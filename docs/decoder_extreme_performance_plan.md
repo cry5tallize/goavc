@@ -1,7 +1,7 @@
 # C轮：B05之后的极致解码性能计划
 
 日期：2026-11-17。代码基线：`9f493b3`，本机Ryzen7 5700X、Windows/amd64、Go1.27.4、CGO0。
-状态：C00 已冻结[基线与成本账本](gates/c00_baseline.md)，C01 已通过[局部缓冲零分配回归](gates/c01_luma_edge_dispatch.md)，C02 已完成[High10 输出打包](gates/c02_high10_output.md)，C03 已完成[整宏块 Direct/Skip 快路](gates/c03_b_direct.md)。下一项为 C04；B01–B05 按已确认的本机范围完成。
+状态：C00 已冻结[基线与成本账本](gates/c00_baseline.md)，C01–C04 已完成，最近一项为[去块 bS 派生元数据](gates/c04_deblock_metadata.md)。下一项为 C05；B01–B05 按已确认的本机范围完成。
 
 ## 结论：下一步先优化数据流和调度，不再按SIMD数量排任务
 
@@ -118,6 +118,9 @@ toFrame，而非仅memcpy；High10完整300帧收益需确认。打包核2倍仅
 对照；空间/时间Direct、带残差及全部子分区均覆盖。必须测真实模式混合的整帧，不只测零残差skip。
 
 ### C04：bS换数据机制，不重启A06整边快照
+
+实现使用现有 `mbInfo` 尾部，而非单独 SoA 缓存；在一致运动的 Direct 内部边，
+只根据残差掩码决定强度。中间候选及最终成对端点证据见[C04报告](gates/c04_deblock_metadata.md)。
 
 在MB状态成功提交时派生供去块使用的16位非零掩码，transform8映射尽量只计算一次。
 **不能把CAVLC的非零计数改成bool**；熵上下文仍保留原计数，掩码是独立派生值。

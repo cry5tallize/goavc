@@ -139,6 +139,7 @@ func decodeMappedCAVLC(fs *frameState, s *sliceEntry, sliceID, first, end int) e
 					return err
 				}
 				fs.decoded[addr] = true
+				fs.prepareDeblockNZ(addr)
 				addr = fs.nextMB(addr)
 			}
 			if addr >= end {
@@ -152,6 +153,7 @@ func decodeMappedCAVLC(fs *frameState, s *sliceEntry, sliceID, first, end int) e
 			return fmt.Errorf("decoder: mb %d: %w", addr, err)
 		}
 		fs.decoded[addr] = true
+		fs.prepareDeblockNZ(addr)
 		addr = fs.nextMB(addr)
 	}
 	return nil
