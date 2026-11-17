@@ -269,6 +269,7 @@ A01局部数组经包装层仍1alloc/op、encoder亮度/均值/权重整块入�
 | P权重分量快路（A03） | decoder逐分量恒等跳过，非恒等复用共享块入口 | Partial | 六格式、场ref、独立平面和单样本公式对照、加权Oracle；阶段数据见gates/a03_p_weights.md | encoder自己的逐样本权重循环未迁移；不扩展Profile功能范围 |
 | 整块均值（A04） | decoder B块均值使用Average8/16 SSE2槽，保留精确原地和部分重叠顺序 | Partial | 奇数尾部/stride/最小len/完整uint16域差分、直接保护页、栈缓冲0分配及FFmpeg像素Oracle通过；五样本见gates/a04_average_blocks.md | width<4及不适合SIMD的几何用Generic；encoder仍逐样本均值；受影响purego/386/race及六目标构建/测试编译通过，Unix/NEON原生未验 |
 | 整块单/双向加权（A05） | decoder P非恒等与B块非均值权重进入Weight8/16 SSE2槽，4样本批量32位乘加/移位/Clip1 | Partial | 规范参数、全uint16域、负数舍入/offset缩放解析值及直接保护页；旧宽域/部分重叠回退、局部0分配、FFmpeg像素Oracle通过，见gates/a05_weight_blocks.md | 奇数宽、其他参数和不合适别名继续原int64；encoder仍逐样本权重；NEON原生未验，Profile状态不变 |
+| IDCT＋Add融合（B03） | 编解码重建共用4×4/有界8×8 Generic融合，int64中间值，列结果直接Add/Clip | Partial | 原组合路径、极值/双位深/错误前缀/系数不变/局部0分配及Oracle通过，见gates/b03_idct_add.md | 8×8宽域和显式其他后端保留原路；不合并反量化，不新增ISA；端点收益未确认 |
 | 残差加减（K13） | 8/10-bit共享Clip1和Subtract，picture与编码真实残差循环迁移，R3精确放行picture | Partial | 本机四路径parity、int32极值、低两位、奇数stride/最小len逐行保护页及局部0分配通过 | gather/scatter与不足4采样尾部为Go，值ABI仅向量化加减；amd64默认直接标量避免gather开销，显式后端保留真实SIMD；NEON原生未验 |
 | 分数MC SIMD（B02/K09b-d子集） | 8-bit亮度六抽头/qpel与色度双线性SSE2，4/8/12/16宽全相位，Put/Avg共用 | Partial | 未裁剪双轴int32、全相位Go对照、逻辑边界/FieldView/halo保护页及0分配、FFmpeg Oracle通过，见gates/b02_fractional_mc.md | 10-bit和其他ISA仍原Go，其他宽度回退；不是完整K09全部平台覆盖 |
 | 搜索去逃逸（G01/K18前置） | caller-owned双位深Workspace，真实编码器跨帧/场/Reset复用，结束解除借用 | Partial | 32组改造前Scorer轨迹/结果，64组prepared零分配，强制x86/purego/386/M8指纹 | 该行仅搜索；完整决策保护网见G03b，K16仍是串行租约复用，未开并行 |

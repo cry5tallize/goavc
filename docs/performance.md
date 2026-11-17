@@ -1319,3 +1319,9 @@ fuzz烟测（日志6exec，0新interesting）。A07测量报告完成，A01局�
 代表性完整块快26.6%–81.5%，0B/0alloc；短端点首轮条件波动大，唯一配对补测持平，
 不确认整体吞吐收益。实际范围、全部首轮/补测及验证见[B02记录](gates/b02_fractional_mc.md)
 和[b02_samples.json](gates/b02_samples.json)。10-bit和其他ISA未计入本项覆盖。
+
+## 29. B03：共享IDCT＋Add融合
+
+默认Generic 4×4及有界8×8直接重建，编解码复用唯一行/列算术；宽域与原错误路径保留，
+反量化不合并。4×4快25.6%–29.9%，普通8×8快11.5%–15.2%，局部0分配，短端点持平。
+完整条件与原始数据见[B03记录](gates/b03_idct_add.md)及[b03_samples.json](gates/b03_samples.json)。

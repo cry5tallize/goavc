@@ -122,17 +122,13 @@ func (fs *frameState) addLuma8Block(mbx, mby, block, qp int, levels *[64]int32, 
 	if err != nil {
 		return err
 	}
-	var coeff, residual [64]int32
+	var coeff [64]int32
 	if err := transform.Dequant8x8(&coeff, levels, qp, fs.matrix8(intra)); err != nil {
-		return err
-	}
-	if err := transform.IDCT8x8(&residual, &coeff); err != nil {
 		return err
 	}
 	x, y := mbx*16+(block%2)*8, mby*16+(block/2)*8
 	pl := &fs.pic.Planes[fs.component]
-	picture.AddResidual8x8(pl, x, y, &residual)
-	return nil
+	return picture.Reconstruct8x8(pl, x, y, &coeff)
 }
 
 func (fs *frameState) reconstructPlane8(mbx, mby, cbp, qp int, res *planeResidual) error {

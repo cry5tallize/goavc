@@ -346,13 +346,12 @@ func reconstruct(pl *picture.Plane, x, y int, levels *[16]int32, qp int, dc *int
 }
 
 func reconstructScaled(pl *picture.Plane, x, y int, levels *[16]int32, qp int, dc *int32, matrix *[16]uint8) {
-	var coeff, out [16]int32
+	var coeff [16]int32
 	transform.Dequant4x4WithScaling(&coeff, levels, qp, matrix)
 	if dc != nil {
 		coeff[0] = *dc
 	}
-	transform.IDCT4x4(&out, &coeff)
-	picture.AddResidual4x4(pl, x, y, &out)
+	picture.Reconstruct4x4(pl, x, y, &coeff)
 }
 
 func nonzero(v []int32) bool {

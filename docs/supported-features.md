@@ -178,6 +178,7 @@
 | 8-bit 420色度整边SSE2 | Partial | A02：逐行解码及编码本地重建共享八线强弱滤波，水平/垂直均接入独立FilterChromaEdge槽。标量差分、解析值、新内核保护页和栈缓冲零分配通过；独立FFmpeg像素一致，前后五样本见[performance.md §21](performance.md)。10-bit、422/444、场/MBAFF不进入新整边槽，继续原路径；不扩大Profile或NEON原生支持 |
 | 整块双向均值SSE2 | Partial | A04：decoder B块8/10-bit均值使用PAVGB/PAVGW，保留奇数尾部、最小len及原地/部分重叠语义；实际SSE2差分、直接保护页、局部0分配与FFmpeg Oracle通过，见[gates/a04_average_blocks.md](gates/a04_average_blocks.md)。encoder仍逐样本均值，不外推编码吞吐 |
 | 整块单/双向加权SSE2 | Partial | A05：decoder P非恒等/B块的4倍数宽完整矩形、规范权重/offset/denom、8/10-bit输出进入Weight8/16槽；完整uint16输入域精确，其他形状/参数/部分重叠保留int64。保护页/解析值/局部0分配/Oracle通过，见[gates/a05_weight_blocks.md](gates/a05_weight_blocks.md)；encoder仍逐样本权重，NEON原生未验 |
+| IDCT＋Add融合 | Partial | B03编解码共用Generic 4×4/有界8×8融合，保留int64/舍入/Clip1、反量化先行及宽域回退；系数不变、错误前缀和局部0分配/Oracle通过，见[gates/b03_idct_add.md](gates/b03_idct_add.md)。旧IDCT接口与显式后端语义不变，无新增ISA |
 | 去块逐边参数复用 | Partial | decoder普通边复用四段bS及每分量QP/阈值，保留旧单段入口和混合MBAFF路径；六格式调度/准备边回归及High直接AU的FFmpeg像素一致，性能见[performance.md §17](performance.md)。A06进一步批量候选端点退化，未采纳，见[gates/a06_deblocking_batch.md](gates/a06_deblocking_batch.md)；不扩展Profile或并行支持 |
 | 去块Generic直接算术 | Partial | 默认/纯Go路径移除逐像素线候选加法的小数组间接调用，显式SIMD仍走真实后端；双位深/方向/Span等价与最终High直接AU FFmpeg像素一致，耗时见[performance.md §17.2](performance.md)；CABAC与重建链未改 |
 | SIMD残差加减 | Partial | K13接入picture重建与真实encoder减法，保持int32极端Clip1、10-bit低两位、各自stride及未写区域；SSE2/AVX2/NEON为固定值向量算术，尾部与gather/scatter由Go完成。x86保护页/局部0分配通过，amd64默认直接标量避免gather开销；NEON原生未验 |

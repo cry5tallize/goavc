@@ -110,15 +110,9 @@ func (e *Encoder) scalingParameters() {
 }
 
 func reconstruct8(pl *picture.Plane, x, y int, levels *[64]int32, qp int, matrix *[64]uint8) {
-	var coeff, out [64]int32
+	var coeff [64]int32
 	transform.Dequant8x8(&coeff, levels, qp, matrix)
-	transform.IDCT8x8(&out, &coeff)
-	for j := 0; j < 8; j++ {
-		for i := 0; i < 8; i++ {
-			value := int32(pl.Sample(x+i, y+j)) + out[j*8+i]
-			pl.SetSample(x+i, y+j, uint16(max(0, min((1<<pl.BitDepth)-1, value))))
-		}
-	}
+	picture.Reconstruct8x8(pl, x, y, &coeff)
 }
 
 func (c *cabacWriter) transformFlag(s *frameState, addr int) {

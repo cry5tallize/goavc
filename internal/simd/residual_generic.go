@@ -47,8 +47,7 @@ func residualAddScalar[T ~byte | ~uint16](dst []T, ds int, residual []int32, rs,
 		d := dst[y*ds:][:w]
 		r := residual[y*rs:][:w]
 		for x := range d {
-			v := int64(d[x]) + int64(r[x])
-			d[x] = T(max(0, min(int64(limit), v)))
+			d[x] = addResidualPixel(d[x], r[x], int64(limit))
 		}
 	}
 }

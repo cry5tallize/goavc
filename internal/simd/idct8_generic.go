@@ -4,17 +4,7 @@ package simd
 // counts successful stores in the original column-major iteration order.
 func idct8Generic(src [64]int32) (dst [64]int32, written int) {
 	var temp [64]int64
-	for y := range 8 {
-		var line [8]int64
-		for x := range 8 {
-			line[x] = int64(src[y*8+x])
-		}
-		if y == 0 {
-			line[0] += 32
-		}
-		out := inverse8Line(line)
-		copy(temp[y*8:y*8+8], out[:])
-	}
+	inverse8Rows(&temp, &src)
 	for x := range 8 {
 		var line [8]int64
 		for y := range 8 {
@@ -31,6 +21,20 @@ func idct8Generic(src [64]int32) (dst [64]int32, written int) {
 		}
 	}
 	return dst, written
+}
+
+func inverse8Rows(temp *[64]int64, src *[64]int32) {
+	for y := range 8 {
+		var line [8]int64
+		for x := range 8 {
+			line[x] = int64(src[y*8+x])
+		}
+		if y == 0 {
+			line[0] += 32
+		}
+		out := inverse8Line(line)
+		copy(temp[y*8:y*8+8], out[:])
+	}
 }
 
 // IDCT8x8通过绑定的值ABI内核并保持原先的列优先部分写入顺序。

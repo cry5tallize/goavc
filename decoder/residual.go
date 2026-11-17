@@ -266,9 +266,7 @@ func addResidual4x4(pl *picture.Plane, x, y int, levels *[16]int32, qp int, alre
 		picture.AddResidualDC4x4(pl, x, y, transform.IDCT4x4DC(src[0]))
 		return nil
 	}
-	var out [16]int32
-	transform.IDCT4x4(&out, src)
-	picture.AddResidual4x4(pl, x, y, &out)
+	picture.Reconstruct4x4(pl, x, y, src)
 	return nil
 }
 
