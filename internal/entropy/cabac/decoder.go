@@ -108,7 +108,7 @@ func (d *Decoder) readBit() uint8 {
 	if d.err != nil {
 		return 0
 	}
-	v, err := d.r.ReadBits(1)
+	v, err := d.r.ReadBit()
 	if err != nil {
 		d.err = err
 	}
@@ -120,7 +120,7 @@ func (d *Decoder) renormalize() {
 	if d.rangeValue >= 128 && d.rangeValue < 256 && d.err == nil {
 		// 单位归一化是常见路径，直接读取一位，避免位数计算及重复长度检查。
 		d.rangeValue *= 2
-		v, err := d.r.ReadBits(1)
+		v, err := d.r.ReadBit()
 		d.err, d.lastBit = err, uint8(v)
 		d.offset = d.offset*2 + uint32(v)
 	} else if d.rangeValue < 128 && d.err == nil {

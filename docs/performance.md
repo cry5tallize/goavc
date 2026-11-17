@@ -1325,3 +1325,9 @@ fuzz烟测（日志6exec，0新interesting）。A07测量报告完成，A01局�
 默认Generic 4×4及有界8×8直接重建，编解码复用唯一行/列算术；宽域与原错误路径保留，
 反量化不合并。4×4快25.6%–29.9%，普通8×8快11.5%–15.2%，局部0分配，短端点持平。
 完整条件与原始数据见[B03记录](gates/b03_idct_add.md)及[b03_samples.json](gates/b03_samples.json)。
+
+## 30. B04：读位缓存与固定扫描
+
+完整报告见[gates/b04_cabac_cache.md](gates/b04_cabac_cache.md)，原始五样本与唯一补测见
+[gates/b04_samples.json](gates/b04_samples.json)。15/16项完整残差快4.0%/7.2%（两侧64B/1alloc），
+最终IDR -1.0%、I/P/B补测+0.02%，持平；复用Reader辅助基准单列，不把局部收益外推为吞吐改善。

@@ -42,6 +42,13 @@ func (fs *frameState) decodeBlock(r *bitstream.Reader, dst *[16]int32, typ cavlc
 }
 
 func (fs *frameState) cabacResidual(c *cabacSyntax, cat int, dst []int32, scan []int) (int, error) {
+	if prepared := fixedCABACScan(scan); prepared != nil {
+		if fs.sps.ChromaFormatIDC == 3 && !fs.sps.SeparateColourPlaneFlag {
+			return c.d.ResidualPrepared444(&c.ctx, cat, dst, prepared, fs.field)
+		}
+		ctx := (*[cabac.ContextCount]cabac.Context)(c.ctx[:cabac.ContextCount])
+		return c.d.ResidualPrepared(ctx, cat, dst, prepared, fs.field)
+	}
 	if fs.sps.ChromaFormatIDC == 3 && !fs.sps.SeparateColourPlaneFlag {
 		return c.d.Residual444(&c.ctx, cat, dst, scan, fs.field)
 	}

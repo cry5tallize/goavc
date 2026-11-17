@@ -104,6 +104,7 @@
 | CAVLC：total_zeros / run_before | Conformant | Conformant | M4 亮度 DC/AC、色度 DC、长游程与整帧 Oracle |
 | CAVLC：level prefix / suffix / 转义 | Conformant | Conformant | M4 suffix 0/1..6、百万 level 转义、14,400 组往返及 Oracle |
 | CABAC：算术编解码器 | Conformant | Conformant | 编码区间解析解、64状态与 Main/High I/P 整帧 FFmpeg Oracle |
+| CABAC缓存与固定扫描优化 | Partial | — | B04读取立即更新逻辑位置，decoder仅固定4/15/16项prepared；8/64项及自定义scan通用路径。逐状态/截断/帧场/Oracle通过，端点持平，见[gates/b04_cabac_cache.md](gates/b04_cabac_cache.md) |
 | CABAC：上下文初始化与状态转移 | Conformant | Conformant | I/PB0..2、QP 0..51 共用初始化表；编码 slice 使用 idc=0 |
 | CABAC：宏块/MV/残差上下文 | Conformant | Partial | I/P四分区与4×4/8×8/DC/AC、非参考B_Direct/B_Skip残差Oracle；B非Direct分区未生成 |
 | CABAC：terminate / cabac_zero_word | Conformant | Conformant | 停止位/PCM重启、逐slice bin密度预算、终端03封装、阈值解析解与5000个MPS密集流读回；现有整帧Oracle回归通过 |

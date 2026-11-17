@@ -246,6 +246,7 @@ A01局部数组经包装层仍1alloc/op、encoder亮度/均值/权重整块入�
 
 | Module | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|
+| CABAC缓存/固定扫描（B04） | ReadBit复用已有reservoir、立即提交逻辑位数；固定4/15/16项扫描一次验证 | Partial | 旧引擎逐状态trace、混合读位、十四类帧场/截断、FFmpeg与编码三方Oracle，见gates/b04_cabac_cache.md | 8/64项及未知scan保持通用入口；短端点收益未确认，不扩大Profile或并行支持 |
 | CPU检测（K01） | amd64安全CPUID/XGETBV、arm64基线NEON能力、purego/其他架构回退 | Partial | `simd/cpu_test.go` 的1024组合与 `cpu_purego_test.go` | CPU检测不等于任何向量kernel已实现；arm64仅交叉构建时不记原生执行 |
 | 内核表（K02） | SAD/SATD、4/8×8正逆变换与DC、精确乘积、去块候选和残差的类型化分发及逐槽诊断 | Partial | 显式Generic/SSE2/AVX2真实consumer；MC用静态noescape平台包装保留scratch零分配 | amd64按实测默认选择SSE2 Forward4/SATD及Generic部分向量化槽；MC仍只加速整数宽16复制，不冒充插值SIMD |
 | parity框架（K03） | 固定种子矩形/stride/offset/最小len、输入不变、强制后端与生产包装0分配 | Partial | x86原生、purego及386全库测试；K14保护页扩展至全部现有内核类别 | NEON仅三系统交叉构建/测试编译，未原生验证；Unix保护页辅助已交付但本机未执行 |

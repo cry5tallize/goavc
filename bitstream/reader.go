@@ -104,6 +104,20 @@ func (r *Reader) PeekBits(n uint) (uint64, error) {
 
 // ReadBit 读取单个比特，返回 0 或 1。
 func (r *Reader) ReadBit() (uint8, error) {
+	if r.nbits != 0 {
+		v := uint8(r.reservoir >> 63)
+		r.reservoir <<= 1
+		r.nbits--
+		r.consumed++
+		return v, nil
+	}
+	return r.readBitRefill()
+}
+
+// 冷路径保持ReadBits的尾部原子失败及错误文本；热单比特只消费已有reservoir。
+//
+//go:noinline
+func (r *Reader) readBitRefill() (uint8, error) {
 	v, err := r.ReadBits(1)
 	if err != nil {
 		return 0, err

@@ -115,10 +115,6 @@ func (d *Decoder) residual(ctx []Context, cat int, dst []int32, scan []int, fiel
 	if !residualSizeValid(cat, len(scan)) {
 		return 0, fmt.Errorf("cabac: residual scan size does not match category: %w", h264.ErrInvalidData)
 	}
-	mode := 0
-	if field {
-		mode = 1
-	}
 	seen := uint64(0)
 	for _, i := range scan {
 		if i < 0 || i >= len(dst) || i >= 64 || seen&(uint64(1)<<i) != 0 {
@@ -126,6 +122,15 @@ func (d *Decoder) residual(ctx []Context, cat int, dst []int32, scan []int, fiel
 		}
 		seen |= uint64(1) << i
 		dst[i] = 0
+	}
+	return d.decodeResidual(ctx, cat, dst, scan, field)
+}
+
+// 校验和清零之后唯一的算术解码流程，prepared与通用入口共用。
+func (d *Decoder) decodeResidual(ctx []Context, cat int, dst []int32, scan []int, field bool) (int, error) {
+	mode := 0
+	if field {
+		mode = 1
 	}
 	var positions [64]int
 	count := 0
