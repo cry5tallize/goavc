@@ -23,6 +23,13 @@ func decodeBMacroblock(fs *frameState, addr, mbx, mby, typ int, s *sliceEntry, q
 	if fs.mv1 == nil {
 		return fmt.Errorf("decoder: missing B motion grid: %w", h264.ErrInvalidData)
 	}
+	if typ == 0 && !fs.mbaff && !fs.field {
+		return decodeBDirect16(fs, addr, mbx, mby, s, qp, skip)
+	}
+	return decodeBGrouped(fs, addr, mbx, mby, typ, s, qp, skip)
+}
+
+func decodeBGrouped(fs *frameState, addr, mbx, mby, typ int, s *sliceEntry, qp *int, skip bool) error {
 	baseX, baseY := mbx*4, fs.motionY(mby)
 	var partBacking [16]bPart
 	// 只有整MB direct的首组使用16槽；多组路径每组最多四槽，活跃视图不重叠。

@@ -1,0 +1,219 @@
+{
+  "baseline": "d199c707c5def82ebebae0c7850768303774dacf",
+  "input": {
+    "Name": "decode-1080p-high-s1",
+    "InputSHA256": "2EA2EB0581F1AA6D79FCD9D3F194C9B4172E8DEB95F133C4418C6E14C16C39B4",
+    "ExpectedYUVSHA256": "F574EABD36B903729D65D0F2B6FF3941DF5244C01B1AD30C330ECE1D5B05C385",
+    "Frames": 300,
+    "SliceCount": 1,
+    "Profile": "high"
+  },
+  "hardware": "Ryzen 7 5700X; Windows/amd64; Go 1.27.4; CGO0; GOAMD64=v1; GOMAXPROCS16; Threads1",
+  "protocol": "Five paired fresh processes; odd before first, even after first; endpoint Sequence 300 frames 1x with independent FFmpeg SHA outside timer; kernel 200ms",
+  "series": {
+    "endpoint": {
+      "before": [
+        {
+          "iterations": 1,
+          "ns_op": 9703897000,
+          "b_op": 1279649504,
+          "allocs_op": 15718
+        },
+        {
+          "iterations": 1,
+          "ns_op": 9472299300,
+          "b_op": 1279639664,
+          "allocs_op": 15710
+        },
+        {
+          "iterations": 1,
+          "ns_op": 9190089500,
+          "b_op": 1279639328,
+          "allocs_op": 15707
+        },
+        {
+          "iterations": 1,
+          "ns_op": 10309591100,
+          "b_op": 1279639264,
+          "allocs_op": 15709
+        },
+        {
+          "iterations": 1,
+          "ns_op": 10025557700,
+          "b_op": 1279639136,
+          "allocs_op": 15707
+        }
+      ],
+      "after": [
+        {
+          "iterations": 1,
+          "ns_op": 8410377700,
+          "b_op": 1279639792,
+          "allocs_op": 15712
+        },
+        {
+          "iterations": 1,
+          "ns_op": 8183405600,
+          "b_op": 1279639456,
+          "allocs_op": 15709
+        },
+        {
+          "iterations": 1,
+          "ns_op": 8488056800,
+          "b_op": 1279639360,
+          "allocs_op": 15709
+        },
+        {
+          "iterations": 1,
+          "ns_op": 8784077400,
+          "b_op": 1279644472,
+          "allocs_op": 15716
+        },
+        {
+          "iterations": 1,
+          "ns_op": 8514039100,
+          "b_op": 1279649456,
+          "allocs_op": 15721
+        }
+      ],
+      "change_percent": -12.529401332268886
+    }
+  },
+  "high10": {
+    "input": {
+      "Name": "high10-1080p-s1",
+      "Frames": 300,
+      "SliceCount": 1,
+      "Format": "yuv420p10le",
+      "InputSHA256": "CD2C1663FC699A15CB2C3F72CAC5E2DFB308AF08DAB49F391174EE6BDC50D735",
+      "ExpectedYUVSHA256": "69F5A263AFE96ADF40FB0007B61A375DA265DBAFB866E42A79DDBB51E9F94F09"
+    },
+    "series": {
+      "endpoint": {
+        "before": [
+          {
+            "iterations": 1,
+            "ns_op": 12222790800,
+            "b_op": 1370166480,
+            "allocs_op": 16417
+          },
+          {
+            "iterations": 1,
+            "ns_op": 12750401400,
+            "b_op": 1370166512,
+            "allocs_op": 16419
+          },
+          {
+            "iterations": 1,
+            "ns_op": 11063626300,
+            "b_op": 1370166464,
+            "allocs_op": 16416
+          },
+          {
+            "iterations": 1,
+            "ns_op": 12524639000,
+            "b_op": 1370166704,
+            "allocs_op": 16419
+          },
+          {
+            "iterations": 1,
+            "ns_op": 11965576000,
+            "b_op": 1370171784,
+            "allocs_op": 16424
+          }
+        ],
+        "after": [
+          {
+            "iterations": 1,
+            "ns_op": 10882508800,
+            "b_op": 1370172056,
+            "allocs_op": 16429
+          },
+          {
+            "iterations": 1,
+            "ns_op": 10903447900,
+            "b_op": 1370166608,
+            "allocs_op": 16419
+          },
+          {
+            "iterations": 1,
+            "ns_op": 10546729500,
+            "b_op": 1370171720,
+            "allocs_op": 16426
+          },
+          {
+            "iterations": 1,
+            "ns_op": 10379500100,
+            "b_op": 1370166496,
+            "allocs_op": 16418
+          },
+          {
+            "iterations": 1,
+            "ns_op": 10515401700,
+            "b_op": 1370166592,
+            "allocs_op": 16418
+          }
+        ],
+        "change_percent": -13.71259090845276
+      }
+    }
+  },
+  "diagnostic": {
+    "method": "Go overlay counts decodeBMacroblock entries; Skip separated from type 0; independent FFmpeg pixel verification; not performance timing",
+    "order": "B types 0 through 22, then B_Skip",
+    "cases": {
+      "decode-1080p-high-s1": [
+        19881,
+        28778,
+        39001,
+        8451,
+        2040,
+        4286,
+        1649,
+        3729,
+        2360,
+        2443,
+        2725,
+        1964,
+        381,
+        2645,
+        428,
+        2696,
+        379,
+        2035,
+        354,
+        2022,
+        4441,
+        11157,
+        30735,
+        1406210
+      ],
+      "high10-1080p-s1": [
+        8329,
+        27378,
+        37372,
+        5088,
+        3724,
+        4643,
+        3693,
+        3399,
+        2262,
+        1923,
+        2324,
+        1578,
+        211,
+        2227,
+        211,
+        2237,
+        386,
+        1959,
+        295,
+        2029,
+        2122,
+        16569,
+        59894,
+        1393191
+      ]
+    }
+  }
+}

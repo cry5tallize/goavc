@@ -1,7 +1,7 @@
 # C轮：B05之后的极致解码性能计划
 
 日期：2026-11-17。代码基线：`9f493b3`，本机Ryzen7 5700X、Windows/amd64、Go1.27.4、CGO0。
-状态：C00 已冻结[基线与成本账本](gates/c00_baseline.md)，C01 已通过[局部缓冲零分配回归](gates/c01_luma_edge_dispatch.md)，C02 已完成[High10 输出打包](gates/c02_high10_output.md)。B01–B05 按已确认的本机范围完成。
+状态：C00 已冻结[基线与成本账本](gates/c00_baseline.md)，C01 已通过[局部缓冲零分配回归](gates/c01_luma_edge_dispatch.md)，C02 已完成[High10 输出打包](gates/c02_high10_output.md)，C03 已完成[整宏块 Direct/Skip 快路](gates/c03_b_direct.md)。下一项为 C04；B01–B05 按已确认的本机范围完成。
 
 ## 结论：下一步先优化数据流和调度，不再按SIMD数量排任务
 
@@ -106,6 +106,9 @@ C00 的五样本基线已归档；自然实拍留出和模式/残差/patch 计�
 toFrame，而非仅memcpy；High10完整300帧收益需确认。打包核2倍仅作筛选目标，不外推整链2倍。
 
 ### C03：B宏块常见模式快路——省掉本来不该做的工作
+
+实测 High/High10 中整宏块 Direct/Skip 分别占进入 B 宏块函数的约 90%/89%，
+故先交付该快路；其余大分区/子分区维持原调度，不为补覆盖而增加未证实的专化。
 
 先用C00模式比例选择B_Skip、整MB Direct、L0/L1/Bi大分区。已确定模式的路径不再统一构造
 四组bGroup、十六个bPart及不使用的切片头/清零工作；复杂子分区仍走原通用路径。

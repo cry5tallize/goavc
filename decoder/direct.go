@@ -102,9 +102,19 @@ func (fs *frameState) deriveDirect(s *sliceEntry, mbx, mby int) (directMotion, e
 			refs = [2]int8{0, 0}
 		}
 	}
+	// 非 MBAFF 的 8×8 推导中，每个象限都查询同一共位块。
+	// 首个光栅位置仍完整推导/校验，后续三个位置只重用已验证结果。
+	reuse8 := !fs.mbaff && fs.sps.Direct8x8InferenceFlag
 	for by := 0; by < 4; by++ {
 		for bx := 0; bx < 4; bx++ {
 			i := by*4 + bx
+			if reuse8 && (bx|by)&1 != 0 {
+				first := (by&^1)*4 + (bx &^ 1)
+				for l := range 2 {
+					out.refs[l][i], out.mvs[l][i] = out.refs[l][first], out.mvs[l][first]
+				}
+				continue
+			}
 			colMV, colID, colIndex := fs.colocated(s, mbx, mby, bx, by)
 			if s.hdr.DirectSpatialMVPredFlag {
 				zero := colID != nil && !s.refs[1][0].LongTerm && colIndex == 0 && absInt(int(colMV.X)) <= 1 && absInt(int(colMV.Y)) <= 1
