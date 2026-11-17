@@ -1331,3 +1331,10 @@ fuzz烟测（日志6exec，0新interesting）。A07测量报告完成，A01局�
 完整报告见[gates/b04_cabac_cache.md](gates/b04_cabac_cache.md)，原始五样本与唯一补测见
 [gates/b04_samples.json](gates/b04_samples.json)。15/16项完整残差快4.0%/7.2%（两侧64B/1alloc），
 最终IDR -1.0%、I/P/B补测+0.02%，持平；复用Reader辅助基准单列，不把局部收益外推为吞吐改善。
+
+## 31. B05a：16宽块加权AVX2
+
+相对B04，16宽且至少两行的单/双向8/10-bit加权按槽启用AVX2，窄块/单行保留SSE2。
+16×16完整包装同机五样本下降24.4%–30.6%，0B/0alloc；计入lane拼接与VZEROUPPER。
+初始AVX/旧SSE混用的慢候选及修复证据完整保留，不计作最终收益。
+范围、数值证明和原始样本见[B05a记录](gates/b05_avx2_weight.md)及[b05_avx2_samples.json](gates/b05_avx2_samples.json)。
