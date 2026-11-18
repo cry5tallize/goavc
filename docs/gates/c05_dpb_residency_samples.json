@@ -1,0 +1,28 @@
+{
+  "baseline": "0fdfbb2046b182fd0fa85bda56e954918a72d8a5",
+  "environment": "Ryzen 7 5700X Windows/amd64 Go 1.27.4 CGO=0 GOAMD64=v1 GOMAXPROCS=16 Threads=1",
+  "snapshot_au": [50, 110, 170, 230, 290],
+  "snapshot_gc": "forced; packet assembly completed before decoding; drain released frames before snapshot",
+  "natural_gc_window": "one separate pass per input, no forced GC inside window; includes residual frequency counters",
+  "decision": "skip migration on the measured workload: half-size arrays cannot save 5% of the process live heap at sampled checkpoints",
+  "high": {
+    "input_sha256": "2EA2EB0581F1AA6D79FCD9D3F194C9B4172E8DEB95F133C4418C6E14C16C39B4",
+    "frames": 300,
+    "dpb_refs_each": 2,
+    "identity_array_bytes_each": 2088960,
+    "max_distinct_written_per_ref_plane_each": 2,
+    "heap_alloc_bytes": [36510880, 36516120, 36516120, 36516120, 36516120],
+    "natural_gc_cpu_seconds_per_1000_au": 0.748328,
+    "natural_gc_automatic_cycles": 35
+  },
+  "high10": {
+    "input_sha256": "CD2C1663FC699A15CB2C3F72CAC5E2DFB308AF08DAB49F391174EE6BDC50D735",
+    "frames": 300,
+    "dpb_refs_each": 2,
+    "identity_array_bytes_each": 2088960,
+    "max_distinct_written_per_ref_plane_each": 2,
+    "heap_alloc_bytes": [65323296, 65323680, 65323904, 65324032, 65324048],
+    "natural_gc_cpu_seconds_per_1000_au": 0.477334,
+    "natural_gc_automatic_cycles": 21
+  }
+}
