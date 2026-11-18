@@ -1,5 +1,12 @@
 # 版本记录
 
+## v1.0.4 — 2026-11-18
+
+- 新增普通渐进、按顺序排列的整宏块行 slice 并行解码，覆盖 8/10-bit 4:2:0、4:2:2、共同 4:4:4 和 CABAC/CAVLC I/P/B。`DecoderConfig.Threads=0` 自动，`1` 强制串行；CLI 默认仍为 `-threads 1`，可显式设为 `-threads 4`。单 slice、行内切分及高级工具仍串行，去块顺序和实例非并发安全契约不变。
+- Ryzen 7 5700X 上，固定 1080p 四 slice 300 帧输入由 1 线程切换到 4 线程，High 中位吞吐 42.26→75.15 FPS，High10 30.22→50.87 FPS；配对加速中位分别为 1.72×、1.67×。所有样本与 FFmpeg 像素一致；不外推到单 slice 或任意视频。见 [C09 报告](docs/gates/c09_slice_parallel.md)。
+- 包含亮度整边包装的栈分配修正、高位深输出按行打包、整宏块 B Direct 专化及去块强度派生元数据。C05 参考身份压缩和 C06 CABAC 候选未通过各自采纳门槛，不进入生产路径。C07/C08 暂缓，详见 [C 轮计划](docs/decoder_extreme_performance_plan.md)。
+- 本机已通过 CGO=0 全库常规门禁、全库 race、相关 purego/386 回归和实际 CLI 串并行像素对照；不扩大 Profile 或平台原生验证范围。
+
 ## v1.0.2 — 2026-11-17
 
 - Direct运动补偿合并参考和双列表MV相同的像素任务，保留原逐4×4运动元数据。
