@@ -1,5 +1,7 @@
 # C06：CABAC MPS 热分支评估（未采纳）
 
+重规划后的独立幅值前缀候选见 [C06 残差复评](c06_residual_unary.md)；不与本次 MPS 数据混算。
+
 基线C04 `1136482`。本次评估一个窄切片：合法MPS分支已证明offset<range，若减去LPS
 后range仍>=256，直接返回，不再调用renormalize。任意Context的State/MPS校验、ready、
 终止和粘性错误仍保留；其他分支保持原算术。没有改Reader位置契约或新增预读。

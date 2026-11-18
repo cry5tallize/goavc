@@ -1,7 +1,7 @@
 # C轮：B05之后的极致解码性能计划
 
 日期：2026-11-17。代码基线：`9f493b3`，本机Ryzen7 5700X、Windows/amd64、Go1.27.4、CGO0。
-状态：C00 已冻结[基线与成本账本](gates/c00_baseline.md)，C01–C04 已完成。C05已交付[身份令牌隔离可行性实验](gates/c05_reference_identity.md)，生产布局未迁移、完整验收未关闭；C06的[MPS热分支候选](gates/c06_cabac_mps.md)未通过端点门禁，不采纳，完整残差结构专化仍待后续。B01–B05 按已确认的本机范围完成。
+状态：C00 已冻结[基线与成本账本](gates/c00_baseline.md)，C01–C04 已完成。C05 [真实 DPB 驻留复评](gates/c05_dpb_residency.md)低于内存门槛，不迁移；C06 [MPS 热分支](gates/c06_cabac_mps.md)及[残差幅值前缀](gates/c06_residual_unary.md)均未通过端点门槛，不启用。B01–B05 按已确认的本机范围完成。
 
 ## 结论：下一步先优化数据流和调度，不再按SIMD数量排任务
 
@@ -151,6 +151,8 @@ slice/mapped权限、intra/PCM优先级、空/相同/交换参考及场MV阈值�
 含映射建立/清理成本的端点、live heap及GC改善，不能只报数组大小。
 
 ### C06：CABAC结构专化，而不是跨依赖bin硬做SIMD
+
+**复评决定：** [幅值前缀候选](gates/c06_residual_unary.md)在 High10 唯一补测配对中位耗时下降 4.94%，但 IDR 两轮未确认同向收益，不启用。通用 `Bin`、残差循环与 B04 的扫描选择保持不变。
 
 **本次评估：** MPS已归一化时省去renormalize调用的候选逐状态正确，但High10唯一补测慢6.3%，留出方向不一致，不采纳；生产保持父版本。候选、核数据及全部五对样本见[C06记录](gates/c06_cabac_mps.md)。尚不宣称可信上下文或残差循环专化完整完成。
 

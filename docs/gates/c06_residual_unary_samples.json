@@ -1,0 +1,209 @@
+{
+  "baseline": "0fdfbb2046b182fd0fa85bda56e954918a72d8a5",
+  "environment": "Ryzen 7 5700X Windows/amd64 Go 1.27.4 CGO=0 GOAMD64=v1 GOMAXPROCS=16 Threads=1",
+  "binary_sha256": {
+    "baseline": "bb715fd51da71ebf44204561762f25fe47bf8d89b1634ed29271cac66a349403",
+    "unary": "065e1cf6fabcda90fc461bcf1fa803bc973bc9e90821e51323796e5604aa3ba6"
+  },
+  "sample_columns": [
+    "iterations",
+    "ns_per_op",
+    "frames_per_s",
+    "bytes_per_op",
+    "allocs_per_op"
+  ],
+  "timing": "High10 Sequence 1x and IDR DirectAU_Auto 500ms; five independent-process pairs per round; alternating order; profile and validation are separate",
+  "inputs": {
+    "high10": {
+      "Name": "high10-1080p-s1",
+      "Frames": 300,
+      "SliceCount": 1,
+      "Format": "yuv420p10le",
+      "InputSHA256": "CD2C1663FC699A15CB2C3F72CAC5E2DFB308AF08DAB49F391174EE6BDC50D735",
+      "ExpectedYUVSHA256": "69F5A263AFE96ADF40FB0007B61A375DA265DBAFB866E42A79DDBB51E9F94F09"
+    },
+    "idr": {
+      "path": "tmp/deblock-perf/high-idr.264",
+      "sha256": "b6f836c52d00a644b4cf5906e1b726b3d0bed713d2b2fdf940cb6c99133e59a9",
+      "frames_per_op": 1
+    }
+  },
+  "results": {
+    "primary": {
+      "high10": {
+        "baseline_median_ns_op": 11099524600,
+        "candidate_median_ns_op": 10596704500,
+        "median_change_pct": -4.5301,
+        "paired_median_change_pct": -1.4595,
+        "pairs": [
+          {
+            "pair": 1,
+            "order": "baseline-first",
+            "baseline": [1, 9510550700, 31.54, 1370171704, 16425],
+            "candidate": [1, 9729855900, 30.83, 1370171704, 16425],
+            "time_change_pct": 2.3059
+          },
+          {
+            "pair": 2,
+            "order": "candidate-first",
+            "baseline": [1, 11200369500, 26.78, 1370171624, 16426],
+            "candidate": [1, 11036905300, 27.18, 1370171624, 16426],
+            "time_change_pct": -1.4595
+          },
+          {
+            "pair": 3,
+            "order": "baseline-first",
+            "baseline": [1, 11099524600, 27.03, 1370171608, 16425],
+            "candidate": [1, 10596704500, 28.31, 1370171720, 16426],
+            "time_change_pct": -4.5301
+          },
+          {
+            "pair": 4,
+            "order": "candidate-first",
+            "baseline": [1, 11357403900, 26.41, 1370171608, 16425],
+            "candidate": [1, 10591528300, 28.32, 1370171976, 16430],
+            "time_change_pct": -6.7434
+          },
+          {
+            "pair": 5,
+            "order": "baseline-first",
+            "baseline": [1, 10891285400, 27.54, 1370166512, 16419],
+            "candidate": [1, 11268051400, 26.62, 1370171720, 16426],
+            "time_change_pct": 3.4593
+          }
+        ]
+      },
+      "idr": {
+        "baseline_median_ns_op": 39894162,
+        "candidate_median_ns_op": 40148969,
+        "median_change_pct": 0.6387,
+        "paired_median_change_pct": -0.2944,
+        "pairs": [
+          {
+            "pair": 1,
+            "order": "baseline-first",
+            "baseline": [14, 39387571, 25.39, 8077772, 116],
+            "candidate": [14, 39842714, 25.1, 8078130, 116],
+            "time_change_pct": 1.1555
+          },
+          {
+            "pair": 2,
+            "order": "candidate-first",
+            "baseline": [13, 38573638, 25.92, 8077775, 115],
+            "candidate": [15, 38372587, 26.06, 8078062, 116],
+            "time_change_pct": -0.5212
+          },
+          {
+            "pair": 3,
+            "order": "baseline-first",
+            "baseline": [13, 42634285, 23.46, 8077777, 116],
+            "candidate": [14, 42284243, 23.65, 8078121, 116],
+            "time_change_pct": -0.821
+          },
+          {
+            "pair": 4,
+            "order": "candidate-first",
+            "baseline": [13, 39894162, 25.07, 8078587, 117],
+            "candidate": [13, 40903546, 24.45, 8078178, 116],
+            "time_change_pct": 2.5302
+          },
+          {
+            "pair": 5,
+            "order": "baseline-first",
+            "baseline": [14, 40267500, 24.83, 8078128, 116],
+            "candidate": [13, 40148969, 24.91, 8078211, 116],
+            "time_change_pct": -0.2944
+          }
+        ]
+      }
+    },
+    "repeat": {
+      "high10": {
+        "baseline_median_ns_op": 9729982700,
+        "candidate_median_ns_op": 9053083500,
+        "median_change_pct": -6.9568,
+        "paired_median_change_pct": -4.9384,
+        "pairs": [
+          {
+            "pair": 1,
+            "order": "baseline-first",
+            "baseline": [1, 10123871600, 29.63, 1370171832, 16427],
+            "candidate": [1, 9371877700, 32.01, 1370171608, 16425],
+            "time_change_pct": -7.4279
+          },
+          {
+            "pair": 2,
+            "order": "candidate-first",
+            "baseline": [1, 10192382100, 29.43, 1370171704, 16425],
+            "candidate": [1, 9689046200, 30.96, 1370171816, 16426],
+            "time_change_pct": -4.9384
+          },
+          {
+            "pair": 3,
+            "order": "baseline-first",
+            "baseline": [1, 9462350800, 31.7, 1370171832, 16427],
+            "candidate": [1, 9053083500, 33.14, 1370171720, 16426],
+            "time_change_pct": -4.3252
+          },
+          {
+            "pair": 4,
+            "order": "candidate-first",
+            "baseline": [1, 8954101000, 33.5, 1370166592, 16418],
+            "candidate": [1, 8669263100, 34.61, 1370171704, 16425],
+            "time_change_pct": -3.1811
+          },
+          {
+            "pair": 5,
+            "order": "baseline-first",
+            "baseline": [1, 9729982700, 30.83, 1370171832, 16427],
+            "candidate": [1, 8894047300, 33.73, 1370171640, 16427],
+            "time_change_pct": -8.5913
+          }
+        ]
+      },
+      "idr": {
+        "baseline_median_ns_op": 35649467,
+        "candidate_median_ns_op": 36649036,
+        "median_change_pct": 2.8039,
+        "paired_median_change_pct": 0.3391,
+        "pairs": [
+          {
+            "pair": 1,
+            "order": "baseline-first",
+            "baseline": [16, 34827175, 28.71, 8078028, 116],
+            "candidate": [14, 36649036, 27.29, 8078112, 116],
+            "time_change_pct": 5.2311
+          },
+          {
+            "pair": 2,
+            "order": "candidate-first",
+            "baseline": [15, 35649467, 28.05, 8078086, 116],
+            "candidate": [15, 35014500, 28.56, 8077753, 116],
+            "time_change_pct": -1.7811
+          },
+          {
+            "pair": 3,
+            "order": "baseline-first",
+            "baseline": [15, 35568240, 28.12, 8077724, 115],
+            "candidate": [16, 34956906, 28.61, 8077399, 115],
+            "time_change_pct": -1.7188
+          },
+          {
+            "pair": 4,
+            "order": "candidate-first",
+            "baseline": [14, 37595807, 26.6, 8078493, 117],
+            "candidate": [15, 37723307, 26.51, 8078071, 116],
+            "time_change_pct": 0.3391
+          },
+          {
+            "pair": 5,
+            "order": "baseline-first",
+            "baseline": [15, 36961060, 27.06, 8078071, 116],
+            "candidate": [12, 42268033, 23.66, 8078658, 117],
+            "time_change_pct": 14.3583
+          }
+        ]
+      }
+    }
+  }
+}

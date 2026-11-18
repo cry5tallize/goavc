@@ -246,7 +246,7 @@ A01局部数组包装分配已由[C01](gates/c01_luma_edge_dispatch.md)关闭；
 
 | Module | Scope | Status | Tests | Known gaps |
 |---|---|---|---|---|
-| CABAC MPS热分支评估（C06） | 省略已归一化MPS调用的测试候选；生产Bin不变 | WIP | 全区间/状态/截断尾部和生命周期差分、IDR/High10及留出五对，见gates/c06_cabac_mps.md | High10补测+6.3%未通过门禁，不采纳；可信上下文/残差循环专化尚未完整实施 |
+| CABAC 结构专化评估（C06） | MPS 热分支与同上下文幅值前缀均仅留测试候选；生产 Bin 与残差循环不变 | WIP | 状态及错误差分、IDR/High10 独立像素核对与实测配对；见gates/c06_cabac_mps.md、gates/c06_residual_unary.md | MPS 候选 High10 回退；幅值候选 High10 补测变快但 IDR 无同向证据，均不采纳 |
 | 参考身份令牌实验（C05） | 每图字典及uint32身份索引的隔离模型；生产仍指针布局 | WIP | 身份对照、合成留存及真实 DPB 驻留探针，见gates/c05_dpb_residency.md | 固定 High/High10 实测驻留下理想进程活跃堆降幅低于 5%，本轮不迁移；未证明自然GC收益 |
 | 高位深分数MC SSE2（B05b） | 10-bit亮度全qpel及uint16色度双线性，4/8/12/16宽完整块，编解码共享 | Partial | 全相位/宽域/halo保护页/真实帧场块/解析向量/0分配/FFmpeg；本轮purego/386/race/六目标通过，见gates/b05_high_depth_mc.md | 其他形状/ISA仍Generic，无10-bit Put/Avg；用户确认B05按本机范围完成，NEON未原生验证，不改变完整M8或Profile状态 |
 | 16宽块加权AVX2（B05a） | 8/10-bit单/双向，16宽且至少两行；其他形状保留SSE2/Generic | Partial | 独立int64解析式、完整uint16/原地/非对齐/保护页/局部0分配及Oracle，见gates/b05_avx2_weight.md | 不是所有加权形状均AVX2；单行收益未确认不启用；NEON未扩展 |

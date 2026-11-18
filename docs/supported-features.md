@@ -106,7 +106,7 @@
 | CAVLC：total_zeros / run_before | Conformant | Conformant | M4 亮度 DC/AC、色度 DC、长游程与整帧 Oracle |
 | CAVLC：level prefix / suffix / 转义 | Conformant | Conformant | M4 suffix 0/1..6、百万 level 转义、14,400 组往返及 Oracle |
 | CABAC：算术编解码器 | Conformant | Conformant | 编码区间解析解、64状态与 Main/High I/P 整帧 FFmpeg Oracle |
-| CABAC MPS热分支实验 | WIP | — | C06候选仅测试保留，完整校验不变；High10补测慢6.3%未采纳，生产Bin仍原实现。状态对照及负结果见[gates/c06_cabac_mps.md](gates/c06_cabac_mps.md)，不代表完整C06或Profile认证 |
+| CABAC 结构专化实验 | WIP | — | C06 的 [MPS 热分支](gates/c06_cabac_mps.md)与[幅值前缀](gates/c06_residual_unary.md)均未过端点门槛，仅保留测试候选。生产 Bin 和残差循环不变，不改变 Profile 状态 |
 | CABAC缓存与固定扫描优化 | Partial | — | B04读取立即更新逻辑位置，decoder仅固定4/15/16项prepared；8/64项及自定义scan通用路径。逐状态/截断/帧场/Oracle通过，端点持平，见[gates/b04_cabac_cache.md](gates/b04_cabac_cache.md) |
 | CABAC：上下文初始化与状态转移 | Conformant | Conformant | I/PB0..2、QP 0..51 共用初始化表；编码 slice 使用 idc=0 |
 | CABAC：宏块/MV/残差上下文 | Conformant | Partial | I/P四分区与4×4/8×8/DC/AC、非参考B_Direct/B_Skip残差Oracle；B非Direct分区未生成 |
