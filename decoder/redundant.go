@@ -11,6 +11,7 @@ import (
 // reconstructRepresentation只重建一个redundant_pic_cnt表示，不发布帧、不更新
 // DPB/POC。失败仅归还本表示的图像，不能把不同表示的宏块拼成一张图。
 func (d *Decoder) reconstructRepresentation(entries []sliceEntry, top, bottom, poc int32) (states [3]*frameState, planeCount int, err error) {
+	workers := parallelSliceWorkers(d.cfg.Threads, entries)
 	groupMap, err := prepareSliceOrder(entries)
 	if err != nil {
 		return states, 0, err
@@ -60,25 +61,19 @@ func (d *Decoder) reconstructRepresentation(entries []sliceEntry, top, bottom, p
 	if err := assignSliceOwnership(entries, states, planeCount, groupMap); err != nil {
 		return states, 0, err
 	}
-	for si := range entries {
-		s := &entries[si]
-		fs := states[s.hdr.ColourPlaneID]
-		if s.hdr.Type != syntax.SliceTypeI && s.hdr.Type != syntax.SliceTypeSI {
-			lists := d.dpb.Lists(s.hdr.FrameNum, poc, s.hdr.Type == syntax.SliceTypeB)
-			for list := 0; list < 1+boolToInt(s.hdr.Type == syntax.SliceTypeB); list++ {
-				n := int(s.hdr.NumRefIdxL0ActiveMinus1) + 1
-				if list == 1 {
-					n = int(s.hdr.NumRefIdxL1ActiveMinus1) + 1
-				}
-				s.refs[list], err = d.dpb.Modify(lists[list], s.hdr.FrameNum, s.hdr.RefListModifications[list], n)
-				if err != nil {
-					return states, 0, err
-				}
-			}
-		}
-		s.frameRefs = s.refs
-		if err := decodeSlice(fs, s, si, s.firstMB, s.endMB); err != nil {
+	if workers > 1 {
+		if err := d.decodeParallelSlices(fs, entries, workers, poc); err != nil {
 			return states, 0, err
+		}
+	} else {
+		for si := range entries {
+			s := &entries[si]
+			if err := d.prepareSliceReferences(s, poc); err != nil {
+				return states, 0, err
+			}
+			if err := decodeSlice(states[s.hdr.ColourPlaneID], s, si, s.firstMB, s.endMB); err != nil {
+				return states, 0, err
+			}
 		}
 	}
 	for comp := 0; comp < planeCount; comp++ {
@@ -100,6 +95,23 @@ func (d *Decoder) reconstructRepresentation(entries []sliceEntry, top, bottom, p
 	fs.pic.FillBorders()
 	success = true
 	return states, planeCount, nil
+}
+
+func (d *Decoder) prepareSliceReferences(s *sliceEntry, poc int32) error {
+	if s.hdr.Type != syntax.SliceTypeI && s.hdr.Type != syntax.SliceTypeSI {
+		b := s.hdr.Type == syntax.SliceTypeB
+		lists := d.dpb.Lists(s.hdr.FrameNum, poc, b)
+		active := [2]uint32{s.hdr.NumRefIdxL0ActiveMinus1, s.hdr.NumRefIdxL1ActiveMinus1}
+		for list := 0; list < 1+boolToInt(b); list++ {
+			refs, err := d.dpb.Modify(lists[list], s.hdr.FrameNum, s.hdr.RefListModifications[list], int(active[list])+1)
+			if err != nil {
+				return err
+			}
+			s.refs[list] = refs
+		}
+	}
+	s.frameRefs = s.refs
+	return nil
 }
 
 func (d *Decoder) reconstructRepresentations(entries []sliceEntry, top, bottom, poc int32) (states [3]*frameState, planeCount int, selected sliceEntry, err error) {

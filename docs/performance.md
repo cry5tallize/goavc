@@ -1374,3 +1374,7 @@ High/High10 单 slice 300 帧在五个同 GOP 相位的采样点各驻留两张�
 ## 36. C06 复评：残差幅值前缀
 
 同上下文幅值前缀候选的端点配对中位耗时：High10 首轮 −1.46%、唯一补测 −4.94%；IDR 首轮 −0.29%、补测 +0.34%。IDR 未确认同向收益，不默认启用，生产路径不变。见[幅值前缀复评](gates/c06_residual_unary.md)及[配对原始数据](gates/c06_residual_unary_samples.json)。
+
+## 37. C09：整宏块行 slice 并行
+
+Ryzen 7 5700X 上，1080p 四 slice 300 帧从 1 线程切换到 4 线程，High 两侧中位 42.26→75.15 FPS，High10 30.22→50.87 FPS；逐对加速倍率中位分别为 1.72×/1.67×。全部样本核对 FFmpeg 像素。仅适用于符合条件的渐进多 slice 输入，单 slice 和高级工具仍串行。计时、分配、验证及限制见 [C09 报告](gates/c09_slice_parallel.md)。

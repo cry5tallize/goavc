@@ -138,10 +138,8 @@ func TestDecoder_ConfigurationAndLimits(t *testing.T) {
 			t.Fatalf("config %+v: %v", cfg, err)
 		}
 	}
-	for _, cfg := range []h264.DecoderConfig{{OutputFormat: h264.PixelFormat(255)}, {Threads: 2}} {
-		if _, err := New(cfg); !errors.Is(err, h264.ErrUnsupported) {
-			t.Fatal(err)
-		}
+	if _, err := New(h264.DecoderConfig{OutputFormat: h264.PixelFormat(255)}); !errors.Is(err, h264.ErrUnsupported) {
+		t.Fatal(err)
 	}
 	data := annex(baselineUnits(t)...)
 	for _, cfg := range []h264.DecoderConfig{{MaxWidth: 32}, {MaxHeight: 32}, {MaxFrameSize: 100}, {MaxNALSize: 16}} {

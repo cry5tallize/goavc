@@ -12,7 +12,7 @@ import (
 func TestDataPartition_NormativeSamples(t *testing.T) {
 	for _, mode := range []string{"pcm", "i16", "inter", "mixed", "skip"} {
 		t.Run(mode, func(t *testing.T) {
-			d := mustDecoder(t, h264.DecoderConfig{})
+			d := mustDecoder(t, h264.DecoderConfig{Threads: 2})
 			partitionReference(t, d)
 			units := partitionVector(mode)
 			// nal_ref_idc 的非零优先级可以不同，只有参考/非参考状态必须一致。

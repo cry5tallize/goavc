@@ -48,6 +48,7 @@ type Grid struct {
 	Ref        []int8
 	valid      []bool
 	sliceStart int
+	sliceEnd   int // 0 表示没有上界；并行连续 slice 必须设置上界。
 	// mappedOwners只借用于当前slice解码；BeginSlice/Reset解除引用。
 	mappedOwners []int
 	mappedSlice  int
@@ -82,27 +83,34 @@ func (g *Grid) Available(bx, by int) bool {
 // availableIndex 共享可用性规则；调用方已校验坐标并只计算一次线性下标。
 // 去块和首slice常用整帧视图，无需重复计算所属宏块；映射slice仍保留原权限检查。
 func (g *Grid) availableIndex(bx, by, index int) bool {
-	if g.mappedOwners == nil && g.sliceStart == 0 {
+	if g.mappedOwners == nil && g.sliceStart == 0 && g.sliceEnd == 0 {
 		return g.valid[index]
 	}
 	mb := (by/4)*g.MBWidth + bx/4
 	if g.mappedOwners != nil {
 		return mb < len(g.mappedOwners) && g.mappedOwners[mb] == g.mappedSlice && g.valid[index]
 	}
-	return mb >= g.sliceStart && g.valid[index]
+	return mb >= g.sliceStart && (g.sliceEnd == 0 || mb < g.sliceEnd) && g.valid[index]
 }
 
 // BeginSlice 限制预测邻块到当前 slice；调用 BeginSlice(0) 可恢复整帧
 // 视图供去块使用。M2 的 slice 按宏块地址递增且不重叠。
 func (g *Grid) BeginSlice(firstMB int) {
-	g.sliceStart = firstMB
+	g.sliceStart, g.sliceEnd = firstMB, 0
 	g.mappedOwners = nil
+}
+
+// BeginSliceRange 在触碰共享 backing 前过滤 owner 区间。调用方必须使用
+// 私有 Grid 描述符，且只写入 [firstMB,endMB) 的宏块。
+func (g *Grid) BeginSliceRange(firstMB, endMB int) {
+	g.BeginSlice(firstMB)
+	g.sliceEnd = endMB
 }
 
 // BeginMappedSlice使用非连续MB的slice身份限制MVP；owners按帧光栅索引，
 // 长度须为MBWidth*MBHeight。只借用到下次BeginSlice或Reset，不复制数据。
 func (g *Grid) BeginMappedSlice(owners []int, sliceID int) {
-	g.sliceStart = 0
+	g.sliceStart, g.sliceEnd = 0, 0
 	g.mappedOwners, g.mappedSlice = owners, sliceID
 }
 

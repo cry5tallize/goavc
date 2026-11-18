@@ -77,7 +77,8 @@ func (s *sliceEntry) readReferenceIndex(fs *frameState, addr, bx, by int, which 
 	} else {
 		neighbor := func(x, y int) int {
 			v := fs.refIndexNeighbor(addr, x, y, list)
-			if !fs.mbaff && fs.directBlocks != nil && x >= 0 && y >= 0 && x < fs.mv.BlockW && y < fs.mv.BlockH && fs.directBlocks[y*fs.mv.BlockW+x] {
+			// 不可用或非正索引无需读 direct 标志；特别是跨 owner 的块。
+			if v > 0 && !fs.mbaff && fs.directBlocks != nil && fs.directBlocks[y*fs.mv.BlockW+x] {
 				return -1
 			}
 			return v

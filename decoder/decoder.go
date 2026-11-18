@@ -56,8 +56,8 @@ func New(cfg h264.DecoderConfig) (*Decoder, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-	if (cfg.OutputFormat != h264.YUV420P && cfg.OutputFormat != h264.YUV420P10LE && cfg.OutputFormat != h264.YUV422P && cfg.OutputFormat != h264.YUV422P10LE && cfg.OutputFormat != h264.YUV444P && cfg.OutputFormat != h264.YUV444P10LE) || cfg.Threads > 1 {
-		return nil, fmt.Errorf("decoder: only serial 8/10-bit planar YUV output is supported: %w", h264.ErrUnsupported)
+	if cfg.OutputFormat != h264.YUV420P && cfg.OutputFormat != h264.YUV420P10LE && cfg.OutputFormat != h264.YUV422P && cfg.OutputFormat != h264.YUV422P10LE && cfg.OutputFormat != h264.YUV444P && cfg.OutputFormat != h264.YUV444P10LE {
+		return nil, fmt.Errorf("decoder: only 8/10-bit planar YUV output is supported: %w", h264.ErrUnsupported)
 	}
 	d := &Decoder{
 		cfg:  cfg,

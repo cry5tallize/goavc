@@ -154,7 +154,7 @@ func TestHigh444_SeparatePCMAndIncompletePlanes(t *testing.T) {
 		t.Run(format.String(), func(t *testing.T) {
 			units, want := high444SeparatePCM(t, format)
 			for _, order := range [][3]int{{2, 3, 4}, {4, 2, 3}} {
-				d := mustDecoder(t, h264.DecoderConfig{})
+				d := mustDecoder(t, h264.DecoderConfig{Threads: 2})
 				data := annex(units[0], units[1], units[order[0]], units[order[1]], units[order[2]])
 				if err := d.SendPacket(h264.Packet{Data: data, PTS: 9}); err != nil {
 					t.Fatal(err)

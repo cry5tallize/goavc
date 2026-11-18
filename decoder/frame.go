@@ -65,33 +65,34 @@ type frameState struct {
 
 	temporary *frameTemporary
 
-	mbW, mbH, total  int
-	subW, subH       int
-	chromaW, chromaH int
-	chromaBlocks     int
-	component        int               // 444共享全尺寸内核当前处理的平面；其余路径保持0。
-	fullResidual     *[2]planeResidual // 仅共同编码444分配，每帧复用，420/422不增加宏块清零量。
-	framePic         *picture.Picture
-	fieldPics        *[2]picture.Picture
-	mbaff, field     bool
-	parity           int
-	activeMB         int
-	fieldFlags       []bool
-	framePOC         int32
-	fieldPOC         [2]int32
-	decoded          []bool
-	groupMap         []uint8 // FMO按语法扫描地址索引；普通单组不分配。
-	sliceOwners      []int   // 物理MB的slice身份，供非连续组的运动邻域使用。
-	info             []mbInfo
-	lumaNZ           []uint8
-	chromaNZ         [2][]uint8
-	dcCoded          [3][]bool
-	mvd              []motion.MV
-	referenceIDs     [2][]*dpb.Identity
-	mv               *motion.Grid
-	mv1              *motion.Grid
-	mvd1             []motion.MV
-	directBlocks     []bool
+	mbW, mbH, total      int
+	subW, subH           int
+	chromaW, chromaH     int
+	chromaBlocks         int
+	component            int               // 444共享全尺寸内核当前处理的平面；其余路径保持0。
+	fullResidual         *[2]planeResidual // 仅共同编码444分配，每帧复用，420/422不增加宏块清零量。
+	framePic             *picture.Picture
+	fieldPics            *[2]picture.Picture
+	mbaff, field         bool
+	parity               int
+	activeMB             int
+	fieldFlags           []bool
+	framePOC             int32
+	fieldPOC             [2]int32
+	decoded              []bool
+	groupMap             []uint8 // FMO按语法扫描地址索引；普通单组不分配。
+	sliceOwners          []int   // 物理MB的slice身份，供非连续组的运动邻域使用。
+	sliceFirst, sliceEnd int     // 并行任务私有的连续 owner 区间；sliceEnd=0 表示串行。
+	info                 []mbInfo
+	lumaNZ               []uint8
+	chromaNZ             [2][]uint8
+	dcCoded              [3][]bool
+	mvd                  []motion.MV
+	referenceIDs         [2][]*dpb.Identity
+	mv                   *motion.Grid
+	mv1                  *motion.Grid
+	mvd1                 []motion.MV
+	directBlocks         []bool
 }
 
 const decoderTemporaryBudget = 16 << 20

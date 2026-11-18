@@ -11,7 +11,7 @@ import (
 func TestRedundant_NormativeRepresentationSelection(t *testing.T) {
 	for _, name := range []string{"primary_preferred", "redundant_only", "lowest_complete_count", "incomplete_lower_count", "partial_primary", "compressed_prediction"} {
 		t.Run(name, func(t *testing.T) {
-			d := mustDecoder(t, h264.DecoderConfig{})
+			d := mustDecoder(t, h264.DecoderConfig{Threads: 2})
 			redundantInit(t, d)
 			makeSlice := func(count uint32, first, length, bias int, predict bool) nal.Unit {
 				return redundantSlice(redundantSliceVector{count: count, first: first, length: length, bias: bias, frame: 1, poc: 2, predict: predict}, false)

@@ -124,7 +124,9 @@ type EncoderConfig struct {
 // 所有 Max* 字段都是抵御不可信输入的资源上限：码流里解析出来的每个尺寸
 // 都必须先与上限比较，再决定是否分配。0 表示使用库内默认值（见 SetDefaults）。
 type DecoderConfig struct {
-	// Threads 是并行度；0 表示自动。
+	// Threads 限制同一张图的 slice 并行度。0 按 GOMAXPROCS 和 slice
+	// 数量自动选择，1 强制串行；实际并行度不超过 64。
+	// 不满足并行条件的码流仍串行解码。
 	Threads int
 
 	// MaxWidth/MaxHeight 是允许的最大解码分辨率。

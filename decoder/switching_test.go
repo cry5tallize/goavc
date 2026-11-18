@@ -304,7 +304,7 @@ func TestSwitchingFrames_NormativeSignedDC(t *testing.T) {
 			}
 			for _, sign := range []int32{1, -1} {
 				t.Run(fmt.Sprintf("si_%v_secondary_%v_sign_%d", si, secondary, sign), func(t *testing.T) {
-					d := mustDecoder(t, h264.DecoderConfig{})
+					d := mustDecoder(t, h264.DecoderConfig{Threads: 2})
 					if err := d.SendPacket(h264.Packet{Data: switchingFrameStream(t, si, secondary, false, sign)}); err != nil {
 						t.Fatal(err)
 					}

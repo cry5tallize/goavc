@@ -24,7 +24,7 @@ func fmoNormativeVectors() []fmoVector {
 func TestFMO_NormativeMapTypesPCM(t *testing.T) {
 	for _, v := range fmoNormativeVectors() {
 		t.Run(fmt.Sprintf("map%d", v.pps.SliceGroupMapType), func(t *testing.T) {
-			d := mustDecoder(t, h264.DecoderConfig{})
+			d := mustDecoder(t, h264.DecoderConfig{Threads: 2})
 			if err := d.SendPacket(h264.Packet{Data: fmoPacket(t, v, fmoSlices(v))}); err != nil {
 				t.Fatal(err)
 			}

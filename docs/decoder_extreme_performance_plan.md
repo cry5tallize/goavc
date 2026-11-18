@@ -189,6 +189,8 @@ Grid.Reset先调查哪些状态对本次帧确需写入，不采用未经证明�
 
 ### C09：多slice并行——极限吞吐的架构增益来源
 
+**已实现首批整行 slice 路径。** 普通渐进、顺序排列的 I/P/B slice 支持 8/10-bit 4:2:0、4:2:2、共同 4:4:4 与 CABAC/CAVLC。`Threads=0` 自动、`1` 串行；工作数不超过请求值、GOMAXPROCS、slice 数和 64。行内切分、ASO、FMO、MBAFF、冗余、数据分区、SP/SI、独立平面保持串行。[C09 验证与端点](gates/c09_slice_parallel.md)。
+
 优先普通逐行多slice：熵引擎/上下文/工作数组各slice独占，输出区域预先验证不重叠；
 运动及邻域权限使用不可变slice视图，不共享可变BeginSlice状态。先完成重建汇合，
 跨slice的idc0去块仍按原规范顺序执行，不并行相邻边。

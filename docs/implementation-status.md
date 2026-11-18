@@ -289,7 +289,7 @@ A01局部数组包装分配已由[C01](gates/c01_luma_edge_dispatch.md)关闭；
 | AU 容量与粘性失败（G09） | AUReader 失败状态清零、NAL/AU 输入输出容量边界和 Packet.Data 独立所有权 | Partial | AU错误/重复读取、writer容量；本轮集成全库race通过 | 未新增封装算法；自然GC/RSS及长期集成门禁仍未完成 |
 | 串行元数据复用（K16精简） | decoder临时与DPB retained分离；encoder候选/场/平面独占租约；各实例空闲16MiB/三槽 | Partial | 六格式脏缓存像素、错误恢复、RC best保持与租约/预算测试；原端点五次before/after | 不是完整slice执行状态隔离；未池化DPB retained backing，未开启内部并行，GC/RSS与长稳未测 |
 | 正常P/B宏块去分配（K17切片） | 栈上固定分区backing，保留全部分区/子类型与读取顺序 | Partial | prepared CAVLC/CABAC、8/10位、P/B非零残差、空间/时间direct的像素/MV/身份/读端与0分配 | 不含每slice初始化、MBAFF首次场引用等完整K17配置门禁；不是整个decoder零分配 |
-| slice并行（K19收益准入） | 本轮暂不实施worker，保留原并行设计 | TODO | 实际h264probe：现有1080p基准每帧1slice，320×240控制语料每帧2slice | 不证明代表性多slice收益；owner-first/私有执行上下文与调度均未交付，Threads>1仍拒绝 |
+| slice 并行（C09 / K19 部分交付） | 顺序排列的普通渐进整行 I/P/B slice；六格式、CABAC/CAVLC | Partial | 独立 FFmpeg 像素、串并行显示顺序与元数据、失败归约/IDR 恢复及四片 300 帧配对，见 [C09](gates/c09_slice_parallel.md) | 单 slice、行内切片及高级工具串行；不并行去块或跨帧执行，不改变 Profile 状态 |
 | RC纯分析复用（K20精简） | 单次RC调用九槽缓存AQ分类/权重/加权搜索参考；场/平面槽分离 | Partial | 改动前144帧RC码流/像素/时钟/QP/VBV SHA不变，固定权重失败换源重试对照，真实ABR前后五样本 | 无worker/跨帧pipeline，CQP不建缓存；时间未加速，GC/RSS未测，不是完整K20 |
 | ME候选并行（K20m范围决定） | 本轮暂不新增批执行器或候选worker | TODO | 现有串行搜索workspace/Scorer轨迹和零分配保护网保留 | 默认diamond/refine粒度小；尚无full-search代表性并行端点证据，不代表证明full-search无收益 |
 | K15–K20m阶段集成验证 | 各代码项独立常规门禁；受影响purego/386、六目标build、短fuzz与全库race | Partial | 12执行记录含命令/结果/日志SHA，codec生产算法cf1dd8feea | 仅已授权精简切片，不签完整M8；本轮剩余测试与性能证据另列 |

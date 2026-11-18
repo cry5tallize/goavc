@@ -140,7 +140,7 @@ func TestCodecCLI_InvalidConfigurationPreservesOutput(t *testing.T) {
 	}
 	decCases := [][]string{
 		{"-max-width", "0"}, {"-max-height", "9000"}, {"-max-frame-size", "-1"},
-		{"-max-slices", "0"}, {"-max-dpb-frames", "0"}, {"-threads", "2"},
+		{"-max-slices", "0"}, {"-max-dpb-frames", "0"}, {"-threads", "-1"},
 		{"-pixel-format", "rgb24"}, {"-format", "auto"}, {"-max-input-buffer", "-1"},
 	}
 	for kind, cases := range map[string][][]string{"encode": encCases, "decode": decCases} {

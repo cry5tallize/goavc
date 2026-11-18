@@ -114,16 +114,7 @@ func (fs *frameState) nextMB(addr int) int {
 }
 
 func decodeMappedCAVLC(fs *frameState, s *sliceEntry, sliceID, first, end int) error {
-	fs.mv.BeginSlice(first)
-	if fs.mv1 != nil {
-		fs.mv1.BeginSlice(first)
-	}
-	if fs.sliceOwners != nil {
-		fs.mv.BeginMappedSlice(fs.sliceOwners, sliceID)
-		if fs.mv1 != nil {
-			fs.mv1.BeginMappedSlice(fs.sliceOwners, sliceID)
-		}
-	}
+	fs.beginMotionSlice(first, end, sliceID)
 	qp := s.hdr.SliceQP
 	for addr := first; addr < end; {
 		if s.hdr.Type == syntax.SliceTypeP || s.hdr.Type == syntax.SliceTypeB || s.hdr.Type == syntax.SliceTypeSP {

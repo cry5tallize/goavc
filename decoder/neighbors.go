@@ -5,6 +5,9 @@ import "github.com/cry5tallize/goavc/internal/prediction"
 // neighborAvailable 实现 Spec: 6.4.8 的宏块可用性：跨 slice 的邻块
 // 即使在同一帧内已经重建，也不能用于 CAVLC 或预测上下文。
 func (fs *frameState) neighborAvailable(addr, other int) bool {
+	if fs.sliceEnd != 0 {
+		return other >= fs.sliceFirst && other < fs.sliceEnd && fs.decoded[other]
+	}
 	return other >= 0 && other < fs.total && fs.decoded[other] &&
 		fs.info[addr].sliceID == fs.info[other].sliceID
 }

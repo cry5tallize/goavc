@@ -158,7 +158,7 @@ func TestMBAFF_MixedPCMPairsNormativeSamples(t *testing.T) {
 		for _, entropy := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/cabac%t", format, entropy), func(t *testing.T) {
 				data, want := mbaffPCMStream(t, format, entropy)
-				d := mustDecoder(t, h264.DecoderConfig{OutputFormat: format})
+				d := mustDecoder(t, h264.DecoderConfig{Threads: 2, OutputFormat: format})
 				if err := d.SendPacket(h264.Packet{Data: data}); err != nil {
 					t.Fatal(err)
 				}

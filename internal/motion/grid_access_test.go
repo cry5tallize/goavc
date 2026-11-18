@@ -49,6 +49,26 @@ func TestGridAccess_SliceAndMappedParity(t *testing.T) {
 	}
 }
 
+func TestGridAccess_SliceRangeHidesWrittenNeighbors(t *testing.T) {
+	g := NewGrid(2, 3)
+	// Simulate all other slices having finished first.
+	g.SetRect(0, 0, g.BlockW, g.BlockH, MV{X: 9}, 2)
+	view := *g
+	view.BeginSliceRange(2, 4)
+	for y := range g.BlockH {
+		for x := range g.BlockW {
+			_, _, ok := view.Get(x, y)
+			if want := y >= 4 && y < 8; ok != want || view.Available(x, y) != want || !g.Available(x, y) {
+				t.Fatalf("view at (%d,%d) available=%v, want %v", x, y, ok, want)
+			}
+		}
+	}
+	view.BeginSlice(0)
+	if !view.Available(0, 0) || !view.Available(0, 8) {
+		t.Fatal("restored whole-picture grid retained slice bounds")
+	}
+}
+
 var gridAccessSink int
 
 func BenchmarkGridGet_1080p_Generic(b *testing.B) {

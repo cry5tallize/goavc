@@ -189,7 +189,7 @@ arm64 已交叉编译，尚未原生验证。完整组合与已知限制见[支�
 - **所有权**：`SendFrame` 返回后可复用或释放输入；`SendPacket` 返回后可复用输入 Data。接收的 Frame 用完须 `Release()`，需要独立副本时 `Clone()`；接收的 Packet.Data 归调用方。
 - **输出排空**：输入与输出不是一一对应。持续接收到 `ErrAgain`，输入结束后 `Flush` 并接收到 `ErrEOF`，避免丢失 B 帧或其他延迟输出。
 - **错误判断**：使用 `errors.Is`。`ErrAgain` 是流控，`ErrEOF` 表示结束，`ErrUnsupported` 是合法但未支持的能力，`ErrInvalidData` 是非法数据，`ErrResourceLimit` 是超出资源预算。
-- **并发**：同一 Encoder/Decoder 不得并发调用，`Threads>1` 当前不支持；多路视频使用独立实例。
+- **并发**：同一 Encoder/Decoder 不得被多个 goroutine 并发调用；多路视频使用独立实例。解码器可用 `Threads: 2` 或 `h264dec -threads 4` 并行处理符合条件的整行 slice；`0` 自动，`1` 强制串行，单 slice 和不符合条件的流仍串行。编码器仍只支持 `Threads` 为 `0` 或 `1`。
 - **I/O 生命周期**：流式 API 不关闭调用方的 Reader/Writer。可能阻塞的网络或管道 I/O，其取消机制由调用方配合实现，详见[取消与阻塞 I/O](docs/stream.md#取消与阻塞-io)。
 
 ## 命令行工具

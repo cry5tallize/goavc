@@ -202,7 +202,8 @@
 | decoder retained metadata 与 DPB 所有权 | Partial | G08失败清尾与DPB Picture归池，K16仅复用临时数组；本轮集成全库race通过。DPB retained backing未池化，自然GC/RSS和长期门禁仍未验收 |
 | 参考身份令牌隔离实验 | WIP | C05 复评：固定 High/High10 实测驻留下理想进程活跃堆降幅低于 5%，本轮不迁移，生产仍使用指针布局。边界见[驻留账本](gates/c05_dpb_residency.md) |
 | AU 容量与粘性错误状态 | Partial | G09保持既有封装前预算与独立Packet所有权；失败清尾/粘性错误/容量测试及本轮集成全库race通过。未新增封装算法，自然GC/RSS和长期门禁仍未验收 |
-| 串行临时元数据复用 | Partial | K16精简复用decoder表示级临时数组及encoder帧/候选元数据，活跃租约独占；各实例空闲缓存16MiB/最多三槽。DPB retained Motion/reference IDs/MBField仍按原生命周期，未做slice并行或宣称全codec零分配；前后端点与边界见performance及实施记录 |
+| 串行临时元数据复用 | Partial | K16精简复用decoder表示级临时数组及encoder帧/候选元数据，活跃租约独占；各实例空闲缓存16MiB/最多三槽。DPB retained Motion/reference IDs/MBField仍按原生命周期，不宣称全codec零分配 |
+| 解码器 slice 并行 | Partial | C09 支持普通渐进整行顺序 slice、六格式双熵 I/P/B；`Threads=0` 自动、`1` 串行。行内切分、单 slice、高级工具及去块保留串行；验证范围和吞吐见 [C09](gates/c09_slice_parallel.md) |
 | decoder正常P/B宏块去分配 | Partial | K17以固定栈backing消除分区容器分配；prepared双熵/双位深、全部P/B分区及子类型、空间/时间direct和非零残差有像素/MV/读端与0分配断言。不宣称每slice初始化、MBAFF首次场引用或整个codec零分配 |
 | RC纯分析复用 | Partial | K20精简单AU复用AQ分类、权重与加权搜索参考，保留场/平面布局及QP/回调顺序；144帧旧RC指纹及失败换源重试通过。只降低已测重复分配，不宣称吞吐加速；无前瞻worker或ME执行器 |
 | M8测试与微基准收尾 | Partial | 本机全库purego/386/测试标签与完整race、两尺寸各300帧原长Oracle、55条CLI哈希和六格式×四码控FFmpeg像素通过；501类×五样本微基准0分配。NEON原生、未实现并行/MC插值及完整M8门禁不算通过 |
